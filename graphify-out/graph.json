@@ -17761,8 +17761,8 @@
       "source_location": "L10",
       "_origin": "ast",
       "id": "cumplebooth_sitio_vendor_gsap_min_na",
-      "community": 78,
-      "community_name": "gsap.min.js",
+      "community": 469,
+      "community_name": "la",
       "norm_label": "na()"
     },
     {
@@ -17871,8 +17871,8 @@
       "source_location": "L10",
       "_origin": "ast",
       "id": "cumplebooth_sitio_vendor_gsap_min_aa",
-      "community": 78,
-      "community_name": "gsap.min.js",
+      "community": 469,
+      "community_name": "la",
       "norm_label": "aa()"
     },
     {
@@ -17893,8 +17893,8 @@
       "source_location": "L10",
       "_origin": "ast",
       "id": "cumplebooth_sitio_vendor_gsap_min_ca",
-      "community": 78,
-      "community_name": "gsap.min.js",
+      "community": 469,
+      "community_name": "la",
       "norm_label": "ca()"
     },
     {
@@ -18080,8 +18080,8 @@
       "source_location": "L10",
       "_origin": "ast",
       "id": "cumplebooth_sitio_vendor_gsap_min_wb",
-      "community": 78,
-      "community_name": "gsap.min.js",
+      "community": 469,
+      "community_name": "la",
       "norm_label": "wb()"
     },
     {
@@ -18114,7 +18114,7 @@
       "_origin": "ast",
       "id": "cumplebooth_sitio_vendor_gsap_min_eb",
       "community": 160,
-      "community_name": "get",
+      "community_name": "nt",
       "norm_label": "eb()"
     },
     {
@@ -18124,8 +18124,8 @@
       "source_location": "L10",
       "_origin": "ast",
       "id": "cumplebooth_sitio_vendor_gsap_min_vb",
-      "community": 78,
-      "community_name": "gsap.min.js",
+      "community": 469,
+      "community_name": "la",
       "norm_label": "vb()"
     },
     {
@@ -18135,8 +18135,8 @@
       "source_location": "L10",
       "_origin": "ast",
       "id": "cumplebooth_sitio_vendor_gsap_min_xb",
-      "community": 78,
-      "community_name": "gsap.min.js",
+      "community": 469,
+      "community_name": "la",
       "norm_label": "xb()"
     },
     {
@@ -18355,8 +18355,8 @@
       "source_location": "L10",
       "_origin": "ast",
       "id": "cumplebooth_sitio_vendor_gsap_min_yd",
-      "community": 316,
-      "community_name": "Hd",
+      "community": 78,
+      "community_name": "gsap.min.js",
       "norm_label": "yd()"
     },
     {
@@ -18465,8 +18465,8 @@
       "source_location": "L10",
       "_origin": "ast",
       "id": "cumplebooth_sitio_vendor_gsap_min_id",
-      "community": 316,
-      "community_name": "Hd",
+      "community": 78,
+      "community_name": "gsap.min.js",
       "norm_label": "id()"
     },
     {
@@ -18531,8 +18531,8 @@
       "source_location": "L10",
       "_origin": "ast",
       "id": "cumplebooth_sitio_vendor_gsap_min_rd",
-      "community": 316,
-      "community_name": "Hd",
+      "community": 78,
+      "community_name": "gsap.min.js",
       "norm_label": "rd()"
     },
     {
@@ -18553,8 +18553,8 @@
       "source_location": "L10",
       "_origin": "ast",
       "id": "cumplebooth_sitio_vendor_gsap_min_vd",
-      "community": 316,
-      "community_name": "Hd",
+      "community": 78,
+      "community_name": "gsap.min.js",
       "norm_label": "vd()"
     },
     {
@@ -18564,8 +18564,8 @@
       "source_location": "L10",
       "_origin": "ast",
       "id": "cumplebooth_sitio_vendor_gsap_min_wd",
-      "community": 316,
-      "community_name": "Hd",
+      "community": 78,
+      "community_name": "gsap.min.js",
       "norm_label": "wd()"
     },
     {
@@ -18685,8 +18685,8 @@
       "source_location": "L10",
       "_origin": "ast",
       "id": "cumplebooth_sitio_vendor_gsap_min_ye",
-      "community": 316,
-      "community_name": "Hd",
+      "community": 78,
+      "community_name": "gsap.min.js",
       "norm_label": "ye()"
     },
     {
@@ -28245,7 +28245,7 @@
       "_origin": "ast",
       "id": "cumplebooth_sitio_vendor_three_core_min_ga_computebonetexture",
       "community": 160,
-      "community_name": "get",
+      "community_name": "nt",
       "norm_label": ".computebonetexture()"
     },
     {
@@ -29279,7 +29279,7 @@
       "_origin": "ast",
       "id": "cumplebooth_sitio_vendor_three_core_min_eo_initcolorstexture",
       "community": 160,
-      "community_name": "get",
+      "community_name": "nt",
       "norm_label": "._initcolorstexture()"
     },
     {
@@ -32732,8 +32732,8 @@
       "source_location": "L6",
       "_origin": "ast",
       "id": "cumplebooth_sitio_vendor_three_core_min_dc_evaluate",
-      "community": 70,
-      "community_name": "nd",
+      "community": 1184,
+      "community_name": "dc",
       "norm_label": ".evaluate()"
     },
     {
@@ -34779,7 +34779,7 @@
       "_origin": "ast",
       "id": "cumplebooth_sitio_vendor_three_core_min_mu_creatematerialfromtype",
       "community": 31,
-      "community_name": "ie",
+      "community_name": "Je",
       "norm_label": ".creatematerialfromtype()"
     },
     {
@@ -36032,8 +36032,8 @@
       "source_location": "L6",
       "_origin": "ast",
       "id": "cumplebooth_sitio_vendor_three_core_min_gu_accumulateadditive",
-      "community": 70,
-      "community_name": "nd",
+      "community": 1184,
+      "community_name": "dc",
       "norm_label": ".accumulateadditive()"
     },
     {
@@ -36912,8 +36912,8 @@
       "source_location": "L6",
       "_origin": "ast",
       "id": "cumplebooth_sitio_vendor_three_core_min_nd_update",
-      "community": 70,
-      "community_name": "nd",
+      "community": 1184,
+      "community_name": "dc",
       "norm_label": "._update()"
     },
     {
@@ -36923,8 +36923,8 @@
       "source_location": "L6",
       "_origin": "ast",
       "id": "cumplebooth_sitio_vendor_three_core_min_nd_updateweight",
-      "community": 70,
-      "community_name": "nd",
+      "community": 1184,
+      "community_name": "dc",
       "norm_label": "._updateweight()"
     },
     {
@@ -36934,8 +36934,8 @@
       "source_location": "L6",
       "_origin": "ast",
       "id": "cumplebooth_sitio_vendor_three_core_min_nd_updatetimescale",
-      "community": 70,
-      "community_name": "nd",
+      "community": 1184,
+      "community_name": "dc",
       "norm_label": "._updatetimescale()"
     },
     {
@@ -41312,8 +41312,8 @@
       "source_location": "L2735",
       "_origin": "ast",
       "id": "cumplebooth_src_app_esbabyshower",
-      "community": 139,
-      "community_name": "composeDiploma",
+      "community": 47,
+      "community_name": "CumpleBooth/src/App.jsx",
       "norm_label": "esbabyshower()"
     },
     {
@@ -41345,8 +41345,8 @@
       "source_location": "L2752",
       "_origin": "ast",
       "id": "cumplebooth_src_app_eventofraseen",
-      "community": 139,
-      "community_name": "composeDiploma",
+      "community": 47,
+      "community_name": "CumpleBooth/src/App.jsx",
       "norm_label": "eventofraseen()"
     },
     {
@@ -43028,8 +43028,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "cumplebooth_src_detectorcara",
-      "community": 47,
-      "community_name": "CumpleBooth/src/App.jsx",
+      "community": 392,
+      "community_name": "detectarCara",
       "norm_label": "detectorcara.js"
     },
     {
@@ -43039,8 +43039,8 @@
       "source_location": "L18",
       "_origin": "ast",
       "id": "cumplebooth_src_detectorcara_preparardetector",
-      "community": 47,
-      "community_name": "CumpleBooth/src/App.jsx",
+      "community": 392,
+      "community_name": "detectarCara",
       "norm_label": "preparardetector()"
     },
     {
@@ -43050,8 +43050,8 @@
       "source_location": "L48",
       "_origin": "ast",
       "id": "cumplebooth_src_detectorcara_ventanas",
-      "community": 47,
-      "community_name": "CumpleBooth/src/App.jsx",
+      "community": 392,
+      "community_name": "detectarCara",
       "norm_label": "ventanas()"
     },
     {
@@ -43061,8 +43061,8 @@
       "source_location": "L60",
       "_origin": "ast",
       "id": "cumplebooth_src_detectorcara_recorte",
-      "community": 47,
-      "community_name": "CumpleBooth/src/App.jsx",
+      "community": 392,
+      "community_name": "detectarCara",
       "norm_label": "recorte()"
     },
     {
@@ -43072,8 +43072,8 @@
       "source_location": "L72",
       "_origin": "ast",
       "id": "cumplebooth_src_detectorcara_detectarcara",
-      "community": 47,
-      "community_name": "CumpleBooth/src/App.jsx",
+      "community": 392,
+      "community_name": "detectarCara",
       "norm_label": "detectarcara()"
     },
     {
@@ -46733,7 +46733,7 @@
       "label": "http()",
       "file_type": "code",
       "source_file": "N8N/gt-baseball/build_respaldo.py",
-      "source_location": "L26",
+      "source_location": "L30",
       "_origin": "ast",
       "id": "n8n_gt_baseball_build_respaldo_http",
       "community": 1243,
@@ -46744,7 +46744,7 @@
       "label": "construir()",
       "file_type": "code",
       "source_file": "N8N/gt-baseball/build_respaldo.py",
-      "source_location": "L33",
+      "source_location": "L37",
       "_origin": "ast",
       "id": "n8n_gt_baseball_build_respaldo_construir",
       "community": 1243,
@@ -46755,7 +46755,7 @@
       "label": "programado()",
       "file_type": "code",
       "source_file": "N8N/gt-baseball/build_respaldo.py",
-      "source_location": "L74",
+      "source_location": "L81",
       "_origin": "ast",
       "id": "n8n_gt_baseball_build_respaldo_programado",
       "community": 1243,
@@ -46766,7 +46766,7 @@
       "label": "probar()",
       "file_type": "code",
       "source_file": "N8N/gt-baseball/build_respaldo.py",
-      "source_location": "L80",
+      "source_location": "L87",
       "_origin": "ast",
       "id": "n8n_gt_baseball_build_respaldo_probar",
       "community": 1243,
@@ -46777,7 +46777,7 @@
       "label": "publicar()",
       "file_type": "code",
       "source_file": "N8N/gt-baseball/build_respaldo.py",
-      "source_location": "L118",
+      "source_location": "L125",
       "_origin": "ast",
       "id": "n8n_gt_baseball_build_respaldo_publicar",
       "community": 1243,
@@ -46788,7 +46788,7 @@
       "label": "main()",
       "file_type": "code",
       "source_file": "N8N/gt-baseball/build_respaldo.py",
-      "source_location": "L135",
+      "source_location": "L142",
       "_origin": "ast",
       "id": "n8n_gt_baseball_build_respaldo_main",
       "community": 1243,
@@ -46810,9 +46810,9 @@
       "label": "Corre el mismo flujo una vez, con un webhook temporal en vez del horario, y lo\u2026",
       "file_type": "rationale",
       "source_file": "N8N/gt-baseball/build_respaldo.py",
-      "source_location": "L81",
+      "source_location": "L88",
       "_origin": "ast",
-      "id": "n8n_gt_baseball_build_respaldo_rationale_81",
+      "id": "n8n_gt_baseball_build_respaldo_rationale_88",
       "community": 1243,
       "community_name": "build.py",
       "norm_label": "corre el mismo flujo una vez, con un webhook temporal en vez del horario, y lo..."
@@ -46989,8 +46989,8 @@
       "source_location": "L41",
       "_origin": "ast",
       "id": "n8n_omnicliente_assets_index_wbfvkgbb_ng",
-      "community": 160,
-      "community_name": "get",
+      "community": 17,
+      "community_name": "o",
       "norm_label": "ng()"
     },
     {
@@ -57351,8 +57351,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "omnicliente_assets_clientsview_djtdisr1_le",
-      "community": 316,
-      "community_name": "Hd",
+      "community": 78,
+      "community_name": "gsap.min.js",
       "norm_label": "le"
     },
     {
@@ -59738,8 +59738,8 @@
       "source_location": "L2",
       "_origin": "ast",
       "id": "omnicliente_assets_index_bhihaq8q_is",
-      "community": 160,
-      "community_name": "get",
+      "community": 17,
+      "community_name": "o",
       "norm_label": "is"
     },
     {
@@ -59782,8 +59782,8 @@
       "source_location": "L7",
       "_origin": "ast",
       "id": "omnicliente_assets_index_bhihaq8q_we",
-      "community": 160,
-      "community_name": "get",
+      "community": 31,
+      "community_name": "Je",
       "norm_label": "we"
     },
     {
@@ -72421,8 +72421,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "wp_content_plugins_akismet_inc_akismet_frontend",
-      "community": 160,
-      "community_name": "get",
+      "community": 131,
+      "community_name": ".dep",
       "norm_label": "akismet-frontend.js"
     },
     {
@@ -72432,8 +72432,8 @@
       "source_location": "L24",
       "_origin": "ast",
       "id": "wp_content_plugins_akismet_inc_akismet_frontend_init",
-      "community": 160,
-      "community_name": "get",
+      "community": 131,
+      "community_name": ".dep",
       "norm_label": "init()"
     },
     {
@@ -72443,8 +72443,8 @@
       "source_location": "L347",
       "_origin": "ast",
       "id": "wp_content_plugins_akismet_inc_akismet_frontend_prepare_timestamp_array_for_request",
-      "community": 160,
-      "community_name": "get",
+      "community": 131,
+      "community_name": ".dep",
       "norm_label": "prepare_timestamp_array_for_request()"
     },
     {
@@ -75600,8 +75600,8 @@
       "source_location": "L113",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_functions_ai1wm_validate_file",
-      "community": 354,
-      "community_name": "Ai1wm_Status",
+      "community": 12,
+      "community_name": "all-in-one-wp-migration/functions.php",
       "norm_label": "ai1wm_validate_file()"
     },
     {
@@ -75611,8 +75611,8 @@
       "source_location": "L135",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_functions_ai1wm_archive_path",
-      "community": 354,
-      "community_name": "Ai1wm_Status",
+      "community": 65,
+      "community_name": "ai1wm_open",
       "norm_label": "ai1wm_archive_path()"
     },
     {
@@ -75633,8 +75633,8 @@
       "source_location": "L189",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_functions_ai1wm_content_list_path",
-      "community": 354,
-      "community_name": "Ai1wm_Status",
+      "community": 12,
+      "community_name": "all-in-one-wp-migration/functions.php",
       "norm_label": "ai1wm_content_list_path()"
     },
     {
@@ -75644,8 +75644,8 @@
       "source_location": "L199",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_functions_ai1wm_media_list_path",
-      "community": 354,
-      "community_name": "Ai1wm_Status",
+      "community": 719,
+      "community_name": ".execute",
       "norm_label": "ai1wm_media_list_path()"
     },
     {
@@ -75655,8 +75655,8 @@
       "source_location": "L209",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_functions_ai1wm_plugins_list_path",
-      "community": 354,
-      "community_name": "Ai1wm_Status",
+      "community": 12,
+      "community_name": "all-in-one-wp-migration/functions.php",
       "norm_label": "ai1wm_plugins_list_path()"
     },
     {
@@ -75677,8 +75677,8 @@
       "source_location": "L229",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_functions_ai1wm_tables_list_path",
-      "community": 72,
-      "community_name": ".execute",
+      "community": 12,
+      "community_name": "all-in-one-wp-migration/functions.php",
       "norm_label": "ai1wm_tables_list_path()"
     },
     {
@@ -75820,8 +75820,8 @@
       "source_location": "L359",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_functions_ai1wm_archive_name",
-      "community": 12,
-      "community_name": "all-in-one-wp-migration/functions.php",
+      "community": 316,
+      "community_name": ".execute",
       "norm_label": "ai1wm_archive_name()"
     },
     {
@@ -75831,8 +75831,8 @@
       "source_location": "L369",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_functions_ai1wm_backup_url",
-      "community": 12,
-      "community_name": "all-in-one-wp-migration/functions.php",
+      "community": 316,
+      "community_name": ".execute",
       "norm_label": "ai1wm_backup_url()"
     },
     {
@@ -75842,8 +75842,8 @@
       "source_location": "L394",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_functions_ai1wm_archive_bytes",
-      "community": 354,
-      "community_name": "Ai1wm_Status",
+      "community": 65,
+      "community_name": "ai1wm_open",
       "norm_label": "ai1wm_archive_bytes()"
     },
     {
@@ -75853,8 +75853,8 @@
       "source_location": "L404",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_functions_ai1wm_archive_mtime",
-      "community": 354,
-      "community_name": "Ai1wm_Status",
+      "community": 12,
+      "community_name": "all-in-one-wp-migration/functions.php",
       "norm_label": "ai1wm_archive_mtime()"
     },
     {
@@ -75908,8 +75908,8 @@
       "source_location": "L454",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_functions_ai1wm_archive_size",
-      "community": 12,
-      "community_name": "all-in-one-wp-migration/functions.php",
+      "community": 316,
+      "community_name": ".execute",
       "norm_label": "ai1wm_archive_size()"
     },
     {
@@ -75919,8 +75919,8 @@
       "source_location": "L464",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_functions_ai1wm_backup_size",
-      "community": 12,
-      "community_name": "all-in-one-wp-migration/functions.php",
+      "community": 316,
+      "community_name": ".execute",
       "norm_label": "ai1wm_backup_size()"
     },
     {
@@ -75941,8 +75941,8 @@
       "source_location": "L500",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_functions_ai1wm_size_format",
-      "community": 12,
-      "community_name": "all-in-one-wp-migration/functions.php",
+      "community": 316,
+      "community_name": ".execute",
       "norm_label": "ai1wm_size_format()"
     },
     {
@@ -75952,8 +75952,8 @@
       "source_location": "L514",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_functions_ai1wm_site_name",
-      "community": 12,
-      "community_name": "all-in-one-wp-migration/functions.php",
+      "community": 316,
+      "community_name": ".execute",
       "norm_label": "ai1wm_site_name()"
     },
     {
@@ -75963,8 +75963,8 @@
       "source_location": "L524",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_functions_ai1wm_archive_file",
-      "community": 1248,
-      "community_name": ".execute",
+      "community": 354,
+      "community_name": "Ai1wm_Status",
       "norm_label": "ai1wm_archive_file()"
     },
     {
@@ -76029,8 +76029,8 @@
       "source_location": "L720",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_functions_ai1wm_generate_random_string",
-      "community": 1248,
-      "community_name": ".execute",
+      "community": 7,
+      "community_name": "Ai1wm_Main_Controller",
       "norm_label": "ai1wm_generate_random_string()"
     },
     {
@@ -76040,8 +76040,8 @@
       "source_location": "L747",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_functions_ai1wm_storage_folder",
-      "community": 1248,
-      "community_name": ".execute",
+      "community": 354,
+      "community_name": "Ai1wm_Status",
       "norm_label": "ai1wm_storage_folder()"
     },
     {
@@ -76205,8 +76205,8 @@
       "source_location": "L954",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_functions_ai1wm_content_filters",
-      "community": 354,
-      "community_name": "Ai1wm_Status",
+      "community": 12,
+      "community_name": "all-in-one-wp-migration/functions.php",
       "norm_label": "ai1wm_content_filters()"
     },
     {
@@ -76216,8 +76216,8 @@
       "source_location": "L974",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_functions_ai1wm_media_filters",
-      "community": 354,
-      "community_name": "Ai1wm_Status",
+      "community": 719,
+      "community_name": ".execute",
       "norm_label": "ai1wm_media_filters()"
     },
     {
@@ -76227,8 +76227,8 @@
       "source_location": "L989",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_functions_ai1wm_plugin_filters",
-      "community": 354,
-      "community_name": "Ai1wm_Status",
+      "community": 12,
+      "community_name": "all-in-one-wp-migration/functions.php",
       "norm_label": "ai1wm_plugin_filters()"
     },
     {
@@ -76557,8 +76557,8 @@
       "source_location": "L1681",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_functions_ai1wm_tell",
-      "community": 12,
-      "community_name": "all-in-one-wp-migration/functions.php",
+      "community": 65,
+      "community_name": "ai1wm_open",
       "norm_label": "ai1wm_tell()"
     },
     {
@@ -76568,8 +76568,8 @@
       "source_location": "L1710",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_functions_ai1wm_putcsv",
-      "community": 354,
-      "community_name": "Ai1wm_Status",
+      "community": 12,
+      "community_name": "all-in-one-wp-migration/functions.php",
       "norm_label": "ai1wm_putcsv()"
     },
     {
@@ -76579,8 +76579,8 @@
       "source_location": "L1744",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_functions_ai1wm_getcsv",
-      "community": 354,
-      "community_name": "Ai1wm_Status",
+      "community": 65,
+      "community_name": "ai1wm_open",
       "norm_label": "ai1wm_getcsv()"
     },
     {
@@ -76601,8 +76601,8 @@
       "source_location": "L1764",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_functions_ai1wm_unlink",
-      "community": 50,
-      "community_name": "Ai1wm_Backups",
+      "community": 65,
+      "community_name": "ai1wm_open",
       "norm_label": "ai1wm_unlink()"
     },
     {
@@ -76678,8 +76678,8 @@
       "source_location": "L1880",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_functions_ai1wm_is_filedata_supported",
-      "community": 50,
-      "community_name": "Ai1wm_Backups",
+      "community": 65,
+      "community_name": "ai1wm_open",
       "norm_label": "ai1wm_is_filedata_supported()"
     },
     {
@@ -76711,8 +76711,8 @@
       "source_location": "L1943",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_functions_ai1wm_is_scheduled_backup",
-      "community": 392,
-      "community_name": "Ai1wm_Notification",
+      "community": 50,
+      "community_name": "Ai1wm_Backups",
       "norm_label": "ai1wm_is_scheduled_backup()"
     },
     {
@@ -76777,8 +76777,8 @@
       "source_location": "L2073",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_functions_ai1wm_get_plugins_dir",
-      "community": 354,
-      "community_name": "Ai1wm_Status",
+      "community": 12,
+      "community_name": "all-in-one-wp-migration/functions.php",
       "norm_label": "ai1wm_get_plugins_dir()"
     },
     {
@@ -76854,8 +76854,8 @@
       "source_location": "L2153",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_functions_ai1wm_replace_directory_separator_with_forward_slash",
-      "community": 12,
-      "community_name": "all-in-one-wp-migration/functions.php",
+      "community": 316,
+      "community_name": ".execute",
       "norm_label": "ai1wm_replace_directory_separator_with_forward_slash()"
     },
     {
@@ -76942,8 +76942,8 @@
       "source_location": "L2278",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_functions_ai1wm_can_decrypt",
-      "community": 50,
-      "community_name": "Ai1wm_Backups",
+      "community": 65,
+      "community_name": "ai1wm_open",
       "norm_label": "ai1wm_can_decrypt()"
     },
     {
@@ -77019,8 +77019,8 @@
       "source_location": "L2422",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_functions_ai1wm_direct_download_supported",
-      "community": 12,
-      "community_name": "all-in-one-wp-migration/functions.php",
+      "community": 316,
+      "community_name": ".execute",
       "norm_label": "ai1wm_direct_download_supported()"
     },
     {
@@ -77184,8 +77184,8 @@
       "source_location": "L221",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_controller_class_ai1wm_backups_controller_ai1wm_backups_controller_backup_check_encryption",
-      "community": 50,
-      "community_name": "Ai1wm_Backups",
+      "community": 65,
+      "community_name": "ai1wm_open",
       "norm_label": ".backup_check_encryption()"
     },
     {
@@ -77547,8 +77547,8 @@
       "source_location": "L288",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_controller_class_ai1wm_main_controller_ai1wm_main_controller_setup_secret_key",
-      "community": 1248,
-      "community_name": ".execute",
+      "community": 7,
+      "community_name": "Ai1wm_Main_Controller",
       "norm_label": ".setup_secret_key()"
     },
     {
@@ -78438,8 +78438,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_model_class_ai1wm_compatibility",
-      "community": 131,
-      "community_name": "Ai1wm_Compatibility",
+      "community": 354,
+      "community_name": "Ai1wm_Status",
       "norm_label": "class-ai1wm-compatibility.php"
     },
     {
@@ -78449,8 +78449,8 @@
       "source_location": "L32",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_model_class_ai1wm_compatibility_ai1wm_compatibility",
-      "community": 131,
-      "community_name": "Ai1wm_Compatibility",
+      "community": 354,
+      "community_name": "Ai1wm_Status",
       "norm_label": "ai1wm_compatibility"
     },
     {
@@ -78460,8 +78460,8 @@
       "source_location": "L34",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_model_class_ai1wm_compatibility_ai1wm_compatibility_get",
-      "community": 131,
-      "community_name": "Ai1wm_Compatibility",
+      "community": 354,
+      "community_name": "Ai1wm_Status",
       "norm_label": ".get()"
     },
     {
@@ -78471,8 +78471,8 @@
       "source_location": "L64",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_model_class_ai1wm_compatibility_ai1wm_compatibility_check",
-      "community": 131,
-      "community_name": "Ai1wm_Compatibility",
+      "community": 354,
+      "community_name": "Ai1wm_Status",
       "norm_label": ".check()"
     },
     {
@@ -78724,8 +78724,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_model_class_ai1wm_notification",
-      "community": 392,
-      "community_name": "Ai1wm_Notification",
+      "community": 50,
+      "community_name": "Ai1wm_Backups",
       "norm_label": "class-ai1wm-notification.php"
     },
     {
@@ -78735,8 +78735,8 @@
       "source_location": "L32",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_model_class_ai1wm_notification_ai1wm_notification",
-      "community": 392,
-      "community_name": "Ai1wm_Notification",
+      "community": 50,
+      "community_name": "Ai1wm_Backups",
       "norm_label": "ai1wm_notification"
     },
     {
@@ -78746,8 +78746,8 @@
       "source_location": "L34",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_model_class_ai1wm_notification_ai1wm_notification_ok",
-      "community": 392,
-      "community_name": "Ai1wm_Notification",
+      "community": 50,
+      "community_name": "Ai1wm_Backups",
       "norm_label": ".ok()"
     },
     {
@@ -78757,8 +78757,8 @@
       "source_location": "L61",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_model_class_ai1wm_notification_ai1wm_notification_error",
-      "community": 392,
-      "community_name": "Ai1wm_Notification",
+      "community": 50,
+      "community_name": "Ai1wm_Backups",
       "norm_label": ".error()"
     },
     {
@@ -78900,8 +78900,8 @@
       "source_location": "L74",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_model_class_ai1wm_status_ai1wm_status_log",
-      "community": 392,
-      "community_name": "Ai1wm_Notification",
+      "community": 50,
+      "community_name": "Ai1wm_Backups",
       "norm_label": ".log()"
     },
     {
@@ -79109,8 +79109,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_model_export_class_ai1wm_export_compatibility",
-      "community": 131,
-      "community_name": "Ai1wm_Compatibility",
+      "community": 354,
+      "community_name": "Ai1wm_Status",
       "norm_label": "class-ai1wm-export-compatibility.php"
     },
     {
@@ -79120,8 +79120,8 @@
       "source_location": "L32",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_model_export_class_ai1wm_export_compatibility_ai1wm_export_compatibility",
-      "community": 131,
-      "community_name": "Ai1wm_Compatibility",
+      "community": 354,
+      "community_name": "Ai1wm_Status",
       "norm_label": "ai1wm_export_compatibility"
     },
     {
@@ -79131,8 +79131,8 @@
       "source_location": "L34",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_model_export_class_ai1wm_export_compatibility_ai1wm_export_compatibility_execute",
-      "community": 131,
-      "community_name": "Ai1wm_Compatibility",
+      "community": 354,
+      "community_name": "Ai1wm_Status",
       "norm_label": ".execute()"
     },
     {
@@ -79142,8 +79142,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_model_export_class_ai1wm_export_config_file",
-      "community": 354,
-      "community_name": "Ai1wm_Status",
+      "community": 65,
+      "community_name": "ai1wm_open",
       "norm_label": "class-ai1wm-export-config-file.php"
     },
     {
@@ -79153,8 +79153,8 @@
       "source_location": "L32",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_model_export_class_ai1wm_export_config_file_ai1wm_export_config_file",
-      "community": 354,
-      "community_name": "Ai1wm_Status",
+      "community": 65,
+      "community_name": "ai1wm_open",
       "norm_label": "ai1wm_export_config_file"
     },
     {
@@ -79164,8 +79164,8 @@
       "source_location": "L34",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_model_export_class_ai1wm_export_config_file_ai1wm_export_config_file_execute",
-      "community": 354,
-      "community_name": "Ai1wm_Status",
+      "community": 65,
+      "community_name": "ai1wm_open",
       "norm_label": ".execute()"
     },
     {
@@ -79208,8 +79208,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_model_export_class_ai1wm_export_content",
-      "community": 354,
-      "community_name": "Ai1wm_Status",
+      "community": 65,
+      "community_name": "ai1wm_open",
       "norm_label": "class-ai1wm-export-content.php"
     },
     {
@@ -79219,8 +79219,8 @@
       "source_location": "L32",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_model_export_class_ai1wm_export_content_ai1wm_export_content",
-      "community": 354,
-      "community_name": "Ai1wm_Status",
+      "community": 65,
+      "community_name": "ai1wm_open",
       "norm_label": "ai1wm_export_content"
     },
     {
@@ -79230,8 +79230,8 @@
       "source_location": "L34",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_model_export_class_ai1wm_export_content_ai1wm_export_content_execute",
-      "community": 354,
-      "community_name": "Ai1wm_Status",
+      "community": 65,
+      "community_name": "ai1wm_open",
       "norm_label": ".execute()"
     },
     {
@@ -79307,8 +79307,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_model_export_class_ai1wm_export_download",
-      "community": 12,
-      "community_name": "all-in-one-wp-migration/functions.php",
+      "community": 316,
+      "community_name": ".execute",
       "norm_label": "class-ai1wm-export-download.php"
     },
     {
@@ -79318,8 +79318,8 @@
       "source_location": "L32",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_model_export_class_ai1wm_export_download_ai1wm_export_download",
-      "community": 12,
-      "community_name": "all-in-one-wp-migration/functions.php",
+      "community": 316,
+      "community_name": ".execute",
       "norm_label": "ai1wm_export_download"
     },
     {
@@ -79329,8 +79329,8 @@
       "source_location": "L34",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_model_export_class_ai1wm_export_download_ai1wm_export_download_execute",
-      "community": 12,
-      "community_name": "all-in-one-wp-migration/functions.php",
+      "community": 316,
+      "community_name": ".execute",
       "norm_label": ".execute()"
     },
     {
@@ -79340,8 +79340,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_model_export_class_ai1wm_export_enumerate_content",
-      "community": 354,
-      "community_name": "Ai1wm_Status",
+      "community": 12,
+      "community_name": "all-in-one-wp-migration/functions.php",
       "norm_label": "class-ai1wm-export-enumerate-content.php"
     },
     {
@@ -79351,8 +79351,8 @@
       "source_location": "L32",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_model_export_class_ai1wm_export_enumerate_content_ai1wm_export_enumerate_content",
-      "community": 354,
-      "community_name": "Ai1wm_Status",
+      "community": 12,
+      "community_name": "all-in-one-wp-migration/functions.php",
       "norm_label": "ai1wm_export_enumerate_content"
     },
     {
@@ -79362,8 +79362,8 @@
       "source_location": "L34",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_model_export_class_ai1wm_export_enumerate_content_ai1wm_export_enumerate_content_execute",
-      "community": 354,
-      "community_name": "Ai1wm_Status",
+      "community": 12,
+      "community_name": "all-in-one-wp-migration/functions.php",
       "norm_label": ".execute()"
     },
     {
@@ -79373,8 +79373,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_model_export_class_ai1wm_export_enumerate_media",
-      "community": 354,
-      "community_name": "Ai1wm_Status",
+      "community": 719,
+      "community_name": ".execute",
       "norm_label": "class-ai1wm-export-enumerate-media.php"
     },
     {
@@ -79384,8 +79384,8 @@
       "source_location": "L32",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_model_export_class_ai1wm_export_enumerate_media_ai1wm_export_enumerate_media",
-      "community": 354,
-      "community_name": "Ai1wm_Status",
+      "community": 719,
+      "community_name": ".execute",
       "norm_label": "ai1wm_export_enumerate_media"
     },
     {
@@ -79395,8 +79395,8 @@
       "source_location": "L34",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_model_export_class_ai1wm_export_enumerate_media_ai1wm_export_enumerate_media_execute",
-      "community": 354,
-      "community_name": "Ai1wm_Status",
+      "community": 719,
+      "community_name": ".execute",
       "norm_label": ".execute()"
     },
     {
@@ -79406,8 +79406,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_model_export_class_ai1wm_export_enumerate_plugins",
-      "community": 354,
-      "community_name": "Ai1wm_Status",
+      "community": 12,
+      "community_name": "all-in-one-wp-migration/functions.php",
       "norm_label": "class-ai1wm-export-enumerate-plugins.php"
     },
     {
@@ -79417,8 +79417,8 @@
       "source_location": "L32",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_model_export_class_ai1wm_export_enumerate_plugins_ai1wm_export_enumerate_plugins",
-      "community": 354,
-      "community_name": "Ai1wm_Status",
+      "community": 12,
+      "community_name": "all-in-one-wp-migration/functions.php",
       "norm_label": "ai1wm_export_enumerate_plugins"
     },
     {
@@ -79428,8 +79428,8 @@
       "source_location": "L34",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_model_export_class_ai1wm_export_enumerate_plugins_ai1wm_export_enumerate_plugins_execute",
-      "community": 354,
-      "community_name": "Ai1wm_Status",
+      "community": 12,
+      "community_name": "all-in-one-wp-migration/functions.php",
       "norm_label": ".execute()"
     },
     {
@@ -79439,8 +79439,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_model_export_class_ai1wm_export_enumerate_tables",
-      "community": 72,
-      "community_name": ".execute",
+      "community": 12,
+      "community_name": "all-in-one-wp-migration/functions.php",
       "norm_label": "class-ai1wm-export-enumerate-tables.php"
     },
     {
@@ -79450,8 +79450,8 @@
       "source_location": "L32",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_model_export_class_ai1wm_export_enumerate_tables_ai1wm_export_enumerate_tables",
-      "community": 72,
-      "community_name": ".execute",
+      "community": 12,
+      "community_name": "all-in-one-wp-migration/functions.php",
       "norm_label": "ai1wm_export_enumerate_tables"
     },
     {
@@ -79461,8 +79461,8 @@
       "source_location": "L34",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_model_export_class_ai1wm_export_enumerate_tables_ai1wm_export_enumerate_tables_execute",
-      "community": 72,
-      "community_name": ".execute",
+      "community": 12,
+      "community_name": "all-in-one-wp-migration/functions.php",
       "norm_label": ".execute()"
     },
     {
@@ -79505,8 +79505,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_model_export_class_ai1wm_export_init",
-      "community": 1248,
-      "community_name": ".execute",
+      "community": 354,
+      "community_name": "Ai1wm_Status",
       "norm_label": "class-ai1wm-export-init.php"
     },
     {
@@ -79516,8 +79516,8 @@
       "source_location": "L32",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_model_export_class_ai1wm_export_init_ai1wm_export_init",
-      "community": 1248,
-      "community_name": ".execute",
+      "community": 354,
+      "community_name": "Ai1wm_Status",
       "norm_label": "ai1wm_export_init"
     },
     {
@@ -79527,8 +79527,8 @@
       "source_location": "L34",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_model_export_class_ai1wm_export_init_ai1wm_export_init_execute",
-      "community": 1248,
-      "community_name": ".execute",
+      "community": 354,
+      "community_name": "Ai1wm_Status",
       "norm_label": ".execute()"
     },
     {
@@ -79538,8 +79538,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_model_export_class_ai1wm_export_media",
-      "community": 354,
-      "community_name": "Ai1wm_Status",
+      "community": 65,
+      "community_name": "ai1wm_open",
       "norm_label": "class-ai1wm-export-media.php"
     },
     {
@@ -79549,8 +79549,8 @@
       "source_location": "L32",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_model_export_class_ai1wm_export_media_ai1wm_export_media",
-      "community": 354,
-      "community_name": "Ai1wm_Status",
+      "community": 65,
+      "community_name": "ai1wm_open",
       "norm_label": "ai1wm_export_media"
     },
     {
@@ -79560,8 +79560,8 @@
       "source_location": "L34",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_model_export_class_ai1wm_export_media_ai1wm_export_media_execute",
-      "community": 354,
-      "community_name": "Ai1wm_Status",
+      "community": 65,
+      "community_name": "ai1wm_open",
       "norm_label": ".execute()"
     },
     {
@@ -79571,8 +79571,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_model_export_class_ai1wm_export_plugins",
-      "community": 354,
-      "community_name": "Ai1wm_Status",
+      "community": 65,
+      "community_name": "ai1wm_open",
       "norm_label": "class-ai1wm-export-plugins.php"
     },
     {
@@ -79582,8 +79582,8 @@
       "source_location": "L32",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_model_export_class_ai1wm_export_plugins_ai1wm_export_plugins",
-      "community": 354,
-      "community_name": "Ai1wm_Status",
+      "community": 65,
+      "community_name": "ai1wm_open",
       "norm_label": "ai1wm_export_plugins"
     },
     {
@@ -79593,8 +79593,8 @@
       "source_location": "L34",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_model_export_class_ai1wm_export_plugins_ai1wm_export_plugins_execute",
-      "community": 354,
-      "community_name": "Ai1wm_Status",
+      "community": 65,
+      "community_name": "ai1wm_open",
       "norm_label": ".execute()"
     },
     {
@@ -79604,8 +79604,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_model_export_class_ai1wm_export_themes",
-      "community": 354,
-      "community_name": "Ai1wm_Status",
+      "community": 65,
+      "community_name": "ai1wm_open",
       "norm_label": "class-ai1wm-export-themes.php"
     },
     {
@@ -79615,8 +79615,8 @@
       "source_location": "L32",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_model_export_class_ai1wm_export_themes_ai1wm_export_themes",
-      "community": 354,
-      "community_name": "Ai1wm_Status",
+      "community": 65,
+      "community_name": "ai1wm_open",
       "norm_label": "ai1wm_export_themes"
     },
     {
@@ -79626,8 +79626,8 @@
       "source_location": "L34",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_model_export_class_ai1wm_export_themes_ai1wm_export_themes_execute",
-      "community": 354,
-      "community_name": "Ai1wm_Status",
+      "community": 65,
+      "community_name": "ai1wm_open",
       "norm_label": ".execute()"
     },
     {
@@ -79637,8 +79637,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_model_import_class_ai1wm_import_blogs",
-      "community": 65,
-      "community_name": "ai1wm_open",
+      "community": 12,
+      "community_name": "all-in-one-wp-migration/functions.php",
       "norm_label": "class-ai1wm-import-blogs.php"
     },
     {
@@ -79648,8 +79648,8 @@
       "source_location": "L32",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_model_import_class_ai1wm_import_blogs_ai1wm_import_blogs",
-      "community": 65,
-      "community_name": "ai1wm_open",
+      "community": 12,
+      "community_name": "all-in-one-wp-migration/functions.php",
       "norm_label": "ai1wm_import_blogs"
     },
     {
@@ -79659,8 +79659,8 @@
       "source_location": "L34",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_model_import_class_ai1wm_import_blogs_ai1wm_import_blogs_execute",
-      "community": 65,
-      "community_name": "ai1wm_open",
+      "community": 12,
+      "community_name": "all-in-one-wp-migration/functions.php",
       "norm_label": ".execute()"
     },
     {
@@ -79802,8 +79802,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_model_import_class_ai1wm_import_compatibility",
-      "community": 131,
-      "community_name": "Ai1wm_Compatibility",
+      "community": 354,
+      "community_name": "Ai1wm_Status",
       "norm_label": "class-ai1wm-import-compatibility.php"
     },
     {
@@ -79813,8 +79813,8 @@
       "source_location": "L32",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_model_import_class_ai1wm_import_compatibility_ai1wm_import_compatibility",
-      "community": 131,
-      "community_name": "Ai1wm_Compatibility",
+      "community": 354,
+      "community_name": "Ai1wm_Status",
       "norm_label": "ai1wm_import_compatibility"
     },
     {
@@ -79824,8 +79824,8 @@
       "source_location": "L34",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_model_import_class_ai1wm_import_compatibility_ai1wm_import_compatibility_execute",
-      "community": 131,
-      "community_name": "Ai1wm_Compatibility",
+      "community": 354,
+      "community_name": "Ai1wm_Status",
       "norm_label": ".execute()"
     },
     {
@@ -80066,8 +80066,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_model_import_class_ai1wm_import_options",
-      "community": 72,
-      "community_name": ".execute",
+      "community": 354,
+      "community_name": "Ai1wm_Status",
       "norm_label": "class-ai1wm-import-options.php"
     },
     {
@@ -80077,8 +80077,8 @@
       "source_location": "L32",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_model_import_class_ai1wm_import_options_ai1wm_import_options",
-      "community": 72,
-      "community_name": ".execute",
+      "community": 354,
+      "community_name": "Ai1wm_Status",
       "norm_label": "ai1wm_import_options"
     },
     {
@@ -80088,8 +80088,8 @@
       "source_location": "L34",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_model_import_class_ai1wm_import_options_ai1wm_import_options_execute",
-      "community": 72,
-      "community_name": ".execute",
+      "community": 354,
+      "community_name": "Ai1wm_Status",
       "norm_label": ".execute()"
     },
     {
@@ -80132,8 +80132,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_model_import_class_ai1wm_import_upload",
-      "community": 50,
-      "community_name": "Ai1wm_Backups",
+      "community": 65,
+      "community_name": "ai1wm_open",
       "norm_label": "class-ai1wm-import-upload.php"
     },
     {
@@ -80143,8 +80143,8 @@
       "source_location": "L32",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_model_import_class_ai1wm_import_upload_ai1wm_import_upload",
-      "community": 50,
-      "community_name": "Ai1wm_Backups",
+      "community": 65,
+      "community_name": "ai1wm_open",
       "norm_label": "ai1wm_import_upload"
     },
     {
@@ -80154,8 +80154,8 @@
       "source_location": "L34",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_model_import_class_ai1wm_import_upload_ai1wm_import_upload_execute",
-      "community": 50,
-      "community_name": "Ai1wm_Backups",
+      "community": 65,
+      "community_name": "ai1wm_open",
       "norm_label": ".execute()"
     },
     {
@@ -80198,8 +80198,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_model_import_class_ai1wm_import_validate",
-      "community": 65,
-      "community_name": "ai1wm_open",
+      "community": 50,
+      "community_name": "Ai1wm_Backups",
       "norm_label": "class-ai1wm-import-validate.php"
     },
     {
@@ -80209,8 +80209,8 @@
       "source_location": "L32",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_model_import_class_ai1wm_import_validate_ai1wm_import_validate",
-      "community": 65,
-      "community_name": "ai1wm_open",
+      "community": 50,
+      "community_name": "Ai1wm_Backups",
       "norm_label": "ai1wm_import_validate"
     },
     {
@@ -80220,8 +80220,8 @@
       "source_location": "L34",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_model_import_class_ai1wm_import_validate_ai1wm_import_validate_execute",
-      "community": 65,
-      "community_name": "ai1wm_open",
+      "community": 50,
+      "community_name": "Ai1wm_Backups",
       "norm_label": ".execute()"
     },
     {
@@ -80342,7 +80342,7 @@
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_view_assets_javascript_backups_min_ie",
       "community": 31,
-      "community_name": "ie",
+      "community_name": "Je",
       "norm_label": "ie()"
     },
     {
@@ -80353,7 +80353,7 @@
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_view_assets_javascript_backups_min_ae",
       "community": 31,
-      "community_name": "ie",
+      "community_name": "Je",
       "norm_label": "ae()"
     },
     {
@@ -80375,7 +80375,7 @@
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_view_assets_javascript_backups_min_me",
       "community": 31,
-      "community_name": "ie",
+      "community_name": "Je",
       "norm_label": "me"
     },
     {
@@ -80386,7 +80386,7 @@
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_view_assets_javascript_backups_min_me_constructor",
       "community": 31,
-      "community_name": "ie",
+      "community_name": "Je",
       "norm_label": ".constructor()"
     },
     {
@@ -80397,7 +80397,7 @@
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_view_assets_javascript_backups_min_me_active",
       "community": 31,
-      "community_name": "ie",
+      "community_name": "Je",
       "norm_label": ".active()"
     },
     {
@@ -80408,7 +80408,7 @@
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_view_assets_javascript_backups_min_me_pause",
       "community": 31,
-      "community_name": "ie",
+      "community_name": "Je",
       "norm_label": ".pause()"
     },
     {
@@ -80419,7 +80419,7 @@
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_view_assets_javascript_backups_min_me_resume",
       "community": 31,
-      "community_name": "ie",
+      "community_name": "Je",
       "norm_label": ".resume()"
     },
     {
@@ -80430,7 +80430,7 @@
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_view_assets_javascript_backups_min_me_run",
       "community": 31,
-      "community_name": "ie",
+      "community_name": "Je",
       "norm_label": ".run()"
     },
     {
@@ -80441,7 +80441,7 @@
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_view_assets_javascript_backups_min_me_on",
       "community": 31,
-      "community_name": "ie",
+      "community_name": "Je",
       "norm_label": ".on()"
     },
     {
@@ -80452,7 +80452,7 @@
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_view_assets_javascript_backups_min_me_off",
       "community": 31,
-      "community_name": "ie",
+      "community_name": "Je",
       "norm_label": ".off()"
     },
     {
@@ -80463,7 +80463,7 @@
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_view_assets_javascript_backups_min_me_stop",
       "community": 31,
-      "community_name": "ie",
+      "community_name": "Je",
       "norm_label": ".stop()"
     },
     {
@@ -80473,8 +80473,8 @@
       "source_location": "L2",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_view_assets_javascript_backups_min_ge",
-      "community": 160,
-      "community_name": "get",
+      "community": 31,
+      "community_name": "Je",
       "norm_label": "ge()"
     },
     {
@@ -80507,7 +80507,7 @@
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_view_assets_javascript_backups_min_e",
       "community": 31,
-      "community_name": "ie",
+      "community_name": "Je",
       "norm_label": "_e"
     },
     {
@@ -80518,7 +80518,7 @@
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_view_assets_javascript_backups_min_e_constructor",
       "community": 31,
-      "community_name": "ie",
+      "community_name": "Je",
       "norm_label": ".constructor()"
     },
     {
@@ -80529,7 +80529,7 @@
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_view_assets_javascript_backups_min_e_pause",
       "community": 31,
-      "community_name": "ie",
+      "community_name": "Je",
       "norm_label": ".pause()"
     },
     {
@@ -80540,7 +80540,7 @@
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_view_assets_javascript_backups_min_e_resume",
       "community": 31,
-      "community_name": "ie",
+      "community_name": "Je",
       "norm_label": ".resume()"
     },
     {
@@ -80551,7 +80551,7 @@
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_view_assets_javascript_backups_min_e_notify",
       "community": 31,
-      "community_name": "ie",
+      "community_name": "Je",
       "norm_label": ".notify()"
     },
     {
@@ -80562,7 +80562,7 @@
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_view_assets_javascript_backups_min_e_run",
       "community": 31,
-      "community_name": "ie",
+      "community_name": "Je",
       "norm_label": ".run()"
     },
     {
@@ -80573,7 +80573,7 @@
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_view_assets_javascript_backups_min_e_stop",
       "community": 31,
-      "community_name": "ie",
+      "community_name": "Je",
       "norm_label": ".stop()"
     },
     {
@@ -80584,7 +80584,7 @@
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_view_assets_javascript_backups_min_e_trigger",
       "community": 31,
-      "community_name": "ie",
+      "community_name": "Je",
       "norm_label": ".trigger()"
     },
     {
@@ -80595,7 +80595,7 @@
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_view_assets_javascript_backups_min_e_runifdirty",
       "community": 31,
-      "community_name": "ie",
+      "community_name": "Je",
       "norm_label": ".runifdirty()"
     },
     {
@@ -80606,7 +80606,7 @@
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_view_assets_javascript_backups_min_e_dirty",
       "community": 31,
-      "community_name": "ie",
+      "community_name": "Je",
       "norm_label": ".dirty()"
     },
     {
@@ -80617,7 +80617,7 @@
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_view_assets_javascript_backups_min_xe",
       "community": 31,
-      "community_name": "ie",
+      "community_name": "Je",
       "norm_label": "xe()"
     },
     {
@@ -80639,7 +80639,7 @@
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_view_assets_javascript_backups_min_te",
       "community": 31,
-      "community_name": "ie",
+      "community_name": "Je",
       "norm_label": "te()"
     },
     {
@@ -80650,7 +80650,7 @@
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_view_assets_javascript_backups_min_ee",
       "community": 31,
-      "community_name": "ie",
+      "community_name": "Je",
       "norm_label": "ee()"
     },
     {
@@ -80661,7 +80661,7 @@
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_view_assets_javascript_backups_min_ne",
       "community": 31,
-      "community_name": "ie",
+      "community_name": "Je",
       "norm_label": "ne()"
     },
     {
@@ -80672,7 +80672,7 @@
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_view_assets_javascript_backups_min_oe",
       "community": 31,
-      "community_name": "ie",
+      "community_name": "Je",
       "norm_label": "oe()"
     },
     {
@@ -80683,7 +80683,7 @@
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_view_assets_javascript_backups_min_pe",
       "community": 31,
-      "community_name": "ie",
+      "community_name": "Je",
       "norm_label": "pe()"
     },
     {
@@ -80716,7 +80716,7 @@
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_view_assets_javascript_backups_min_ue",
       "community": 31,
-      "community_name": "ie",
+      "community_name": "Je",
       "norm_label": "ue()"
     },
     {
@@ -80759,8 +80759,8 @@
       "source_location": "L2",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_view_assets_javascript_backups_min_je",
-      "community": 160,
-      "community_name": "get",
+      "community": 31,
+      "community_name": "Je",
       "norm_label": "je()"
     },
     {
@@ -80848,7 +80848,7 @@
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_view_assets_javascript_backups_min_findindex",
       "community": 31,
-      "community_name": "ie",
+      "community_name": "Je",
       "norm_label": "findindex()"
     },
     {
@@ -80891,8 +80891,8 @@
       "source_location": "L2",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_view_assets_javascript_backups_min_includes",
-      "community": 17,
-      "community_name": "o",
+      "community": 71,
+      "community_name": "yp",
       "norm_label": "includes()"
     },
     {
@@ -80902,8 +80902,8 @@
       "source_location": "L2",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_view_assets_javascript_backups_min_indexof",
-      "community": 160,
-      "community_name": "get",
+      "community": 71,
+      "community_name": "yp",
       "norm_label": "indexof()"
     },
     {
@@ -80924,8 +80924,8 @@
       "source_location": "L2",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_view_assets_javascript_backups_min_lastindexof",
-      "community": 160,
-      "community_name": "get",
+      "community": 71,
+      "community_name": "yp",
       "norm_label": "lastindexof()"
     },
     {
@@ -80980,7 +80980,7 @@
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_view_assets_javascript_backups_min_reduceright",
       "community": 160,
-      "community_name": "get",
+      "community_name": "nt",
       "norm_label": "reduceright()"
     },
     {
@@ -81101,7 +81101,7 @@
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_view_assets_javascript_backups_min_nt",
       "community": 160,
-      "community_name": "get",
+      "community_name": "nt",
       "norm_label": "nt()"
     },
     {
@@ -81111,8 +81111,8 @@
       "source_location": "L2",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_view_assets_javascript_backups_min_ot",
-      "community": 160,
-      "community_name": "get",
+      "community": 71,
+      "community_name": "yp",
       "norm_label": "ot()"
     },
     {
@@ -81133,8 +81133,8 @@
       "source_location": "L2",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_view_assets_javascript_backups_min_at",
-      "community": 160,
-      "community_name": "get",
+      "community": 31,
+      "community_name": "Je",
       "norm_label": "at()"
     },
     {
@@ -81145,7 +81145,7 @@
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_view_assets_javascript_backups_min_lt",
       "community": 160,
-      "community_name": "get",
+      "community_name": "nt",
       "norm_label": "lt"
     },
     {
@@ -81156,7 +81156,7 @@
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_view_assets_javascript_backups_min_lt_constructor",
       "community": 160,
-      "community_name": "get",
+      "community_name": "nt",
       "norm_label": ".constructor()"
     },
     {
@@ -81167,7 +81167,7 @@
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_view_assets_javascript_backups_min_lt_get",
       "community": 160,
-      "community_name": "get",
+      "community_name": "nt",
       "norm_label": ".get()"
     },
     {
@@ -81177,8 +81177,8 @@
       "source_location": "L2",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_view_assets_javascript_backups_min_ct",
-      "community": 160,
-      "community_name": "get",
+      "community": 31,
+      "community_name": "Je",
       "norm_label": "ct"
     },
     {
@@ -81188,8 +81188,8 @@
       "source_location": "L2",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_view_assets_javascript_backups_min_ct_constructor",
-      "community": 160,
-      "community_name": "get",
+      "community": 31,
+      "community_name": "Je",
       "norm_label": ".constructor()"
     },
     {
@@ -81200,7 +81200,7 @@
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_view_assets_javascript_backups_min_ct_set",
       "community": 160,
-      "community_name": "get",
+      "community_name": "nt",
       "norm_label": ".set()"
     },
     {
@@ -81210,8 +81210,8 @@
       "source_location": "L2",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_view_assets_javascript_backups_min_ct_deleteproperty",
-      "community": 160,
-      "community_name": "get",
+      "community": 31,
+      "community_name": "Je",
       "norm_label": ".deleteproperty()"
     },
     {
@@ -81221,8 +81221,8 @@
       "source_location": "L2",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_view_assets_javascript_backups_min_ct_has",
-      "community": 160,
-      "community_name": "get",
+      "community": 31,
+      "community_name": "Je",
       "norm_label": ".has()"
     },
     {
@@ -81232,8 +81232,8 @@
       "source_location": "L2",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_view_assets_javascript_backups_min_ct_ownkeys",
-      "community": 160,
-      "community_name": "get",
+      "community": 31,
+      "community_name": "Je",
       "norm_label": ".ownkeys()"
     },
     {
@@ -81321,7 +81321,7 @@
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_view_assets_javascript_backups_min_et",
       "community": 160,
-      "community_name": "get",
+      "community_name": "nt",
       "norm_label": "et()"
     },
     {
@@ -81332,7 +81332,7 @@
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_view_assets_javascript_backups_min_it",
       "community": 160,
-      "community_name": "get",
+      "community_name": "nt",
       "norm_label": "it()"
     },
     {
@@ -81343,7 +81343,7 @@
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_view_assets_javascript_backups_min_rt",
       "community": 160,
-      "community_name": "get",
+      "community_name": "nt",
       "norm_label": "rt()"
     },
     {
@@ -81354,7 +81354,7 @@
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_view_assets_javascript_backups_min_mt",
       "community": 160,
-      "community_name": "get",
+      "community_name": "nt",
       "norm_label": "mt()"
     },
     {
@@ -81365,7 +81365,7 @@
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_view_assets_javascript_backups_min_pt",
       "community": 160,
-      "community_name": "get",
+      "community_name": "nt",
       "norm_label": "pt()"
     },
     {
@@ -81376,7 +81376,7 @@
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_view_assets_javascript_backups_min_jt",
       "community": 160,
-      "community_name": "get",
+      "community_name": "nt",
       "norm_label": "jt()"
     },
     {
@@ -81420,7 +81420,7 @@
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_view_assets_javascript_backups_min_qt",
       "community": 160,
-      "community_name": "get",
+      "community_name": "nt",
       "norm_label": "qt"
     },
     {
@@ -81431,7 +81431,7 @@
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_view_assets_javascript_backups_min_qt_constructor",
       "community": 160,
-      "community_name": "get",
+      "community_name": "nt",
       "norm_label": ".constructor()"
     },
     {
@@ -81442,7 +81442,7 @@
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_view_assets_javascript_backups_min_qt_value",
       "community": 160,
-      "community_name": "get",
+      "community_name": "nt",
       "norm_label": ".value()"
     },
     {
@@ -81474,8 +81474,8 @@
       "source_location": "L2",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_view_assets_javascript_backups_min_xt",
-      "community": 4,
-      "community_name": "backups.min.js",
+      "community": 1236,
+      "community_name": "Xt",
       "norm_label": "xt"
     },
     {
@@ -81485,8 +81485,8 @@
       "source_location": "L2",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_view_assets_javascript_backups_min_xt_constructor",
-      "community": 4,
-      "community_name": "backups.min.js",
+      "community": 1236,
+      "community_name": "Xt",
       "norm_label": ".constructor()"
     },
     {
@@ -81496,8 +81496,8 @@
       "source_location": "L2",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_view_assets_javascript_backups_min_xt_value",
-      "community": 4,
-      "community_name": "backups.min.js",
+      "community": 1236,
+      "community_name": "Xt",
       "norm_label": ".value()"
     },
     {
@@ -81507,8 +81507,8 @@
       "source_location": "L2",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_view_assets_javascript_backups_min_en",
-      "community": 160,
-      "community_name": "get",
+      "community": 131,
+      "community_name": ".dep",
       "norm_label": "en"
     },
     {
@@ -81518,8 +81518,8 @@
       "source_location": "L2",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_view_assets_javascript_backups_min_en_constructor",
-      "community": 160,
-      "community_name": "get",
+      "community": 131,
+      "community_name": ".dep",
       "norm_label": ".constructor()"
     },
     {
@@ -81529,8 +81529,8 @@
       "source_location": "L2",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_view_assets_javascript_backups_min_en_value",
-      "community": 160,
-      "community_name": "get",
+      "community": 131,
+      "community_name": ".dep",
       "norm_label": ".value()"
     },
     {
@@ -81540,8 +81540,8 @@
       "source_location": "L2",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_view_assets_javascript_backups_min_en_dep",
-      "community": 160,
-      "community_name": "get",
+      "community": 131,
+      "community_name": ".dep",
       "norm_label": ".dep()"
     },
     {
@@ -81551,8 +81551,8 @@
       "source_location": "L2",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_view_assets_javascript_backups_min_tn",
-      "community": 1236,
-      "community_name": "tn",
+      "community": 4,
+      "community_name": "backups.min.js",
       "norm_label": "tn"
     },
     {
@@ -81562,8 +81562,8 @@
       "source_location": "L2",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_view_assets_javascript_backups_min_tn_constructor",
-      "community": 1236,
-      "community_name": "tn",
+      "community": 4,
+      "community_name": "backups.min.js",
       "norm_label": ".constructor()"
     },
     {
@@ -81573,8 +81573,8 @@
       "source_location": "L2",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_view_assets_javascript_backups_min_tn_value",
-      "community": 1236,
-      "community_name": "tn",
+      "community": 4,
+      "community_name": "backups.min.js",
       "norm_label": ".value()"
     },
     {
@@ -81607,7 +81607,7 @@
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_view_assets_javascript_backups_min_sn",
       "community": 31,
-      "community_name": "ie",
+      "community_name": "Je",
       "norm_label": "sn"
     },
     {
@@ -81618,7 +81618,7 @@
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_view_assets_javascript_backups_min_sn_constructor",
       "community": 31,
-      "community_name": "ie",
+      "community_name": "Je",
       "norm_label": ".constructor()"
     },
     {
@@ -81629,7 +81629,7 @@
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_view_assets_javascript_backups_min_sn_notify",
       "community": 31,
-      "community_name": "ie",
+      "community_name": "Je",
       "norm_label": ".notify()"
     },
     {
@@ -81640,7 +81640,7 @@
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_view_assets_javascript_backups_min_sn_value",
       "community": 31,
-      "community_name": "ie",
+      "community_name": "Je",
       "norm_label": ".value()"
     },
     {
@@ -81661,8 +81661,8 @@
       "source_location": "L2",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_view_assets_javascript_backups_min_dn",
-      "community": 160,
-      "community_name": "get",
+      "community": 17,
+      "community_name": "o",
       "norm_label": "dn()"
     },
     {
@@ -81771,8 +81771,8 @@
       "source_location": "L2",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_view_assets_javascript_backups_min_qn",
-      "community": 63,
-      "community_name": "concat",
+      "community": 17,
+      "community_name": "o",
       "norm_label": "qn()"
     },
     {
@@ -81903,8 +81903,8 @@
       "source_location": "L2",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_view_assets_javascript_backups_min_go",
-      "community": 4,
-      "community_name": "backups.min.js",
+      "community": 71,
+      "community_name": "yp",
       "norm_label": "go()"
     },
     {
@@ -82134,8 +82134,8 @@
       "source_location": "L2",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_view_assets_javascript_backups_min_ws",
-      "community": 17,
-      "community_name": "o",
+      "community": 63,
+      "community_name": "concat",
       "norm_label": "ws()"
     },
     {
@@ -82146,7 +82146,7 @@
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_view_assets_javascript_backups_min_ss",
       "community": 160,
-      "community_name": "get",
+      "community_name": "nt",
       "norm_label": "ss()"
     },
     {
@@ -82200,8 +82200,8 @@
       "source_location": "L2",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_view_assets_javascript_backups_min_get",
-      "community": 160,
-      "community_name": "get",
+      "community": 17,
+      "community_name": "o",
       "norm_label": "get()"
     },
     {
@@ -82222,8 +82222,8 @@
       "source_location": "L2",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_view_assets_javascript_backups_min_has",
-      "community": 160,
-      "community_name": "get",
+      "community": 31,
+      "community_name": "Je",
       "norm_label": "has()"
     },
     {
@@ -82409,8 +82409,8 @@
       "source_location": "L2",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_view_assets_javascript_backups_min_rr",
-      "community": 17,
-      "community_name": "o",
+      "community": 71,
+      "community_name": "yp",
       "norm_label": "rr()"
     },
     {
@@ -82420,8 +82420,8 @@
       "source_location": "L2",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_view_assets_javascript_backups_min_ar",
-      "community": 17,
-      "community_name": "o",
+      "community": 71,
+      "community_name": "yp",
       "norm_label": "ar()"
     },
     {
@@ -82585,8 +82585,8 @@
       "source_location": "L2",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_view_assets_javascript_backups_min_qr",
-      "community": 17,
-      "community_name": "o",
+      "community": 63,
+      "community_name": "concat",
       "norm_label": "qr()"
     },
     {
@@ -82607,8 +82607,8 @@
       "source_location": "L2",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_view_assets_javascript_backups_min_kr",
-      "community": 160,
-      "community_name": "get",
+      "community": 17,
+      "community_name": "o",
       "norm_label": "kr()"
     },
     {
@@ -82618,8 +82618,8 @@
       "source_location": "L2",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_view_assets_javascript_backups_min_xr",
-      "community": 160,
-      "community_name": "get",
+      "community": 17,
+      "community_name": "o",
       "norm_label": "xr()"
     },
     {
@@ -82739,8 +82739,8 @@
       "source_location": "L2",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_view_assets_javascript_backups_min_ki",
-      "community": 160,
-      "community_name": "get",
+      "community": 17,
+      "community_name": "o",
       "norm_label": "ki()"
     },
     {
@@ -82959,8 +82959,8 @@
       "source_location": "L2",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_view_assets_javascript_backups_min_ma",
-      "community": 160,
-      "community_name": "get",
+      "community": 63,
+      "community_name": "concat",
       "norm_label": "ma()"
     },
     {
@@ -83114,7 +83114,7 @@
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_view_assets_javascript_backups_min_mounted",
       "community": 31,
-      "community_name": "ie",
+      "community_name": "Je",
       "norm_label": "mounted()"
     },
     {
@@ -83125,7 +83125,7 @@
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_view_assets_javascript_backups_min_updated",
       "community": 31,
-      "community_name": "ie",
+      "community_name": "Je",
       "norm_label": "updated()"
     },
     {
@@ -83521,7 +83521,7 @@
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_view_assets_javascript_backups_min_l",
       "community": 31,
-      "community_name": "ie",
+      "community_name": "Je",
       "norm_label": "$l()"
     },
     {
@@ -83532,7 +83532,7 @@
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_view_assets_javascript_backups_min_created",
       "community": 31,
-      "community_name": "ie",
+      "community_name": "Je",
       "norm_label": "created()"
     },
     {
@@ -83543,7 +83543,7 @@
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_view_assets_javascript_backups_min_beforeupdate",
       "community": 31,
-      "community_name": "ie",
+      "community_name": "Je",
       "norm_label": "beforeupdate()"
     },
     {
@@ -83554,7 +83554,7 @@
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_view_assets_javascript_backups_min_zl",
       "community": 31,
-      "community_name": "ie",
+      "community_name": "Je",
       "norm_label": "zl()"
     },
     {
@@ -83565,7 +83565,7 @@
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_view_assets_javascript_backups_min_gl",
       "community": 31,
-      "community_name": "ie",
+      "community_name": "Je",
       "norm_label": "gl()"
     },
     {
@@ -83576,7 +83576,7 @@
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_view_assets_javascript_backups_min_ql",
       "community": 31,
-      "community_name": "ie",
+      "community_name": "Je",
       "norm_label": "ql()"
     },
     {
@@ -83587,7 +83587,7 @@
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_view_assets_javascript_backups_min_ec",
       "community": 31,
-      "community_name": "ie",
+      "community_name": "Je",
       "norm_label": "ec()"
     },
     {
@@ -83850,8 +83850,8 @@
       "source_location": "L2",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_view_assets_javascript_backups_min_ru",
-      "community": 160,
-      "community_name": "get",
+      "community": 17,
+      "community_name": "o",
       "norm_label": "ru()"
     },
     {
@@ -84763,8 +84763,8 @@
       "source_location": "L2",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_view_assets_javascript_backups_min_xp",
-      "community": 160,
-      "community_name": "get",
+      "community": 31,
+      "community_name": "Je",
       "norm_label": "xp()"
     },
     {
@@ -85170,8 +85170,8 @@
       "source_location": "L2",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_view_assets_javascript_backups_min_fd",
-      "community": 160,
-      "community_name": "get",
+      "community": 71,
+      "community_name": "yp",
       "norm_label": "fd()"
     },
     {
@@ -85181,8 +85181,8 @@
       "source_location": "L2",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_view_assets_javascript_backups_min_ud",
-      "community": 160,
-      "community_name": "get",
+      "community": 71,
+      "community_name": "yp",
       "norm_label": "ud()"
     },
     {
@@ -85192,8 +85192,8 @@
       "source_location": "L2",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_view_assets_javascript_backups_min_hd",
-      "community": 316,
-      "community_name": "Hd",
+      "community": 78,
+      "community_name": "gsap.min.js",
       "norm_label": "hd()"
     },
     {
@@ -85313,8 +85313,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_view_assets_javascript_export_min",
-      "community": 160,
-      "community_name": "get",
+      "community": 131,
+      "community_name": ".dep",
       "norm_label": "export.min.js"
     },
     {
@@ -85324,8 +85324,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_view_assets_javascript_export_min_e",
-      "community": 160,
-      "community_name": "get",
+      "community": 131,
+      "community_name": ".dep",
       "norm_label": "e()"
     },
     {
@@ -85335,8 +85335,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_view_assets_javascript_export_min_o",
-      "community": 160,
-      "community_name": "get",
+      "community": 131,
+      "community_name": ".dep",
       "norm_label": "o()"
     },
     {
@@ -85346,8 +85346,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_view_assets_javascript_export_min_n",
-      "community": 160,
-      "community_name": "get",
+      "community": 131,
+      "community_name": ".dep",
       "norm_label": "n()"
     },
     {
@@ -85357,8 +85357,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_view_assets_javascript_export_min_i",
-      "community": 160,
-      "community_name": "get",
+      "community": 131,
+      "community_name": ".dep",
       "norm_label": "i()"
     },
     {
@@ -85368,8 +85368,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "wp_content_plugins_all_in_one_wp_migration_lib_view_assets_javascript_export_min_a",
-      "community": 160,
-      "community_name": "get",
+      "community": 131,
+      "community_name": ".dep",
       "norm_label": "a()"
     },
     {
@@ -99987,8 +99987,8 @@
       "source_location": "L581",
       "_origin": "ast",
       "id": "contexto_completo_12_sistema_de_prompts_promptsview",
-      "community": 1305,
-      "community_name": "12. Sistema de Prompts (PromptsView)",
+      "community": 224,
+      "community_name": "AutomatizaTech \u2014 Contexto Completo del Proyecto",
       "norm_label": "12. sistema de prompts (promptsview)"
     },
     {
@@ -99998,8 +99998,8 @@
       "source_location": "L587",
       "_origin": "ast",
       "id": "contexto_completo_7_secciones_y_sus_campos",
-      "community": 1305,
-      "community_name": "12. Sistema de Prompts (PromptsView)",
+      "community": 224,
+      "community_name": "AutomatizaTech \u2014 Contexto Completo del Proyecto",
       "norm_label": "7 secciones y sus campos"
     },
     {
@@ -100009,8 +100009,8 @@
       "source_location": "L599",
       "_origin": "ast",
       "id": "contexto_completo_permisos",
-      "community": 1305,
-      "community_name": "12. Sistema de Prompts (PromptsView)",
+      "community": 224,
+      "community_name": "AutomatizaTech \u2014 Contexto Completo del Proyecto",
       "norm_label": "permisos"
     },
     {
@@ -100262,7 +100262,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "clientes_omnicliente_qa_qa_00_indice_entornos",
-      "community": 439,
+      "community": 594,
       "community_name": "OmniCliente/QA/QA-00-Indice-Entornos.md",
       "norm_label": "omnicliente/qa/qa-00-indice-entornos.md"
     },
@@ -100604,7 +100604,7 @@
       "_origin": "ast",
       "id": "clientes_omnicliente_qa_qa_04_bot_config_prompts",
       "community": 594,
-      "community_name": "QA-04 \u2014 Configuraci\u00f3n de Bots y Prompts",
+      "community_name": "OmniCliente/QA/QA-00-Indice-Entornos.md",
       "norm_label": "qa/qa-04-bot-config-prompts.md"
     },
     {
@@ -100615,7 +100615,7 @@
       "_origin": "ast",
       "id": "clientes_omnicliente_qa_qa_04_bot_config_prompts_qa_04_configuraci\u00f3n_de_bots_y_prompts",
       "community": 594,
-      "community_name": "QA-04 \u2014 Configuraci\u00f3n de Bots y Prompts",
+      "community_name": "OmniCliente/QA/QA-00-Indice-Entornos.md",
       "norm_label": "qa-04 \u2014 configuracion de bots y prompts"
     },
     {
@@ -100626,7 +100626,7 @@
       "_origin": "ast",
       "id": "clientes_omnicliente_qa_qa_04_bot_config_prompts_1_tab_configuraci\u00f3n_del_bot_botsview",
       "community": 594,
-      "community_name": "QA-04 \u2014 Configuraci\u00f3n de Bots y Prompts",
+      "community_name": "OmniCliente/QA/QA-00-Indice-Entornos.md",
       "norm_label": "1. tab \"configuracion del bot\" (botsview)"
     },
     {
@@ -100637,7 +100637,7 @@
       "_origin": "ast",
       "id": "clientes_omnicliente_qa_qa_04_bot_config_prompts_2_tab_prompts_promptsview",
       "community": 594,
-      "community_name": "QA-04 \u2014 Configuraci\u00f3n de Bots y Prompts",
+      "community_name": "OmniCliente/QA/QA-00-Indice-Entornos.md",
       "norm_label": "2. tab \"prompts\" (promptsview)"
     },
     {
@@ -100648,7 +100648,7 @@
       "_origin": "ast",
       "id": "clientes_omnicliente_qa_qa_04_bot_config_prompts_3_tab_vista_previa_prompt_promptpreviewpanel",
       "community": 594,
-      "community_name": "QA-04 \u2014 Configuraci\u00f3n de Bots y Prompts",
+      "community_name": "OmniCliente/QA/QA-00-Indice-Entornos.md",
       "norm_label": "3. tab \"vista previa prompt\" (promptpreviewpanel)"
     },
     {
@@ -100890,7 +100890,7 @@
       "_origin": "ast",
       "id": "clientes_omnicliente_qa_qa_08_auditoria",
       "community": 439,
-      "community_name": "OmniCliente/QA/QA-00-Indice-Entornos.md",
+      "community_name": "QA-08 \u2014 Auditor\u00eda",
       "norm_label": "qa/qa-08-auditoria.md"
     },
     {
@@ -100901,7 +100901,7 @@
       "_origin": "ast",
       "id": "clientes_omnicliente_qa_qa_08_auditoria_qa_08_auditor\u00eda",
       "community": 439,
-      "community_name": "OmniCliente/QA/QA-00-Indice-Entornos.md",
+      "community_name": "QA-08 \u2014 Auditor\u00eda",
       "norm_label": "qa-08 \u2014 auditoria"
     },
     {
@@ -100912,7 +100912,7 @@
       "_origin": "ast",
       "id": "clientes_omnicliente_qa_qa_08_auditoria_1_vista_de_auditor\u00eda",
       "community": 439,
-      "community_name": "OmniCliente/QA/QA-00-Indice-Entornos.md",
+      "community_name": "QA-08 \u2014 Auditor\u00eda",
       "norm_label": "1. vista de auditoria"
     },
     {
@@ -100923,7 +100923,7 @@
       "_origin": "ast",
       "id": "clientes_omnicliente_qa_qa_08_auditoria_2_detalle_expandible",
       "community": 439,
-      "community_name": "OmniCliente/QA/QA-00-Indice-Entornos.md",
+      "community_name": "QA-08 \u2014 Auditor\u00eda",
       "norm_label": "2. detalle expandible"
     },
     {
@@ -100934,7 +100934,7 @@
       "_origin": "ast",
       "id": "clientes_omnicliente_qa_qa_08_auditoria_3_filtros_y_paginaci\u00f3n",
       "community": 439,
-      "community_name": "OmniCliente/QA/QA-00-Indice-Entornos.md",
+      "community_name": "QA-08 \u2014 Auditor\u00eda",
       "norm_label": "3. filtros y paginacion"
     },
     {
@@ -101208,7 +101208,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "clientes_omnicliente_qa_qa_12_responsive_movil",
-      "community": 439,
+      "community": 594,
       "community_name": "OmniCliente/QA/QA-00-Indice-Entornos.md",
       "norm_label": "qa/qa-12-responsive-movil.md"
     },
@@ -126882,8 +126882,8 @@
       "source_location": "L400",
       "_origin": "ast",
       "id": "docs_guia_deploy_mobile_6_6_ajustes_espec\u00edficos_para_omnicliente",
-      "community": 1304,
-      "community_name": "6.6 Ajustes Espec\u00edficos para OmniCliente",
+      "community": 360,
+      "community_name": "6. Gu\u00eda Paso a Paso \u2014 Capacitor",
       "norm_label": "6.6 ajustes especificos para omnicliente"
     },
     {
@@ -126893,8 +126893,8 @@
       "source_location": "L402",
       "_origin": "ast",
       "id": "docs_guia_deploy_mobile_a_manejo_de_urls_api_js",
-      "community": 1304,
-      "community_name": "6.6 Ajustes Espec\u00edficos para OmniCliente",
+      "community": 360,
+      "community_name": "6. Gu\u00eda Paso a Paso \u2014 Capacitor",
       "norm_label": "a. manejo de urls (api.js)"
     },
     {
@@ -126904,8 +126904,8 @@
       "source_location": "L417",
       "_origin": "ast",
       "id": "docs_guia_deploy_mobile_b_statusbar_y_safearea_para_notch_island",
-      "community": 1304,
-      "community_name": "6.6 Ajustes Espec\u00edficos para OmniCliente",
+      "community": 360,
+      "community_name": "6. Gu\u00eda Paso a Paso \u2014 Capacitor",
       "norm_label": "b. statusbar y safearea (para notch/island)"
     },
     {
@@ -126915,8 +126915,8 @@
       "source_location": "L439",
       "_origin": "ast",
       "id": "docs_guia_deploy_mobile_c_deep_links",
-      "community": 1304,
-      "community_name": "6.6 Ajustes Espec\u00edficos para OmniCliente",
+      "community": 360,
+      "community_name": "6. Gu\u00eda Paso a Paso \u2014 Capacitor",
       "norm_label": "c. deep links"
     },
     {
@@ -126926,8 +126926,8 @@
       "source_location": "L450",
       "_origin": "ast",
       "id": "docs_guia_deploy_mobile_d_navegaci\u00f3n_back_button_android",
-      "community": 1304,
-      "community_name": "6.6 Ajustes Espec\u00edficos para OmniCliente",
+      "community": 360,
+      "community_name": "6. Gu\u00eda Paso a Paso \u2014 Capacitor",
       "norm_label": "d. navegacion (back button android)"
     },
     {
@@ -129137,8 +129137,8 @@
       "source_location": "L870",
       "_origin": "ast",
       "id": "docs_manual_usuario_mantenimiento_para_administradores",
-      "community": 719,
-      "community_name": "\ud83d\udd27 Mantenimiento para Administradores",
+      "community": 253,
+      "community_name": "PARTE 2: ADMINISTRADORES (BACK-END)",
       "norm_label": "\ud83d\udd27 mantenimiento para administradores"
     },
     {
@@ -129148,8 +129148,8 @@
       "source_location": "L872",
       "_origin": "ast",
       "id": "docs_manual_usuario_tareas_diarias",
-      "community": 719,
-      "community_name": "\ud83d\udd27 Mantenimiento para Administradores",
+      "community": 253,
+      "community_name": "PARTE 2: ADMINISTRADORES (BACK-END)",
       "norm_label": "tareas diarias"
     },
     {
@@ -129159,8 +129159,8 @@
       "source_location": "L887",
       "_origin": "ast",
       "id": "docs_manual_usuario_tareas_semanales",
-      "community": 719,
-      "community_name": "\ud83d\udd27 Mantenimiento para Administradores",
+      "community": 253,
+      "community_name": "PARTE 2: ADMINISTRADORES (BACK-END)",
       "norm_label": "tareas semanales"
     },
     {
@@ -129170,8 +129170,8 @@
       "source_location": "L909",
       "_origin": "ast",
       "id": "docs_manual_usuario_tareas_mensuales",
-      "community": 719,
-      "community_name": "\ud83d\udd27 Mantenimiento para Administradores",
+      "community": 253,
+      "community_name": "PARTE 2: ADMINISTRADORES (BACK-END)",
       "norm_label": "tareas mensuales"
     },
     {
@@ -142796,7 +142796,7 @@
       "label": "Configuraci\u00f3n fuera del repo",
       "file_type": "document",
       "source_file": "N8N/gt-baseball/README.md",
-      "source_location": "L76",
+      "source_location": "L82",
       "_origin": "ast",
       "id": "n8n_gt_baseball_readme_configuraci\u00f3n_fuera_del_repo",
       "community": 1300,
@@ -142807,7 +142807,7 @@
       "label": "Publicar y desplegar",
       "file_type": "document",
       "source_file": "N8N/gt-baseball/README.md",
-      "source_location": "L89",
+      "source_location": "L95",
       "_origin": "ast",
       "id": "n8n_gt_baseball_readme_publicar_y_desplegar",
       "community": 1300,
@@ -142818,7 +142818,7 @@
       "label": "Pruebas",
       "file_type": "document",
       "source_file": "N8N/gt-baseball/README.md",
-      "source_location": "L113",
+      "source_location": "L119",
       "_origin": "ast",
       "id": "n8n_gt_baseball_readme_pruebas",
       "community": 1300,
@@ -247250,7 +247250,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "N8N/gt-baseball/build_respaldo.py",
-      "source_location": "L19",
+      "source_location": "L22",
       "weight": 1.0,
       "_origin": "ast",
       "source": "n8n_gt_baseball_build_respaldo",
@@ -247261,7 +247261,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "N8N/gt-baseball/build_respaldo.py",
-      "source_location": "L33",
+      "source_location": "L37",
       "weight": 1.0,
       "_origin": "ast",
       "source": "n8n_gt_baseball_build_respaldo",
@@ -247272,7 +247272,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "N8N/gt-baseball/build_respaldo.py",
-      "source_location": "L26",
+      "source_location": "L30",
       "weight": 1.0,
       "_origin": "ast",
       "source": "n8n_gt_baseball_build_respaldo",
@@ -247283,7 +247283,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "N8N/gt-baseball/build_respaldo.py",
-      "source_location": "L135",
+      "source_location": "L142",
       "weight": 1.0,
       "_origin": "ast",
       "source": "n8n_gt_baseball_build_respaldo",
@@ -247294,7 +247294,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "N8N/gt-baseball/build_respaldo.py",
-      "source_location": "L80",
+      "source_location": "L87",
       "weight": 1.0,
       "_origin": "ast",
       "source": "n8n_gt_baseball_build_respaldo",
@@ -247305,7 +247305,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "N8N/gt-baseball/build_respaldo.py",
-      "source_location": "L74",
+      "source_location": "L81",
       "weight": 1.0,
       "_origin": "ast",
       "source": "n8n_gt_baseball_build_respaldo",
@@ -247316,7 +247316,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "N8N/gt-baseball/build_respaldo.py",
-      "source_location": "L118",
+      "source_location": "L125",
       "weight": 1.0,
       "_origin": "ast",
       "source": "n8n_gt_baseball_build_respaldo",
@@ -247339,7 +247339,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "N8N/gt-baseball/build_respaldo.py",
-      "source_location": "L40",
+      "source_location": "L44",
       "weight": 1.0,
       "_origin": "ast",
       "source": "n8n_gt_baseball_build_respaldo_construir",
@@ -247351,7 +247351,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "N8N/gt-baseball/build_respaldo.py",
-      "source_location": "L143",
+      "source_location": "L150",
       "weight": 1.0,
       "_origin": "ast",
       "source": "n8n_gt_baseball_build_respaldo_main",
@@ -247363,7 +247363,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "N8N/gt-baseball/build_respaldo.py",
-      "source_location": "L85",
+      "source_location": "L92",
       "weight": 1.0,
       "_origin": "ast",
       "source": "n8n_gt_baseball_build_respaldo_probar",
@@ -247375,7 +247375,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "N8N/gt-baseball/build_respaldo.py",
-      "source_location": "L143",
+      "source_location": "L150",
       "weight": 1.0,
       "_origin": "ast",
       "source": "n8n_gt_baseball_build_respaldo_main",
@@ -247387,7 +247387,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "N8N/gt-baseball/build_respaldo.py",
-      "source_location": "L141",
+      "source_location": "L148",
       "weight": 1.0,
       "_origin": "ast",
       "source": "n8n_gt_baseball_build_respaldo_main",
@@ -247400,7 +247400,7 @@
       "confidence": "INFERRED",
       "confidence_score": 0.8,
       "source_file": "N8N/gt-baseball/build_respaldo.py",
-      "source_location": "L91",
+      "source_location": "L98",
       "weight": 1.0,
       "_origin": "ast",
       "source": "n8n_gt_baseball_build_respaldo_probar",
@@ -247410,10 +247410,10 @@
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "N8N/gt-baseball/build_respaldo.py",
-      "source_location": "L81",
+      "source_location": "L88",
       "weight": 1.0,
       "_origin": "ast",
-      "source": "n8n_gt_baseball_build_respaldo_rationale_81",
+      "source": "n8n_gt_baseball_build_respaldo_rationale_88",
       "target": "n8n_gt_baseball_build_respaldo_probar",
       "confidence_score": 1.0
     },
@@ -247422,7 +247422,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "N8N/gt-baseball/build_respaldo.py",
-      "source_location": "L148",
+      "source_location": "L155",
       "weight": 1.0,
       "_origin": "ast",
       "source": "n8n_gt_baseball_build_respaldo_main",
@@ -247435,7 +247435,7 @@
       "confidence": "INFERRED",
       "confidence_score": 0.8,
       "source_file": "N8N/gt-baseball/build_respaldo.py",
-      "source_location": "L121",
+      "source_location": "L128",
       "weight": 1.0,
       "_origin": "ast",
       "source": "n8n_gt_baseball_build_respaldo_publicar",
@@ -385569,7 +385569,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "N8N/gt-baseball/README.md",
-      "source_location": "L76",
+      "source_location": "L82",
       "weight": 1.0,
       "_origin": "ast",
       "source": "n8n_gt_baseball_readme_gt_baseball_inscripciones",
@@ -385602,7 +385602,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "N8N/gt-baseball/README.md",
-      "source_location": "L113",
+      "source_location": "L119",
       "weight": 1.0,
       "_origin": "ast",
       "source": "n8n_gt_baseball_readme_gt_baseball_inscripciones",
@@ -385613,7 +385613,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "N8N/gt-baseball/README.md",
-      "source_location": "L89",
+      "source_location": "L95",
       "weight": 1.0,
       "_origin": "ast",
       "source": "n8n_gt_baseball_readme_gt_baseball_inscripciones",
@@ -389015,5 +389015,5 @@
       "source_file": "wp-content/themes/automatiza-tech/assets/home-premium/preview.html"
     }
   ],
-  "built_at_commit": "33e3d8d065ba9670ab3f35bf83524d07a2ec4803"
+  "built_at_commit": "b451d1654d85f86bceef54017af23492ca667d98"
 }

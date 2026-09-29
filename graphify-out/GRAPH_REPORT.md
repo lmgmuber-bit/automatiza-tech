@@ -1,16 +1,16 @@
 # Graph Report - ecstatic-galileo-01e4e9  (2026-09-28)
 
 ## Corpus Check
-- 1308 files · ~11,704,837 words
+- 1308 files · ~11,705,194 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 13312 nodes · 21219 edges · 1293 communities (1165 shown, 128 thin omitted)
+- 13312 nodes · 21219 edges · 1290 communities (1163 shown, 127 thin omitted)
 - Extraction: 92% EXTRACTED · 8% INFERRED · 0% AMBIGUOUS · INFERRED: 1756 edges (avg confidence: 0.76)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `33e3d8d0`
+- Built from commit: `b451d165`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -46,7 +46,7 @@
 - OmnichannelController
 - wrapper.php
 - index-BhihAq8q.js
-- ie
+- Je
 - _i
 - AlbumPage.jsx
 - zh
@@ -146,7 +146,7 @@
 - Material explicativo CumpleClick
 - Handoff a Claude — CumpleClick: invitaciones inmersivas y campaña promocional
 - cb_manual_datos
-- Ai1wm_Compatibility
+- .dep
 - record-frozen-gameplay.mjs
 - jr
 - Tl
@@ -175,7 +175,7 @@
 - wu
 - 🖋️ Módulo de Contratos con DOBLE FIRMA — AutomatizaTech
 - Google_Drive_Integration
-- get
+- nt
 - Ai1wm_Updater
 - automatiza-tech/functions.php
 - AutomatizaTech_Credentials_Vault
@@ -328,7 +328,7 @@
 - Personajes (6) — esqueleto estándar con escena tropical, protagonista:
 - posiciones.js
 - Conexiones y credenciales — regla general para todos los agentes
-- Hd
+- .execute
 - predictions.js
 - 🌐 Diagrama Visual - Usuario Frontend (Mermaid)
 - 🔧 Diagrama de Flujo - Administrador del Sistema (Back-end)
@@ -402,7 +402,7 @@
 - 🔴 INCIDENTE Y HOTFIX 2026-09-08 — "Guardar" mandaba un correo en vez de guardar
 - HANDOFF OPENCODE — Material explicativo "¿Qué es CumpleClick?"
 - admin/album.php
-- Ai1wm_Notification
+- detectarCara
 - Consentimiento para la captura y uso de imagen de niños, niñas y adolescentes
 - QA local — K-Pop photoSession
 - Handoff Claude → Codex — pulir la revista del Álbum Recuerdo + video promocional
@@ -445,7 +445,7 @@
 - inc/services-frontend.php
 - services-frontend-backup.php
 - services-frontend-broken.php
-- OmniCliente/QA/QA-00-Indice-Entornos.md
+- QA-08 — Auditoría
 - QA-05 — Gestión de Agentes
 - QA-10 — Asistente AI
 - Tres modos de autenticación
@@ -599,7 +599,7 @@
 - Ai1wm_Log
 - rest-proposals.php
 - PDF
-- QA-04 — Configuración de Bots y Prompts
+- OmniCliente/QA/QA-00-Indice-Entornos.md
 - 3. USUARIOS DE PRUEBA
 - 15. Convenciones y Reglas del Proyecto
 - 17. Seguridad y Credenciales
@@ -716,7 +716,7 @@
 - 2. ARQUITECTURA DE ARCHIVOS
 - 7. Publicación en Google Play Store
 - 9. Push Notifications
-- 🔧 Mantenimiento para Administradores
+- .execute
 - 10. Depuración
 - 12. Dependencias
 - 6. Sistema de Emails
@@ -840,7 +840,7 @@
 - lib.planes.php
 - 12. Despliegue
 - 4. Modelo de datos
-- tn
+- Xt
 - ❓ Preguntas Frecuentes (Administradores)
 - Posfiesta CumpleClick: la línea de trabajo (para cualquier agente)
 - subirHidden.test.mjs
@@ -849,7 +849,6 @@
 - 5. Motor de precios y geometría (dominio)
 - build.py
 - 10. Entorno
-- .execute
 - 11. Dependencias
 - Higgsfield por API REST (opcion cuando el MCP no tiene saldo)
 - PROMPT-AGENTE.md
@@ -869,8 +868,6 @@
 - chat.php
 - GT Baseball · Inscripciones
 - globo3d.js
-- 6.6 Ajustes Específicos para OmniCliente
-- 12. Sistema de Prompts (PromptsView)
 - PDF
 
 ## God Nodes (most connected - your core abstractions)
@@ -904,7 +901,7 @@
 - **AutomatizaTech Admin Management System** — wp_content_themes_automatiza_tech_detalles_y_busqueda_manual_md_visualizacion, wp_content_themes_automatiza_tech_editar_clientes_manual_md_edicion, wp_content_themes_automatiza_tech_editar_contactos_manual_md_admin_edicion [EXTRACTED 0.90]
 - **Home Premium UI Components** — wp_content_themes_automatiza_tech_assets_home_premium_body_html_root, wp_content_themes_automatiza_tech_assets_home_premium_preview_html_root, wp_content_themes_automatiza_tech_assets_home_premium_img_at_logo_png, wp_content_themes_automatiza_tech_assets_home_premium_img_tech_avatar_png [EXTRACTED 0.95]
 
-## Communities (1293 total, 128 thin omitted)
+## Communities (1290 total, 127 thin omitted)
 
 ### Community 0 - "qr"
 Cohesion: 0.03
@@ -924,7 +921,7 @@ Nodes (26): _a(), Ao(), _assertThisInitialized(), cb(), cc(), ga(), gb(), ha() (
 
 ### Community 4 - "backups.min.js"
 Cohesion: 0.03
-Nodes (79): Ut(), $a(), beforeMount(), beforeUnmount(), bf(), bo(), cl(), Co() (+71 more)
+Nodes (78): Ut(), $a(), beforeMount(), beforeUnmount(), bf(), bo(), cl(), Co() (+70 more)
 
 ### Community 5 - "parse"
 Cohesion: 0.07
@@ -936,7 +933,7 @@ Nodes (5): bd, ki, qi, ti, xi()
 
 ### Community 7 - "Ai1wm_Main_Controller"
 Cohesion: 0.04
-Nodes (12): Bandar, ai1wm_enqueue_script(), ai1wm_enqueue_style(), ai1wm_parse_size(), ai1wm_register_script(), ai1wm_register_style(), Ai1wm_Export_Controller, Ai1wm_Import_Controller (+4 more)
+Nodes (13): Bandar, ai1wm_enqueue_script(), ai1wm_enqueue_style(), ai1wm_generate_random_string(), ai1wm_parse_size(), ai1wm_register_script(), ai1wm_register_style(), Ai1wm_Export_Controller (+5 more)
 
 ### Community 8 - "src/main.mjs"
 Cohesion: 0.14
@@ -955,8 +952,8 @@ Cohesion: 0.03
 Nodes (23): Ad(), Sa(), aa, ad, Cd, dn, ea, fr (+15 more)
 
 ### Community 12 - "all-in-one-wp-migration/functions.php"
-Cohesion: 0.04
-Nodes (58): ai1wm_activate_plugins(), ai1wm_activate_stylesheet(), ai1wm_activate_template(), ai1wm_active_plugins(), ai1wm_active_servmask_plugins(), ai1wm_active_stylesheet(), ai1wm_active_template(), ai1wm_archive_name() (+50 more)
+Cohesion: 0.03
+Nodes (61): ai1wm_activate_plugins(), ai1wm_activate_stylesheet(), ai1wm_activate_template(), ai1wm_active_plugins(), ai1wm_active_servmask_plugins(), ai1wm_active_stylesheet(), ai1wm_active_template(), ai1wm_archive_mtime() (+53 more)
 
 ### Community 13 - "ScrollTrigger.min.js"
 Cohesion: 0.05
@@ -971,8 +968,8 @@ Cohesion: 0.05
 Nodes (65): cb_album_api_theme(), cb_build_theme_payload(), cb_compile_invitation_prompt(), cb_data_dir(), cb_game_kinds(), cb_generate_public_slug(), cb_inspect_video(), cb_invitation_dir() (+57 more)
 
 ### Community 17 - "o"
-Cohesion: 0.07
-Nodes (66): ao, ar(), As(), bn(), br(), bt(), d(), da() (+58 more)
+Cohesion: 0.06
+Nodes (70): ao, Ng(), is, As(), bn(), br(), bt(), d() (+62 more)
 
 ### Community 18 - "ai"
 Cohesion: 0.05
@@ -1022,9 +1019,9 @@ Nodes (39): akismet_add_comment_author_url(), akismet_add_comment_nonce(), akism
 Cohesion: 0.07
 Nodes (100): le(), me(), ne(), Om(), pg(), Ge(), He, Ue (+92 more)
 
-### Community 31 - "ie"
-Cohesion: 0.07
-Nodes (22): ae(), beforeUpdate(), created(), _e, ec(), Ee(), findIndex(), Gl() (+14 more)
+### Community 31 - "Je"
+Cohesion: 0.06
+Nodes (29): we, ae(), at(), beforeUpdate(), created(), ct, _e, ec() (+21 more)
 
 ### Community 33 - "AlbumPage.jsx"
 Cohesion: 0.13
@@ -1067,8 +1064,8 @@ Cohesion: 0.04
 Nodes (44): Ajustar el tiempo:, Ajustar el tiempo:, Buffer de Mensajes, Buffer de Mensajes, Calcular tasa de cancelación:, Características del Template v4:, Columnas (fila 1 - headers):, Columnas (fila 1 - headers): (+36 more)
 
 ### Community 47 - "CumpleBooth/src/App.jsx"
-Cohesion: 0.06
-Nodes (33): BoothApp(), brandLogoCache, CARRERAS_CUT_CON_AIRE, CHAR_IMG, CHAR_JUEGO_AUDIO, CHAR_PNG, CHAR_RUN_ATLAS, CHAR_VIDEO (+25 more)
+Cohesion: 0.07
+Nodes (31): BoothApp(), brandLogoCache, CARRERAS_CUT_CON_AIRE, CHAR_IMG, CHAR_JUEGO_AUDIO, CHAR_PNG, CHAR_RUN_ATLAS, CHAR_VIDEO (+23 more)
 
 ### Community 48 - "lib.album.php"
 Cohesion: 0.08
@@ -1080,7 +1077,7 @@ Nodes (42): 10. Archivos Relacionados, 1. Resumen Ejecutivo, 2.1 Mensaje Entrant
 
 ### Community 50 - "Ai1wm_Backups"
 Cohesion: 0.07
-Nodes (18): ai1wm_backup_bytes(), ai1wm_backup_path(), ai1wm_can_decrypt(), ai1wm_get_filters(), ai1wm_is_filedata_supported(), ai1wm_is_filename_supported(), ai1wm_is_filesize_supported(), ai1wm_json_response() (+10 more)
+Nodes (17): ai1wm_backup_bytes(), ai1wm_backup_path(), ai1wm_get_filters(), ai1wm_is_filename_supported(), ai1wm_is_filesize_supported(), ai1wm_is_scheduled_backup(), ai1wm_json_response(), ai1wm_setup_environment() (+9 more)
 
 ### Community 51 - "ContractService"
 Cohesion: 0.07
@@ -1127,16 +1124,16 @@ Cohesion: 0.05
 Nodes (37): 1️⃣ Flujo de Agendamiento de Cita, 2️⃣ Flujo de Cancelación de Cita, 3️⃣ Flujo de Respuesta a Recordatorios, 🔹 AGENTE IA, APIs Utilizadas, 🔹 BUFFER DE MENSAJES (Anti-typing), Capacidades Principales:, ✅ Checklist de Mantenimiento (+29 more)
 
 ### Community 63 - "concat"
-Cohesion: 0.12
-Nodes (25): mi(), Ai(), bi(), ci(), concat(), Cs(), ei(), fa() (+17 more)
+Cohesion: 0.11
+Nodes (27): mi(), Ai(), bi(), ci(), concat(), Cs(), ei(), fa() (+19 more)
 
 ### Community 64 - "PASO A PASO"
 Cohesion: 0.05
 Nodes (36): A. Crear directorio, A. HTML/CSS del Modal, Archivos clave que DEBES leer antes de empezar:, B. Generar 6 personajes (BudgetPixel + remover fondo), B. JavaScript del Modal, C. Remover fondos (cut PNGs), CLAUDE COMPLETÓ (NO TOCAR, YA ESTÁ EN PRODUCCIÓN LOCAL):, Comandos esenciales: (+28 more)
 
 ### Community 65 - "ai1wm_open"
-Cohesion: 0.10
-Nodes (20): ai1wm_allowed_html_tags(), ai1wm_close(), ai1wm_copy(), ai1wm_copy_gz(), ai1wm_gzopen(), ai1wm_is_decryption_password_valid(), ai1wm_open(), ai1wm_package_path() (+12 more)
+Cohesion: 0.07
+Nodes (31): ai1wm_allowed_html_tags(), ai1wm_archive_bytes(), ai1wm_archive_path(), ai1wm_can_decrypt(), ai1wm_close(), ai1wm_copy(), ai1wm_copy_gz(), ai1wm_getcsv() (+23 more)
 
 ### Community 67 - "AT-CUMPLECLICK-006 — Invitaciones dinámicas por temática"
 Cohesion: 0.06
@@ -1151,12 +1148,12 @@ Cohesion: 0.05
 Nodes (38): dependencies, @fontsource/baloo-2, @fontsource/caveat, gsap, lenis, @mediapipe/tasks-vision, qrcode, react (+30 more)
 
 ### Community 71 - "yp"
-Cohesion: 0.11
-Nodes (36): ap(), bp(), getNamespace(), getPos(), Ip(), jp(), Mp(), onattribdata() (+28 more)
+Cohesion: 0.09
+Nodes (45): ap(), ar(), bp(), Fd(), getNamespace(), getPos(), go(), includes() (+37 more)
 
 ### Community 72 - ".execute"
-Cohesion: 0.07
-Nodes (28): ai1wm_blog_blogsdir_abspath(), ai1wm_blog_blogsdir_relpath(), ai1wm_blog_blogsdir_url(), ai1wm_blog_files_abspath(), ai1wm_blog_files_relpath(), ai1wm_blog_files_url(), ai1wm_blog_sites_abspath(), ai1wm_blog_sites_relpath() (+20 more)
+Cohesion: 0.09
+Nodes (25): ai1wm_blog_blogsdir_abspath(), ai1wm_blog_blogsdir_relpath(), ai1wm_blog_blogsdir_url(), ai1wm_blog_files_abspath(), ai1wm_blog_files_relpath(), ai1wm_blog_files_url(), ai1wm_blog_sites_abspath(), ai1wm_blog_sites_relpath() (+17 more)
 
 ### Community 73 - "festival-src/main.mjs"
 Cohesion: 0.14
@@ -1176,7 +1173,7 @@ Nodes (63): 2026-09-10 cierre 7 — Frozen: los huecos de Elsa y Olaf se salían
 
 ### Community 78 - "gsap.min.js"
 Cohesion: 0.06
-Nodes (27): Aa(), Ba(), Ca(), Context(), Db(), fb(), Gw(), Hd() (+19 more)
+Nodes (29): Ba(), Context(), Db(), fb(), Gw(), Hd(), ia(), Id() (+21 more)
 
 ### Community 79 - "consultas.php"
 Cohesion: 0.09
@@ -1358,9 +1355,9 @@ Nodes (21): 10. Próximo flujo recomendado para Claude, 11. Estado Git y precauc
 Cohesion: 0.13
 Nodes (25): cb_ajuste_bcc(), cb_ajuste_recuperacion(), cb_ajustes(), cb_ajustes_numericos(), cb_ajustes_ruta(), cb_guardar_ajustes(), cb_manual_banner(), cb_manual_cabecera_compuesta() (+17 more)
 
-### Community 131 - "Ai1wm_Compatibility"
-Cohesion: 0.20
-Nodes (3): Ai1wm_Compatibility, Ai1wm_Export_Compatibility, Ai1wm_Import_Compatibility
+### Community 131 - ".dep"
+Cohesion: 0.17
+Nodes (4): init(), prepare_timestamp_array_for_request(), en, e()
 
 ### Community 132 - "record-frozen-gameplay.mjs"
 Cohesion: 0.30
@@ -1391,8 +1388,8 @@ Cohesion: 0.10
 Nodes (19): 1. Vista general, 2.1 Carcasa (marco MDF), 2.2 Hueco para tablet (frente) — UNIVERSAL AJUSTABLE, 2.3 Retén de tablet (tapa trasera), 2.4 Canal para tira LED (borde interno del frente), 2.5 Compartimento power bank (trasero, abajo), 2.6 Base antivotante (piso), 2.7 Pedestal metálico (+11 more)
 
 ### Community 139 - "composeDiploma"
-Cohesion: 0.17
-Nodes (23): alturaComunAsomate(), componerAsomate(), componerGrupal(), composeDiploma(), composeImage(), composePredictionImage(), composeRecuerdito(), cssVar() (+15 more)
+Cohesion: 0.20
+Nodes (21): alturaComunAsomate(), componerAsomate(), componerGrupal(), composeDiploma(), composeImage(), composePredictionImage(), composeRecuerdito(), cssVar() (+13 more)
 
 ### Community 140 - "nombreEvento"
 Cohesion: 0.18
@@ -1470,9 +1467,9 @@ Nodes (3): wu, yu, zu
 Cohesion: 0.11
 Nodes (18): 📂 Almacenamiento, 📁 Archivos del módulo, 🐛 Bugs conocidos / corregidos, ❌ Caracteres especiales (`?`) en títulos PDF (corregido commits `3581f33`–`78edd15`), 🛡️ Cláusulas blindaje (en la plantilla legal), 📞 Cómo crear un contrato, Desde código PHP (ej: cuando se confirma el pago final), Desde HTTP (N8N / Postman, login WP requerido vía cookie/auth) (+10 more)
 
-### Community 160 - "get"
-Cohesion: 0.05
-Nodes (37): Eb(), Ng(), is, we, init(), prepare_timestamp_array_for_request(), at(), ct (+29 more)
+### Community 160 - "nt"
+Cohesion: 0.13
+Nodes (12): Eb(), Et(), It(), jt(), lt, Mt(), nt(), Pt() (+4 more)
 
 ### Community 161 - "Ai1wm_Updater"
 Cohesion: 0.10
@@ -1695,8 +1692,8 @@ Cohesion: 0.30
 Nodes (14): Error(), GetInfoFromTrueType(), GetInfoFromType1(), LoadMap(), MakeDefinitionFile(), MakeFont(), MakeFontDescriptor(), MakeFontEncoding() (+6 more)
 
 ### Community 224 - "AutomatizaTech — Contexto Completo del Proyecto"
-Cohesion: 0.18
-Nodes (11): 16. Scripts de Utilidad PHP, 1. ¿Qué es AutomatizaTech?, 4. Arquitectura General, 6. Base de Datos OmniCliente, Archivos de Documentación por Carpeta, AutomatizaTech — Contexto Completo del Proyecto, ⚡ Diferencias clave respecto al estado real (Mayo 2026), Estructura de `prompt_data` (campos del JSON) (+3 more)
+Cohesion: 0.14
+Nodes (14): 12. Sistema de Prompts (PromptsView), 16. Scripts de Utilidad PHP, 1. ¿Qué es AutomatizaTech?, 4. Arquitectura General, 6. Base de Datos OmniCliente, 7 Secciones y sus campos, Archivos de Documentación por Carpeta, AutomatizaTech — Contexto Completo del Proyecto (+6 more)
 
 ### Community 225 - "Codex — La predicción de la cabina de baby shower"
 Cohesion: 0.14
@@ -1795,8 +1792,8 @@ Cohesion: 0.15
 Nodes (12): 2. Qué Esperar Después, General, 📖 Manual de Usuario - AutomatizaTech, Para Administradores (Back-end), Para Usuarios del Sitio Web (Front-end), PARTE 1: USUARIOS DEL SITIO WEB (FRONT-END), ❓ Preguntas Frecuentes (Clientes), Proceso Automático (+4 more)
 
 ### Community 253 - "PARTE 2: ADMINISTRADORES (BACK-END)"
-Cohesion: 0.22
-Nodes (9): 4. Acceso al Panel de Administración, Consultas Útiles para Reportes, Dashboard Principal, Iniciar Sesión, 📊 Panel de Estadísticas, Para Administradores, Para Clientes, PARTE 2: ADMINISTRADORES (BACK-END) (+1 more)
+Cohesion: 0.15
+Nodes (13): 4. Acceso al Panel de Administración, Consultas Útiles para Reportes, Dashboard Principal, Iniciar Sesión, 🔧 Mantenimiento para Administradores, 📊 Panel de Estadísticas, Para Administradores, Para Clientes (+5 more)
 
 ### Community 254 - "07 — N8N Workflows"
 Cohesion: 0.15
@@ -2014,9 +2011,9 @@ Nodes (7): boot(), anotarResultado(), cualJuego(), fiesta(), parametro(), puntaj
 Cohesion: 0.14
 Nodes (13): 1. Regla de oro: verificar antes de asumir, 2. Dónde están las credenciales, 3.1 Credenciales dentro de n8n (actualizado 2026-08-26), 3.2 Escribir workflows por API: el bloqueo de `settings`, 3.3 Hostinger PROD por SSH/SFTP (actualizado 2026-09-06), 3. Estado real de las conexiones, 4. Cómo verificar y conectar, por agente, 5. Hooks del repositorio: apuntar siempre a un shim (+5 more)
 
-### Community 316 - "Hd"
-Cohesion: 0.29
-Nodes (8): Id(), Rd(), Vd(), Wd(), yd(), ye(), Le, Hd()
+### Community 316 - ".execute"
+Cohesion: 0.18
+Nodes (9): ai1wm_archive_name(), ai1wm_archive_size(), ai1wm_backup_size(), ai1wm_backup_url(), ai1wm_direct_download_supported(), ai1wm_replace_directory_separator_with_forward_slash(), ai1wm_site_name(), ai1wm_size_format() (+1 more)
 
 ### Community 317 - "predictions.js"
 Cohesion: 0.36
@@ -2160,7 +2157,7 @@ Nodes (8): captureDemoFamily(), captureGalleryAdmin(), captureTropicalScreenshot
 
 ### Community 354 - "Ai1wm_Status"
 Cohesion: 0.05
-Nodes (25): ai1wm_archive_bytes(), ai1wm_archive_mtime(), ai1wm_archive_path(), ai1wm_content_filters(), ai1wm_content_list_path(), ai1wm_get_plugins_dir(), ai1wm_getcsv(), ai1wm_media_filters() (+17 more)
+Nodes (11): ai1wm_archive_file(), ai1wm_storage_folder(), Ai1wm_Compatibility, Ai1wm_Status, Ai1wm_Export_Archive, Ai1wm_Export_Compatibility, Ai1wm_Export_Init, Ai1wm_Import_Compatibility (+3 more)
 
 ### Community 355 - "Automatizatech — Pipeline de Propuestas"
 Cohesion: 0.22
@@ -2183,8 +2180,8 @@ Cohesion: 0.22
 Nodes (9): 10.1 Modo "Servidor Remoto" vs "Archivos Locales", 10.2 Seguridad en Mobile, 10.3 Ajustes CSS para Mobile, 10.4 Testing en Dispositivo Físico, 10.5 Estimación de Costos, 10.6 Checklist Pre-Publicación, 10. Consideraciones Especiales, Android (+1 more)
 
 ### Community 360 - "6. Guía Paso a Paso — Capacitor"
-Cohesion: 0.22
-Nodes (9): 6.1 Instalar Capacitor, 6.2 Agregar Plataformas, 6.3 Plugins Útiles (Opcionales), 6.4 Configurar Iconos y Splash Screen, 6.5 Workflow de Desarrollo, 6.7 Build de Producción, 6. Guía Paso a Paso — Capacitor, Android (APK / AAB) (+1 more)
+Cohesion: 0.14
+Nodes (14): 6.1 Instalar Capacitor, 6.2 Agregar Plataformas, 6.3 Plugins Útiles (Opcionales), 6.4 Configurar Iconos y Splash Screen, 6.5 Workflow de Desarrollo, 6.6 Ajustes Específicos para OmniCliente, 6.7 Build de Producción, 6. Guía Paso a Paso — Capacitor (+6 more)
 
 ### Community 361 - "01 — Arquitectura General del Ecosistema AutomatizaTech"
 Cohesion: 0.22
@@ -2293,6 +2290,10 @@ Nodes (7): 2. ENTREGABLES (esto es lo que tienes que producir), 6. ORDEN DE TRAB
 ### Community 391 - "admin/album.php"
 Cohesion: 0.39
 Nodes (4): admin_csrf_field(), admin_csrf_token(), admin_media_action(), h()
+
+### Community 392 - "detectarCara"
+Cohesion: 0.70
+Nodes (4): detectarCara(), prepararDetector(), recorte(), ventanas()
 
 ### Community 393 - "Consentimiento para la captura y uso de imagen de niños, niñas y adolescentes"
 Cohesion: 0.25
@@ -2454,8 +2455,8 @@ Nodes (6): get_default_features_content(), get_default_special_services_content(
 Cohesion: 0.36
 Nodes (6): get_default_features_content(), get_default_special_services_content(), pricing_services_shortcode(), render_features_section(), render_pricing_section(), render_special_services_section()
 
-### Community 439 - "OmniCliente/QA/QA-00-Indice-Entornos.md"
-Cohesion: 0.29
+### Community 439 - "QA-08 — Auditoría"
+Cohesion: 0.40
 Nodes (4): 1. Vista de Auditoría, 2. Detalle Expandible, 3. Filtros y Paginación, QA-08 — Auditoría
 
 ### Community 440 - "QA-05 — Gestión de Agentes"
@@ -2575,8 +2576,8 @@ Cohesion: 0.27
 Nodes (10): actualizarUI(), frame(), logro(), aroY(), avanzar(), carril(), enganchar(), MODOS (+2 more)
 
 ### Community 469 - "la"
-Cohesion: 0.60
-Nodes (5): Animation(), Da(), la(), Ua(), Va()
+Cohesion: 0.22
+Nodes (11): Aa(), Animation(), Ca(), Da(), la(), na(), Ua(), Va() (+3 more)
 
 ### Community 470 - "qa-album-visual.mjs"
 Cohesion: 0.25
@@ -3042,8 +3043,8 @@ Nodes (5): Closure, MarketingAssetRaceStatement, mk_check(), mk_reject(), PDOSta
 Cohesion: 0.23
 Nodes (12): at_propuesta_conservar_precios(), at_propuesta_errores_payload(), at_propuesta_estado_permitido_por_api(), at_propuesta_transicion_valida(), automatiza_proposals_rest_auth(), automatiza_proposals_rest_create(), automatiza_proposals_rest_get(), automatiza_proposals_rest_state_get() (+4 more)
 
-### Community 594 - "QA-04 — Configuración de Bots y Prompts"
-Cohesion: 0.40
+### Community 594 - "OmniCliente/QA/QA-00-Indice-Entornos.md"
+Cohesion: 0.29
 Nodes (4): 1. Tab "Configuración del Bot" (BotsView), 2. Tab "Prompts" (PromptsView), 3. Tab "Vista Previa Prompt" (PromptPreviewPanel), QA-04 — Configuración de Bots y Prompts
 
 ### Community 595 - "3. USUARIOS DE PRUEBA"
@@ -3470,9 +3471,9 @@ Nodes (4): 7.1 Requisitos, 7.2 Pasos, 7.3 Tiempos de Revisión, 7. Publicación 
 Cohesion: 0.50
 Nodes (4): 9.1 Setup con Capacitor, 9.2 Código en React, 9.3 Backend — Enviar Push, 9. Push Notifications
 
-### Community 719 - "🔧 Mantenimiento para Administradores"
-Cohesion: 0.50
-Nodes (4): 🔧 Mantenimiento para Administradores, Tareas Diarias, Tareas Mensuales, Tareas Semanales
+### Community 719 - ".execute"
+Cohesion: 0.40
+Nodes (3): ai1wm_media_filters(), ai1wm_media_list_path(), Ai1wm_Export_Enumerate_Media
 
 ### Community 721 - "10. Depuración"
 Cohesion: 0.50
@@ -3770,10 +3771,6 @@ Nodes (22): code(), construir(), main(), node(), publicar(), Construye (y con --
 Cohesion: 0.50
 Nodes (4): 10. Entorno, Levantar en local, Prerrequisitos, Variables de entorno
 
-### Community 1248 - ".execute"
-Cohesion: 0.29
-Nodes (4): ai1wm_archive_file(), ai1wm_generate_random_string(), ai1wm_storage_folder(), Ai1wm_Export_Init
-
 ### Community 1250 - "11. Dependencias"
 Cohesion: 0.67
 Nodes (3): 11. Dependencias, Desarrollo, Producción
@@ -3814,25 +3811,17 @@ Nodes (7): Configuración fuera del repo, Estado (28-sep-2026), Flujo de inscrip
 Cohesion: 0.83
 Nodes (3): buildGlobo(), makeGradientTexture(), mountHeroGlobo()
 
-### Community 1304 - "6.6 Ajustes Específicos para OmniCliente"
-Cohesion: 0.40
-Nodes (5): 6.6 Ajustes Específicos para OmniCliente, A. Manejo de URLs (api.js), B. StatusBar y SafeArea (para notch/island), C. Deep Links, D. Navegación (back button Android)
-
-### Community 1305 - "12. Sistema de Prompts (PromptsView)"
-Cohesion: 0.67
-Nodes (3): 12. Sistema de Prompts (PromptsView), 7 Secciones y sus campos, Permisos
-
 ## Knowledge Gaps
 - **4469 isolated node(s):** `params`, `saved`, `audio`, `input`, `state` (+4464 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **128 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **127 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `v()` connect `Tween` to `CumpleBooth/src/App.jsx`, `jr`, `gsap.min.js`, `index-BhihAq8q.js`?**
+- **Why does `v()` connect `Tween` to `detectarCara`, `jr`, `gsap.min.js`, `index-BhihAq8q.js`?**
   _High betweenness centrality (0.016) - this node is a cross-community bridge._
-- **Why does `detectarCara()` connect `CumpleBooth/src/App.jsx` to `Tween`, `nombreEvento`?**
+- **Why does `detectarCara()` connect `detectarCara` to `Tween`, `nombreEvento`, `CumpleBooth/src/App.jsx`?**
   _High betweenness centrality (0.016) - this node is a cross-community bridge._
 - **Why does `resize()` connect `lenis.min.js` to `src/main.mjs`, `globo3d.js`?**
   _High betweenness centrality (0.013) - this node is a cross-community bridge._

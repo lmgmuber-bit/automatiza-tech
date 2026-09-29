@@ -394,3 +394,134 @@ test('el cierre usa la foto de próximos pasos si viene, y el logo encima', () =
   assert.ok(html.includes("url('img/cierre.png')"));
   assert.ok(html.includes('class="closing-logo"'));
 });
+
+// --- Documento completo ------------------------------------------------------
+
+function eyebrows(html) {
+  return [...html.matchAll(/<p class="eyebrow">(\d\d) · ([^<]+)<\/p>/g)].map((m) => `${m[1]} ${m[2]}`);
+}
+
+test('el plan corto trae las 8 láminas en orden: portada, método, Gantt, 3 fases, necesitamos, reuniones, portal, cierre', () => {
+  const html = tp.renderPlanHtml(planCorto(), {});
+  assert.equal(contar(html, '<section class="slide'), 10);
+  assert.ok(html.includes('<h1>Plan de trabajo — Sitio de una página</h1>'));
+  assert.ok(html.includes('<title>Plan de trabajo · Sitio de una página</title>'));
+  assert.deepEqual(eyebrows(html), [
+    '02 El Método AT',
+    '03 Carta Gantt',
+    '04 Fase 1 de 3',
+    '05 Fase 2 de 3',
+    '06 Fase 3 de 3',
+    '07 Tu parte',
+    '08 Acompañamiento',
+    '09 Tu portal',
+    '10 Próximo paso',
+  ]);
+});
+
+test('el plan largo parte la primera fase en dos láminas y la carta Gantt sigue en una sola', () => {
+  const html = tp.renderPlanHtml(planLargo(), {});
+  assert.equal(contar(html, '<section class="slide'), 11);
+  assert.equal(contar(html, 'class="slide plan-panel plan-gantt"'), 1);
+  assert.equal(contar(html, '(continuación)'), 1);
+  assert.equal(contar(html, 'class="gantt-barra '), 16);
+});
+
+test('usa el mismo estilo, logo, controles y aviso de lámina que la propuesta', () => {
+  const html = tp.renderPlanHtml(planCorto(), {});
+  assert.ok(html.includes('.at-watermark img { width: 190px'));
+  assert.ok(html.includes('logo-automatiza-tech'));
+  assert.ok(html.includes('id="at-prev"'));
+  assert.ok(html.includes('setMode(true)'));
+  assert.ok(html.includes("type: 'at-deck-lamina'"));
+  assert.ok(html.includes('.gantt-barra.is-revision'));
+});
+
+test('el borrador lleva el aviso y oculta el botón del PDF; la versión final no', () => {
+  const borrador = tp.renderPlanHtml({ ...planCorto(), draft: true }, {});
+  assert.ok(borrador.includes('<body class="is-draft">'));
+  assert.ok(borrador.includes('Borrador · vista previa sin fotos'));
+  // El botón está en el cierre y lo esconde la regla de STYLE (template.js) para body.is-draft.
+  assert.ok(borrador.includes('<a class="pdf-button" href="presentation.pdf" download>'));
+  assert.ok(borrador.includes('body.is-draft .pdf-button { display: none !important; }'));
+  const final = tp.renderPlanHtml(planCorto(), {});
+  assert.ok(!final.includes('class="at-draft-badge"'));
+});
+
+test('cada lámina toma su foto y las fotos se precargan una sola vez', () => {
+  const images = {
+    cover: 'img/cover.png',
+    metodo: 'img/metodo.png',
+    gantt: 'img/gantt.png',
+    fase_1: 'img/fase_1.png',
+    fase_2: 'img/fase_2.png',
+    fase_3: 'img/fase_3.png',
+    necesitamos: 'img/necesitamos.png',
+    reuniones: 'img/reuniones.png',
+    portal: 'img/portal.png',
+    cierre: 'img/cierre.png',
+  };
+  const html = tp.renderPlanHtml(planLargo(), images);
+  for (const url of Object.values(images)) {
+    assert.ok(html.includes(`url('${url}')`), `falta la foto ${url}`);
+  }
+  // fase_1 sale en dos láminas y se precarga una sola vez.
+  assert.equal(contar(html, 'url(\'img/fase_1.png\')'), 2);
+  const head = html.slice(0, html.indexOf('</head>'));
+  assert.equal(contar(head, '<link rel="preload" as="image"'), 10);
+});
+
+test('sin fotos, cada lámina cae al degradado de marca y no hay precargas', () => {
+  const html = tp.renderPlanHtml(planCorto(), {});
+  assert.ok(html.includes('background: linear-gradient(135deg, #0d1b2a'));
+  assert.ok(!html.includes('rel="preload"'));
+});
+
+test('contrato sin propuesta y cliente sin portal: el plan se dibuja igual', () => {
+  const plan = { ...planCorto(), portal_url: '', images: {}, metodo: undefined, reuniones: [], necesitamos_de_ti: [], soporte: undefined };
+  const html = tp.renderPlanHtml(plan, {});
+  assert.equal(contar(html, '<section class="slide'), 10);
+  assert.ok(html.includes('<h2>Sigue tu proyecto</h2>'));
+  assert.ok(!html.includes('class="plan-boton"'));
+  assert.equal(contar(html, 'Estás aquí'), 1);
+});
+
+test('un plan con solo lo mínimo que exige el esquema no rompe el documento', () => {
+  const minimo = {
+    unique_id: 'PlanPrueba03',
+    company_name: 'Cliente Prueba SpA',
+    proyecto: 'Proyecto de prueba',
+    fases: [{ clave: 'diseno_desarrollo' }],
+    cronograma: { inicio: '2026-10-05', fin: '2026-10-09', barras: [] },
+  };
+  const html = tp.renderPlanHtml(minimo, undefined);
+  assert.equal(contar(html, '<section class="slide'), 8);
+  assert.ok(html.includes('<h2>Diseño y desarrollo</h2>'));
+  assert.ok(html.includes('Las fechas aparecen aquí cuando el plan tenga actividades.'));
+});
+
+test('el nombre del proyecto y el de la empresa se escapan en la portada y el título', () => {
+  const html = tp.renderPlanHtml({ ...planCorto(), proyecto: 'Sitio <b>nuevo</b> & más', company_name: 'Empresa <i>X</i>' }, {});
+  assert.ok(html.includes('<title>Plan de trabajo · Sitio &lt;b&gt;nuevo&lt;/b&gt; &amp; más</title>'));
+  assert.ok(html.includes('<h1>Plan de trabajo — Sitio &lt;b&gt;nuevo&lt;/b&gt; &amp; más</h1>'));
+  assert.ok(html.includes('<p class="eyebrow">Empresa &lt;i&gt;X&lt;/i&gt;</p>'));
+});
+
+test('elementos que no son objetos (null, números) en fases, bloques, actividades, barras e hitos no rompen el documento', () => {
+  // validatePlanPayload acepta esos elementos; si el template lanzara, server.js respondería 502 y n8n
+  // reintentaría tres veces un error que reintentar no arregla.
+  const plan = planCorto();
+  const faseValida = plan.fases[0];
+  faseValida.bloques = [null, 7, ...faseValida.bloques.map((b) => ({ ...b, actividades: [null, 3, ...b.actividades] }))];
+  plan.fases = [null, faseValida];
+  plan.cronograma.barras = [null, 5, ...plan.cronograma.barras];
+  plan.cronograma.hitos = [null, 7, ...plan.cronograma.hitos];
+  let html = '';
+  assert.doesNotThrow(() => {
+    html = tp.renderPlanHtml(plan, {});
+  });
+  assert.ok(html.includes('<h2>Diseño y desarrollo</h2>'));
+  assert.ok(html.includes('class="gantt-barra '));
+  // Sin fases en absoluto, o con solo elementos rotos, también sale un documento.
+  assert.doesNotThrow(() => tp.renderPlanHtml({ ...planCorto(), fases: [null, 4], reuniones: [null, 2], necesitamos_de_ti: [null] }, {}));
+});

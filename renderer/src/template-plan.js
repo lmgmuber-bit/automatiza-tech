@@ -874,23 +874,60 @@ const ESTILO_CIERRE = `
 
 // === Documento ===
 
+// Orden de las láminas (y la foto de cada una, image_briefs[].slide): portada (cover), Método AT (metodo),
+// carta Gantt (gantt), una por fase o más si la fase es larga (fase_1..fase_3), qué necesitamos de ti
+// (necesitamos), reuniones y soporte (reuniones), sigue tu proyecto (portal) y cierre para agendar (cierre).
 function renderPlanHtml(data, images = {}) {
   const d = data && typeof data === 'object' ? data : {};
   const fotos = images && typeof images === 'object' ? images : {};
-  const preload = fotos.cover ? `<link rel="preload" as="image" href="${escapeHtml(fotos.cover)}" />` : '';
+  const fases = (Array.isArray(d.fases) ? d.fases : []).filter((f) => f && typeof f === 'object').slice(0, 3);
+  const slides = [renderPlanCover(d, fotos.cover)];
+  const usadas = [fotos.cover];
+  let n = 1;
+  const agregar = (html, foto) => {
+    slides.push(html);
+    usadas.push(foto);
+  };
+  n += 1;
+  agregar(renderMetodoSlide(d, n, fotos.metodo), fotos.metodo);
+  n += 1;
+  agregar(renderGanttSlide(d, n, fotos.gantt), fotos.gantt);
+  fases.forEach((fase, i) => {
+    const foto = fotos[`fase_${i + 1}`];
+    paginarBloques(fase.bloques, fase.descripcion).forEach((bloques, p) => {
+      n += 1;
+      const datosFase = { fase, numeroFase: i + 1, totalFases: fases.length, bloques, continuacion: p > 0, cronograma: d.cronograma };
+      agregar(renderFaseSlide(datosFase, n, foto), foto);
+    });
+  });
+  n += 1;
+  agregar(renderNecesitamosSlide(d, n, fotos.necesitamos), fotos.necesitamos);
+  n += 1;
+  agregar(renderReunionesSlide(d, n, fotos.reuniones), fotos.reuniones);
+  n += 1;
+  agregar(renderPortalSlide(d, n, fotos.portal), fotos.portal);
+  n += 1;
+  agregar(renderCierreSlide(d, n, fotos.cierre), fotos.cierre);
+
+  // Igual que en la propuesta: en modo presentación solo se dibuja la lámina activa y el navegador no
+  // baja la foto de una lámina oculta; precargarlas desde <head> evita ver el degradado un instante.
+  const preload = [...new Set(usadas.filter(Boolean))]
+    .map((url) => `<link rel="preload" as="image" href="${escapeHtml(url)}" />`)
+    .join('\n');
+
   return `<!doctype html>
 <html lang="es">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Plan de trabajo · ${escapeHtml(String(d.proyecto || ''))}</title>
+<title>Plan de trabajo · ${escapeHtml(texto(d.proyecto))}</title>
 ${preload}
-<style>${STYLE}${ESTILO_PORTADA}</style>
+<style>${STYLE}${ESTILO_PORTADA}${ESTILO_GANTT}${ESTILO_FASES}${ESTILO_CIERRE}</style>
 </head>
 <body${d.draft ? ' class="is-draft"' : ''}>
 ${d.draft ? '<div class="at-draft-badge">Borrador · vista previa sin fotos</div>' : ''}
 <div class="deck">
-${renderPlanCover(d, fotos.cover)}
+${slides.join('\n')}
 </div>
 ${renderDeckControls()}
 <script>${SCRIPT}</script>
@@ -898,4 +935,25 @@ ${renderDeckControls()}
 </html>`;
 }
 
-module.exports = { renderPlanHtml, lunesDe, semanaIndice, diasEntre, fechaLarga, fechaCorta, rangoCorto, diasTexto, urlSegura, filasGantt, medidasGantt, renderGantt, renderGanttSlide, renderMetodoSlide, paginarBloques, renderFaseSlide, renderNecesitamosSlide, renderReunionesSlide, renderPortalSlide, renderCierreSlide };
+module.exports = {
+  renderPlanHtml,
+  lunesDe,
+  semanaIndice,
+  diasEntre,
+  fechaLarga,
+  fechaCorta,
+  rangoCorto,
+  diasTexto,
+  urlSegura,
+  filasGantt,
+  medidasGantt,
+  renderGantt,
+  renderGanttSlide,
+  renderMetodoSlide,
+  paginarBloques,
+  renderFaseSlide,
+  renderNecesitamosSlide,
+  renderReunionesSlide,
+  renderPortalSlide,
+  renderCierreSlide,
+};

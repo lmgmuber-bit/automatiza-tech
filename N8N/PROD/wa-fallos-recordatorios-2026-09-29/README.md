@@ -12,7 +12,7 @@
 - **Prueba real autorizada por Luis (08:15):** un wamid falso de la cita 2000000000, que no existe, anotado y marcado `failed` (131026).
   - WordPress guardó la anotación y la marca de «ya avisado».
   - No registró fallo del correo en `debug.log`.
-  - El correo debía llegarle a Luis con el asunto «El cliente de la cita 2000000000 no recibió el recordatorio de WhatsApp».
+  - **A Luis le llegó el correo** con el asunto «El cliente de la cita 2000000000 no recibió el recordatorio de WhatsApp» (lo confirmó él el 29-sep): la cadena funciona de punta a punta.
 
 ## Qué resuelve
 

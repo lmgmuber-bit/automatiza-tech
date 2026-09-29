@@ -1095,6 +1095,205 @@ def prueba_correos_render():
     ok(r and '«aprobando»' not in r['html'], 'correo render: si WordPress guardó, no habla de un plan trabado')
 
 
+@seccion('render')
+def prueba_render():
+    from build_plan_3_render import MAX_RENDERS  # vuelve a escribir plan-3-render.json
+    wf = revisar_workflow('plan-3-render.json', 'Plan de trabajo · 3 Render', 'plan-v1-render')
+    rn = next(n for n in wf['nodes'] if n['name'] == 'Render')
+    ok(rn['credentials']['httpHeaderAuth']['id'] == 'fj2orzbsjlnHaiLd' and rn['parameters']['url'] == BASE_R + '/render'
+       and rn['parameters']['options']['timeout'] == 290000 and rn.get('onError') == 'continueRegularOutput'
+       and rn['parameters']['options']['response']['response'] == {'fullResponse': True, 'neverError': True},
+       'plan-3-render.json: el render va con la clave X-AT-Render-Key, 290 s, respuesta completa (código HTTP) y sin cortar el flujo')
+    fp = next(n for n in wf['nodes'] if n['name'] == 'Fotos de la propuesta')
+    ok('credentials' not in fp and fp.get('onError') == 'continueRegularOutput',
+       'plan-3-render.json: el manifest público se lee sin credenciales y nunca corta el flujo')
+    ok(MAX_RENDERS == 3, 'plan-3-render.json: hasta 3 renders en total')
+    correo = next(n for n in wf['nodes'] if n['name'] == 'Armar correo')['parameters']['jsCode']
+    ok('easypanel' not in correo, 'plan-3-render.json: el código del correo no nombra *.easypanel.host')
+
+    def sim(webhook, **http):
+        http.setdefault('Guardar vista', VISTA_LISTO if webhook.get('modo') == 'final' else VISTA_BORRADOR)
+        # Revisión de texto de las fotos (ciclo D de esta tarea, D18; hasta el Step 19 estos nodos no existen y no se
+        # usan): sin manifest previo del plan, las fotos guardadas y GPT-4o sin texto. Estos casos miran el render; la
+        # revisión la prueba probar_revision_plan.py.
+        http.setdefault('Fotos previas del plan', [{'statusCode': 404, 'body': 'Not Found'}])
+        http.setdefault('Leer fotos del plan', [MANIFEST_PLAN])
+        http.setdefault('Buscar texto en fotos', [SIN_TEXTO])
+        return simular('plan-3-render.json', webhook=webhook, http=http, openai={})
+
+    # R1. Vista previa con aviso: sin fotos aunque WordPress mande alguna, un solo render, correo «borrador listo».
+    t = sim({'id': 9, 'modo': 'draft', 'aviso': True}, **{'Leer render': leido(cuerpo_render(False, image_briefs=[BRIEFS_NUEVAS[0]])),
+                                                         'Render': [renderer_ok(0)]})
+    sin_error(t, 'R1')
+    ok(llamadas(t, 'Leer render')[0]['url'] == WP + '/plan/9/render&modo=draft',
+       'R1: GET /plan/9/render con &modo=draft (la base ya trae ?rest_route=)', llamadas(t, 'Leer render'))
+    rc = llamadas(t, 'Render')
+    ok(len(rc) == 1 and rc[0]['body']['draft'] is True and rc[0]['body']['image_briefs'] == [] and rc[0]['body']['unique_id'] == 'PRUEBAplan01',
+       'R1: un render, draft, sin fotos y con el código del plan', rc)
+    ok(not llamadas(t, 'Fotos de la propuesta'), 'R1: la vista previa no lee las fotos de la propuesta')
+    gv = llamadas(t, 'Guardar vista')
+    ok(gv and gv[0]['url'] == WP + '/plan/9/vista' and {k: gv[0]['body'][k] for k in ('modo', 'ok', 'view_url', 'pdf_url', 'faltan')}
+       == {'modo': 'draft', 'ok': True, 'view_url': VISTA, 'pdf_url': PDF, 'faltan': []} and gv[0]['body']['nota'].startswith('Vista previa lista'),
+       'R1: POST /plan/9/vista {modo: draft, ok: true, …}', gv)
+    ok(len(t['correos']) == 1 and t['correos'][0]['asunto'] == '[PRUEBA] Sitio de la panadería · borrador del plan listo para revisar'
+       and 'easypanel' not in t['correos'][0]['html'], 'R1: correo «borrador listo» sin enlaces a *.easypanel.host',
+       [c['asunto'] for c in t['correos']])
+    ok(t['correos'] and 'automatiza-crm-ficha&amp;id=5&amp;pt=9#tab-plan' in t['correos'][0]['html'],
+       'R1: el botón abre la pestaña del plan en la ficha del CRM (crm_cliente_id de /render)')
+
+    # R2. Vista previa sin aviso («Guardar y recalcular»): sin correo. Con aviso 'true' como texto: con correo.
+    t = sim({'id': 9, 'modo': 'draft', 'aviso': False}, **{'Leer render': leido(cuerpo_render(False)), 'Render': [renderer_ok(0)]})
+    ok(not t['correos'] and llamadas(t, 'Guardar vista'), 'R2: vista previa sin aviso → se guarda y no se manda correo')
+    t = sim({'id': 9, 'modo': 'draft', 'aviso': 'true'}, **{'Leer render': leido(cuerpo_render(False)), 'Render': [renderer_ok(0)]})
+    ok(len(t['correos']) == 1, 'R2: aviso "true" como texto también avisa')
+
+    # R3. La vista previa falla: no se reintenta, queda la nota y se avisa.
+    t = sim({'id': 9, 'modo': 'draft', 'aviso': False}, **{'Leer render': leido(cuerpo_render(False)),
+                                                          'Render': [renderer_ok(error='connect ECONNREFUSED')]})
+    sin_error(t, 'R3')
+    gv = llamadas(t, 'Guardar vista')
+    ok(len(llamadas(t, 'Render')) == 1 and gv and gv[0]['body']['ok'] is False
+       and gv[0]['body']['nota'].startswith('el renderer no devolvió la presentación (connect ECONNREFUSED)'), 'R3: un solo intento y nota con el motivo', gv)
+    ok(t['correos'] and t['correos'][0]['asunto'].endswith('la vista previa del plan no se pudo generar'), 'R3: correo con el problema')
+
+    # R4. Versión final con propuesta: portada y cierre reutilizan sus fotos; se pagan solo las 8 nuevas.
+    render_final = cuerpo_render(True, image_briefs=[BRIEF_COVER] + BRIEFS_NUEVAS + [BRIEFS_NUEVAS[1], brief('challenge', 'x'), BRIEF_CIERRE])
+    t = sim({'id': 9, 'modo': 'final', 'aviso': False}, **{'Leer render': leido(render_final), 'Fotos de la propuesta': [MANIFEST_PROP],
+                                                          'Render': [renderer_ok(8)]})
+    sin_error(t, 'R4')
+    ok(llamadas(t, 'Leer render')[0]['url'].endswith('/plan/9/render&modo=final'), 'R4: GET con &modo=final')
+    fpc = llamadas(t, 'Fotos de la propuesta')
+    ok(fpc and fpc[0]['url'] == BASE_R + '/p/PRUEBAprop01/img/manifest.json', 'R4: lee el manifest de fotos de la propuesta', fpc)
+    rc = llamadas(t, 'Render')
+    body = rc[0]['body'] if rc else {}
+    ok(len(rc) == 1 and body.get('draft') is False and body.get('images') == {'cover': BASE_R + '/p/PRUEBAprop01/img/cover.jpg',
+                                                                                'cierre': BASE_R + '/p/PRUEBAprop01/img/next_steps.png'},
+       'R4: un render final con portada y cierre desde la propuesta', body.get('images'))
+    ok(body.get('image_briefs') == BRIEFS_NUEVAS,
+       'R4: se piden solo las 8 fotos nuevas, sin repetidas ni láminas ajenas, con la misma descripción (mismo hash)')
+    ok(all(body.get(k) == render_final[k] for k in ('document_type', 'unique_id', 'fases', 'cronograma', 'agenda', 'portal_url', 'client_name', 'metodo')),
+       'R4: el resto del cuerpo de WordPress llega intacto al renderer (también portal_url vacío: la lámina «Sigue tu proyecto» sale sin enlace)')
+    gv = llamadas(t, 'Guardar vista')
+    ok(gv and gv[0]['body']['modo'] == 'final' and gv[0]['body']['ok'] is True and gv[0]['body']['faltan'] == []
+       and gv[0]['body']['nota'].startswith('Versión final verificada: Presentación y PDF generados · 8 de 8 fotos nuevas guardadas junto al plan'
+                                            ' · Con las fotos de la propuesta, sin costo: portada, cierre · 1 render'),
+       'R4: POST /vista final ok (WordPress pasa el plan a «listo»)', gv)
+    ok(t['correos'] and t['correos'][0]['asunto'] == '✅ [PRUEBA] Sitio de la panadería · plan de trabajo listo'
+       and 'automatiza-crm-ficha&amp;id=5&amp;pt=9#tab-plan' in t['correos'][0]['html'], 'R4: correo «plan de trabajo listo» con el botón a la ficha')
+
+    # R5. Faltan fotos en los tres intentos: 3 renders con el mismo cuerpo y el plan pasa a «error».
+    t = sim({'id': 9, 'modo': 'final', 'aviso': False}, **{'Leer render': leido(render_final), 'Fotos de la propuesta': [MANIFEST_PROP],
+                                                          'Render': [renderer_ok(8, ['gantt', 'fase_2']), renderer_ok(8, ['gantt'])]})
+    sin_error(t, 'R5')
+    rc = llamadas(t, 'Render')
+    ok(len(rc) == 3 and rc[0]['body'] == rc[1]['body'] == rc[2]['body'],
+       'R5: tres renders con el mismo cuerpo (el renderer reutiliza lo ya pagado)', len(rc))
+    gv = llamadas(t, 'Guardar vista')
+    ok(gv and gv[0]['body']['ok'] is False and gv[0]['body']['faltan'] == ['gantt']
+       and gv[0]['body']['nota'].startswith('fotos que no se generaron tras 3 intentos: carta Gantt') and '(ejecución SIM-1)' in gv[0]['body']['nota'],
+       'R5: POST /vista final sin ok, con lo que falta (WordPress lo pasa a «error»)', gv)
+    ok(t['correos'] and t['correos'][0]['asunto'].endswith('la versión final del plan tiene problemas'), 'R5: correo con problemas')
+
+    # R6. La segunda pasada completa las fotos: queda listo con 2 renders.
+    t = sim({'id': 9, 'modo': 'final', 'aviso': False}, **{'Leer render': leido(render_final), 'Fotos de la propuesta': [MANIFEST_PROP],
+                                                          'Render': [renderer_ok(8, ['gantt']), renderer_ok(8)]})
+    gv = llamadas(t, 'Guardar vista')
+    ok(len(llamadas(t, 'Render')) == 2 and gv and gv[0]['body']['ok'] is True and '2 renders' in gv[0]['body']['nota'],
+       'R6: se reintenta solo hasta que salen todas', gv)
+
+    # R7. La propuesta no tiene manifest (404): portada y cierre sin foto, sin pagarlas, y el plan igual queda listo.
+    t = sim({'id': 9, 'modo': 'final', 'aviso': False}, **{'Leer render': leido(render_final),
+                                                          'Fotos de la propuesta': [{'statusCode': 404, 'body': 'Not Found'}],
+                                                          'Render': [renderer_ok(8)]})
+    rc = llamadas(t, 'Render')
+    gv = llamadas(t, 'Guardar vista')
+    ok(rc and rc[0]['body']['images'] == {} and [b['slide'] for b in rc[0]['body']['image_briefs']] == NUEVAS,
+       'R7: sin manifest no se reutiliza ni se paga portada o cierre')
+    ok(gv and gv[0]['body']['ok'] is True and 'la propuesta no tiene foto guardada para portada, cierre' in gv[0]['body']['nota'],
+       'R7: queda listo con el aviso en la nota', gv)
+
+    # R8. Contrato sin propuesta: portada y cierre piden foto nueva; no se lee ningún manifest.
+    t = sim({'id': 9, 'modo': 'final', 'aviso': False}, **{'Leer render': leido(cuerpo_render(True), uid=''), 'Render': [renderer_ok(10)]})
+    rc = llamadas(t, 'Render')
+    ok(not llamadas(t, 'Fotos de la propuesta') and rc and [b['slide'] for b in rc[0]['body']['image_briefs']] == TODAS
+       and rc[0]['body']['images'] == {}, 'R8: sin propuesta se piden las 10 fotos (portada y cierre incluidas)')
+    gv = llamadas(t, 'Guardar vista')
+    ok(gv and gv[0]['body']['ok'] is True and '10 de 10 fotos nuevas' in gv[0]['body']['nota'], 'R8: listo con 10 fotos nuevas', gv)
+
+    # R9. WordPress no entrega el cuerpo: no se renderiza y la versión final queda en «error» (nunca en «aprobando»).
+    t = sim({'id': 9, 'modo': 'final', 'aviso': False}, **{'Leer render': [{'statusCode': 404, 'body': {'code': 'x', 'message': 'Plan no encontrado'}}]})
+    sin_error(t, 'R9')
+    gv = llamadas(t, 'Guardar vista')
+    ok(not llamadas(t, 'Render') and gv and gv[0]['url'] == WP + '/plan/9/vista' and gv[0]['body']['modo'] == 'final'
+       and gv[0]['body']['ok'] is False and gv[0]['body']['nota'].startswith('No se pudo leer el plan en WordPress (HTTP 404) — Plan no encontrado'),
+       'R9: POST /vista final sin ok', gv)
+    ok(t['correos'] and 'plan 9' in t['correos'][0]['asunto'], 'R9: correo aunque no se sepa el nombre del proyecto')
+
+    # R10. Todo salió bien pero WordPress no guardó el resultado: el correo lo dice y sugiere «Destrabar».
+    t = sim({'id': 9, 'modo': 'final', 'aviso': False}, **{'Leer render': leido(render_final), 'Fotos de la propuesta': [MANIFEST_PROP],
+                                                          'Render': [renderer_ok(8)], 'Guardar vista': [{'statusCode': 500, 'body': {}}]})
+    h = t['correos'][0]['html'] if t['correos'] else ''
+    ok(t['correos'] and t['correos'][0]['asunto'].startswith('⚠️') and 'No se pudo guardar el resultado en WordPress' in h and 'Destrabar' in h,
+       'R10: si WordPress no guarda, el correo avisa que el plan puede seguir en «aprobando»')
+
+    # R11. El renderer nunca responde: 3 intentos y «error».
+    t = sim({'id': 9, 'modo': 'final', 'aviso': False}, **{'Leer render': leido(render_final), 'Fotos de la propuesta': [MANIFEST_PROP],
+                                                          'Render': [renderer_ok(error='timeout of 290000ms exceeded')]})
+    gv = llamadas(t, 'Guardar vista')
+    ok(len(llamadas(t, 'Render')) == 3 and gv and gv[0]['body']['ok'] is False
+       and gv[0]['body']['nota'].startswith('el renderer no devolvió la presentación (timeout of 290000ms exceeded) tras 3 intentos'),
+       'R11: 3 intentos y error', gv)
+
+    # R12. Modo desconocido: se trata como vista previa (nunca se pagan fotos por error).
+    t = sim({'id': 9, 'modo': 'otro'}, **{'Leer render': leido(cuerpo_render(True), estado='borrador'), 'Render': [renderer_ok(0)]})
+    rc = llamadas(t, 'Render')
+    ok(llamadas(t, 'Leer render')[0]['url'].endswith('&modo=draft') and rc and rc[0]['body']['draft'] is True
+       and rc[0]['body']['image_briefs'] == [], 'R12: modo desconocido → vista previa sin fotos')
+
+    # R13 (D10). Vista previa atrasada: el plan ya está «aprobando», «listo» o «enviado» → no se dibuja ni se escribe.
+    for estado in ('aprobando', 'listo', 'enviado'):
+        t = sim({'id': 9, 'codigo': 'PRUEBAplan01', 'modo': 'draft', 'aviso': True},
+                **{'Leer render': leido(cuerpo_render(False), estado=estado), 'Render': [renderer_ok(0)]})
+        sin_error(t, f'R13 {estado}')
+        ok(t['pasos'][-1] == '¿Toca renderizar?' and not llamadas(t, 'Render') and not llamadas(t, 'Guardar vista') and not t['correos'],
+           f'R13: vista previa con el plan en «{estado}» → no toca el renderer (/p/<codigo>/ queda con la versión final), ni /vista, ni correo',
+           t['pasos'])
+    t = sim({'id': 9, 'modo': 'draft', 'aviso': False}, **{'Leer render': leido(cuerpo_render(False), estado='error'), 'Render': [renderer_ok(0)]})
+    ok(len(llamadas(t, 'Render')) == 1 and llamadas(t, 'Guardar vista'), 'R13: con el plan en «error» la vista previa sí se dibuja (Volver al borrador)')
+    t = sim({'id': 9, 'modo': 'final', 'aviso': False}, **{'Leer render': leido(render_final, estado='aprobando'),
+                                                          'Fotos de la propuesta': [MANIFEST_PROP], 'Render': [renderer_ok(8)]})
+    ok(len(llamadas(t, 'Render')) == 1, 'R13: la versión final con el plan «aprobando» se dibuja')
+
+    # R14 (D11). El renderer rechaza el cuerpo (400 del esquema): no se reintenta y los motivos van a la nota.
+    t = sim({'id': 9, 'modo': 'final', 'aviso': False}, **{'Leer render': leido(render_final), 'Fotos de la propuesta': [MANIFEST_PROP],
+                                                          'Render': [RECHAZO_ESQUEMA, renderer_ok(8)]})
+    sin_error(t, 'R14')
+    gv = llamadas(t, 'Guardar vista')
+    ok(len(llamadas(t, 'Render')) == 1 and gv and gv[0]['body']['ok'] is False
+       and gv[0]['body']['nota'].startswith('el renderer rechazó el plan (HTTP 400: falta el objeto obligatorio: cronograma; '
+                                            'fases debe traer al menos una fase)'),
+       'R14: 400 con details → un solo render y los motivos en la nota (WordPress pasa el plan a «error»)', gv)
+    ok(t['correos'] and 'falta el objeto obligatorio: cronograma' in t['correos'][0]['html'], 'R14: el correo trae los motivos del renderer')
+    t = sim({'id': 9, 'modo': 'draft', 'aviso': False}, **{'Leer render': leido(cuerpo_render(False)), 'Render': [RECHAZO_ESQUEMA]})
+    gv = llamadas(t, 'Guardar vista')
+    ok(gv and gv[0]['body']['ok'] is False and 'falta el objeto obligatorio: cronograma' in gv[0]['body']['nota'] and t['correos'],
+       'R14: en la vista previa el 400 también llega a la nota y al correo', gv)
+
+    # R15 (D11). Un 5xx sí se reintenta: el segundo render sale bien; si los tres fallan, la nota trae el HTTP y el motivo.
+    caido = renderer_http(502, {'error': 'render failed', 'details': 'Playwright timeout'})
+    t = sim({'id': 9, 'modo': 'final', 'aviso': False}, **{'Leer render': leido(render_final), 'Fotos de la propuesta': [MANIFEST_PROP],
+                                                          'Render': [caido, renderer_ok(8)]})
+    gv = llamadas(t, 'Guardar vista')
+    ok(len(llamadas(t, 'Render')) == 2 and gv and gv[0]['body']['ok'] is True and '2 renders' in gv[0]['body']['nota'],
+       'R15: un 502 se reintenta y la segunda pasada deja el plan listo', gv)
+    t = sim({'id': 9, 'modo': 'final', 'aviso': False}, **{'Leer render': leido(render_final), 'Fotos de la propuesta': [MANIFEST_PROP],
+                                                          'Render': [caido]})
+    gv = llamadas(t, 'Guardar vista')
+    ok(len(llamadas(t, 'Render')) == 3 and gv and gv[0]['body']['ok'] is False
+       and gv[0]['body']['nota'].startswith('el renderer no devolvió la presentación (HTTP 502: Playwright timeout) tras 3 intentos'),
+       'R15: tres 502 → 3 intentos y la nota con el código y el motivo', gv)
+
+
 # ==== Las tareas siguientes agregan sus secciones justo antes de esta línea ====
 
 if __name__ == '__main__':

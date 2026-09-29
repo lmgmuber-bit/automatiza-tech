@@ -102,38 +102,11 @@ Crea una hoja llamada "Citas" con las siguientes columnas:
 
 ---
 
-## 📝 Templates de WhatsApp (Requeridos por Meta)
+## 📝 Plantillas de WhatsApp (requeridas por Meta)
 
-Debes crear estos templates en Meta Business Manager:
+⚠️ **Corrección del 2026-09-24.** Esta sección decía que los recordatorios usaban las plantillas `recordatorio_24h` y `recordatorio_1h`. **Nunca fue así**: esas plantillas no se crearon y los flujos mandaban `text` o `interactive`. Meta solo entrega un mensaje que no es plantilla si el cliente escribió al número en las últimas 24 h; a quien agenda por la web lo acepta (`200` + `wamid`) y lo descarta 3 s después con el error **131047**, que llega por el webhook y nadie procesaba.
 
-### Template: `recordatorio_24h`
-```
-Idioma: Español (es)
-Categoría: UTILITY
-
-Cuerpo del mensaje:
-¡Hola {{1}}! 👋
-
-Te recordamos que tienes una cita agendada con AutomatizaTech:
-
-📅 Fecha: {{2}}
-🕐 Hora: {{3}}
-
-¡Te esperamos! Si necesitas reagendar, responde a este mensaje.
-```
-
-### Template: `recordatorio_1h`
-```
-Idioma: Español (es)
-Categoría: UTILITY
-
-Cuerpo del mensaje:
-¡Hola {{1}}! ⏰
-
-Tu cita con AutomatizaTech es en 1 hora.
-
-¡Nos vemos pronto! 🚀
-```
+Las plantillas reales (9, Utility), su estado, el código de cada flujo, las pruebas y cómo aplicar o revertir están en [`wa-plantillas-2026-09-24/README.md`](wa-plantillas-2026-09-24/README.md): `recordatorio_cita_72h`, `recordatorio_cita_24h`, `recordatorio_cita_1h`, `recordatorio_seguimiento_hoy`, `recordatorio_seguimiento_manana`, `aviso_demo`, `aviso_reunion_prospecto`, `aviso_reunion_seguimiento` y `alerta_argos`.
 
 ---
 
@@ -151,9 +124,9 @@ El sistema incluye varias medidas para evitar bloqueos:
 - Máximo 10 recordatorios por hora
 - Ejecución cada hora (no continua)
 
-### 3. **Uso de Templates Aprobados**
-- Los recordatorios usan templates pre-aprobados por Meta
-- Evita problemas con mensajes fuera de la ventana de 24h
+### 3. **Plantillas aprobadas para escribir fuera de la ventana de 24 h**
+- Recordatorios, seguimientos, avisos de reunión y alertas de ARGOS pasan a plantillas Utility (estado y detalle en `wa-plantillas-2026-09-24/`).
+- Un mensaje que no es plantilla solo llega si el cliente escribió en las últimas 24 h; con WhatsApp, `success` + `wamid` **no** significa entregado.
 
 ---
 

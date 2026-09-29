@@ -1,0 +1,1 @@
+=https://automatizatech.cl/wp-json/automatiza/v1/n8n-errors/search?workflow_name={{ encodeURIComponent($json.workflow?.name || '') }}&error_node={{ encodeURIComponent(($json.execution?.error || $json.trigger?.error || {}).node?.name || '') }}&error_message={{ encodeURIComponent((($json.execution?.error || $json.trigger?.error || {}).message || '').substring(0, 100)) }}&days=30

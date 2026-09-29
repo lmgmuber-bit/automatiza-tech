@@ -2363,6 +2363,198 @@
       "videos": {
         "welcome": "welcome-fiestas-patrias.mp4"
       }
+    },
+    "brujitas": {
+      "nombre": "Noche de Brujas",
+      "franquicia": null,
+      "publico": "mixto",
+      "diploma": "Invitado de honor de la Noche de Brujas",
+      "colors": {
+        "accent": "#F26A1B",
+        "accentSoft": "#FDE7D6",
+        "yellow": "#FFC94A",
+        "ink": "#2E1A47",
+        "bgLight1": "#F6EEFF",
+        "bgLight2": "#FFE9D6",
+        "dark1": "#5B2A86",
+        "dark2": "#2E1A47",
+        "dark3": "#F26A1B"
+      },
+      "confetti": [
+        "#F26A1B",
+        "#5B2A86",
+        "#FFFFFF",
+        "#FFC94A",
+        "#B084E0",
+        "#FDE7D6"
+      ],
+      "personajes": [
+        {
+          "emoji": "🧙‍♀️",
+          "name": "Brujita Luna",
+          "img": "brujita.jpg",
+          "game": [
+            {
+              "kind": "escudo",
+              "label": "¡Atrapa la calabaza!",
+              "image": "fondo-sala.jpg",
+              "seconds": 15
+            },
+            {
+              "kind": "fichas",
+              "label": "¡Arma la imagen!",
+              "image": "puzzle-brujita.jpg",
+              "cols": 3,
+              "filas": 3
+            },
+            {
+              "kind": "copos",
+              "label": "¡Atrapa los dulces!",
+              "emojis": [
+                "🍬",
+                "🎃",
+                "🍭",
+                "⭐"
+              ],
+              "seconds": 15
+            }
+          ]
+        },
+        {
+          "emoji": "🎃",
+          "name": "Pepa Calabaza",
+          "img": "calabaza.jpg",
+          "game": [
+            {
+              "kind": "fichas",
+              "label": "¡Arma la imagen!",
+              "image": "puzzle-calabaza.jpg",
+              "cols": 3,
+              "filas": 3
+            },
+            {
+              "kind": "copos",
+              "label": "¡Atrapa los dulces!",
+              "emojis": [
+                "🍬",
+                "🎃",
+                "🍭",
+                "⭐"
+              ],
+              "seconds": 15
+            }
+          ]
+        },
+        {
+          "emoji": "👻",
+          "name": "Fantasmín",
+          "img": "fantasmita.jpg",
+          "game": [
+            {
+              "kind": "fichas",
+              "label": "¡Arma la imagen!",
+              "image": "puzzle-fantasmita.jpg",
+              "cols": 3,
+              "filas": 3
+            },
+            {
+              "kind": "copos",
+              "label": "¡Atrapa los dulces!",
+              "emojis": [
+                "🍬",
+                "🎃",
+                "🍭",
+                "⭐"
+              ],
+              "seconds": 15
+            }
+          ]
+        },
+        {
+          "emoji": "🐈‍⬛",
+          "name": "Gato Medianoche",
+          "img": "gato.jpg",
+          "game": [
+            {
+              "kind": "fichas",
+              "label": "¡Arma la imagen!",
+              "image": "puzzle-gato.jpg",
+              "cols": 3,
+              "filas": 3
+            },
+            {
+              "kind": "copos",
+              "label": "¡Atrapa los dulces!",
+              "emojis": [
+                "🍬",
+                "🎃",
+                "🍭",
+                "⭐"
+              ],
+              "seconds": 15
+            }
+          ]
+        },
+        {
+          "emoji": "🦇",
+          "name": "Murci",
+          "img": "murcielaguito.jpg",
+          "game": [
+            {
+              "kind": "fichas",
+              "label": "¡Arma la imagen!",
+              "image": "puzzle-murcielaguito.jpg",
+              "cols": 3,
+              "filas": 3
+            },
+            {
+              "kind": "copos",
+              "label": "¡Atrapa los dulces!",
+              "emojis": [
+                "🍬",
+                "🎃",
+                "🍭",
+                "⭐"
+              ],
+              "seconds": 15
+            }
+          ]
+        },
+        {
+          "emoji": "🤕",
+          "name": "Momi",
+          "img": "momia.jpg",
+          "game": [
+            {
+              "kind": "fichas",
+              "label": "¡Arma la imagen!",
+              "image": "puzzle-momia.jpg",
+              "cols": 3,
+              "filas": 3
+            },
+            {
+              "kind": "copos",
+              "label": "¡Atrapa los dulces!",
+              "emojis": [
+                "🍬",
+                "🎃",
+                "🍭",
+                "⭐"
+              ],
+              "seconds": 15
+            }
+          ]
+        }
+      ],
+      "frameBox": {
+        "x": 0.1062,
+        "y": 0.1238,
+        "w": 0.7876,
+        "h": 0.443
+      },
+      "marcoGrande": true,
+      "fondoEscena": "fondo-escena.jpg",
+      "musicaHint": "Pendiente: dos pistas instrumentales (Luis, Gemini)"
     }
   }
 }

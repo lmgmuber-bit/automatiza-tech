@@ -11,6 +11,15 @@ export function rutaFondo(...candidatas) {
   return candidatas.find((ruta) => typeof ruta === 'string' && VALIDO.test(ruta)) || FONDO_GENERICO
 }
 
+export const PENDONES_GENERICOS = ['#D52B1E', '#FFFFFF', '#0039A6']
+
+/** Colores de los banderines de la franja de recuerdo: los tres primeros del confeti de la temática (29-09: en un
+ *  evento de Noche de Brujas salían rojo, blanco y azul). Sin tres colores válidos, los de siempre. */
+export function pendonesDe(confetti) {
+  const validos = (Array.isArray(confetti) ? confetti : []).filter((c) => typeof c === 'string' && /^#[0-9a-f]{6}$/i.test(c))
+  return validos.length >= 3 ? validos.slice(0, 3) : PENDONES_GENERICOS
+}
+
 /** Estilo con la variable --feria-fondo. La dirección va absoluta: una url() relativa dentro de una variable CSS se
  *  resuelve contra la hoja que la usa (assets/), no contra la página. */
 export function fondoEstilo(base, here, ...candidatas) {

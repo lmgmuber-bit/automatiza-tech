@@ -2547,14 +2547,214 @@
         }
       ],
       "frameBox": {
-        "x": 0.1062,
-        "y": 0.1238,
-        "w": 0.7876,
-        "h": 0.443
+        "x": 0.1087,
+        "y": 0.0936,
+        "w": 0.7686,
+        "h": 0.5097
       },
       "marcoGrande": true,
       "fondoEscena": "fondo-escena.jpg",
-      "musicaHint": "Pendiente: dos pistas instrumentales (Luis, Gemini)"
+      "musicaHint": "Pendiente: dos pistas instrumentales (Luis, Gemini)",
+      "videos": {
+        "welcome": "welcome-brujitas.mp4",
+        "despedida": "despedida-brujitas.mp4"
+      }
+    },
+    "navidad": {
+      "nombre": "Navidad del Viejito Pascuero",
+      "franquicia": null,
+      "publico": "mixto",
+      "diploma": "Ayudante oficial del Viejito Pascuero",
+      "colors": {
+        "accent": "#C62828",
+        "accentSoft": "#FBE4E1",
+        "yellow": "#F4C542",
+        "ink": "#1F3D2B",
+        "bgLight1": "#FFF8EC",
+        "bgLight2": "#E8F3EA",
+        "dark1": "#1B5E20",
+        "dark2": "#1F3D2B",
+        "dark3": "#C62828"
+      },
+      "confetti": [
+        "#C62828",
+        "#1B5E20",
+        "#F4C542",
+        "#FFFFFF",
+        "#8BC34A",
+        "#FBE4E1"
+      ],
+      "personajes": [
+        {
+          "emoji": "🎅",
+          "name": "Viejito Pascuero",
+          "img": "pascuero.jpg",
+          "game": [
+            {
+              "kind": "escudo",
+              "label": "¡Atrapa la estrella!",
+              "image": "fondo-sala.jpg",
+              "seconds": 15
+            },
+            {
+              "kind": "fichas",
+              "label": "¡Arma la imagen!",
+              "image": "puzzle-pascuero.jpg",
+              "cols": 3,
+              "filas": 3
+            },
+            {
+              "kind": "copos",
+              "label": "¡Atrapa los regalos!",
+              "emojis": [
+                "🎁",
+                "⭐",
+                "🍬",
+                "🔔"
+              ],
+              "seconds": 15
+            }
+          ]
+        },
+        {
+          "emoji": "🤶",
+          "name": "Señora Pascuera",
+          "img": "pascuera.jpg",
+          "game": [
+            {
+              "kind": "fichas",
+              "label": "¡Arma la imagen!",
+              "image": "puzzle-pascuera.jpg",
+              "cols": 3,
+              "filas": 3
+            },
+            {
+              "kind": "copos",
+              "label": "¡Atrapa los regalos!",
+              "emojis": [
+                "🎁",
+                "⭐",
+                "🍬",
+                "🔔"
+              ],
+              "seconds": 15
+            }
+          ]
+        },
+        {
+          "emoji": "🦌",
+          "name": "Reno Cascabel",
+          "img": "reno.jpg",
+          "game": [
+            {
+              "kind": "fichas",
+              "label": "¡Arma la imagen!",
+              "image": "puzzle-reno.jpg",
+              "cols": 3,
+              "filas": 3
+            },
+            {
+              "kind": "copos",
+              "label": "¡Atrapa los regalos!",
+              "emojis": [
+                "🎁",
+                "⭐",
+                "🍬",
+                "🔔"
+              ],
+              "seconds": 15
+            }
+          ]
+        },
+        {
+          "emoji": "🧝",
+          "name": "Duende Ayudante",
+          "img": "duende.jpg",
+          "game": [
+            {
+              "kind": "fichas",
+              "label": "¡Arma la imagen!",
+              "image": "puzzle-duende.jpg",
+              "cols": 3,
+              "filas": 3
+            },
+            {
+              "kind": "copos",
+              "label": "¡Atrapa los regalos!",
+              "emojis": [
+                "🎁",
+                "⭐",
+                "🍬",
+                "🔔"
+              ],
+              "seconds": 15
+            }
+          ]
+        },
+        {
+          "emoji": "⛄",
+          "name": "Copito",
+          "img": "nieve.jpg",
+          "game": [
+            {
+              "kind": "fichas",
+              "label": "¡Arma la imagen!",
+              "image": "puzzle-nieve.jpg",
+              "cols": 3,
+              "filas": 3
+            },
+            {
+              "kind": "copos",
+              "label": "¡Atrapa los regalos!",
+              "emojis": [
+                "🎁",
+                "⭐",
+                "🍬",
+                "🔔"
+              ],
+              "seconds": 15
+            }
+          ]
+        },
+        {
+          "emoji": "🐧",
+          "name": "Pingüi",
+          "img": "pinguino.jpg",
+          "game": [
+            {
+              "kind": "fichas",
+              "label": "¡Arma la imagen!",
+              "image": "puzzle-pinguino.jpg",
+              "cols": 3,
+              "filas": 3
+            },
+            {
+              "kind": "copos",
+              "label": "¡Atrapa los regalos!",
+              "emojis": [
+                "🎁",
+                "⭐",
+                "🍬",
+                "🔔"
+              ],
+              "seconds": 15
+            }
+          ]
+        }
+      ],
+      "frameBox": {
+        "x": 0.1062,
+        "y": 0.0832,
+        "w": 0.7932,
+        "h": 0.4894
+      },
+      "marcoGrande": true,
+      "fondoEscena": "fondo-escena.jpg",
+      "musicaHint": "Pendiente: dos pistas instrumentales (Luis, Gemini)",
+      "videos": {
+        "welcome": "welcome-navidad.mp4",
+        "despedida": "despedida-navidad.mp4"
+      }
     }
   }
 }

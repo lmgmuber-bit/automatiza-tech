@@ -135,10 +135,11 @@ test('marcos: la foto de cada temática infantil cae dentro del marco pintado', 
     if (await page.$('[data-step=menu]')) await button('Foto con tu personaje')
     await page.waitForSelector('[data-step=roulette]');await button('¡Me gusta!');await button('Continuar')
     await page.waitForFunction(()=>['juego','camera'].includes(document.querySelector('main')?.dataset.step))
-    if (await page.$('[data-step=juego]')) {
-      await button('Saltar')
-      await page.waitForFunction(()=>document.querySelector('main')?.dataset.step==='camera'||[...document.querySelectorAll('button')].some((b)=>b.textContent.includes('Ir a mi foto')))
-      if (await page.$('[data-step=juego]')) await button('Ir a mi foto')
+    // 29-09: el personaje estrella trae tres juegos y entre uno y otro la cabina pregunta '¿Jugamos otro?'. La prueba
+    // solo sabía saltar uno y quedaba parada según el personaje que sacara la ruleta. Ahora salta hasta llegar a la cámara.
+    for (let i=0;i<8&&await page.$('[data-step=juego]');i++) {
+      const cual=await (await page.waitForFunction(()=>{const b=[...document.querySelectorAll('button')].filter((n)=>!n.disabled);const ir=b.find((n)=>n.textContent.includes('Ir a mi foto'));const saltar=b.find((n)=>n.textContent.includes('Saltar'));return document.querySelector('main')?.dataset.step!=='juego'?'listo':ir?'Ir a mi foto':saltar?'Saltar':false})).jsonValue()
+      if (cual!=='listo') { await button(cual); await new Promise((done)=>setTimeout(done,250)) }
     }
     await button('Tomar mi foto');await page.waitForSelector('.feria-result')
     const src=await page.$eval('.feria-result',(i)=>i.src)

@@ -163,6 +163,10 @@ $mundos = $r['json']['mundos'] ?? [];
 f_check(array_column($mundos['infantil'] ?? [], 'slug') === ['hielo', 'spidey'], 'mundos infantiles');
 f_check(($mundos['adulto'][1]['slug'] ?? '') === 'baby-nube' && ($mundos['adulto'][1]['personajes'] ?? true) === false, 'baby-nube va sin personajes');
 f_check(($mundos['infantil'][0]['personajes'] ?? false) === true && str_starts_with((string) $mundos['infantil'][0]['imagen'], 'themes/hielo/'), 'hielo con personajes e imagen');
+// 29-09: cada temática publica su fondo de pantalla y el evento usa el de su primera temática con fondo propio.
+f_check(($mundos['infantil'][0]['fondo'] ?? '') === 'themes/hielo/fondo-evento.jpg', 'hielo publica su fondo de evento');
+f_check(($r['json']['feria']['fondo'] ?? '') === 'themes/hielo/fondo-evento.jpg', 'el evento usa el fondo de su primera temática');
+f_check(cb_feria_fondo_mundo('no-existe') === '', 'una temática sin archivo no publica fondo');
 f_check(array_key_exists('video_espera', $r['json']), 'trae el video de espera (vacío si el archivo aún no está)');
 
 // ── Número F-### ────────────────────────────────────────────────────────────

@@ -7,7 +7,7 @@ import { afterName, armIdle, firstName, initialPhotoStep, reservation, returnUrl
 import { downloadImage, withRemembrance } from './media.js'
 import { FullscreenButton, useFullscreenOnTap } from './fullscreen.jsx'
 import { prepararVideo, urlDeVideo } from '../videoListo.js'
-import { fondoEstilo } from './fondo.js'
+import { fondoEstilo, pendonesDe } from './fondo.js'
 import { INTRO_ARRANQUE_MS, alVencer, esperaPorDuracion, restanteMinimo } from './intro.js'
 import './feria.css'
 
@@ -85,7 +85,7 @@ export default function FeriaBooth({ feria, theme, themeData, characters, filter
       setHeld(number)
       const compositionStart = performance.now()
       const composed = precompuesta ? source : await renderPhoto(source, firstName(name), person, filter, segmenter)
-      const finalPhoto = await filterImage(await withRemembrance(composed, feria, number), filter)
+      const finalPhoto = await filterImage(await withRemembrance(composed, feria, number, pendonesDe(themeData?.confetti)), filter)
       if (segmenter) segmenter.metrics.compositionMs = performance.now() - compositionStart
       setPhoto(finalPhoto)
     } catch { setError('No pudimos preparar tu recuerdo. La foto sigue aquí: puedes reintentar o guardar la original.') }
@@ -111,7 +111,7 @@ export default function FeriaBooth({ feria, theme, themeData, characters, filter
     if (locked.current) return
     locked.current = true; setBusy(true); setError('')
     try {
-      if (!diploma) setDiploma(await withRemembrance(await renderDiploma(firstName(name), person, route === 'asomate' ? heroe : null), feria, held))
+      if (!diploma) setDiploma(await withRemembrance(await renderDiploma(firstName(name), person, route === 'asomate' ? heroe : null), feria, held, pendonesDe(themeData?.confetti)))
       setStep('diploma')
     } catch { setError('No pudimos preparar el diploma. Puedes intentarlo nuevamente.') }
     finally { locked.current = false; setBusy(false) }

@@ -2,7 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { existsSync, readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
-import { FONDO_GENERICO, fondoEstilo, rutaFondo } from '../../src/feria/fondo.js'
+import { FONDO_GENERICO, PENDONES_GENERICOS, fondoEstilo, pendonesDe, rutaFondo } from '../../src/feria/fondo.js'
 
 const root = resolve(import.meta.dirname, '../..')
 
@@ -31,7 +31,7 @@ test('el estilo lleva la dirección absoluta, también bajo /app/', () => {
 
 test('el genérico existe y las temáticas de los eventos de fin de año traen fondo propio en 9:16', () => {
   assert.ok(existsSync(resolve(root, 'public', FONDO_GENERICO)))
-  for (const slug of ['brujitas', 'fiestas-patrias']) {
+  for (const slug of ['brujitas', 'navidad', 'fiestas-patrias']) {
     const archivo = resolve(root, 'public/themes', slug, 'fondo-evento.jpg')
     assert.ok(existsSync(archivo), slug + ' sin fondo-evento.jpg')
     const b = readFileSync(archivo)
@@ -45,6 +45,12 @@ test('el genérico existe y las temáticas de los eventos de fin de año traen f
     }
     assert.equal(ancho + 'x' + alto, '1080x1920', slug)
   }
+})
+
+test('los banderines de la franja toman los colores de la temática', () => {
+  assert.deepEqual(pendonesDe(['#F26A1B', '#5B2A86', '#FFFFFF', '#FFC94A']), ['#F26A1B', '#5B2A86', '#FFFFFF'])
+  assert.deepEqual(pendonesDe(['#D52B1E', '#FFFFFF', '#0039A6', '#F2C14E']), PENDONES_GENERICOS)
+  for (const malo of [undefined, null, [], ['#fff', 'rojo', '#12345'], ['#F26A1B', '#5B2A86'], 'texto']) assert.deepEqual(pendonesDe(malo), PENDONES_GENERICOS)
 })
 
 test('el selector baja solo hasta la autorización y el botón al elegir temática', () => {

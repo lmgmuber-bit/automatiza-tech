@@ -6490,6 +6490,17 @@ ok(preg_match('/<form[^>]*class="at-pt-form-aprobar at-pt-requiere-guardado"[^>]
 ok(strpos($h, 'page=automatiza-followup') !== false && strpos($h, 'pt_plan=' . $f2->id) !== false && strpos($h, 'Agendar llamada de seguimiento') !== false, '«Agendar llamada de seguimiento» abre el formulario de seguimiento con pt_plan');
 ok(strpos($h, 'Destrabar') === false && strpos($h, 'no tiene correo') === false && strpos($h, 'no tiene propuesta') === false, 'en borrador, con correo y con propuesta: sin Destrabar ni avisos de falta');
 ok(strpos($h, '<fieldset>') !== false, 'en borrador la tabla se puede editar');
+// «Entrega estimada» (D4) es el hito de cronograma.hitos = fin del último bloque de implementación, no el fin de todo el
+// cronograma con el soporte: con ptc_sembrar (inicio 5-oct-2026, tabla por defecto) el hito cae el 10-nov y el fin el 17-nov.
+$cr9 = at_pt_payload(at_pt_plan((int) $f2->id))['cronograma'] ?? [];
+$hito9 = '';
+foreach ((array) ($cr9['hitos'] ?? []) as $h9) {
+	if (($h9['nombre'] ?? '') === 'Entrega estimada') {
+		$hito9 = (string) $h9['fecha'];
+	}
+}
+ok($hito9 === '2026-11-10' && ($cr9['fin'] ?? '') === '2026-11-17', 'punto de partida: el hito «Entrega estimada» es 2026-11-10 y el fin del cronograma 2026-11-17 (' . $hito9 . ' / ' . ($cr9['fin'] ?? '') . ')');
+ok(strpos($h, 'Entrega estimada: 10 nov 2026') !== false && strpos($h, 'Entrega estimada: 17 nov 2026') === false, 'la caja «Fechas estimadas» muestra la entrega estimada del hito (10 nov 2026), no el fin del soporte');
 
 // ---------- Sin propuesta y sin correo (Review Focus 4) ----------
 $c3 = ptc_cliente($m . 'd', '');
@@ -6864,7 +6875,9 @@ function at_pt_render_plan(object $fila, int $crm_id): void {
 	};
 	$crono = is_array($pl['cronograma'] ?? null) ? $pl['cronograma'] : [];
 	$entrega = '';
-	foreach ((array) ($pl['hitos'] ?? []) as $h) {
+	// «Entrega estimada» (D4: fin del último bloque de implementación) vive solo en cronograma.hitos: at_pt_calcular_fechas()
+	// la deja fuera de plan.hitos. Si no aparece, se usa el fin del cronograma (que incluye el soporte).
+	foreach ((array) ($crono['hitos'] ?? []) as $h) {
 		if (is_array($h) && ($h['nombre'] ?? '') === 'Entrega estimada') {
 			$entrega = (string) ($h['fecha'] ?? '');
 		}
@@ -7473,7 +7486,7 @@ cd /c/wamp64/www/automatiza-tech/.worktrees/plan-trabajo; PHP=/c/wamp64/bin/php/
 Expected: 15 líneas `ok …` (entre ellas `ok   serializar() arma exactamente el plan_json que espera el servidor (…)`,
 `ok   con cambios sin guardar, «Aprobar» se bloquea con un aviso antes de confirmar` y `ok   «+ Actividad» agrega una
 fila de Luis: 1 día, AutomatizaTech, no en paralelo`), `TODO OK`, `exit=0` (tarda unos segundos: abre el navegador una
-vez); y la prueba de la pestaña, `TODO OK` (33 `ok`: entre ellas `ok   el botón Aprobar muestra (8 fotos + revisión ≈ US$0,0516)`,
+vez); y la prueba de la pestaña, `TODO OK` (35 `ok`: entre ellas `ok   la caja «Fechas estimadas» muestra la entrega estimada del hito (10 nov 2026), no el fin del soporte`, `ok   el botón Aprobar muestra (8 fotos + revisión ≈ US$0,0516)`,
 `ok   sin propuesta: portada y cierre también son fotos nuevas (10 fotos + revisión ≈ US$0,0580)`, `ok   sin correo: avisa que
 «Sigue tu proyecto» sale sin enlace, y la pestaña se dibuja igual` y `ok   error sin plan: «Reintentar borrador» con el
 motivo (Review Focus 5)`).

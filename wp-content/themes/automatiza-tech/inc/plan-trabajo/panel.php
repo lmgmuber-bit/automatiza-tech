@@ -298,7 +298,9 @@ function at_pt_render_plan(object $fila, int $crm_id): void {
 	};
 	$crono = is_array($pl['cronograma'] ?? null) ? $pl['cronograma'] : [];
 	$entrega = '';
-	foreach ((array) ($pl['hitos'] ?? []) as $h) {
+	// «Entrega estimada» (D4: fin del último bloque de implementación) vive solo en cronograma.hitos: at_pt_calcular_fechas()
+	// la deja fuera de plan.hitos. Si no aparece, se usa el fin del cronograma (que incluye el soporte).
+	foreach ((array) ($crono['hitos'] ?? []) as $h) {
 		if (is_array($h) && ($h['nombre'] ?? '') === 'Entrega estimada') {
 			$entrega = (string) ($h['fecha'] ?? '');
 		}

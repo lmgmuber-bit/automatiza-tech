@@ -72,6 +72,17 @@ ok(preg_match('/<form[^>]*class="at-pt-form-aprobar at-pt-requiere-guardado"[^>]
 ok(strpos($h, 'page=automatiza-followup') !== false && strpos($h, 'pt_plan=' . $f2->id) !== false && strpos($h, 'Agendar llamada de seguimiento') !== false, '«Agendar llamada de seguimiento» abre el formulario de seguimiento con pt_plan');
 ok(strpos($h, 'Destrabar') === false && strpos($h, 'no tiene correo') === false && strpos($h, 'no tiene propuesta') === false, 'en borrador, con correo y con propuesta: sin Destrabar ni avisos de falta');
 ok(strpos($h, '<fieldset>') !== false, 'en borrador la tabla se puede editar');
+// «Entrega estimada» (D4) es el hito de cronograma.hitos = fin del último bloque de implementación, no el fin de todo el
+// cronograma con el soporte: con ptc_sembrar (inicio 5-oct-2026, tabla por defecto) el hito cae el 10-nov y el fin el 17-nov.
+$cr9 = at_pt_payload(at_pt_plan((int) $f2->id))['cronograma'] ?? [];
+$hito9 = '';
+foreach ((array) ($cr9['hitos'] ?? []) as $h9) {
+	if (($h9['nombre'] ?? '') === 'Entrega estimada') {
+		$hito9 = (string) $h9['fecha'];
+	}
+}
+ok($hito9 === '2026-11-10' && ($cr9['fin'] ?? '') === '2026-11-17', 'punto de partida: el hito «Entrega estimada» es 2026-11-10 y el fin del cronograma 2026-11-17 (' . $hito9 . ' / ' . ($cr9['fin'] ?? '') . ')');
+ok(strpos($h, 'Entrega estimada: 10 nov 2026') !== false && strpos($h, 'Entrega estimada: 17 nov 2026') === false, 'la caja «Fechas estimadas» muestra la entrega estimada del hito (10 nov 2026), no el fin del soporte');
 
 // ---------- Sin propuesta y sin correo (Review Focus 4) ----------
 $c3 = ptc_cliente($m . 'd', '');

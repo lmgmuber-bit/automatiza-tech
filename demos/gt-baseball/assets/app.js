@@ -970,15 +970,30 @@
   }
 
   function enviar() {
-    if (estado.enviando || estado.enviado) return;
-    // El anti-bot tiene que estar resuelto antes de enviar (si el sitio lo usa).
-    var ts = tokenTurnstile();
-    if (SITEKEY && !ts) {
-      $('err-turnstile').textContent = 'Confirma que no eres un robot para enviar.';
-      $('campo-turnstile').hidden = false;
-      var box = $('campo-turnstile'); if (box.scrollIntoView) box.scrollIntoView({ block: 'center' });
+    if (estado.enviando || estado.enviado || estado.esperandoTs) return;
+    // El anti-bot tiene que estar resuelto antes de enviar (si el sitio lo usa). En modo Managed suele resolverse
+    // solo en 1 a 3 s: si todavía no hay token, se espera hasta 8 s antes de pedirle algo al apoderado.
+    if (SITEKEY && !tokenTurnstile()) {
+      estado.esperandoTs = true;
+      $('btn-siguiente').disabled = true;
+      $('err-turnstile').textContent = 'Verificando que no eres un robot…';
+      var t0 = Date.now();
+      (function esperar() {
+        if (tokenTurnstile()) {
+          estado.esperandoTs = false; $('btn-siguiente').disabled = false; $('err-turnstile').textContent = '';
+          enviar();
+        } else if (Date.now() - t0 < 8000) {
+          setTimeout(esperar, 250);
+        } else {
+          estado.esperandoTs = false; $('btn-siguiente').disabled = false;
+          $('err-turnstile').textContent = 'Confirma que no eres un robot: marca la casilla de arriba y vuelve a tocar «Enviar inscripción».';
+          $('campo-turnstile').hidden = false;
+          var box = $('campo-turnstile'); if (box.scrollIntoView) box.scrollIntoView({ block: 'center' });
+        }
+      })();
       return;
     }
+    var ts = tokenTurnstile();
     if (navigator.onLine === false) { terminar(false, { tipo: 'offline' }); return; }
     estado.enviando = true;
     $('btn-siguiente').disabled = true;

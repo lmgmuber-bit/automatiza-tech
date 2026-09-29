@@ -1,6 +1,8 @@
 # GT Baseball Academy — prototipo de inscripción con QR (fase 1)
 
-Fecha: 2026-09-27 · Rama: `claude/gt-baseball-prototipo` · Estado: diseño aprobado por Luis en el chat.
+Fecha: 2026-09-27 · Rama: `claude/gt-baseball-prototipo` · Estado: **EN PROD en `https://gtbaseball.com/` desde el
+28-sep**, con dominio propio, Turnstile y respaldo automático del Sheet. Las secciones van en orden cronológico; las
+últimas describen el estado actual y `N8N/gt-baseball/README.md` lo resume.
 
 ## Por qué
 
@@ -367,3 +369,31 @@ simultánea, así que la barrera va antes.
   lanzar Chrome con `--disable-blink-features=AutomationControlled` e `ignoreDefaultArgs: ['--enable-automation']`, y
   diagnosticar con el `error-callback` y el `before-interactive-callback`. La sitekey de prueba de Cloudflare
   (`1x00000000000000000000AA`) siempre da token, incluso a bots: no sirve para comparar.
+
+## Sheet: Jeffer como editor, protecciones y respaldo automático (28-sep, noche)
+
+**Pedido de Luis:** que Jeffer sea editor del Sheet y que haya un respaldo periódico, para no perder datos si alguien
+borra o edita algo por error.
+
+- **Editor:** el permiso de Jeffer pasó de lector a editor. El conector de Google Drive de Claude está en otra cuenta
+  y no puede tocar archivos de `contacto@`, así que se hizo con las credenciales de n8n mediante un flujo temporal
+  (`n8n_temp.py`, en los respaldos).
+- **Protecciones** (reversibles en Datos → Proteger hojas y rangos):
+  - la fila 1 (encabezados) solo la puede cambiar `contacto@`, porque de ella depende cómo el sistema agrega filas;
+  - las columnas A–Y, de la fila 2 hacia abajo, muestran una advertencia antes de editar o borrar.
+  El sistema agrega filas por API como dueño y las protecciones no lo frenan: se verificó con un envío real después
+  de ponerlas. Para sus notas, Jeffer usa las columnas de la Z en adelante. No hay que renombrar la pestaña
+  «Inscripciones».
+- **Respaldo:** flujo «GT Baseball · Respaldo del Sheet» (`iefq6IxFOBrHtmOd`, `build_respaldo.py`). Cada 6 horas
+  (minuto 5, hora de Venezuela) compara el `modifiedTime` del Sheet con el anotado en la última copia
+  (`appProperties.origenModified`). Si cambió, copia el Sheet completo a la carpeta privada «GT Baseball · Respaldos
+  del Sheet de inscripciones»: es de `contacto@` y no está compartida con la academia. No borra copias viejas
+  (decisión de Luis). Se suma al historial de versiones propio de Google Sheets.
+- **Verificado:**
+  - primera corrida, copia;
+  - segunda sin cambios, no copia;
+  - después de un envío real, copia de nuevo;
+  - flujo validado sin errores ni advertencias.
+- **Trampa cerrada:** `deploy_gt.py subir` apuntaba a `/demos/gt-baseball/v2/`, que ahora tiene el `.htaccess` que
+  redirige al dominio. Subir ahí lo habría pisado y habría vuelto a publicar el sitio en la dirección vieja. Ahora el
+  script se niega a subir y queda solo para armar copias locales.

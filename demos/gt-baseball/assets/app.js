@@ -16,6 +16,9 @@
     if (otro) ENDPOINT = decodeURIComponent(otro[1]);
   }
   var PRUEBA = /[?&]prueba=1\b/.test(location.search);
+  // Turnstile (anti-bot): se activa solo si el despliegue puso la sitekey en data-turnstile.
+  var SITEKEY = app.getAttribute('data-turnstile') || '';
+  var tsId = null;
   var TOTAL = 5;
   var NOMBRES = ['Atleta', 'Contacto', 'Béisbol', 'Pago', 'Enviar'];
   var MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
@@ -458,7 +461,7 @@
     });
     $('btn-siguiente').textContent = n === TOTAL ? 'Enviar inscripción' : 'Siguiente';
     $('aviso-error').hidden = true;
-    if (n === TOTAL) pintarResumen();
+    if (n === TOTAL) { pintarResumen(); montarTurnstile(); }
     window.scrollTo(0, 0);
     var titulo = form.querySelector('.paso[data-paso="' + n + '"] .paso__titulo');
     if (titulo) { titulo.setAttribute('tabindex', '-1'); titulo.focus({ preventScroll: true }); }
@@ -942,8 +945,40 @@
     $('enviando-detalle').textContent = 'Guardando la inscripción y enviando los correos';
   }
 
+  // Turnstile (anti-bot): se dibuja al llegar al paso 5, una sola vez. Sin sitekey, no hace nada.
+  function montarTurnstile() {
+    if (!SITEKEY || tsId !== null) return;
+    $('campo-turnstile').hidden = false;
+    var intentos = 0;
+    (function esperar() {
+      if (window.turnstile && window.turnstile.render) {
+        try {
+          tsId = window.turnstile.render('#turnstile-box', {
+            sitekey: SITEKEY, theme: 'auto', language: 'es',
+            callback: function () { $('err-turnstile').textContent = ''; }
+          });
+        } catch (e) { tsId = null; }
+      } else if (intentos++ < 60) { setTimeout(esperar, 100); }
+    })();
+  }
+  function tokenTurnstile() {
+    if (!SITEKEY) return '';
+    try { return (window.turnstile && tsId !== null) ? (window.turnstile.getResponse(tsId) || '') : ''; } catch (e) { return ''; }
+  }
+  function reiniciarTurnstile() {
+    try { if (window.turnstile && tsId !== null) window.turnstile.reset(tsId); } catch (e) {}
+  }
+
   function enviar() {
     if (estado.enviando || estado.enviado) return;
+    // El anti-bot tiene que estar resuelto antes de enviar (si el sitio lo usa).
+    var ts = tokenTurnstile();
+    if (SITEKEY && !ts) {
+      $('err-turnstile').textContent = 'Confirma que no eres un robot para enviar.';
+      $('campo-turnstile').hidden = false;
+      var box = $('campo-turnstile'); if (box.scrollIntoView) box.scrollIntoView({ block: 'center' });
+      return;
+    }
     if (navigator.onLine === false) { terminar(false, { tipo: 'offline' }); return; }
     estado.enviando = true;
     $('btn-siguiente').disabled = true;
@@ -962,7 +997,7 @@
         var comp = ep === 'adjunto' ? estado.comprobante.url : '';
         estado.subiendo = comp ? 'la foto, la planilla y el comprobante' : 'la foto y la planilla';
         cuerpo = JSON.stringify({ v: 2, id: estado.id, prueba: PRUEBA, hp: $('hp').value, datos: d, foto: estado.foto,
-          pdf: estado.pdf.output('datauristring'), comprobante: comp });
+          pdf: estado.pdf.output('datauristring'), comprobante: comp, turnstile: ts });
       } catch (e) { fin(false, { tipo: 'pdf' }); return; }
       var xhr = new XMLHttpRequest();
       xhr.open('POST', ENDPOINT);
@@ -976,7 +1011,8 @@
         var j = {};
         try { j = JSON.parse(xhr.responseText || '{}'); } catch (e) { j = {}; }
         var ok = xhr.status >= 200 && xhr.status < 300 && j.ok === true;
-        if (!ok) j.tipo = j.errores && j.errores.indexOf('limite') !== -1 ? 'limite' : (xhr.status === 400 ? 'datos' : 'servidor');
+        var err = j.errores || [];
+        if (!ok) j.tipo = err.indexOf('turnstile') !== -1 ? 'turnstile' : (err.indexOf('limite') !== -1 ? 'limite' : (xhr.status === 400 ? 'datos' : 'servidor'));
         // El cargador se ve al menos un instante: evita un parpadeo si la red es muy rápida.
         setTimeout(function () { fin(ok, j); }, Math.max(0, 900 - (Date.now() - inicio)));
       };
@@ -991,6 +1027,7 @@
     $('btn-siguiente').disabled = false;
     estado.enviando = false;
     if (ok) { estado.enviado = true; borrar(CLAVE_BORRADOR); }
+    else reiniciarTurnstile();  // el token es de un solo uso: un reintento necesita uno nuevo
     terminar(ok, info || {});
   }
 
@@ -1010,6 +1047,7 @@
     limite: ['Espera un momento', 'Se enviaron varias inscripciones seguidas desde aquí. Espera unos minutos e inténtalo de nuevo.'],
     datos: ['Falta un dato', 'La academia no pudo recibir la inscripción porque falta o está mal un dato. Revísalo y vuelve a enviar.'],
     servidor: ['No se pudo enviar', 'La academia no pudo recibir la inscripción en este momento. Tus datos siguen guardados: inténtalo en unos minutos.'],
+    turnstile: ['Verificación pendiente', 'No pudimos confirmar que no eres un robot. Toca «Intentar de nuevo».'],
     pdf: ['No se pudo preparar', 'Este navegador no pudo armar la planilla. Prueba con Chrome o Safari actualizado.']
   };
 

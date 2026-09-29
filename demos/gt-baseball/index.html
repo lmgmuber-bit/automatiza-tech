@@ -18,7 +18,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/styles.css?v=8">
+<link rel="stylesheet" href="assets/styles.css?v=9">
 </head>
 <body>
 <!-- Íconos: Tabler Icons 3.48.0 (MIT) y WhatsApp de Simple Icons 16.33.0 (CC0). -->
@@ -64,7 +64,7 @@
 </svg>
 <a class="saltar" href="#contenido">Saltar al contenido</a>
 
-<div class="app" id="app" data-endpoint="https://n8n-n8n.kchiba.easypanel.host/webhook/gt-baseball-inscripcion-v2" data-whatsapp="">
+<div class="app" id="app" data-endpoint="https://n8n-n8n.kchiba.easypanel.host/webhook/gt-baseball-inscripcion-v2" data-whatsapp="" data-turnstile="">
 
   <header class="cabecera">
     <div class="marca">
@@ -470,6 +470,10 @@
               </label>
               <p class="campo__error" id="err-acepta" data-error-para="acepta"></p>
             </div>
+            <div class="campo" data-campo="turnstile" id="campo-turnstile" hidden>
+              <div id="turnstile-box" class="turnstile"></div>
+              <p class="campo__error" id="err-turnstile"></p>
+            </div>
           </fieldset>
 
           <div class="acciones">
@@ -564,7 +568,9 @@
 <!-- Formas de pago de la academia: el despliegue reemplaza {} con el bloque "pago" de gt-config.json. -->
 <script type="application/json" id="datos-pago">{}</script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/4.2.1/jspdf.umd.min.js" integrity="sha512-plOdviVmws4Y3JAvbnpfKb2hVxKM1lCwsi3vmElYRj+tiDLffZ4FVUj5a8vyKJ9pIgl8JCAHEJ4D1iUKBecswg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<!-- Turnstile (anti-bot). Solo se activa si el despliegue puso la sitekey en data-turnstile del #app. -->
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer></script>
 <script src="assets/planilla.js?v=4"></script>
-<script src="assets/app.js?v=8"></script>
+<script src="assets/app.js?v=9"></script>
 </body>
 </html>

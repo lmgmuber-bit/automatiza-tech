@@ -9,7 +9,7 @@
   Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains"
   # CSP a la medida de la página: propios + la fuente de Google, jsPDF por CDN y el webhook de n8n (envío).
   # 'unsafe-inline' en script/style por el <script> de arranque y los estilos en línea del SVG; sin datos de usuario en línea.
-  Header always set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://n8n-n8n.kchiba.easypanel.host; form-action 'self'; frame-ancestors 'none'; base-uri 'self'; upgrade-insecure-requests"
+  Header always set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://n8n-n8n.kchiba.easypanel.host https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com; form-action 'self'; frame-ancestors 'none'; base-uri 'self'; upgrade-insecure-requests"
 </IfModule>
 
 # Sin listado de directorios.

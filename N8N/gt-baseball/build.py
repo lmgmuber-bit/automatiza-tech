@@ -41,7 +41,8 @@ LIMITE_CORREO_DIA = 6
 EDAD_FIRMA_ATLETA = 15
 
 JS_VALIDAR = r"""
-const entrada = $input.first().json;
+// En n8n lee el Webhook por nombre (así el paso anti-bot puede ir antes de Validar); en las pruebas usa $input.
+const entrada = (typeof $ !== 'undefined') ? $('Webhook').first().json : $input.first().json;
 const body = entrada.body || {};
 const d = (body.datos && typeof body.datos === 'object') ? body.datos : {};
 const v2 = body.v === 2;
@@ -401,7 +402,30 @@ def construir(cfg):
             'options': {'responseCode': 200}}),
     ]
 
-    enlaces = [('Webhook', 0, 'Validar'), ('Validar', 0, '¿Válido?'), ('¿Válido?', 0, 'Subir foto'),
+    # Anti-bot Cloudflare Turnstile: solo si gt-config trae la sitekey. Verifica el token contra Cloudflare (la
+    # Secret vive en $env.TURNSTILE_SECRET de n8n, nunca en el repo) ANTES de Validar, para que un bot no gaste
+    # el límite ni marque el id como usado. La página manda el token en body.turnstile.
+    turnstile = bool(cfg.get('turnstile_sitekey'))
+    if turnstile:
+        nodes += [
+            node('g20', 'Verificar Turnstile', 'n8n-nodes-base.httpRequest', 4.2, [220, 180], {
+                'method': 'POST', 'url': 'https://challenges.cloudflare.com/turnstile/v0/siteverify',
+                'sendBody': True, 'contentType': 'form-urlencoded', 'specifyBody': 'keypair',
+                'bodyParameters': {'parameters': [
+                    {'name': 'secret', 'value': '={{ $env.TURNSTILE_SECRET }}'},
+                    {'name': 'response', 'value': "={{ ($json.body && $json.body.turnstile) || '' }}"},
+                    {'name': 'remoteip', 'value': "={{ (($json.headers && ($json.headers['x-forwarded-for'] || $json.headers['x-real-ip'])) || '').split(',')[0].trim() }}"}]},
+                'options': {}}, onError='continueRegularOutput'),
+            si('g21', '¿Humano?', [440, 180], '={{ $json.success === true }}'),
+            node('g22', 'Responder Turnstile', 'n8n-nodes-base.respondToWebhook', 1.1, [660, 360], {
+                'respondWith': 'json', 'responseBody': "={{ JSON.stringify({ ok: false, errores: ['turnstile'] }) }}",
+                'options': {'responseCode': 403}}),
+        ]
+
+    enlaces = ([('Webhook', 0, 'Verificar Turnstile'), ('Verificar Turnstile', 0, '¿Humano?'),
+                ('¿Humano?', 0, 'Validar'), ('¿Humano?', 1, 'Responder Turnstile')]
+               if turnstile else [('Webhook', 0, 'Validar')]) + [
+               ('Validar', 0, '¿Válido?'), ('¿Válido?', 0, 'Subir foto'),
                ('¿Válido?', 1, 'Responder error'), ('Subir foto', 0, 'Pasar planilla'),
                ('Pasar planilla', 0, 'Subir planilla'), ('Subir planilla', 0, '¿Con comprobante?'),
                # Con comprobante se sube y sigue; sin comprobante va directo. Armar corre una sola vez.

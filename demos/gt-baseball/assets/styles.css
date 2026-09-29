@@ -303,6 +303,8 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--a
 .resumen__atleta img { width: 60px; height: 80px; object-fit: cover; border-radius: 10px; }
 .acepto { display: flex; gap: 12px; align-items: flex-start; margin: 0 !important; padding: 14px 16px; border-radius: 16px; background: var(--sup); border: 1.5px solid var(--borde-suave); font-weight: 500 !important; cursor: pointer; }
 .acepto input { flex: none; width: 24px; height: 24px; margin: 1px 0 0; accent-color: var(--oro); }
+#campo-turnstile { margin-top: 14px; }
+.turnstile { min-height: 65px; }
 
 /* Pago: forma de pago en tarjetas, datos con «Copiar» y comprobante adjunto */
 .paso__intro { margin: -6px 0 18px; color: var(--suave); }

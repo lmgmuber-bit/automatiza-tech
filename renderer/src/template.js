@@ -696,3 +696,17 @@ module.exports = {
   renderBulletListBody,
   renderPricingBody,
 };
+
+// Piezas que comparte el plan de trabajo (template-plan.js): mismo estilo, script de navegación, logo,
+// íconos de contacto y controles. Solo se agregan exportaciones; el HTML de la propuesta no cambia
+// (lo cuida test/template-propuesta-igual.test.js).
+Object.assign(module.exports, {
+  STYLE,
+  SCRIPT,
+  LOGO_URL,
+  CONTACTS,
+  CONTACT_ICONS,
+  backgroundStyle,
+  logoMark,
+  renderDeckControls,
+});

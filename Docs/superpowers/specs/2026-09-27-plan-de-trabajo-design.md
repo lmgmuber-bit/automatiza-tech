@@ -1,6 +1,6 @@
 # Plan de trabajo del proyecto (cronograma con carta Gantt) — diseño
 
-Fecha: 2026-09-27. Rama: `claude/plan-de-trabajo` (sale de `claude/cierre-cliente`, PR #50; usa además el renderer y los
+Fecha: 2026-09-27; ajustado el 2026-09-29 con las decisiones 6 a 9 de Luis. Rama: `claude/plan-de-trabajo` (sale de `claude/cierre-cliente`, PR #50; usa además el renderer y los
 flujos n8n de `claude/propuestas-json-robusto`, PR #51). Estado: diseño aprobado por Luis en conversación; falta su revisión
 de este documento.
 
@@ -44,6 +44,16 @@ revisarlo y aclarar dudas, por la web o por WhatsApp con Tech.
    Propuesta por fases», que se cierra con la firma; lo que viene: Diseño y desarrollo → Implementación → Soporte y mejora
    continua.
 5. Nada le llega al cliente sin el clic de Luis.
+6. **(29-sep) El plan vive en el módulo de clientes, no en el de propuestas.** Mismo estilo y botones que el panel de
+   propuestas, pero en la ficha del cliente oficial (CRM › Ficha de Cliente): ahí Luis edita semanas, días y
+   actividades del cronograma.
+7. **(29-sep) Imágenes:** las láminas que ya existían en la propuesta reutilizan sus fotos; las **láminas nuevas** (Método
+   AT, carta Gantt, fases, qué necesitamos, reuniones) llevan **fotos nuevas**, con su cantidad y costo a la vista antes
+   de «Aprobar».
+8. **(29-sep) El cierre del documento trae enlaces que se tocan** para agendar la llamada de seguimiento: por WhatsApp con
+   Tech o por el sitio web.
+9. **(29-sep) Luis también agenda desde el panel** la llamada de seguimiento con los datos del cliente, por el flujo normal
+   de reuniones de seguimiento: evento en Google Calendar con Meet y aviso al cliente por correo y por WhatsApp.
 
 ## Etapas
 
@@ -63,7 +73,7 @@ revisarlo y aclarar dudas, por la web o por WhatsApp con Tech.
   $fresh)` dentro de `try/catch`; un fallo del plan nunca afecta la firma.
 - El módulo nuevo escucha ese hook: si el contrato es `servicios`, tiene `proposal_id` y no existe un plan para ese contrato,
   crea el plan en estado `generando` y llama al flujo n8n «Plan 1 Borrador». Idempotente: un contrato, un plan.
-- Botón **«Crear plan de trabajo»** en la ficha de la propuesta para contratos ya firmados antes de este cambio (p. ej. el
+- Botón **«Crear plan de trabajo»** en la pestaña «Plan de trabajo» de la ficha del cliente, para contratos ya firmados antes de este cambio (p. ej. el
   contrato 12) o si el disparo automático falló.
 
 ### 2. Datos
@@ -149,17 +159,27 @@ marcadas «en paralelo».
   4. **Una lámina por fase**: actividades, responsable, duración, entregable y qué aprobamos juntos.
   5. **Qué necesitamos de ti**: insumos y la regla de la cláusula 4.2 («el plazo corre desde que los recibimos»).
   6. **Reuniones y soporte**: inicio, seguimiento, entrega y capacitación; garantía y servicios mensuales si los hay.
-  7. **Cierre**: «Agenda tu llamada de seguimiento» (web o WhatsApp con Tech).
-- Fotos: **se reutilizan las de Higgsfield de la propuesta del mismo cliente** (mismo almacén de imágenes; sin costo). Solo
-  con `fotos_nuevas: true` pide fotos nuevas a Soul 2, y el panel muestra el costo antes de «Aprobar» (mismo cálculo que
-  `at_propuesta_costo_fotos()`).
+  7. **Cierre**: «Agenda tu llamada de seguimiento», con **dos enlaces que se tocan** (decisión 8): «Por WhatsApp con Tech»
+     (`wa.me/56927002984` con el mensaje y el código del plan) y «En el sitio web» (`ver-plan.php?id=<codigo>&agendar=1`,
+     que abre el selector de horarios). Los enlaces funcionan en la presentación y en el PDF.
+- Fotos (decisión 7):
+  - **Reutilizadas, sin costo:** las láminas que ya existían en la propuesta usan sus fotos del mismo almacén de
+    imágenes: portada (foto de portada de la propuesta) y cierre (foto de próximos pasos).
+  - **Nuevas, con costo:** Método AT, carta Gantt, una por fase, «Qué necesitamos de ti» y «Reuniones y soporte». La IA
+    del borrador escribe sus descripciones por rubro con las mismas reglas de la propuesta (`fotos_guard.py`: personas del
+    rubro, sin texto ni pantallas). El panel muestra cuántas son y su costo antes de «Aprobar» (mismo cálculo que
+    `at_propuesta_costo_fotos()`), y el renderer reutiliza las ya guardadas con el mismo prompt (`img/manifest.json`).
+  - Lección del 28-sep: Soul 2 imprime letras en prendas, envases y paredes; para escenas con personas conviene
+    `alibaba/qwen-image-3/text-to-image` o `recraft/v4.1/text-to-image` (12 de 12 limpias). Se decide al implementar.
 - Salida: `/p/<codigo_plan>/index.html` y `presentation.pdf`.
 - Las fechas del documento dicen «estimadas» y «desde que recibimos el anticipo y tus insumos», para no prometer una fecha
   fija que dependa del cliente.
 
 ### 6. Panel (WordPress)
 
-Pestaña **«Plan de trabajo»** en la ficha de la propuesta:
+Pestaña **«🗓️ Plan de trabajo»** en la **ficha del cliente** (CRM › Ficha de Cliente, `crm-ai-completo.php`, junto a
+«🚀 Proyectos» y «📜 Contratos y operación»; decisión 6). Mismo estilo y botones que el panel de propuestas. Si el cliente
+tiene más de un contrato firmado, un selector elige el plan. Contiene:
 
 - estado y vista previa;
 - fecha de inicio;
@@ -169,7 +189,12 @@ Pestaña **«Plan de trabajo»** en la ficha de la propuesta:
   - «Pedir cambios»: con comentarios a la IA;
   - «Aprobar»: versión final; fotos nuevas solo si se pidieron;
   - «Destrabar»: si queda en `generando` o `error`;
-  - «Enviar al cliente» y «Enviar por mi WhatsApp»: solo desde `listo`, con confirmación.
+  - «Enviar al cliente» y «Enviar por mi WhatsApp»: solo desde `listo`, con confirmación;
+  - **«Agendar llamada de seguimiento»** (decisión 9): abre el formulario de reuniones de seguimiento que ya existe
+    (`inc/admin-followup-meetings.php`) con los datos del cliente precargados y el tipo fijo «Seguimiento del plan de
+    trabajo». Usa el flujo normal: evento en Google Calendar con Meet (`automatiza_tech_create_followup_calendar_event()`)
+    y aviso al cliente por correo (`automatiza_tech_send_followup_email()`) y por WhatsApp
+    (`automatiza_tech_send_followup_whatsapp()`), con las casillas de siempre.
 
 «Propuestas › Ajustes del plan»: tabla de tiempos.
 
@@ -223,5 +248,6 @@ el portal del cliente mostrando el plan (posible fase siguiente: enlazar el plan
 ## Pendientes de Luis
 
 1. Corregir la tabla de tiempos de referencia (sección 3) antes de la primera generación.
-2. Revisar este documento.
+2. Revisar este documento (con los ajustes del 29-sep) y dar el ok para empezar la etapa 1.
+4. Decidir si el PR #50 (cierre de cliente) se mergea antes de empezar: esta rama parte de él.
 3. Etapa 3: plantilla de Meta y ok para tocar el bot.

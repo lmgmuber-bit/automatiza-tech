@@ -384,16 +384,23 @@ borra o edita algo por error.
   El sistema agrega filas por API como dueño y las protecciones no lo frenan: se verificó con un envío real después
   de ponerlas. Para sus notas, Jeffer usa las columnas de la Z en adelante. No hay que renombrar la pestaña
   «Inscripciones».
-- **Respaldo:** flujo «GT Baseball · Respaldo del Sheet» (`iefq6IxFOBrHtmOd`, `build_respaldo.py`). Cada 6 horas
-  (minuto 5, hora de Venezuela) compara el `modifiedTime` del Sheet con el anotado en la última copia
-  (`appProperties.origenModified`). Si cambió, copia el Sheet completo a la carpeta privada «GT Baseball · Respaldos
-  del Sheet de inscripciones»: es de `contacto@` y no está compartida con la academia. No borra copias viejas
-  (decisión de Luis). Se suma al historial de versiones propio de Google Sheets.
-- **Verificado:**
-  - primera corrida, copia;
-  - segunda sin cambios, no copia;
-  - después de un envío real, copia de nuevo;
+- **Respaldo:** flujo «GT Baseball · Respaldo del Sheet» (`iefq6IxFOBrHtmOd`, `build_respaldo.py`).
+  - Primera versión: una copia nueva de Google Sheets por cada cambio, sin borrar. Probada: copió en la primera
+    corrida, no copió en la segunda y volvió a copiar después de un envío real.
+  - Luis pidió no llenar el Drive y eligió **un solo archivo que se pisa**. Versión final: cada 6 horas (minuto 5,
+    hora de Venezuela), si el `modifiedTime` del Sheet difiere del anotado en el respaldo
+    (`appProperties.origenModified`), exporta el Sheet como Excel y **sobrescribe**
+    «GT Baseball · Inscripciones · respaldo.xlsx» (id en gt-config: `respaldo_file_id`). Queda en la carpeta privada
+    «GT Baseball · Respaldos del Sheet de inscripciones», que es de `contacto@` y no está compartida con la academia.
+  - Red de seguridad: Drive guarda las versiones anteriores de un `.xlsx` 30 días o hasta 100 versiones ([ayuda de
+    Google](https://support.google.com/drive/answer/2409045)). Si el respaldo copia un Sheet dañado, se vuelve a una
+    versión previa con Administrar versiones. Se suma al historial propio de Google Sheets.
+- **Verificado (versión final):**
+  - la primera corrida pisó el archivo y la segunda no subió nada;
+  - el Excel pesa 6.883 bytes y trae las 3 filas del Sheet con sus encabezados (leído con «Extract from File» de n8n);
+  - Drive ya lista 2 versiones del respaldo;
   - flujo validado sin errores ni advertencias.
+  - En la carpeta quedaron las 2 copias de Google Sheets de la primera versión: las borra Luis a mano.
 - **Trampa cerrada:** `deploy_gt.py subir` apuntaba a `/demos/gt-baseball/v2/`, que ahora tiene el `.htaccess` que
   redirige al dominio. Subir ahí lo habría pisado y habría vuelto a publicar el sitio en la dirección vieja. Ahora el
   script se niega a subir y queda solo para armar copias locales.

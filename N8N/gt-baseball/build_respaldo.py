@@ -1,14 +1,17 @@
 """Construye (y con --publicar crea/actualiza y activa) el flujo n8n «GT Baseball · Respaldo del Sheet».
 
-Cada 6 horas mira si el Google Sheet de inscripciones cambió y, si cambió, guarda una copia completa con fecha y
-hora en una carpeta privada de contacto@automatizatech.cl que NO está compartida con la academia. Así, si alguien
-con permiso de edición borra o cambia algo por error, queda una copia para recuperarlo (además del historial de
-versiones que Google Sheets guarda solo).
+Cada 6 horas mira si el Google Sheet de inscripciones cambió y, si cambió, lo exporta como Excel (.xlsx) y PISA un
+único archivo de respaldo en una carpeta privada de contacto@automatizatech.cl que NO está compartida con la
+academia. Así Drive no se llena de archivos (decisión de Luis, 28-sep: «un solo archivo que se pisa»).
 
-- «Cambió» se decide comparando el modifiedTime del Sheet con el que quedó anotado en la última copia
-  (appProperties.origenModified): sin cambios no se copia nada, así la carpeta no se llena de copias iguales.
-- No borra copias viejas: borrar respaldos es decisión de Luis, a mano.
-- Los ids (Sheet y carpeta) no están en el repo (es público): se leen de gt-config.json.
+- Red de seguridad del archivo único: al ser un .xlsx (no un archivo de Google), Drive guarda sus versiones
+  anteriores 30 días o hasta 100 versiones (Drive → clic derecho → Administrar versiones). Si el Sheet se daña y el
+  respaldo copia el daño, se vuelve a una versión anterior del respaldo. Además, el Sheet tiene su propio historial.
+- «Cambió» se decide comparando el modifiedTime del Sheet con el anotado en el respaldo
+  (appProperties.origenModified): sin cambios no se sube nada (ni se gasta una versión).
+- El archivo de respaldo se crea una sola vez (id en gt-config: respaldo_file_id). Si alguien lo borra, el flujo
+  falla a la vista en n8n; se recrea con n8n_temp.py y se actualiza el id.
+- Los ids (Sheet, carpeta y archivo) no están en el repo (es público): se leen de gt-config.json.
 
     python N8N/gt-baseball/build_respaldo.py <ruta>/gt-config.json              # escribe el JSON del flujo
     python N8N/gt-baseball/build_respaldo.py <ruta>/gt-config.json --probar     # corre una vez (flujo temporal)
@@ -20,6 +23,7 @@ from n8n_api import call, WEBHOOK_BASE
 
 NOMBRE = 'GT Baseball · Respaldo del Sheet'
 DRIVE = {'googleDriveOAuth2Api': {'id': 'fXrMhILaDWpAj8Ue', 'name': 'Google Drive account'}}
+XLSX = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
 CADA_HORAS = 6
 
 
@@ -31,42 +35,45 @@ def http(id_, name, pos, params):
 
 
 def construir(cfg, disparador):
-    for k in ('sheet_id', 'respaldo_folder_id'):
+    for k in ('sheet_id', 'respaldo_file_id'):
         if not cfg.get(k):
             raise SystemExit(f'Falta {k} en gt-config.json')
-    sheet, carpeta = cfg['sheet_id'], cfg['respaldo_folder_id']
+    sheet, archivo = cfg['sheet_id'], cfg['respaldo_file_id']
     nodes = [
         disparador,
         http('r1', 'Sheet original', [220, 0], {
             'method': 'GET', 'url': f'https://www.googleapis.com/drive/v3/files/{sheet}',
-            'sendQuery': True, 'queryParameters': {'parameters': [{'name': 'fields', 'value': 'id,name,modifiedTime'}]}}),
-        http('r2', 'Último respaldo', [440, 0], {
-            'method': 'GET', 'url': 'https://www.googleapis.com/drive/v3/files',
-            'sendQuery': True, 'queryParameters': {'parameters': [
-                {'name': 'q', 'value': f"'{carpeta}' in parents and trashed = false"},
-                {'name': 'orderBy', 'value': 'createdTime desc'},
-                {'name': 'pageSize', 'value': '1'},
-                {'name': 'fields', 'value': 'files(id,name,createdTime,appProperties)'}]}}),
+            'sendQuery': True, 'queryParameters': {'parameters': [{'name': 'fields', 'value': 'id,modifiedTime'}]}}),
+        http('r2', 'Respaldo actual', [440, 0], {
+            'method': 'GET', 'url': f'https://www.googleapis.com/drive/v3/files/{archivo}',
+            'sendQuery': True, 'queryParameters': {'parameters': [{'name': 'fields', 'value': 'id,appProperties'}]}}),
         {'id': 'r3', 'name': '¿Cambió?', 'type': 'n8n-nodes-base.if', 'typeVersion': 2, 'position': [660, 0],
          'parameters': {'conditions': {
              'options': {'caseSensitive': True, 'leftValue': '', 'typeValidation': 'strict'},
              'conditions': [{'id': 'r3c', 'leftValue':
-                 "={{ !((($json.files || [])[0] || {}).appProperties || {}).origenModified"
-                 " || (($json.files[0].appProperties || {}).origenModified !== $('Sheet original').first().json.modifiedTime) }}",
+                 "={{ (($json.appProperties || {}).origenModified || '') !== $('Sheet original').first().json.modifiedTime }}",
                  'rightValue': True, 'operator': {'type': 'boolean', 'operation': 'true', 'singleValue': True}}],
              'combinator': 'and'}, 'options': {}}},
-        http('r4', 'Copiar', [880, -80], {
-            'method': 'POST', 'url': f'https://www.googleapis.com/drive/v3/files/{sheet}/copy',
-            'sendQuery': True, 'queryParameters': {'parameters': [{'name': 'fields', 'value': 'id,name,createdTime'}]},
+        http('r4', 'Exportar a Excel', [880, -80], {
+            'method': 'GET', 'url': f'https://www.googleapis.com/drive/v3/files/{sheet}/export',
+            'sendQuery': True, 'queryParameters': {'parameters': [{'name': 'mimeType', 'value': XLSX}]},
+            'options': {'response': {'response': {'responseFormat': 'file', 'outputPropertyName': 'data'}}}}),
+        http('r5', 'Pisar respaldo', [1100, -80], {
+            'method': 'PATCH', 'url': f'https://www.googleapis.com/upload/drive/v3/files/{archivo}',
+            'sendQuery': True, 'queryParameters': {'parameters': [{'name': 'uploadType', 'value': 'media'},
+                                                                 {'name': 'fields', 'value': 'id,mimeType,size'}]},
+            'sendHeaders': True, 'headerParameters': {'parameters': [{'name': 'Content-Type', 'value': XLSX}]},
+            'sendBody': True, 'contentType': 'binaryData', 'inputDataFieldName': 'data'}),
+        http('r6', 'Marcar versión', [1320, -80], {
+            'method': 'PATCH', 'url': f'https://www.googleapis.com/drive/v3/files/{archivo}',
+            'sendQuery': True, 'queryParameters': {'parameters': [{'name': 'fields', 'value': 'id,name,modifiedTime,appProperties'}]},
             'sendBody': True, 'specifyBody': 'json',
-            'jsonBody': "={{ JSON.stringify({ name: 'GT Baseball · Inscripciones · respaldo ' + "
-                        "$now.setZone('America/Caracas').toFormat('yyyy-LL-dd HH:mm'), parents: ['" + carpeta + "'], "
-                        "appProperties: { origenModified: $('Sheet original').first().json.modifiedTime } }) }}"}),
+            'jsonBody': "={{ JSON.stringify({ appProperties: { origenModified: $('Sheet original').first().json.modifiedTime } }) }}"}),
     ]
-    enlaces = [(disparador['name'], 'Sheet original'), ('Sheet original', 'Último respaldo'),
-               ('Último respaldo', '¿Cambió?')]
+    enlaces = [(disparador['name'], 'Sheet original'), ('Sheet original', 'Respaldo actual'),
+               ('Respaldo actual', '¿Cambió?'), ('Exportar a Excel', 'Pisar respaldo'), ('Pisar respaldo', 'Marcar versión')]
     connections = {a: {'main': [[{'node': b, 'type': 'main', 'index': 0}]]} for a, b in enlaces}
-    connections['¿Cambió?'] = {'main': [[{'node': 'Copiar', 'type': 'main', 'index': 0}], []]}
+    connections['¿Cambió?'] = {'main': [[{'node': 'Exportar a Excel', 'type': 'main', 'index': 0}], []]}
     return {'name': NOMBRE, 'nodes': nodes, 'connections': connections,
             'settings': {'executionOrder': 'v1', 'timezone': 'America/Caracas'}}
 
@@ -102,10 +109,10 @@ def probar(cfg):
                 time.sleep(1.5)
         r = json.loads(raw) if raw else {}
         r = r[0] if isinstance(r, list) and r else r
-        if r.get('id') and r.get('name'):
-            print('COPIÓ:', r['name'])
+        if (r.get('appProperties') or {}).get('origenModified'):
+            print('PISÓ el respaldo; versión del Sheet anotada:', r['appProperties']['origenModified'])
         elif r.get('sin_cambios'):
-            print('SIN CAMBIOS: no copió (la última copia ya es del Sheet actual)')
+            print('SIN CAMBIOS: no subió nada (el respaldo ya es del Sheet actual)')
         else:
             print('RESPUESTA INESPERADA:', json.dumps(r, ensure_ascii=False)[:300])
     finally:

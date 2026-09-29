@@ -9,7 +9,7 @@ pruebas y decisiones en `Docs/superpowers/specs/2026-09-27-gt-baseball-prototipo
 |---|---|---|
 | Sitio | `https://gtbaseball.com/` (cartel con QR en `/cartel.html`) | EN PROD. Carpeta propia `domains/gtbaseball.com/public_html` en Hostinger, aislada de los otros dominios de la cuenta |
 | Flujo de inscripción | «GT Baseball · Inscripciones v2» (`jsqxDfoWvJbDVAUa`), webhook `gt-baseball-inscripcion-v2`, 20 nodos | Activo. Lo construye `build.py` |
-| Respaldo del Sheet | «GT Baseball · Respaldo del Sheet» (`iefq6IxFOBrHtmOd`) | Activo, cada 6 horas. Lo construye `build_respaldo.py` |
+| Respaldo del Sheet | «GT Baseball · Respaldo del Sheet» (`iefq6IxFOBrHtmOd`) | Activo, cada 6 horas: pisa un único `.xlsx` si el Sheet cambió. Lo construye `build_respaldo.py` |
 | Direcciones viejas | `automatizatech.cl/demos/gt-baseball/` (v1) y `…/v2/` | Redirigen 301 a `https://gtbaseball.com/` |
 | Flujo v1 | «GT Baseball · Inscripciones (prototipo)» (`1ooWxClFzc6vGb3W`) | Activo pero sin uso (su página redirige). Congelado: etiqueta git `gt-baseball-v1` |
 | Google Sheet | «GT Baseball Academy · Inscripciones», Drive de `contacto@automatizatech.cl` | Jeffer es **editor** desde el 28-sep. Fila 1 bloqueada; columnas A–Y con advertencia |
@@ -62,23 +62,29 @@ Webhook POST /webhook/gt-baseball-inscripcion-v2
 
 ## Respaldo del Sheet
 
-`build_respaldo.py` arma un flujo que cada 6 horas (minuto 5, hora de Venezuela):
+`build_respaldo.py` arma un flujo que **pisa un único archivo** para no llenar el Drive (decisión de Luis, 28-sep).
+Cada 6 horas (minuto 5, hora de Venezuela):
 1. mira el `modifiedTime` del Sheet;
-2. si cambió desde la última copia, guarda una copia completa, «GT Baseball · Inscripciones · respaldo AAAA-MM-DD HH:mm»,
-   en la carpeta privada «GT Baseball · Respaldos del Sheet de inscripciones».
+2. si cambió desde el último respaldo, lo exporta como Excel y **sobrescribe** «GT Baseball · Inscripciones ·
+   respaldo.xlsx», que está en la carpeta privada «GT Baseball · Respaldos del Sheet de inscripciones».
 
-La carpeta es de `contacto@` y no está compartida con la academia. Cada copia anota en `appProperties.origenModified` de qué versión
-salió; sin cambios no copia, así la carpeta no se llena de copias iguales. **No borra copias viejas:** eso lo decide
-Luis, a mano. Además, Google Sheets guarda su propio historial de versiones (Archivo → Historial de versiones).
+La carpeta es de `contacto@` y no está compartida con la academia. El respaldo anota en `appProperties.origenModified`
+de qué versión del Sheet salió; si el Sheet no cambió, no sube nada. El archivo se creó una sola vez: su id está en
+gt-config (`respaldo_file_id`). Si alguien lo borra, el flujo falla a la vista en n8n.
 
-Para recuperar algo: abrir la copia más reciente anterior al error y copiar de vuelta las filas al Sheet original.
+**Red de seguridad del archivo único:** como es un `.xlsx` y no un archivo de Google, Drive guarda sus versiones
+anteriores 30 días o hasta 100 versiones ([ayuda de Google](https://support.google.com/drive/answer/2409045)).
+Si el Sheet se daña y el respaldo copia el daño, en Drive → clic derecho sobre el respaldo → **Administrar versiones**
+se baja una versión de antes del error. Además, el Sheet tiene su propio historial (Archivo → Historial de versiones).
+
+Para recuperar algo: bajar la versión buena del respaldo y copiar de vuelta las filas al Sheet original.
 
 ## Configuración fuera del repo
 
 El repositorio es público: destinatarios, ids de la carpeta, del Sheet y de la carpeta de respaldos, el correo de la
 academia, su WhatsApp y los datos para pagar (cédula, teléfono de pago móvil, correo de Zelle) viven en un
 `gt-config.json` local. Claves:
-- `folder_id`, `sheet_id`, `sheet_url`, `respaldo_folder_id`;
+- `folder_id`, `sheet_id`, `sheet_url`, `respaldo_folder_id`, `respaldo_file_id`;
 - `destinatarios`, `destinatarios_prueba`, `responder_a`, `whatsapp`;
 - `pago` (`{monto, permitir_despues, metodos: [{id, nombre, detalle, monto, comprobante, datos: [{etiqueta, valor, copiar}], texto}]}`);
 - `turnstile_sitekey`: pública. Sin ella, Turnstile se apaga en la página y en el flujo;

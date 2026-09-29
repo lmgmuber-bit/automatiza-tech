@@ -740,3 +740,48 @@ function at_pt_accion_reintentar(): void {
 	$motivo = at_pt_iniciar_borrador($id);
 	at_pt_volver($crm, $id, $motivo === '' ? 'reintentando' : 'n8n_fallo');
 }
+
+// ---------------------------------------------------------------------------------------------------------------
+// «Agendar llamada de seguimiento» (decisión 9): datos para precargar inc/admin-followup-meetings.php (?pt_plan=).
+// ---------------------------------------------------------------------------------------------------------------
+
+/**
+ * Datos del cliente de un plan para el formulario de «Reuniones de seguimiento»: la ficha del CRM manda y, si le
+ * falta algo, lo completan los marcadores del contrato. El tipo es fijo («Seguimiento del plan de trabajo», en el
+ * asunto). [] si el plan no existe. Largos recortados a las columnas de wp_automatiza_followup_meetings.
+ */
+function at_pt_datos_agenda(int $plan_id): array {
+	$fila = $plan_id > 0 ? at_pt_plan($plan_id) : null;
+	if (!$fila) {
+		return [];
+	}
+	global $wpdb;
+	$crm = null;
+	$crm_id = at_pt_crm_de_plan($fila); // el enlace actual de la ficha operativa, o el guardado al crear el plan
+	if ($crm_id > 0) {
+		$crm = $wpdb->get_row($wpdb->prepare("SELECT nombre, email, empresa, telefono FROM {$wpdb->prefix}crm_clientes WHERE id = %d", $crm_id));
+	}
+	$contrato = $wpdb->get_row($wpdb->prepare("SELECT contract_number, placeholders FROM {$wpdb->prefix}automatiza_contracts WHERE id = %d", (int) $fila->contrato_id));
+	$ph = $contrato ? json_decode((string) $contrato->placeholders, true) : [];
+	$ph = is_array($ph) ? $ph : [];
+	$primero = function (...$valores): string {
+		foreach ($valores as $v) {
+			$v = trim(sanitize_text_field((string) $v));
+			if ($v !== '') {
+				return $v;
+			}
+		}
+		return '';
+	};
+	$correo = $primero($crm->email ?? '', $ph['email_cliente'] ?? '');
+	$proyecto = $primero(at_pt_payload($fila)['proyecto'] ?? '', $ph['nombre_proyecto'] ?? '');
+	$numero = $contrato ? trim((string) $contrato->contract_number) : '';
+	return [
+		'client_name'     => mb_substr($primero($crm->nombre ?? '', $ph['representante_cliente_nombre'] ?? '', $ph['razon_social_cliente'] ?? ''), 0, 100),
+		'client_email'    => is_email($correo) ? $correo : '',
+		'company_name'    => mb_substr($primero($crm->empresa ?? '', $ph['razon_social_cliente'] ?? ''), 0, 150),
+		'phone'           => mb_substr($primero($crm->telefono ?? '', $ph['telefono_cliente'] ?? ''), 0, 30),
+		'meeting_subject' => mb_substr('Seguimiento del plan de trabajo' . ($proyecto !== '' ? ' — ' . $proyecto : ''), 0, 255),
+		'notes'           => 'Plan de trabajo ' . $fila->codigo . ($numero !== '' ? ' (contrato ' . $numero . ')' : '') . '. Llamada para revisar el plan con el cliente y aclarar sus dudas.',
+	];
+}

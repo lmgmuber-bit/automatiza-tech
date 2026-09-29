@@ -29,8 +29,7 @@ function at_pt_rest_rutas(): void {
 	foreach ($rutas as $ruta => [$metodo, $callback]) {
 		register_rest_route($ns, '/plan/(?P<id>\d+)/' . $ruta, [
 			'methods'             => $metodo,
-			// Provisorio (Task 7, primer commit): WordPress da 500 antes de mirar la clave si el manejador no existe.
-			'callback'            => is_callable($callback) ? $callback : function () { return new WP_Error('at_pt_pendiente', 'Ruta todavía no implementada.', ['status' => 501]); },
+			'callback'            => $callback,
 			'permission_callback' => 'automatiza_proposals_rest_auth',
 			'args'                => $id,
 		]);
@@ -161,4 +160,122 @@ function at_pt_rest_borrador(WP_REST_Request $r) {
 		$avisos[] = 'No se pudo pedir la vista previa: ' . $motivo;
 	}
 	return new WP_REST_Response(['ok' => true, 'errores' => [], 'avisos' => $avisos], 200);
+}
+
+/**
+ * GET /plan/{id}/render&modo=draft|final — el cuerpo que n8n le manda al renderer, el código de la propuesta
+ * (si hay) para reutilizar su portada y su cierre ('' sin propuesta), el cliente del CRM (botón de los correos)
+ * y el estado del plan: el flujo 3 no renderiza una vista previa de un plan «aprobando», «listo» o «enviado» (D10).
+ */
+function at_pt_rest_render(WP_REST_Request $r) {
+	$f = at_pt_rest_fila($r);
+	if (is_wp_error($f)) {
+		return $f;
+	}
+	$modo = (string) ($r->get_param('modo') ?? 'draft');
+	if (!in_array($modo, ['draft', 'final'], true)) {
+		return new WP_Error('at_pt_modo', 'modo debe ser draft o final.', ['status' => 400]);
+	}
+	$plan = at_pt_payload($f);
+	if (empty($plan['fases'])) {
+		return new WP_Error('at_pt_sin_contenido', 'El plan todavía no tiene contenido.', ['status' => 409]);
+	}
+	$uid = '';
+	if ((int) $f->propuesta_id > 0) {
+		global $wpdb;
+		$uid = (string) $wpdb->get_var($wpdb->prepare("SELECT unique_link_id FROM {$wpdb->prefix}automatiza_propuestas WHERE id = %d", (int) $f->propuesta_id));
+	}
+	// El renderer arma la ruta /p/<uid>/ con esto: solo códigos que él mismo acepta.
+	if (!preg_match('/^[A-Za-z0-9_-]{6,64}$/', $uid)) {
+		$uid = '';
+	}
+	return new WP_REST_Response([
+		'ok'             => true,
+		'render'         => at_pt_armar_render($plan, at_pt_datos_render($f), $modo === 'final'),
+		'propuesta_uid'  => $uid,
+		// Para el botón de los correos a Luis; 0 si la ficha no está enlazada al CRM.
+		'crm_cliente_id' => (int) at_pt_db_partes($f)['crm_id'],
+		'estado'         => (string) $f->estado,
+	], 200);
+}
+
+/**
+ * POST /plan/{id}/vista — n8n cuenta cómo salió el render. Con ok y enlace, guarda view_url y pdf_url.
+ * Final completa (ok, enlace y sin fotos faltantes) con el plan «aprobando» → «listo». Final incompleta
+ * o fallida → «error» con el motivo (si la transición vale; si no, solo la nota). Vista previa fallida:
+ * solo la nota, el estado no cambia. Una vista previa que llega con el plan «aprobando», «listo» o «enviado» es
+ * vieja (terminó después de pedir la final): no guarda enlaces ni nota, para no pisar la versión final (D10).
+ */
+function at_pt_rest_vista(WP_REST_Request $r) {
+	$f = at_pt_rest_fila($r);
+	if (is_wp_error($f)) {
+		return $f;
+	}
+	$p = at_pt_rest_cuerpo($r);
+	$modo = (string) ($p['modo'] ?? '');
+	if (!in_array($modo, ['draft', 'final'], true)) {
+		return new WP_Error('at_pt_modo', 'modo debe ser draft o final.', ['status' => 400]);
+	}
+	$ok = !empty($p['ok']) && $p['ok'] !== 'false';
+	$view = at_pt_db_url($p['view_url'] ?? '');
+	$pdf = at_pt_db_url($p['pdf_url'] ?? '');
+	$faltan = [];
+	foreach ((array) ($p['faltan'] ?? []) as $s) {
+		$s = sanitize_key(is_scalar($s) ? (string) $s : '');
+		if ($s !== '') {
+			$faltan[] = $s;
+		}
+	}
+	$nota = mb_substr(sanitize_textarea_field((string) ($p['nota'] ?? '')), 0, 500);
+	$id = (int) $f->id;
+	if ($modo === 'draft' && in_array((string) $f->estado, ['aprobando', 'listo', 'enviado'], true)) {
+		return new WP_REST_Response(['ok' => true, 'estado' => (string) $f->estado], 200);
+	}
+	if ($ok && $view !== '') {
+		at_pt_guardar($id, ['view_url' => $view, 'pdf_url' => $pdf]);
+	}
+	if ($modo === 'final') {
+		$completa = $ok && $view !== '' && !$faltan;
+		if ($completa && (string) $f->estado === 'aprobando') {
+			at_pt_cambiar_estado($id, 'listo', '');
+		} elseif (!$completa) {
+			$motivo = 'La versión final no quedó completa'
+				. ($faltan ? ': faltan las fotos de ' . implode(', ', $faltan) : '')
+				. ($nota !== '' ? ' (' . $nota . ')' : '') . '.';
+			if (at_pt_transicion_valida((string) $f->estado, 'error')) {
+				at_pt_cambiar_estado($id, 'error', $motivo);
+			} else {
+				at_pt_guardar($id, ['nota' => $motivo]);
+			}
+		}
+	} elseif (!$ok) {
+		at_pt_guardar($id, ['nota' => 'La vista previa no se pudo generar' . ($nota !== '' ? ': ' . $nota : '.')]);
+	}
+	$ahora = at_pt_plan($id);
+	return new WP_REST_Response(['ok' => true, 'estado' => $ahora ? (string) $ahora->estado : (string) $f->estado], 200);
+}
+
+/**
+ * POST /plan/{id}/error — n8n avisa que algo falló. Lo llaman los flujos 1 Borrador y 2 Cambios (el 3 Render termina
+ * siempre en /vista). Solo pasa a «error» un plan que espera a esos flujos («generando» o «cambios»); en otro estado
+ * el aviso es de una corrida vieja o repetida (por ejemplo, el 409 de un borrador tardío) y solo queda la nota: un
+ * borrador bueno, un plan «aprobando» o uno «listo» no se tumban.
+ */
+function at_pt_rest_error(WP_REST_Request $r) {
+	$f = at_pt_rest_fila($r);
+	if (is_wp_error($f)) {
+		return $f;
+	}
+	$p = at_pt_rest_cuerpo($r);
+	$nota = mb_substr(sanitize_textarea_field((string) ($p['nota'] ?? '')), 0, 1000);
+	if ($nota === '') {
+		$nota = 'n8n avisó un error sin detalle.';
+	}
+	if (in_array((string) $f->estado, ['generando', 'cambios'], true)) {
+		at_pt_cambiar_estado((int) $f->id, 'error', $nota);
+	} else {
+		at_pt_guardar((int) $f->id, ['nota' => $nota]);
+	}
+	$ahora = at_pt_plan((int) $f->id);
+	return new WP_REST_Response(['ok' => true, 'estado' => $ahora ? (string) $ahora->estado : (string) $f->estado], 200);
 }

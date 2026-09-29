@@ -451,7 +451,19 @@ function at_cc_render_barra(object $p): void {
 	$codigo = (string) $p->unique_link_id;
 	$respuesta_clave = sanitize_key(wp_unslash($_GET['respuesta'] ?? ''));
 	$msg = at_cc_mensaje_respuesta($respuesta_clave);
-	$abrir = ['aceptar' => 'at-cc-acepta', 'evaluar' => 'at-cc-evalua'][sanitize_key(wp_unslash($_GET['responder'] ?? ''))] ?? '';
+	// 29-sep (pedido de Luis): el enlace «Aceptar la propuesta» del correo y del WhatsApp ya no abre el diálogo al
+	// cargar, porque tapaba la presentación antes de leerla. Aceptar pasa por «¿Ya revisaste toda la propuesta?»
+	// mientras el cliente no llegue a la última lámina (lo avisa la presentación con postMessage); al llegar, el
+	// diálogo de datos se abre solo una vez y el botón va directo a él. «La sigo evaluando» sí se abre solo:
+	// quien toca ese enlace viene a escribir sus dudas.
+	$responder_get = sanitize_key(wp_unslash($_GET['responder'] ?? ''));
+	$abrir = $responder_get === 'evaluar' ? 'at-cc-evalua' : '';
+	$pide_aceptar = $responder_get === 'aceptar';
+	$origen_deck = '';
+	$partes_deck = wp_parse_url((string) ($p->gamma_iframe_url ?? ''));
+	if (!empty($partes_deck['scheme']) && !empty($partes_deck['host'])) {
+		$origen_deck = $partes_deck['scheme'] . '://' . $partes_deck['host'] . (!empty($partes_deck['port']) ? ':' . (int) $partes_deck['port'] : '');
+	}
 	$filas = at_cc_filas_de_propuesta($p);
 	$accion = admin_url('admin-post.php');
 	$nonce = wp_create_nonce('at_cc_responder_' . $codigo);
@@ -533,6 +545,7 @@ dialog.at-cc-dlg::backdrop{background:rgba(10,22,40,.75)}
 .at-cc-dlg .at-cc-sec{background:#fff;color:var(--at-marino);border:1px solid #b9c8d8}
 .at-cc-dlg label.at-cc-fila{display:flex;gap:8px;align-items:flex-start;font-weight:400;margin:6px 0}
 .at-cc-dlg .at-cc-acciones{display:flex;gap:10px;justify-content:flex-end;margin-top:18px;flex-wrap:wrap}
+.at-cc-guia{margin:0;font-size:14px;color:#e2e8f0;flex-basis:100%;text-align:center}
 .at-cc-trampa{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
 @media (max-width:600px){.at-cc-barra{padding:8px 10px;gap:8px}.at-cc-btn{padding:10px 14px;font-size:14px}}
 </style>
@@ -546,6 +559,7 @@ dialog.at-cc-dlg::backdrop{background:rgba(10,22,40,.75)}
 	<?php elseif ($estado === 'rechazada'): ?>
 		<button type="button" class="at-cc-btn at-cc-si" data-abrir="at-cc-acepta">Acepto la propuesta</button>
 	<?php else: ?>
+		<?php if ($pide_aceptar && !$msg): ?><p class="at-cc-guia">Revisa la propuesta hasta la última lámina y, si estás de acuerdo, acéptala aquí.</p><?php endif; ?>
 		<button type="button" class="at-cc-btn at-cc-si" data-abrir="at-cc-acepta">Acepto la propuesta</button>
 		<button type="button" class="at-cc-btn at-cc-sec" data-abrir="at-cc-evalua">La sigo evaluando</button>
 		<button type="button" class="at-cc-btn at-cc-sec" data-abrir="at-cc-rechaza">No, gracias</button>
@@ -558,7 +572,7 @@ dialog.at-cc-dlg::backdrop{background:rgba(10,22,40,.75)}
 		<?php echo $ocultos('acepta'); ?>
 		<?php echo $aviso_dialogo('at-cc-acepta'); ?>
 		<h2>Aceptar la propuesta</h2>
-		<p>Con tu aceptación te enviamos el contrato para firmar y los primeros pasos para partir.</p>
+		<p>Al confirmar registramos tu aceptación y te enviamos el contrato para firmar y los primeros pasos para partir.</p>
 		<?php if ($filas): ?>
 			<p><strong>¿Qué aceptas?</strong></p>
 			<?php foreach ($filas as $i => $f): ?>
@@ -590,8 +604,20 @@ dialog.at-cc-dlg::backdrop{background:rgba(10,22,40,.75)}
 		<input type="text" id="at-cc-a-direccion" name="direccion" required maxlength="300" autocomplete="street-address">
 		<label class="at-cc-fila"><input type="checkbox" name="acepto" value="1" required> <span>Acepto la propuesta y sus condiciones.</span></label>
 		<div class="at-cc-acciones">
-			<button type="button" class="at-cc-btn at-cc-sec" data-cerrar>Volver</button>
+			<button type="button" class="at-cc-btn at-cc-sec" data-cerrar>Seguir viendo la propuesta</button>
 			<button type="submit" class="at-cc-btn at-cc-si">Confirmar aceptación</button>
+		</div>
+	</form>
+</dialog>
+<dialog class="at-cc-dlg" id="at-cc-previo">
+	<?php echo $cabecera; ?>
+	<form method="dialog">
+		<h2>¿Ya revisaste toda la propuesta?</h2>
+		<p>Antes de aceptar, léela hasta la última lámina: ahí están lo que incluye, la inversión y los próximos pasos.</p>
+		<p>¿La leíste completa y estás de acuerdo con ella?</p>
+		<div class="at-cc-acciones">
+			<button type="button" class="at-cc-btn at-cc-sec" data-cerrar>Ver la propuesta</button>
+			<button type="button" class="at-cc-btn at-cc-si" data-at-cc-seguir>Sí, estoy de acuerdo</button>
 		</div>
 	</form>
 </dialog>
@@ -668,7 +694,15 @@ dialog.at-cc-dlg::backdrop{background:rgba(10,22,40,.75)}
 <script>
 (function () {
 	function abrir(id) { var d = document.getElementById(id); if (d && d.showModal) { d.showModal(); } }
-	document.querySelectorAll('[data-abrir]').forEach(function (b) { b.addEventListener('click', function () { abrir(b.getAttribute('data-abrir')); }); });
+	// 29-sep: «Acepto la propuesta» pregunta primero «¿Ya revisaste toda la propuesta?» si el cliente no llegó a la
+	// última lámina; si llegó, va directo a los datos. La presentación (otro dominio) avisa la lámina con postMessage.
+	var llegoAlFinal = false;
+	document.querySelectorAll('[data-abrir]').forEach(function (b) { b.addEventListener('click', function () {
+		var id = b.getAttribute('data-abrir');
+		if (id === 'at-cc-acepta' && !llegoAlFinal && document.getElementById('at-cc-previo')) { id = 'at-cc-previo'; }
+		abrir(id);
+	}); });
+	document.querySelectorAll('[data-at-cc-seguir]').forEach(function (b) { b.addEventListener('click', function () { b.closest('dialog').close(); abrir('at-cc-acepta'); }); });
 	document.querySelectorAll('dialog.at-cc-dlg [data-cerrar]').forEach(function (b) { b.addEventListener('click', function () { b.closest('dialog').close(); }); });
 	// Task 18: cada formulario (aceptar y datos del contrato) muestra sus propios campos de empresa, y
 	// solo los exige mientras se ven: un campo obligatorio oculto bloquearía el envío sin decir por qué.
@@ -713,6 +747,19 @@ dialog.at-cc-dlg::backdrop{background:rgba(10,22,40,.75)}
 	}
 	var inicial = <?php echo wp_json_encode($abrir); ?>;
 	if (inicial) { abrir(inicial); }
+	// Al llegar a la última lámina: el botón va directo a los datos y el diálogo se abre solo una vez, si no hay
+	// otro abierto. Solo se acepta el aviso que viene del origen de la presentación.
+	var origenDeck = <?php echo wp_json_encode($origen_deck); ?>;
+	var yaOfrecido = false;
+	window.addEventListener('message', function (e) {
+		if (!origenDeck || e.origin !== origenDeck) { return; }
+		var m = e.data;
+		if (!m || m.type !== 'at-deck-lamina' || typeof m.lamina !== 'number' || typeof m.total !== 'number' || m.total < 1 || m.lamina !== m.total) { return; }
+		llegoAlFinal = true;
+		if (yaOfrecido || !document.getElementById('at-cc-acepta') || document.querySelector('dialog.at-cc-dlg[open]')) { return; }
+		yaOfrecido = true;
+		abrir('at-cc-acepta');
+	});
 })();
 </script>
 <?php

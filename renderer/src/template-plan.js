@@ -1,4 +1,4 @@
-const { escapeHtml } = require('./escape');
+const { escapeHtml, linkify } = require('./escape');
 const { STYLE, SCRIPT, backgroundStyle, logoMark, renderDeckControls } = require('./template');
 
 // Plan de trabajo: el documento que acompaña al contrato de servicios firmado. Usa el mismo estilo, logo
@@ -397,6 +397,303 @@ const ESTILO_PORTADA = `
   .plan-cover h1.is-largo { font-size: 52px; }
 `;
 
+// Mismas seis fases y los mismos textos que la sección «Método» de automatizatech.cl
+// (assets/home-premium/body.html): el plan no puede contar el método distinto que la web.
+const METODO = [
+  { clave: 'diagnostico', titulo: 'Diagnóstico', texto: 'Revisamos tu negocio y detectamos dónde estás perdiendo tiempo y ventas.' },
+  { clave: 'priorizacion', titulo: 'Priorización', texto: 'Definimos qué conviene implementar primero para tener impacto rápido.' },
+  { clave: 'propuesta', titulo: 'Propuesta por fases', texto: 'Un plan claro, por etapas, sin sorpresas ni inversiones a ciegas.' },
+  { clave: 'diseno_desarrollo', titulo: 'Diseño y desarrollo', texto: 'Construimos con diseño premium y tecnología sólida, pensada para crecer.' },
+  { clave: 'implementacion', titulo: 'Implementación', texto: 'Lo dejamos funcionando y conectado a tu operación real, sin fricción.' },
+  { clave: 'soporte', titulo: 'Soporte y mejora continua', texto: 'No desaparecemos. Medimos, ajustamos y seguimos optimizando contigo.' },
+];
+
+function renderMetodoSlide(data, index, imageUrl) {
+  const m = data && data.metodo && typeof data.metodo === 'object' ? data.metodo : {};
+  const hechas = new Set(Array.isArray(m.hechas) ? m.hechas : ['diagnostico', 'priorizacion']);
+  const actual = typeof m.actual === 'string' && m.actual ? m.actual : 'propuesta';
+  const firma = texto(data && data.fecha_firma_larga).trim();
+  const pasos = METODO.map((p, i) => {
+    const estado = p.clave === actual ? 'actual' : hechas.has(p.clave) ? 'hecha' : 'proxima';
+    const marca = estado === 'hecha' ? '✓' : numero(i + 1);
+    const extra =
+      estado === 'actual'
+        ? `<span class="metodo-aqui">Estás aquí</span><p class="metodo-firma">${
+            firma ? `Cerrada con tu firma del ${escapeHtml(firma)}` : 'Cerrada con tu firma del contrato'
+          }</p>`
+        : `<p class="metodo-estado">${estado === 'hecha' ? 'Hecho' : 'Lo que viene'}</p>`;
+    return `<li class="metodo-paso is-${estado}"><span class="metodo-marca">${marca}</span><h3>${escapeHtml(p.titulo)}</h3><p class="metodo-texto">${escapeHtml(
+      p.texto
+    )}</p>${extra}</li>`;
+  }).join('');
+  const proximas = METODO.filter((p) => p.clave !== actual && !hechas.has(p.clave)).map((p) => escapeHtml(p.titulo));
+  return `
+    <section class="slide plan-panel plan-metodo">
+      <div class="slide-bg" style="${fondoPanel(imageUrl, index)}"></div>
+      ${logoMark()}
+      <div class="panel-head plan-anima">
+        <p class="eyebrow">${numero(index)} · El Método AT</p>
+        <h2>Dónde estamos en tu proyecto</h2>
+      </div>
+      <ol class="metodo">${pasos}</ol>
+      ${proximas.length ? `<p class="metodo-pie">Lo que viene: ${proximas.join(' → ')}. Este plan detalla esas fases.</p>` : ''}
+    </section>`;
+}
+
+// Alto (px) de cada fila de la tabla de una fase según la densidad, medido en Chrome a 1920×1080 con
+// nombres y detalles en una sola línea (normal 59,5/51/+23; denso 49,5/41/+23; muy denso 39,5/32) y
+// redondeado hacia arriba. La tabla tiene ALTO_TABLA px bajo el título, menos lo que ocupe la descripción.
+// Con eso se reparte la fase en láminas y se elige la letra más grande que cabe: nada se sale por abajo,
+// ni en pantalla ni en el PDF.
+const FILAS_FASE = {
+  normal: { clase: '', bloque: 62, act: 53, detalle: 25 },
+  denso: { clase: ' is-denso', bloque: 52, act: 43, detalle: 24 },
+  muyDenso: { clase: ' is-muy-denso', bloque: 40, act: 33, detalle: 0 },
+};
+const ALTO_TABLA = 560;
+// La tarjeta «Qué aprobamos juntos» (470 px de ancho) cabe con hasta 5 entregas de dos líneas; con 7 termina
+// a 1118 px (medido en Chrome a 1920×1080 con el peor caso de la Task 3). Por eso una lámina lleva a lo más
+// MAX_ENTREGAS_LAMINA bloques con entrega, aunque la tabla tenga espacio para más.
+const MAX_ENTREGAS_LAMINA = 5;
+
+// Lo que queda para la tabla después de la descripción: hasta 3 líneas de unas 80 letras (38 px cada una).
+function altoDisponible(descripcion) {
+  const d = texto(descripcion).trim();
+  return d ? ALTO_TABLA - 18 - Math.min(3, Math.ceil(d.length / 80)) * 38 : ALTO_TABLA;
+}
+
+function altoBloques(bloques, m) {
+  return bloques.reduce(
+    (alto, b) =>
+      alto +
+      m.bloque +
+      (Array.isArray(b.actividades) ? b.actividades : []).reduce((s, a) => s + m.act + (m.detalle && texto(a.detalle).trim() ? m.detalle : 0), 0),
+    0
+  );
+}
+
+function densidadFase(bloques, disponible) {
+  for (const m of [FILAS_FASE.normal, FILAS_FASE.denso]) {
+    if (altoBloques(bloques, m) <= disponible) return m.clase;
+  }
+  return FILAS_FASE.muyDenso.clase;
+}
+
+// Reparte los bloques de una fase en láminas llenando cada una hasta su alto con la letra más chica (la
+// primera lleva la descripción) y con a lo más MAX_ENTREGAS_LAMINA entregas, para que una fase larga siga
+// en una lámina de «continuación» en vez de salirse por abajo. Un bloque que no cabe solo en una lámina se
+// corta en trozos; el trozo que sigue lleva `sigue: true` y la entrega queda en el último trozo. Cada bloque
+// lleva `ocurrencia` (cuántos bloques anteriores de la fase se llaman igual) para encontrar su revisión
+// aunque dos bloques tengan el mismo nombre; los trozos de un bloque comparten la suya.
+function paginarBloques(bloques, descripcion = '') {
+  const m = FILAS_FASE.muyDenso;
+  const porTrozo = Math.max(1, Math.floor((altoDisponible('x'.repeat(240)) - m.bloque) / m.act));
+  const lista = [];
+  const vistos = new Map();
+  for (const b of (Array.isArray(bloques) ? bloques : []).filter((x) => x && typeof x === 'object')) {
+    const acts = (Array.isArray(b.actividades) ? b.actividades : []).filter((a) => a && typeof a === 'object');
+    const ocurrencia = vistos.get(texto(b.nombre)) || 0;
+    vistos.set(texto(b.nombre), ocurrencia + 1);
+    if (acts.length <= porTrozo) {
+      lista.push({ ...b, actividades: acts, ocurrencia });
+      continue;
+    }
+    for (let i = 0; i < acts.length; i += porTrozo) {
+      lista.push({
+        ...b,
+        actividades: acts.slice(i, i + porTrozo),
+        entrega: Boolean(b.entrega) && i + porTrozo >= acts.length,
+        sigue: i > 0,
+        ocurrencia,
+      });
+    }
+  }
+  const paginas = [];
+  let actual = [];
+  for (const b of lista) {
+    const disponible = paginas.length === 0 ? altoDisponible(descripcion) : ALTO_TABLA;
+    const entregas = actual.filter((x) => x.entrega).length + (b.entrega ? 1 : 0);
+    if (actual.length && (altoBloques(actual.concat([b]), m) > disponible || entregas > MAX_ENTREGAS_LAMINA)) {
+      paginas.push(actual);
+      actual = [];
+    }
+    actual.push(b);
+  }
+  if (actual.length) paginas.push(actual);
+  return paginas.length ? paginas : [[]];
+}
+
+// La revisión del cliente de cada bloque con entrega, emparejada igual que en la carta Gantt. La clave es
+// «nombre#ocurrencia» (0 para el primer bloque con ese nombre en la fase, 1 para el segundo…): dos bloques
+// «Desarrollo» en la misma fase no se pisan la revisión.
+function revisionesPorBloque(cronograma, faseClave) {
+  const mapa = new Map();
+  const vistos = new Map();
+  for (const g of filasGantt(cronograma)) {
+    if (g.fase !== faseClave) continue;
+    for (const f of g.filas) {
+      if (!f.trabajo) continue;
+      const nombre = texto(f.trabajo.etiqueta);
+      const k = vistos.get(nombre) || 0;
+      vistos.set(nombre, k + 1);
+      if (f.revision) mapa.set(`${nombre}#${k}`, f.revision);
+    }
+  }
+  return mapa;
+}
+
+// Clave de cada bloque para revisionesPorBloque: la `ocurrencia` que puso paginarBloques o, si la lámina se
+// dibuja con los bloques de la fase sin paginar, la que se cuenta aquí en orden.
+function clavesBloques(lista) {
+  const vistos = new Map();
+  return lista.map((b) => {
+    const nombre = texto(b.nombre);
+    if (Number.isInteger(b.ocurrencia)) return `${nombre}#${b.ocurrencia}`;
+    const k = vistos.get(nombre) || 0;
+    vistos.set(nombre, k + 1);
+    return `${nombre}#${k}`;
+  });
+}
+
+function renderFaseSlide({ fase, numeroFase, totalFases, bloques, continuacion, cronograma }, index, imageUrl) {
+  const f = fase && typeof fase === 'object' ? fase : {};
+  const titulo = texto(f.titulo).trim() || FASES[f.clave] || 'Fase';
+  const revisiones = revisionesPorBloque(cronograma, f.clave);
+  const lista = (Array.isArray(bloques) ? bloques : []).filter((b) => b && typeof b === 'object');
+  const conDescripcion = !continuacion && Boolean(texto(f.descripcion).trim());
+  const densidad = densidadFase(lista, conDescripcion ? altoDisponible(f.descripcion) : ALTO_TABLA);
+
+  const filas = lista
+    .map((b) => {
+      const acts = (Array.isArray(b.actividades) ? b.actividades : []).filter((a) => a && typeof a === 'object');
+      const entregable = b.entrega && texto(b.entregable).trim() ? `<span>Entrega: ${escapeHtml(b.entregable)}</span>` : '';
+      const nombreBloque = `${escapeHtml(texto(b.nombre))}${b.sigue ? ' (sigue)' : ''}`;
+      const cabeza = `<tr class="plan-bloque"><td colspan="4"><b>${nombreBloque}</b>${entregable}</td></tr>`;
+      const cuerpo = acts
+        .map((a) => {
+          const r = responsableClave(a.responsable);
+          const paralelo = a.en_paralelo ? '<em class="plan-paralelo">en paralelo</em>' : '';
+          const detalle = texto(a.detalle).trim() ? `<small>${escapeHtml(a.detalle)}</small>` : '';
+          return `<tr><td class="plan-act">${escapeHtml(texto(a.nombre))}${paralelo}${detalle}</td><td><span class="quien is-${r}">${
+            RESPONSABLES[r]
+          }</span></td><td>${diasTexto(a.dias_habiles)}</td><td>${escapeHtml(rangoCorto(a.desde, a.hasta))}</td></tr>`;
+        })
+        .join('');
+      return cabeza + cuerpo;
+    })
+    .join('');
+
+  const claves = clavesBloques(lista);
+  const entregas = lista
+    .map((b, i) => {
+      if (!b.entrega) return '';
+      const rev = revisiones.get(claves[i]);
+      const cuando = rev ? `Tu revisión: ${escapeHtml(rangoCorto(rev.desde, rev.hasta))}.` : 'Lo revisas apenas te lo entregamos.';
+      return `<li><b>${escapeHtml(texto(b.entregable).trim() || texto(b.nombre))}</b><span>${cuando}</span></li>`;
+    })
+    .join('');
+  const aprobamos = entregas
+    ? `<ul class="aprobamos-lista">${entregas}</ul><p class="aprobamos-nota">Tienes 5 días hábiles para aprobar cada entrega o enviarnos tus observaciones (cláusula 6.1 del contrato).</p>`
+    : '<p class="aprobamos-nota">En esta parte no hay entregas que aprobar: te contamos el avance en cada reunión de seguimiento.</p>';
+
+  return `
+    <section class="slide plan-contenido plan-fase">
+      <div class="slide-bg" style="${fondoContenido(imageUrl, index)}"></div>
+      ${logoMark()}
+      <div class="plan-texto plan-anima">
+        <p class="eyebrow">${numero(index)} · Fase ${numeroFase} de ${totalFases}</p>
+        <div class="accent-bar"></div>
+        <h2>${escapeHtml(titulo)}${continuacion ? ' <span class="plan-cont">(continuación)</span>' : ''}</h2>
+        ${conDescripcion ? `<p class="plan-desc">${linkify(escapeHtml(f.descripcion))}</p>` : ''}
+        <table class="plan-tabla${densidad}"><thead><tr><th>Actividad</th><th>Quién</th><th>Duración</th><th>Fechas</th></tr></thead><tbody>${filas}</tbody></table>
+      </div>
+      <aside class="plan-tarjeta"><h3>Qué aprobamos juntos</h3>${aprobamos}</aside>
+    </section>`;
+}
+
+const ESTILO_FASES = `
+  .metodo { position: absolute; left: 72px; right: 72px; top: 320px; z-index: 2; list-style: none; display: grid;
+    grid-template-columns: repeat(6, 1fr); gap: 22px; }
+  .metodo::before { content: ''; position: absolute; left: 4%; right: 4%; top: 36px; height: 2px; background: rgba(255,255,255,.16); }
+  .metodo-paso { position: relative; padding: 0 6px; }
+  .metodo-marca { position: relative; display: flex; align-items: center; justify-content: center; width: 72px; height: 72px;
+    border-radius: 50%; font-size: 24px; font-weight: 800; color: #9fb3c8; background: #0a1420; border: 2px solid rgba(255,255,255,.22); }
+  .metodo-paso.is-hecha .metodo-marca { color: #06222a; background: #00d9c0; border-color: #00d9c0; font-size: 32px; }
+  .metodo-paso.is-actual .metodo-marca { color: #fff; border-color: #00d9c0; box-shadow: 0 0 0 8px rgba(0,217,192,.18); }
+  .metodo-paso.is-actual::after { content: ''; position: absolute; inset: -24px -14px -30px; z-index: -1; border-radius: 20px;
+    background: rgba(0,217,192,.07); border: 1px solid rgba(0,217,192,.32); }
+  .metodo-paso h3 { color: #fff; font-size: 27px; font-weight: 800; margin-top: 26px; line-height: 1.2; }
+  .metodo-texto { color: #b8c6d6; font-size: 19px; line-height: 1.5; margin-top: 12px; }
+  .metodo-paso.is-hecha h3, .metodo-paso.is-hecha .metodo-texto { opacity: .72; }
+  .metodo-paso.is-proxima .metodo-texto { color: #9fb3c8; }
+  .metodo-estado { color: #9fb3c8; font-size: 16px; letter-spacing: .1em; text-transform: uppercase; margin-top: 18px; font-weight: 700; }
+  .metodo-paso.is-hecha .metodo-estado { color: #00d9c0; }
+  .metodo-aqui { display: inline-block; margin-top: 18px; padding: 7px 16px; border-radius: 999px; background: #00d9c0; color: #06222a;
+    font-size: 16px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
+  .metodo-firma { color: #fff; font-size: 18px; line-height: 1.45; margin-top: 12px; }
+  .metodo-pie { position: absolute; left: 72px; right: 72px; bottom: 120px; z-index: 2; color: #c9d4e0; font-size: 24px;
+    border-top: 1px solid rgba(255,255,255,.14); padding-top: 26px; }
+  .plan-contenido .plan-texto { position: absolute; left: 72px; top: 240px; width: 1180px; z-index: 2; }
+  .plan-texto h2 { color: #fff; font-size: 46px; font-weight: 800; margin-bottom: 18px; text-shadow: 0 2px 18px rgba(6,13,21,.7); }
+  .plan-cont { color: #9fb3c8; font-size: 30px; font-weight: 600; }
+  .plan-desc { color: #dbe4ee; font-size: 25px; line-height: 1.5; margin-bottom: 18px; max-width: 1080px;
+    display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  .plan-desc a { color: #00d9c0; }
+  .plan-tabla { width: 100%; border-collapse: collapse; table-layout: fixed; }
+  .plan-tabla th { color: #9fb3c8; font-size: 15px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; text-align: left;
+    padding: 0 12px 10px 0; border-bottom: 1px solid rgba(255,255,255,.2); }
+  .plan-tabla th:nth-child(1) { width: 52%; }
+  .plan-tabla th:nth-child(2) { width: 17%; }
+  .plan-tabla th:nth-child(3) { width: 16%; }
+  .plan-tabla th:nth-child(4) { width: 15%; }
+  .plan-tabla td { color: #dbe4ee; font-size: 21px; padding: 10px 12px 10px 0; border-bottom: 1px solid rgba(255,255,255,.1); vertical-align: top;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .plan-tabla tr.plan-bloque td { color: #fff; padding-top: 18px; border-bottom: 0; }
+  .plan-tabla tr.plan-bloque b { font-size: 23px; }
+  .plan-tabla tr.plan-bloque span { margin-left: 16px; color: #00d9c0; font-size: 18px; }
+  .plan-act small { display: block; color: #9fb3c8; font-size: 17px; margin-top: 3px; overflow: hidden; text-overflow: ellipsis; }
+  .plan-paralelo { margin-left: 10px; font-style: normal; font-size: 14px; color: #06222a; background: #9fb3c8; border-radius: 999px;
+    padding: 2px 10px; vertical-align: 2px; }
+  .quien { display: inline-block; font-size: 17px; font-weight: 700; padding: 3px 12px; border-radius: 999px; color: #06222a; }
+  .quien.is-at { background: #00d9c0; }
+  .quien.is-cliente { background: #38bdf8; }
+  .quien.is-ambos { background: #a78bfa; }
+  .plan-tabla.is-denso td { font-size: 19px; padding: 6px 12px 6px 0; }
+  .plan-tabla.is-denso tr.plan-bloque td { padding-top: 12px; }
+  .plan-tabla.is-muy-denso td { font-size: 17px; padding: 4px 12px 4px 0; }
+  .plan-tabla.is-muy-denso tr.plan-bloque td { padding-top: 9px; }
+  .plan-tabla.is-muy-denso tr.plan-bloque b { font-size: 19px; }
+  .plan-tabla.is-muy-denso .plan-act small { display: none; }
+  .plan-tabla.is-muy-denso .quien { font-size: 15px; padding: 1px 10px; }
+  .plan-tarjeta { position: absolute; right: 72px; top: 240px; width: 470px; z-index: 2; background: rgba(6,13,21,.8);
+    border: 1px solid rgba(0,217,192,.35); border-radius: 18px; padding: 30px 32px; }
+  .plan-tarjeta h3 { color: #00d9c0; font-size: 20px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; margin-bottom: 18px; }
+  .aprobamos-lista { list-style: none; display: flex; flex-direction: column; gap: 16px; }
+  .aprobamos-lista li { display: flex; flex-direction: column; gap: 4px; padding-left: 18px; border-left: 3px solid #f59e0b; }
+  .aprobamos-lista b { color: #fff; font-size: 21px; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .aprobamos-lista span { color: #c9d4e0; font-size: 18px; }
+  .aprobamos-nota { color: #9fb3c8; font-size: 17px; line-height: 1.5; margin-top: 20px; }
+  @media screen {
+    body.mode-deck .slide.is-active .plan-anima > *,
+    body.mode-deck .slide.is-active .plan-tarjeta,
+    body.mode-deck .slide.is-active .metodo-paso,
+    body.mode-deck .slide.is-active .gantt { animation: at-rise .65s cubic-bezier(.22,.9,.3,1) both; }
+    body.mode-deck .slide.is-active .plan-anima > *:nth-child(2) { animation-delay: .1s; }
+    body.mode-deck .slide.is-active .plan-anima > *:nth-child(3) { animation-delay: .18s; }
+    body.mode-deck .slide.is-active .plan-anima > *:nth-child(n+4) { animation-delay: .26s; }
+    body.mode-deck .slide.is-active .plan-tarjeta, body.mode-deck .slide.is-active .gantt { animation-delay: .3s; }
+    body.mode-deck .slide.is-active .metodo-paso:nth-child(2) { animation-delay: .08s; }
+    body.mode-deck .slide.is-active .metodo-paso:nth-child(3) { animation-delay: .16s; }
+    body.mode-deck .slide.is-active .metodo-paso:nth-child(4) { animation-delay: .24s; }
+    body.mode-deck .slide.is-active .metodo-paso:nth-child(5) { animation-delay: .32s; }
+    body.mode-deck .slide.is-active .metodo-paso:nth-child(6) { animation-delay: .4s; }
+    @media (prefers-reduced-motion: reduce) {
+      body.mode-deck .slide.is-active .plan-anima > *, body.mode-deck .slide.is-active .plan-tarjeta,
+      body.mode-deck .slide.is-active .metodo-paso, body.mode-deck .slide.is-active .gantt { animation: none !important; }
+    }
+  }
+`;
+
 // === Documento ===
 
 function renderPlanHtml(data, images = {}) {
@@ -423,4 +720,4 @@ ${renderDeckControls()}
 </html>`;
 }
 
-module.exports = { renderPlanHtml, lunesDe, semanaIndice, diasEntre, fechaLarga, fechaCorta, rangoCorto, diasTexto, urlSegura, filasGantt, medidasGantt, renderGantt, renderGanttSlide };
+module.exports = { renderPlanHtml, lunesDe, semanaIndice, diasEntre, fechaLarga, fechaCorta, rangoCorto, diasTexto, urlSegura, filasGantt, medidasGantt, renderGantt, renderGanttSlide, renderMetodoSlide, paginarBloques, renderFaseSlide };

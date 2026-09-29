@@ -179,3 +179,129 @@ test('la lámina de la carta dice inicio, entrega estimada y duración', () => {
   assert.ok(html.includes('<b>23 de diciembre de 2026</b>'));
   assert.ok(html.includes('<b>14 semanas</b>'));
 });
+
+// --- Método AT y fases -------------------------------------------------------
+
+test('el Método AT marca Diagnóstico y Priorización hechos y «Estás aquí» en Propuesta por fases', () => {
+  const html = tp.renderMetodoSlide(planCorto(), 2, '');
+  assert.ok(html.includes('02 · El Método AT'));
+  assert.equal(contar(html, 'class="metodo-paso '), 6);
+  assert.equal(contar(html, 'class="metodo-paso is-hecha"'), 2);
+  assert.equal(contar(html, 'Estás aquí'), 1);
+  const actual = html.match(/<li class="metodo-paso is-actual">[\s\S]*?<\/li>/)[0];
+  assert.ok(actual.includes('<h3>Propuesta por fases</h3>'));
+  assert.ok(actual.includes('Cerrada con tu firma del 28 de septiembre de 2026'));
+  assert.equal(contar(html, 'class="metodo-paso is-proxima"'), 3);
+  assert.ok(html.includes('Lo que viene: Diseño y desarrollo → Implementación → Soporte y mejora continua.'));
+});
+
+test('sin fecha de firma ni datos del método, la lámina igual sale bien', () => {
+  const html = tp.renderMetodoSlide({}, 2, '');
+  assert.equal(contar(html, 'Estás aquí'), 1);
+  assert.ok(html.includes('Cerrada con tu firma del contrato'));
+});
+
+test('paginarBloques deja una fase larga en dos láminas y una corta en una', () => {
+  const [fase1] = planLargo().fases;
+  const paginas = tp.paginarBloques(fase1.bloques, fase1.descripcion);
+  assert.deepEqual(
+    paginas.map((p) => p.map((b) => b.nombre)),
+    [['Arranque', 'Diseño', 'Núcleo de la plataforma', 'Agenda y pagos'], ['Integraciones', 'Pruebas y revisión']]
+  );
+  assert.equal(tp.paginarBloques(planCorto().fases[0].bloques, planCorto().fases[0].descripcion).length, 1);
+  assert.deepEqual(tp.paginarBloques(undefined), [[]]);
+});
+
+test('paginarBloques deja a lo más 5 entregas por lámina, para que «Qué aprobamos juntos» quepa', () => {
+  // El peor caso de la Task 3: Arranque + 13 bloques con entrega de una actividad cada uno. Por alto de la
+  // tabla caben 7 en la segunda lámina, pero la tarjeta de entregas se saldría por abajo.
+  const bloques = [
+    { nombre: 'Arranque', entrega: false, actividades: [{ nombre: 'Reunión de inicio' }, { nombre: 'Entrega de logo, textos y accesos' }] },
+  ];
+  for (let i = 1; i <= 13; i++) {
+    bloques.push({ nombre: `Etapa ${i}`, entregable: `Módulo ${i}`, entrega: true, actividades: [{ nombre: `Trabajo ${i}` }] });
+  }
+  const paginas = tp.paginarBloques(bloques, 'Descripción corta de la fase.');
+  assert.deepEqual(
+    paginas.map((p) => p.filter((b) => b.entrega).length),
+    [5, 5, 3]
+  );
+  assert.equal(paginas.flat().length, 14);
+});
+
+test('dos bloques con el mismo nombre en una fase muestran cada uno su propia revisión', () => {
+  const plan = planCorto();
+  // El bloque «Desarrollo» pasa a llamarse igual que el anterior («Diseño»), en la fase y en su barra.
+  plan.fases[0].bloques[2].nombre = 'Diseño';
+  plan.cronograma.barras[3].etiqueta = 'Diseño';
+  const fase = plan.fases[0];
+  const [pagina] = tp.paginarBloques(fase.bloques, fase.descripcion);
+  for (const bloques of [fase.bloques, pagina]) {
+    const html = tp.renderFaseSlide(
+      { fase, numeroFase: 1, totalFases: 3, bloques, continuacion: false, cronograma: plan.cronograma },
+      4,
+      ''
+    );
+    assert.ok(html.includes('<li><b>Diseño de la página</b><span>Tu revisión: 15 – 21 oct.</span></li>'));
+    assert.ok(html.includes('<li><b>Sitio en ambiente de prueba</b><span>Tu revisión: 2 – 6 nov.</span></li>'));
+  }
+});
+
+test('la lámina de una fase lista actividades con responsable, días y fechas, y qué aprobamos juntos', () => {
+  const plan = planCorto();
+  const html = tp.renderFaseSlide(
+    { fase: plan.fases[0], numeroFase: 1, totalFases: 3, bloques: plan.fases[0].bloques, continuacion: false, cronograma: plan.cronograma },
+    4,
+    ''
+  );
+  assert.ok(html.includes('04 · Fase 1 de 3'));
+  assert.ok(html.includes('<h2>Diseño y desarrollo</h2>'));
+  assert.ok(html.includes('Diseñamos y construimos tu sitio de una página.'));
+  assert.ok(html.includes('<td class="plan-act">Reunión de inicio</td><td><span class="quien is-ambos">Ambos</span></td><td>1 día hábil</td><td>5 oct</td>'));
+  assert.ok(html.includes('<span class="quien is-cliente">Tú</span></td><td>3 días hábiles</td><td>6 – 8 oct</td>'));
+  assert.ok(html.includes('<span class="quien is-at">AutomatizaTech</span>'));
+  assert.ok(html.includes('<b>Diseño</b><span>Entrega: Diseño de la página</span>'));
+  assert.ok(html.includes('Qué aprobamos juntos'));
+  assert.ok(html.includes('<li><b>Diseño de la página</b><span>Tu revisión: 15 – 21 oct.</span></li>'));
+  assert.ok(html.includes('<li><b>Sitio en ambiente de prueba</b><span>Tu revisión: 2 – 6 nov.</span></li>'));
+  assert.ok(html.includes('cláusula 6.1 del contrato'));
+});
+
+test('una fase sin entregas lo dice, y la continuación no repite la descripción', () => {
+  const plan = planLargo();
+  const fase = plan.fases[2];
+  const html = tp.renderFaseSlide(
+    { fase, numeroFase: 3, totalFases: 3, bloques: fase.bloques, continuacion: true, cronograma: plan.cronograma },
+    10,
+    ''
+  );
+  assert.ok(html.includes('Soporte y mejora continua <span class="plan-cont">(continuación)</span>'));
+  assert.ok(!html.includes('No desaparecemos: acompañamos'));
+  assert.ok(html.includes('En esta parte no hay entregas que aprobar'));
+});
+
+test('las actividades en paralelo se marcan y la tabla se compacta con muchas filas', () => {
+  const plan = planLargo();
+  const [pagina1] = tp.paginarBloques(plan.fases[0].bloques, plan.fases[0].descripcion);
+  const html = tp.renderFaseSlide(
+    { fase: plan.fases[0], numeroFase: 1, totalFases: 3, bloques: pagina1, continuacion: false, cronograma: plan.cronograma },
+    4,
+    ''
+  );
+  assert.ok(html.includes('Módulo de pagos<em class="plan-paralelo">en paralelo</em>'));
+  assert.ok(html.includes('<table class="plan-tabla is-muy-denso">'));
+});
+
+test('los textos de las fases se escapan', () => {
+  const plan = planCorto();
+  plan.fases[0].descripcion = 'Descripción <img src=x onerror=alert(1)>';
+  plan.fases[0].bloques[0].actividades[0].nombre = 'Reunión <script>x</script>';
+  const html = tp.renderFaseSlide(
+    { fase: plan.fases[0], numeroFase: 1, totalFases: 3, bloques: plan.fases[0].bloques, continuacion: false, cronograma: plan.cronograma },
+    4,
+    ''
+  );
+  assert.ok(!html.includes('<img src=x'));
+  assert.ok(!html.includes('<script>x'));
+  assert.ok(html.includes('Reunión &lt;script&gt;x&lt;/script&gt;'));
+});

@@ -432,3 +432,309 @@ function at_pt_render_plan(object $fila, int $crm_id): void {
 	</div>
 	<?php
 }
+
+// ---------------------------------------------------------------------------------------------------------------
+// Acciones admin-post de la pestaña. Todas terminan en at_pt_volver() (redirect + exit).
+// ---------------------------------------------------------------------------------------------------------------
+
+add_action('admin_post_at_pt_crear', 'at_pt_accion_crear');
+add_action('admin_post_at_pt_guardar', 'at_pt_accion_guardar');
+add_action('admin_post_at_pt_cambios', 'at_pt_accion_cambios');
+add_action('admin_post_at_pt_aprobar', 'at_pt_accion_aprobar');
+add_action('admin_post_at_pt_destrabar', 'at_pt_accion_destrabar');
+add_action('admin_post_at_pt_reintentar', 'at_pt_accion_reintentar');
+
+/** Vuelve a la pestaña del plan con un aviso; siempre termina la petición. */
+function at_pt_volver(int $crm_id, int $plan_id, string $msg): void {
+	wp_safe_redirect(at_pt_url_ficha($crm_id, $plan_id, $msg));
+	exit;
+}
+
+/**
+ * Cliente del CRM de un plan: el enlace actual de su ficha operativa (el mismo que usa at_pt_planes_de_crm()) o, si la
+ * ficha no está enlazada, el que se guardó al crear el plan. 0 si no hay ninguno.
+ */
+function at_pt_crm_de_plan(object $fila): int {
+	global $wpdb;
+	$actual = (int) ($fila->tech_id ?? 0) > 0
+		? (int) $wpdb->get_var($wpdb->prepare("SELECT crm_cliente_id FROM {$wpdb->prefix}automatiza_tech_clients WHERE id = %d", (int) $fila->tech_id))
+		: 0;
+	return $actual > 0 ? $actual : (int) ($fila->crm_cliente_id ?? 0);
+}
+
+/** Nonce del plan, permiso y plan de una acción del panel. Devuelve [fila, crm_id para volver]. */
+function at_pt_accion_plan(): array {
+	$id = absint($_POST['plan_id'] ?? 0);
+	check_admin_referer('at_pt_plan_' . $id);
+	if (!current_user_can('manage_options')) {
+		wp_die('Sin permiso.', '', ['response' => 403]);
+	}
+	$crm_post = absint($_POST['crm_id'] ?? 0);
+	$fila = at_pt_plan($id);
+	if (!$fila) {
+		at_pt_volver($crm_post, 0, 'sin_plan');
+	}
+	$crm = at_pt_crm_de_plan($fila);
+	return [$fila, $crm > 0 ? $crm : $crm_post];
+}
+
+/** Si n8n no recibió el aviso y el plan sigue en el estado intermedio, lo deja en «error» con esa nota. */
+function at_pt_error_si_sigue(int $plan_id, string $estado_intermedio, string $nota): void {
+	$f = at_pt_plan($plan_id);
+	if ($f && (string) $f->estado === $estado_intermedio) {
+		at_pt_cambiar_estado($plan_id, 'error', $nota);
+	}
+}
+
+/** El contrato es de una ficha operativa enlazada a ese cliente del CRM. */
+function at_pt_contrato_es_del_cliente(int $contrato_id, int $crm_id): bool {
+	if ($contrato_id <= 0 || $crm_id <= 0) {
+		return false;
+	}
+	global $wpdb;
+	$crm = $wpdb->get_var($wpdb->prepare(
+		"SELECT t.crm_cliente_id FROM {$wpdb->prefix}automatiza_contracts c
+		 JOIN {$wpdb->prefix}automatiza_tech_clients t ON t.id = c.client_id WHERE c.id = %d",
+		$contrato_id
+	));
+	return (int) $crm === $crm_id;
+}
+
+/**
+ * Fecha de inicio para recalcular: la que escribió Luis, o la guardada, o la de defecto (primer lunes hábil
+ * después de la firma). Si cae en fin de semana o feriado, se corre al hábil siguiente.
+ */
+function at_pt_fecha_inicio_elegida(string $pedida, object $fila, array $plan, array $feriados): string {
+	$es_fecha = function (string $f): bool {
+		return (bool) preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $f, $m) && checkdate((int) $m[2], (int) $m[3], (int) $m[1]);
+	};
+	$inicio = trim($pedida);
+	if (!$es_fecha($inicio)) {
+		$inicio = trim((string) ($fila->fecha_inicio ?? ''));
+	}
+	if (!$es_fecha($inicio)) {
+		$firma = (string) ($plan['fecha_firma'] ?? '');
+		return at_pt_inicio_por_defecto($es_fecha($firma) ? $firma : current_time('Y-m-d'), $feriados);
+	}
+	return at_pt_es_habil($inicio, $feriados) ? $inicio : at_pt_siguiente_habil($inicio, $feriados);
+}
+
+/**
+ * Plan guardado + lo que llegó del panel: las fases que armó plan-trabajo.js (plan_json, con el detalle de cada
+ * actividad) y los textos de las láminas (proyecto, qué necesitamos, reuniones, hitos y servicios mensuales).
+ * Conserva lo que el panel no edita (image_briefs, fecha_firma, soporte.garantia_meses…): la garantía viene del
+ * contrato (D8) y, aunque $textos traiga 'garantia_meses', no se toca. Sin validar: lo valida
+ * at_pt_validar_plan() después.
+ */
+function at_pt_plan_desde_panel(array $anterior, array $editado, array $textos): array {
+	$plan = $anterior;
+	$fases = [];
+	foreach ((array) ($editado['fases'] ?? []) as $f) {
+		if (!is_array($f)) {
+			continue;
+		}
+		$bloques = [];
+		foreach ((array) ($f['bloques'] ?? []) as $b) {
+			if (!is_array($b)) {
+				continue;
+			}
+			$acts = [];
+			foreach ((array) ($b['actividades'] ?? []) as $a) {
+				if (!is_array($a)) {
+					continue;
+				}
+				$acts[] = [
+					'nombre'       => sanitize_text_field((string) ($a['nombre'] ?? '')),
+					'detalle'      => sanitize_textarea_field((string) ($a['detalle'] ?? '')),
+					'responsable'  => sanitize_key((string) ($a['responsable'] ?? '')),
+					'dias_habiles' => is_numeric($a['dias_habiles'] ?? null) ? (int) $a['dias_habiles'] : 0,
+					'servicio'     => sanitize_key((string) ($a['servicio'] ?? '')),
+					'etapa'        => sanitize_key((string) ($a['etapa'] ?? '')),
+					'origen'       => sanitize_key((string) ($a['origen'] ?? '')),
+					'en_paralelo'  => !empty($a['en_paralelo']),
+				];
+			}
+			$bloques[] = [
+				'nombre'      => sanitize_text_field((string) ($b['nombre'] ?? '')),
+				'entregable'  => sanitize_text_field((string) ($b['entregable'] ?? '')),
+				'entrega'     => !empty($b['entrega']),
+				'actividades' => $acts,
+			];
+		}
+		$fases[] = [
+			'clave'       => sanitize_key((string) ($f['clave'] ?? '')),
+			'descripcion' => sanitize_textarea_field((string) ($f['descripcion'] ?? '')),
+			'bloques'     => $bloques,
+		];
+	}
+	$plan['fases'] = $fases;
+	$lineas = function (string $texto): array {
+		return array_values(array_filter(array_map('trim', preg_split('/\r\n|\r|\n/', $texto)), 'strlen'));
+	};
+	if (trim((string) ($textos['proyecto'] ?? '')) !== '') {
+		$plan['proyecto'] = trim((string) $textos['proyecto']);
+	}
+	$plan['necesitamos_de_ti'] = $lineas((string) ($textos['necesitamos_de_ti'] ?? ''));
+	$plan['reuniones'] = [];
+	foreach ($lineas((string) ($textos['reuniones'] ?? '')) as $l) {
+		$p = array_map('trim', explode('|', $l, 2));
+		$plan['reuniones'][] = ['nombre' => $p[0], 'detalle' => $p[1] ?? ''];
+	}
+	$plan['hitos'] = [];
+	foreach ($lineas((string) ($textos['hitos'] ?? '')) as $l) {
+		$p = array_map('trim', explode('|', $l, 2));
+		if ($p[0] !== 'Entrega estimada') {
+			$plan['hitos'][] = ['nombre' => $p[0], 'despues_de' => $p[1] ?? ''];
+		}
+	}
+	$soporte = is_array($plan['soporte'] ?? null) ? $plan['soporte'] : ['garantia_meses' => 3, 'mensuales' => []];
+	if (array_key_exists('mensuales', $textos)) {
+		$soporte['mensuales'] = $lineas((string) $textos['mensuales']);
+	}
+	$plan['soporte'] = $soporte;
+	return $plan;
+}
+
+/** «Crear plan de trabajo» (contrato firmado sin plan): crea el plan y pide el borrador a n8n. */
+function at_pt_accion_crear(): void {
+	$contrato_id = absint($_POST['contrato_id'] ?? 0);
+	check_admin_referer('at_pt_crear_' . $contrato_id);
+	if (!current_user_can('manage_options')) {
+		wp_die('Sin permiso.', '', ['response' => 403]);
+	}
+	$crm_id = absint($_POST['crm_id'] ?? 0);
+	$ya = at_pt_plan_de_contrato($contrato_id);
+	if ($ya) {
+		at_pt_volver($crm_id, (int) $ya->id, 'ya_existe');
+	}
+	if (!at_pt_contrato_es_del_cliente($contrato_id, $crm_id)) {
+		at_pt_volver($crm_id, 0, 'no_se_pudo');
+	}
+	$id = at_pt_crear_plan($contrato_id);
+	if (is_wp_error($id) || (int) $id <= 0) {
+		at_pt_volver($crm_id, 0, 'no_se_pudo');
+	}
+	$id = (int) $id;
+	// Si n8n no recibe el aviso, at_pt_iniciar_borrador() (Task 6) deja el plan en «error» con el motivo.
+	$motivo = at_pt_iniciar_borrador($id);
+	at_pt_volver($crm_id, $id, $motivo === '' ? 'creado' : 'n8n_fallo');
+}
+
+/**
+ * «Guardar y recalcular» (sin IA), en el orden de uso único de la Task 2: validar lo que llegó → marcar lo que
+ * editó Luis → validar otra vez → fechas. Guarda, deja el plan en borrador y pide la vista previa.
+ */
+function at_pt_accion_guardar(): void {
+	[$fila, $crm] = at_pt_accion_plan();
+	$id = (int) $fila->id;
+	$anterior = at_pt_payload($fila);
+	if (empty($anterior['fases']) || !in_array((string) $fila->estado, ['borrador', 'listo', 'error'], true)) {
+		at_pt_volver($crm, $id, 'no_editable');
+	}
+	$editado = json_decode((string) wp_unslash($_POST['plan_json'] ?? ''), true);
+	if (!is_array($editado) || !isset($editado['fases']) || !is_array($editado['fases'])) {
+		at_pt_volver($crm, $id, 'json_invalido');
+	}
+	$textos = [
+		'proyecto'          => sanitize_text_field(wp_unslash($_POST['proyecto'] ?? '')),
+		'necesitamos_de_ti' => sanitize_textarea_field(wp_unslash($_POST['necesitamos_de_ti'] ?? '')),
+		'reuniones'         => sanitize_textarea_field(wp_unslash($_POST['reuniones'] ?? '')),
+		'hitos'             => sanitize_textarea_field(wp_unslash($_POST['hitos'] ?? '')),
+		'mensuales'         => sanitize_textarea_field(wp_unslash($_POST['mensuales'] ?? '')),
+	];
+	$v = at_pt_validar_plan(at_pt_plan_desde_panel($anterior, $editado, $textos));
+	if (empty($v['ok'])) {
+		at_pt_guardar_detalles($id, (array) ($v['errores'] ?? []));
+		at_pt_volver($crm, $id, 'invalido');
+	}
+	$v2 = at_pt_validar_plan(at_pt_marcar_ediciones($anterior, (array) $v['plan'], 'luis'));
+	if (empty($v2['ok'])) {
+		at_pt_guardar_detalles($id, (array) ($v2['errores'] ?? []));
+		at_pt_volver($crm, $id, 'invalido');
+	}
+	$feriados = at_pt_feriados();
+	$plan = (array) $v2['plan'];
+	$inicio = at_pt_fecha_inicio_elegida((string) wp_unslash($_POST['fecha_inicio'] ?? ''), $fila, $plan, $feriados);
+	$plan = at_pt_calcular_fechas($plan, $inicio, $feriados);
+	// Desde «listo» o «error» vuelve a borrador (la versión final hay que aprobarla de nuevo).
+	if ((string) $fila->estado !== 'borrador' && !at_pt_cambiar_estado($id, 'borrador', '')) {
+		at_pt_volver($crm, $id, 'transicion');
+	}
+	// La nota vieja (p. ej. «No se pudo pedir la vista previa…») se borra: describe un intento anterior.
+	if (!at_pt_guardar($id, ['payload' => $plan, 'fecha_inicio' => $inicio, 'nota' => ''])) {
+		at_pt_volver($crm, $id, 'error_guardar');
+	}
+	at_pt_guardar_detalles($id, (array) ($v['avisos'] ?? []));
+	$motivo = at_pt_pedir_render($id, 'draft', false);
+	at_pt_volver($crm, $id, $motivo === '' ? 'guardado' : 'guardado_sin_vista');
+}
+
+/** «Pedir cambios»: guarda los comentarios y llama al flujo «Plan de trabajo · 2 Cambios» con {id, codigo}. */
+function at_pt_accion_cambios(): void {
+	[$fila, $crm] = at_pt_accion_plan();
+	$id = (int) $fila->id;
+	$comentarios = trim(sanitize_textarea_field(wp_unslash($_POST['comentarios'] ?? '')));
+	if ($comentarios === '') {
+		at_pt_volver($crm, $id, 'sin_comentarios');
+	}
+	if (empty(at_pt_payload($fila)['fases']) || !at_pt_transicion_valida((string) $fila->estado, 'cambios')) {
+		at_pt_volver($crm, $id, 'transicion');
+	}
+	if (!at_pt_guardar($id, ['comentarios' => mb_substr($comentarios, 0, 4000)])) {
+		at_pt_volver($crm, $id, 'error_guardar');
+	}
+	if (!at_pt_cambiar_estado($id, 'cambios', '')) {
+		at_pt_volver($crm, $id, 'transicion');
+	}
+	$motivo = at_pt_llamar_n8n(AT_N8N_PLAN_CAMBIOS, ['id' => $id, 'codigo' => (string) $fila->codigo]);
+	if ($motivo !== '') {
+		at_pt_error_si_sigue($id, 'cambios', 'No se pudo pedir los cambios: ' . $motivo);
+	}
+	at_pt_volver($crm, $id, $motivo === '' ? 'cambios_pedidos' : 'n8n_fallo');
+}
+
+/** «Aprobar»: versión final con fotos (el costo se confirmó en el navegador). */
+function at_pt_accion_aprobar(): void {
+	[$fila, $crm] = at_pt_accion_plan();
+	$id = (int) $fila->id;
+	if (empty(at_pt_payload($fila)['fases']) || !at_pt_transicion_valida((string) $fila->estado, 'aprobando')) {
+		at_pt_volver($crm, $id, 'transicion');
+	}
+	if (!at_pt_cambiar_estado($id, 'aprobando', '')) {
+		at_pt_volver($crm, $id, 'transicion');
+	}
+	// Si n8n no recibe el aviso, at_pt_pedir_render() (Task 6) pasa el plan de «aprobando» a «error» con el motivo.
+	$motivo = at_pt_pedir_render($id, 'final', true);
+	at_pt_volver($crm, $id, $motivo === '' ? 'aprobando' : 'n8n_fallo');
+}
+
+/** «Destrabar»: un plan que quedó esperando a n8n pasa a «error» para poder reintentar. */
+function at_pt_accion_destrabar(): void {
+	[$fila, $crm] = at_pt_accion_plan();
+	$id = (int) $fila->id;
+	if (!in_array((string) $fila->estado, ['generando', 'cambios', 'aprobando'], true)) {
+		at_pt_volver($crm, $id, 'transicion');
+	}
+	at_pt_cambiar_estado($id, 'error', 'Destrabado por Luis');
+	at_pt_volver($crm, $id, 'destrabado');
+}
+
+/**
+ * Desde «error»: con payload vuelve a borrador sin llamar a nadie; sin payload pide otra vez el borrador
+ * (at_pt_iniciar_borrador() lo pasa a «generando» y, si n8n no recibe el aviso, lo deja en «error» con el motivo).
+ */
+function at_pt_accion_reintentar(): void {
+	[$fila, $crm] = at_pt_accion_plan();
+	$id = (int) $fila->id;
+	if ((string) $fila->estado !== 'error') {
+		at_pt_volver($crm, $id, 'transicion');
+	}
+	if (!empty(at_pt_payload($fila)['fases'])) {
+		if (!at_pt_cambiar_estado($id, 'borrador', '')) {
+			at_pt_volver($crm, $id, 'transicion');
+		}
+		at_pt_volver($crm, $id, 'vuelto_borrador');
+	}
+	$motivo = at_pt_iniciar_borrador($id);
+	at_pt_volver($crm, $id, $motivo === '' ? 'reintentando' : 'n8n_fallo');
+}

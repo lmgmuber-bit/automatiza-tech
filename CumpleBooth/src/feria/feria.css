@@ -84,3 +84,5 @@
 /* 7: la cabecera fija de la feria (~72 px) tapaba el selector de cámara y el borde de arriba de Asómate. */
 .feria-kiosco .camera-picker{top:84px}
 .feria-kiosco .capture,.feria-kiosco .preview,.feria-kiosco .asomate-elegir{padding-top:72px}
+/* 29-09: al elegir temática el selector baja solo hasta la autorización y el botón; este margen deja aire bajo el botón. */
+.feria-selector .feria-primary{scroll-margin-bottom:28px}

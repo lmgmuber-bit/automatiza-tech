@@ -228,12 +228,40 @@ function cb_feria_publica(array $feria, ?string $modo = null): array
         'fecha_texto' => cb_feria_fecha_texto($feria['fecha']),
         'mesa' => $feria['mesa'],
         'recuerdo' => cb_feria_recuerdo($feria),
+        'fondo' => cb_feria_fondo($feria),
     ];
     if ($modo !== null) {
         $out['modo'] = $modo;
     }
     $out['modos'] = cb_feria_modos($feria);
     return $out;
+}
+
+/**
+ * Fondo de pantalla de una temática para el selector y el kiosco (Luis, 29-09: un evento de Noche de Brujas mostraba
+ * el fondo de Fiestas Patrias). Es `fondo-evento.jpg`, 9:16 y con el centro despejado; sin archivo, cadena vacía.
+ */
+function cb_feria_fondo_mundo(string $slug): string
+{
+    return is_file(cb_themes_dir() . '/' . $slug . '/fondo-evento.jpg') ? 'themes/' . $slug . '/fondo-evento.jpg' : '';
+}
+
+/**
+ * Fondo del evento: el de su primera temática con fondo propio, Niños antes que Adultos, en el orden en que se
+ * marcaron. Sin ninguna, cadena vacía y el kiosco usa el genérico. Cuando el evento tenga su temática principal
+ * como dato (ticket 024), se lee de ahí.
+ */
+function cb_feria_fondo(array $feria): string
+{
+    foreach (cb_feria_modos($feria) as $slugs) {
+        foreach ($slugs as $slug) {
+            $fondo = cb_feria_fondo_mundo($slug);
+            if ($fondo !== '') {
+                return $fondo;
+            }
+        }
+    }
+    return '';
 }
 
 /** Imagen de muestra de un mundo para el selector: el banner si existe, si no el fondo de la sala. */
@@ -259,6 +287,7 @@ function cb_feria_mundos_publicos(array $feria): array
                 'slug' => $slug,
                 'nombre' => (string) ($themes[$slug]['nombre'] ?? $slug),
                 'imagen' => cb_feria_imagen_mundo($slug),
+                'fondo' => cb_feria_fondo_mundo($slug),
                 'personajes' => !empty($themes[$slug]['personajes']),
             ];
         }
@@ -304,6 +333,11 @@ function cb_feria_resolver(array $feria, array $resuelto, string $tema, string $
     if ($modo !== 'infantil') {
         // El juego general de la temática no pasa por el filtro de personajes: en Adultos también se apaga.
         $theme['game'] = new stdClass();
+    }
+    // Fondo de pantalla del kiosco: el de la temática elegida (29-09); sin archivo, el del evento o el genérico.
+    $fondoMundo = cb_feria_fondo_mundo($tema);
+    if ($fondoMundo !== '') {
+        $theme['images']['fondoEvento'] = $fondoMundo;
     }
     // Filtro de la foto final, por temática (hoy solo "bn": el estudio en blanco y negro que la
     // competencia vende a adultos). El kiosco lo aplica al componer; sin el campo, foto a color.

@@ -7,6 +7,7 @@ import { afterName, armIdle, firstName, initialPhotoStep, reservation, returnUrl
 import { downloadImage, withRemembrance } from './media.js'
 import { FullscreenButton, useFullscreenOnTap } from './fullscreen.jsx'
 import { prepararVideo, urlDeVideo } from '../videoListo.js'
+import { fondoEstilo } from './fondo.js'
 import { INTRO_ARRANQUE_MS, alVencer, esperaPorDuracion, restanteMinimo } from './intro.js'
 import './feria.css'
 
@@ -135,7 +136,7 @@ export default function FeriaBooth({ feria, theme, themeData, characters, filter
   })() : null
 
   return <main className={`app feria-kiosco feria-kiosco-${feria.modo}`} data-step={step} data-segmentation={segmenter ? JSON.stringify(segmenter.metrics) : undefined}
-    style={{ '--feria-fondo': `url("${new URL(base + 'feria/fondo.jpg', location.href).href}")` }}>
+    style={fondoEstilo(base, location.href, themeData?.images?.fondoEvento, feria.fondo)}>
     <header className="feria-kiosk-header"><span>CumpleClick <b>·</b> {feria.nombre}</span><span className="feria-kiosk-acciones">{music && <button className="feria-fullscreen" type="button" onClick={toggleMusic} aria-label={muted ? 'Activar música' : 'Silenciar música'} title={muted ? 'Activar música' : 'Silenciar música'}><span aria-hidden="true">{muted ? '🔇' : '🎵'}</span></button>}<FullscreenButton />{!completed && <button className="feria-quiet" disabled={busy} onClick={finish}>Salir</button>}</span></header>
     {step === 'name' && <section className="feria-panel feria-name"><img className="feria-name-logo" src={base + 'brand/cumpleclick-mark.svg'} alt="CumpleClick" /><span className="feria-eyebrow">{child ? 'TU AVENTURA COMIENZA' : 'UN RETRATO A TU MANERA'}</span><h1 ref={heading} tabIndex={-1}>¿Cómo te llamas?</h1><p>Solo tu primer nombre, si quieres.</p><label className="feria-name-label">Tu nombre <span>(opcional)</span><input value={name} maxLength={20} autoComplete="off" autoCapitalize="words" onChange={(e) => setName(e.target.value)} placeholder="Tu primer nombre" /></label>
       {child && !consent && <label className="feria-consent"><input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} />Soy el adulto responsable y autorizo tomar la foto</label>}

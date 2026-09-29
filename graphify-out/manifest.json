@@ -4715,8 +4715,8 @@
     "semantic_hash": ""
   },
   "CLAUDE.md": {
-    "mtime": 1790649460.034971,
-    "ast_hash": "6d64e769d9b99d0c9ddb9f6c063563fb",
+    "mtime": 1790651473.2995906,
+    "ast_hash": "5596450e62e528a0d91e4bee1fd17784",
     "semantic_hash": ""
   },
   "CONTEXTO_COMPLETO.md": {
@@ -10850,8 +10850,8 @@
     "semantic_hash": ""
   },
   "demos/gt-baseball/assets/app.js": {
-    "mtime": 1790646752.4190407,
-    "ast_hash": "6b5c5d475ff5091adbe27079f7bf442f",
+    "mtime": 1790687033.7783737,
+    "ast_hash": "bcc05b90bf076940f965512d1aa93863",
     "semantic_hash": ""
   },
   "demos/gt-baseball/assets/planilla.js": {
@@ -10875,8 +10875,8 @@
     "semantic_hash": ""
   },
   "demos/gt-baseball/index.html": {
-    "mtime": 1790650723.4210613,
-    "ast_hash": "60705da3cbe20e07fdbd265115f70bb9",
+    "mtime": 1790688243.1343136,
+    "ast_hash": "95cb5271da33880c52be9226cb86d067",
     "semantic_hash": ""
   },
   "CumpleBooth/sitio/assets/img/og-cumpleclick.jpg": {
@@ -10922,6 +10922,16 @@
   "N8N/gt-baseball/build_respaldo.py": {
     "mtime": 1790648956.46677,
     "ast_hash": "c0532d444951268d7001ad11e295681a",
+    "semantic_hash": ""
+  },
+  "demos/gt-baseball/assets/estadio-noche-vertical.jpg": {
+    "mtime": 1790688178.6745057,
+    "ast_hash": "408aabbee22a4b31049b259b230416d2",
+    "semantic_hash": ""
+  },
+  "demos/gt-baseball/assets/estadio-noche.jpg": {
+    "mtime": 1790688144.1574538,
+    "ast_hash": "9e18aa393d419003ab0d1b715af0711e",
     "semantic_hash": ""
   }
 }

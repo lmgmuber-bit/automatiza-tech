@@ -97,6 +97,7 @@ const li = (t) => `<li style="margin:0 0 6px;">${t}</li>`;"""
                     '${li("PDF generado")}'
                     '${li(esc(v.fotos_locales) + " de " + esc(v.fotos_pedidas) + " fotos guardadas junto a la presentación")}'
                     '${rev ? li(esc(rev) + " descripciones de fotos reemplazadas por el filtro (pedían pantallas, texto o personas)") : ""}'
+                    '${(v.avisos_fotos || []).map((a) => li("⚠️ " + esc(a))).join("")}'
                     '${li("El chatbot de demo respondió")}'
                     '</ul>', 'ok')
     lista_mal = (caja('<ul style="margin:0;padding-left:18px;">${(v.problemas || []).map((p) => li(esc(p))).join("")}</ul>', 'error')

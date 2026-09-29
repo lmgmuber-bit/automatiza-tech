@@ -33,6 +33,23 @@ Estados: `borrador → ajustando|generando`, `ajustando → borrador|error`, `ge
 propuesta en `error` con el motivo. Si un flujo se cae igual (OpenAI caído, un JSON ilegible), el workflow
 «0 Avisar error» (`m7TOfKznVSBGz4Nd`, `settings.errorWorkflow` de los tres) le escribe a Luis. Una propuesta que
 haya quedado en `ajustando` o `generando` se destraba desde el panel (pasa a `error`, que es transición válida).
+Desde `error` no hace falta destrabar: basta escribir el comentario de nuevo y apretar «Pedir cambios» (o «Aprobar»).
+
+**Respuesta de la IA con llaves de más (2026-09-26, autorizado por Luis).** El nodo OpenAI de «1 Borrador» y
+«2 Cambios» no fuerza JSON, y el 26-sep «2 Cambios» dejó la 53 en `error` por una llave `}` de más al final de una
+respuesta que traía bien el cambio pedido (ejecución 408862). Los dos flujos leen la respuesta con `leerJsonModelo`
+(`N8N/propuestas-v3/json_guard.py`): `JSON.parse` estricto como siempre, con una sola tolerancia (un objeto completo
+seguido solo de llaves `}` y espacios). «2 Cambios» además rechaza lo que no es la propuesta ni un pedazo de ella
+(un arreglo, `null`, claves que no son de la propuesta, un envoltorio `{propuesta}` con otras claves) y sigue
+aceptando respuestas parciales, que se completan con lo guardado; su aviso de error ahora dice el motivo real.
+🔴 No hacerla más tolerante: la primera versión publicada (16:26) buscaba la propuesta en cualquier parte del texto, y
+dos rondas de revisión adversarial mostraron que así toma una nota, la versión «antes» o la plantilla del prompt y
+la guarda como cambio correcto. Casos en `python N8N/propuestas-v3/probar_json.py` (46; corre con node el código
+real de los nodos). Respaldo de lo que había antes del 26-sep en `C:/Users/luis_/respaldos/n8n/2026-09-26-json-robusto/`
+(rollback: volver a publicar esos JSON, o construir desde `origin/main` y `deploy.py`). Esta versión corre desde el
+26-sep 18:06; la anterior de ese día quedó respaldada como `*.vivo-v1-antes-v3.json` en la misma carpeta. Límite conocido,
+del lado seguro: si la IA envuelve la propuesta y agrega una nota (`{propuesta, cambios: …}`), «2 Cambios» marca error;
+basta volver a «Pedir cambios».
 
 ## Panel de propuestas (wp-admin › Propuestas, EN PROD desde el 2026-09-24 15:48)
 
@@ -126,7 +143,29 @@ Reglas que aplica `N8N/propuestas-v3/fotos_guard.py` (compartido por Borrador y 
   computadores, oficinas ni reuniones); el prompt de Borrador dice qué mostrar por lámina.
 - La portada va siempre en primer plano con el fondo desenfocado; se reemplaza si pide estadio, fachada, calle o muro.
 - Los reemplazos son escenas neutras que sirven para cualquier rubro, nunca las de otro cliente.
-- Siempre se agrega el cierre `no signs, no labels, no text, no lettering, no logos, no watermarks`.
+- Siempre se agrega el cierre `no signs, no labels, no text, no lettering, no logos, no watermarks, no subtitles,
+  no captions` (los dos últimos desde el 27-sep).
+
+**Fotos sin texto (EN PROD en n8n desde el 2026-09-27 01:27, autorizado por Luis).** En una propuesta real el modelo
+de imagen inventó leyendas blancas como subtítulos de película y hojas con garabatos, aunque el prompt dice «no
+text». Tres cambios:
+- **Filtro** (`fotos_guard.py`): prohíbe hojas con dibujos técnicos, planos, bocetos, instrucciones o manuales y notas
+  adhesivas (solo como papel: «terapia manual», «un barista dibujando en el café» o «una enfermera tomando sangre»
+  siguen pasando), y las escenas de tienda, sala de ventas o supermercado van en primer plano con el fondo desenfocado.
+- **Revisión automática en «3 Final»** (`build_3_final.py`): con las fotos ya guardadas, GPT-4o revisa todas en una
+  sola consulta; las que tengan letras, números, subtítulos o garabatos se piden **una vez** más con otra descripción
+  (el renderer reutiliza una foto solo si su descripción no cambió) y lo que siga con texto llega como aviso en el
+  correo a Luis, sin pasar la propuesta a «error». Una foto rehecha no se vuelve a pagar en corridas siguientes:
+  «Leer fotos previas» compara el sha256 del manifest del renderer. Costo según la documentación de OpenAI (no medido
+  en una factura): ≈ US$0,025 por consulta con 9 fotos, hasta dos consultas, más US$0,0032 por foto rehecha; el
+  botón «Aprobar y generar versión final» lo suma. Pruebas: `probar_revision_fotos.py` (139 comprobaciones, recorre el
+  grafo real del flujo con el código de sus nodos) y `probar_fotos.py`.
+- **«2 Cambios»** sabe cómo se numeran las láminas (1 portada, 2 desafío, 3 solución, 4 beneficios, 5 cómo funciona,
+  las extras, inversión, próximos pasos): «cambia la foto de la lámina 3» ya no crea una extra que no existe.
+
+Respaldo de lo que corría antes: `C:/Users/luis_/respaldos/n8n/2026-09-27-fotos-sin-texto/` (los tres flujos);
+rollback = volver a publicar esos JSON con `deploy.py`. Verificado después de publicar: la versión activa de «1
+Borrador», «2 Cambios» y «3 Final» es idéntica a los JSON del repo.
 
 Revisar una foto siempre **dentro de la plantilla** (la capa oscura tapa detalles en las láminas interiores,
 no en la portada), con `renderProposalHtml` y Playwright en local, sin gastar.

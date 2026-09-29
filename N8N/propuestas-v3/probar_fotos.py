@@ -45,7 +45,36 @@ CASOS = [
     ('extra_1', 'shelf of books in a library', N),
     ('challenge', 'busy store with customers browsing the shelves', N),
     ('how_it_works', 'close-up of hands wrapping a gift box in kraft paper', N),
+    # Propuesta 53 (2026-09-26): hojas con dibujos, planos o instrucciones traen garabatos que parecen texto
+    ('solution', 'carpenter reviewing furniture sketches on a workbench', R),
+    ('solution', 'woman assembling a white bookshelf following the instruction sheets', R),
+    ('how_it_works', 'designer drawing blueprints of a modular cabinet', R),
+    ('extra_1', 'sticky notes on a wall with ideas for the new collection', R),
+    ('how_it_works', 'open user manual on a table next to a coffee machine', R),
+    ('solution', 'architect reviewing drawings on paper at a large desk', R),
+    ('solution', 'technical drawing of a kitchen cabinet next to a pencil', R),
+    ('how_it_works', 'customer reading the instructions of a new blender', R),
+    ('solution', 'hands following step-by-step instructions to assemble a chair', R),
+    ('pricing', 'stack of training manuals next to a cup of coffee', R),
+    # «drawing», «manual» e «instructions» como verbo o adjetivo: escenas del rubro sin papel (2026-09-27)
+    ('solution', 'physiotherapist performing manual therapy on a patient shoulder in a bright clinic', C),
+    ('benefits', 'therapist giving a manual lymphatic drainage massage in a calm spa room', C),
+    ('how_it_works', 'teenager using a manual coffee grinder in a cozy kitchen', C),
+    ('cover', 'close-up of a barista drawing a heart in the latte foam, background completely blurred', C),
+    ('challenge', 'nurse drawing blood from a patient arm in a bright clinic', C),
+    ('benefits', 'swimming coach giving instructions to kids at the pool', C),
+    ('next_steps', 'driving school instructor giving instructions to a student behind the wheel', C),
+    # Tiendas: se conserva la escena del rubro, con el fondo desenfocado (lo comprueba la regla de abajo)
+    ('benefits', 'happy family choosing a sofa together in a furniture showroom', C),
+    ('benefits', 'friends laughing next to two armchairs in a large store', C),
+    ('next_steps', 'couple walking through the aisles of a supermarket with a cart', C),
+    # Escenas sin tienda ni papeles siguen igual
+    ('solution', 'man assembling a modular oak cabinet in a bright living room', C),
+    ('how_it_works', 'hands fitting a wooden drawer into a white modular cabinet, soft daylight', C),
+    # Prohibiciones que escribe el modelo con subtítulos/leyendas: se descartan y el cierre queda una sola vez
+    ('challenge', 'tired shop owner closing the shutter at night, no subtitles or captions', C),
 ]
+TIENDAS = ('showroom', 'store', 'supermarket')
 
 briefs = [{'slide': s, 'prompt': p} for s, p, _ in CASOS]
 js = (JS_LIMPIAR_FOTOS + '\nconst BRIEFS = ' + json.dumps(briefs) + ';\n'
@@ -64,8 +93,11 @@ for (slide, prompt, debe), res in zip(CASOS, json.loads(r.stdout)):
     print(f"{'OK ' if ok else 'MAL'} {slide:12} {obtuvo:10} {prompt[:58]!r}")
     if obtuvo == N:
         print(f"      -> {res['salida'][:150]}")
-    if not res['salida'].endswith('no signs, no labels, no text, no lettering, no logos, no watermarks'):
-        print('    MAL: falta el cierre'); fallas += 1
+    cierre = 'no signs, no labels, no text, no lettering, no logos, no watermarks, no subtitles, no captions'
+    if not res['salida'].endswith(cierre) or res['salida'].count('no subtitles') != 1:
+        print('    MAL: falta el cierre o está repetido'); fallas += 1
+    if obtuvo != R and any(t in prompt for t in TIENDAS) and 'blurred' not in res['salida']:
+        print('    MAL: escena de tienda sin el fondo desenfocado'); fallas += 1
     # Borrador guarda la descripción ya filtrada y Final la vuelve a filtrar: si el texto cambiara, el hash del
     # prompt cambiaría y el renderer volvería a pagar una foto que ya tiene.
     if res['segunda'] != res['salida']:

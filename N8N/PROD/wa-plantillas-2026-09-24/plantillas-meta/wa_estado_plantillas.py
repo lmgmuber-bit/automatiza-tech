@@ -71,5 +71,9 @@ try:
             print(f"  {t['name']:<24} {t['status']:<10} {t['category']:<9} {t['language']}{extra}")
 finally:
     if wid:
+        try:  # desde el 29-sep n8n no borra un workflow publicado (409): despublicar antes
+            api("POST", f"/workflows/{wid}/deactivate")
+        except Exception:
+            pass
         api("DELETE", f"/workflows/{wid}")
         print("(workflow temporal borrado)")

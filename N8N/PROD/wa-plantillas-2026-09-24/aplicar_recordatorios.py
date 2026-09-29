@@ -147,6 +147,10 @@ def plantillas_aprobadas():
         raise RuntimeError("el webhook temporal no quedo registrado")
     finally:
         if wid:
+            try:  # desde el 29-sep n8n no borra un workflow publicado (409): despublicar antes
+                api("POST", f"/workflows/{wid}/deactivate")
+            except Exception:
+                pass
             api("DELETE", f"/workflows/{wid}")
 
 

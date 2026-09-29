@@ -187,3 +187,21 @@ function pt_limpiar(): void {
 	$GLOBALS['pt_creados'] = ['crm' => [], 'tech' => [], 'propuesta' => [], 'contrato' => [], 'archivo' => []];
 }
 register_shutdown_function('pt_limpiar');
+
+/** Petición REST a automatiza-tech/v1. $clave: true = AT_REST_SECRET, false = sin cabecera, texto = esa clave. */
+function pt_pedir(string $metodo, string $ruta, $cuerpo = null, $clave = true, array $query = []): WP_REST_Response {
+	$r = new WP_REST_Request($metodo, '/automatiza-tech/v1' . $ruta);
+	if ($clave === true) {
+		$r->set_header('x-at-secret', AT_REST_SECRET);
+	} elseif (is_string($clave)) {
+		$r->set_header('x-at-secret', $clave);
+	}
+	if ($query) {
+		$r->set_query_params($query);
+	}
+	if ($cuerpo !== null) {
+		$r->set_header('content-type', 'application/json');
+		$r->set_body(is_string($cuerpo) ? $cuerpo : wp_json_encode($cuerpo));
+	}
+	return rest_do_request($r);
+}

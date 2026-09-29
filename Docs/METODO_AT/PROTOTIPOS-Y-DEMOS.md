@@ -1,6 +1,7 @@
 # Prototipos de Claude Design y demos para prospectos
 
-Fecha: 2026-09-29. Primer caso completo: el demo de una tienda con delivery (28-sep-2026).
+Fecha: 2026-09-29. Primer caso completo: el demo de una botillería con delivery express (28-sep-2026),
+con un nombre provisional mientras el cliente decide el suyo.
 Lo propio de cada cliente (precios, nombres, guiones de PROD, fuentes del prototipo) vive en la bóveda privada,
 en `10-Projects/<Cliente>/README.md`; este documento es solo el método. El repo es público: aquí no van nombres de
 clientes, precios ni teléfonos.
@@ -9,11 +10,12 @@ clientes, precios ni teléfonos.
 
 1. La reunión entra por el flujo de Meet y crea la propuesta v3 (`PROPUESTAS-FLUJO-V3.md`).
 2. Con el brief se arma un prompt para **Claude Design** (identidad + pantallas); Luis lo pega y exporta el ZIP.
-3. Un agente revisa el export con las skills de diseño (ui-ux-pro-max, design-taste-frontend, frontend-design),
+3. Si el cliente aún no tiene nombre, el prototipo usa uno provisional y todo se trata como genérico hasta que decida.
+4. Un agente revisa el export con las skills de diseño (ui-ux-pro-max, design-taste-frontend, frontend-design),
    mide con un script en el navegador y **corrige directamente** en una copia `v2` (nunca sobre el export original).
-4. Se publica en `https://automatizatech.cl/demos/<rubro>/` con autorización de Luis.
-5. El enlace del demo va **primero en los próximos pasos** de la propuesta (el renderer lo vuelve enlace).
-6. Opcional: video vertical de recorrido para mandar por WhatsApp.
+5. Se publica en `https://automatizatech.cl/demos/<rubro>/` con autorización de Luis.
+6. El enlace del demo va **primero en los próximos pasos** de la propuesta (el renderer lo vuelve enlace).
+7. Opcional: video vertical de recorrido para mandar por WhatsApp.
 
 ## Qué trae un export de Claude Design
 

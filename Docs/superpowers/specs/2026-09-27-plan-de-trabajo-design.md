@@ -54,6 +54,17 @@ revisarlo y aclarar dudas, por la web o por WhatsApp con Tech.
    Tech o por el sitio web.
 9. **(29-sep) Luis también agenda desde el panel** la llamada de seguimiento con los datos del cliente, por el flujo normal
    de reuniones de seguimiento: evento en Google Calendar con Meet y aviso al cliente por correo y por WhatsApp.
+10. **(29-sep) Módulo independiente de la propuesta.** Es para clientes oficiales con contrato de servicios firmado. Lo
+    contratado sale del **contrato** (servicios contratados, alcance, entregables y fases siguientes, ya revisados por
+    Luis); la propuesta, si existe, solo aporta fotos, rubro y el extracto de la reunión. Un contrato sin propuesta
+    también tiene plan. Código, tabla y pantallas propios, fuera de `inc/propuestas-admin/` y de `inc/cierre-cliente/`,
+    salvo el hook de la firma.
+11. **(29-sep) Todo editable por Luis**, igual que los montos y las fases en la propuesta: actividades, responsables,
+    días hábiles, semanas, «en paralelo», descripciones de cada fase y textos de las láminas; y la tabla de tiempos de
+    referencia en sus ajustes.
+12. **(29-sep) El documento menciona el portal del cliente:** una lámina «Sigue tu proyecto» explica que en su portal ve
+    sus contratos, el avance y las fechas de su proyecto y el historial de reuniones, seguimientos y pagos, que todo queda
+    documentado, y lleva su enlace (`at_crm_url_portal()`, `/?crm_view=timeline&cid=…&token=…`).
 
 ## Etapas
 
@@ -71,7 +82,8 @@ revisarlo y aclarar dudas, por la web o por WhatsApp con Tech.
 
 - Al final de `ContractService::sign_as_client()`, después de las copias por correo: `do_action('at_contrato_firmado',
   $fresh)` dentro de `try/catch`; un fallo del plan nunca afecta la firma.
-- El módulo nuevo escucha ese hook: si el contrato es `servicios`, tiene `proposal_id` y no existe un plan para ese contrato,
+- El módulo nuevo escucha ese hook: si el contrato es `servicios` y no existe un plan para ese contrato (con o sin
+  `proposal_id`; decisión 10),
   crea el plan en estado `generando` y llama al flujo n8n «Plan 1 Borrador». Idempotente: un contrato, un plan.
 - Botón **«Crear plan de trabajo»** en la pestaña «Plan de trabajo» de la ficha del cliente, para contratos ya firmados antes de este cambio (p. ej. el
   contrato 12) o si el disparo automático falló.
@@ -134,8 +146,9 @@ marcadas «en paralelo».
 ### 4. Borrador con IA (n8n «Plan 1 Borrador»)
 
 - Webhook `plan-v1-borrador` con clave propia (`X-AT-Plan-Key`, credencial de n8n, como `X-AT-Borrador-Key`).
-- Entrada: id y código del plan, lo aceptado (filas de la aceptación), alcance y entregables de la propuesta
-  (`solution_text`, `how_it_works`), extracto de la transcripción de la reunión si existe, y la tabla de tiempos.
+- Entrada: id y código del plan; del **contrato**, los servicios contratados, el alcance, los entregables y las fases
+  siguientes (placeholders revisados por Luis); de la propuesta, si existe, el rubro y el extracto de la reunión; y la
+  tabla de tiempos.
 - GPT-4o (mismo nodo que el borrador de propuestas) devuelve el JSON del plan: arma actividades concretas para lo contratado y
   asigna a cada una un `servicio` de la tabla; no inventa duraciones si la actividad calza con la tabla.
 - WordPress valida el JSON (tipos, responsables, días enteros de 1 a 60, fases conocidas), **pone los días de la tabla** donde
@@ -159,13 +172,16 @@ marcadas «en paralelo».
   4. **Una lámina por fase**: actividades, responsable, duración, entregable y qué aprobamos juntos.
   5. **Qué necesitamos de ti**: insumos y la regla de la cláusula 4.2 («el plazo corre desde que los recibimos»).
   6. **Reuniones y soporte**: inicio, seguimiento, entrega y capacitación; garantía y servicios mensuales si los hay.
+  6b. **Sigue tu proyecto** (decisión 12): qué ve en su portal (contratos, proyecto con fechas y estado, historial de
+     reuniones, seguimientos y pagos), que todo queda documentado, y el enlace a su portal.
   7. **Cierre**: «Agenda tu llamada de seguimiento», con **dos enlaces que se tocan** (decisión 8): «Por WhatsApp con Tech»
      (`wa.me/56927002984` con el mensaje y el código del plan) y «En el sitio web» (`ver-plan.php?id=<codigo>&agendar=1`,
      que abre el selector de horarios). Los enlaces funcionan en la presentación y en el PDF.
 - Fotos (decisión 7):
   - **Reutilizadas, sin costo:** las láminas que ya existían en la propuesta usan sus fotos del mismo almacén de
     imágenes: portada (foto de portada de la propuesta) y cierre (foto de próximos pasos).
-  - **Nuevas, con costo:** Método AT, carta Gantt, una por fase, «Qué necesitamos de ti» y «Reuniones y soporte». La IA
+  - **Nuevas, con costo:** Método AT, carta Gantt, una por fase, «Qué necesitamos de ti», «Reuniones y soporte» y
+    «Sigue tu proyecto». Sin propuesta, también la portada y el cierre. La IA
     del borrador escribe sus descripciones por rubro con las mismas reglas de la propuesta (`fotos_guard.py`: personas del
     rubro, sin texto ni pantallas). El panel muestra cuántas son y su costo antes de «Aprobar» (mismo cálculo que
     `at_propuesta_costo_fotos()`), y el renderer reutiliza las ya guardadas con el mismo prompt (`img/manifest.json`).
@@ -242,8 +258,10 @@ tiene más de un contrato firmado, un selector elige el plan. Contiene:
 
 ## Fuera de alcance
 
-Reuniones de seguimiento recurrentes, avance real del proyecto contra el plan (tareas y porcentajes), facturación por hitos y
-el portal del cliente mostrando el plan (posible fase siguiente: enlazar el plan desde la pestaña «Proyectos» del CRM).
+Reuniones de seguimiento recurrentes, avance real del proyecto contra el plan (tareas y porcentajes) y facturación por
+hitos. Posible fase siguiente (propuesta de Claude, sin confirmar): al enviar el plan, escribir su fecha de inicio y su
+entrega estimada en el proyecto del CRM y enlazar el plan desde «Tus Proyectos» del portal, para que el portal y el plan
+digan lo mismo.
 
 ## Pendientes de Luis
 

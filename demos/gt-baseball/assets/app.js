@@ -137,7 +137,45 @@
   function mostrar(nombre) {
     Object.keys(vistas).forEach(function (k) { vistas[k].hidden = k !== nombre; });
     window.scrollTo(0, 0);
+    actualizarArriba();
   }
+
+  // ---------- Volver arriba ----------
+  // Aparece al llegar a la última sección de la portada («¿Dónde estamos?») o al pie, solo en la portada, y lleva al
+  // inicio de una vez (suave, salvo con «menos movimiento»). Después deja el foco en el contenido para el teclado.
+  var arribaMetas = [];
+  function actualizarArriba() {
+    var btn = $('btn-arriba');
+    if (!btn) return;
+    var ver = !vistas.portada.hidden && arribaMetas.some(function (m) { return m.visible; });
+    btn.classList.toggle('arriba--visible', ver);
+    btn.tabIndex = ver ? 0 : -1;
+  }
+  (function () {
+    var btn = $('btn-arriba');
+    var donde = document.getElementById('t-donde');
+    var objetivos = [donde && donde.closest('section'), document.querySelector('.pie')].filter(Boolean);
+    if (!btn || !objetivos.length || !('IntersectionObserver' in window)) return;
+    arribaMetas = objetivos.map(function (el) { return { el: el, visible: false }; });
+    var io = new IntersectionObserver(function (entradas) {
+      entradas.forEach(function (e) {
+        arribaMetas.forEach(function (m) { if (m.el === e.target) m.visible = e.isIntersecting; });
+      });
+      actualizarArriba();
+    });
+    objetivos.forEach(function (el) { io.observe(el); });
+    var sinMovimiento = window.matchMedia('(prefers-reduced-motion: reduce)');
+    btn.addEventListener('click', function () {
+      window.scrollTo({ top: 0, behavior: sinMovimiento.matches ? 'auto' : 'smooth' });
+      var destino = $('contenido');
+      if (destino) destino.focus({ preventScroll: true });
+    });
+  })();
+
+  // Fondo del sitio: las fotos 2 y 3 de la rotación se piden recién con la página cargada (ver .fondo-sitio en
+  // styles.css), para que no le quiten velocidad a la primera.
+  if (document.readyState === 'complete') document.documentElement.classList.add('fondos-listos');
+  else window.addEventListener('load', function () { document.documentElement.classList.add('fondos-listos'); });
 
   function nuevoId() {
     var r = Math.floor(Math.random() * 1296).toString(36).toUpperCase();

@@ -81,18 +81,38 @@ body {
   font: 400 17px/1.55 var(--cuerpo);
   transition: background-color .25s ease, color .25s ease;
 }
-/* Fondo del sitio: estadio de noche (Soul 2, 29-sep, sin texto; carteles borrosos borrados y luces altas comprimidas
- * para que ningún foco quede blanco puro) fijo detrás de todo, con un velo del color del tema que mantiene el contraste
- * del texto. Es una capa fija aparte y no background-attachment: fixed, porque iOS la ignora y estira la foto. */
+/* Fondo del sitio: tres fotos (Soul 2, 29-sep, sin texto; carteles y marcas borrosas borrados y luces altas
+ * comprimidas para que nada quede blanco puro) que se turnan con un fundido lento, en el orden que pidió Luis:
+ * pelota, atardecer y estadio de noche; cada una se ve unos 8 s (ciclo de 24 s). Encima va un velo del color del tema
+ * que mantiene el contraste del texto con cualquiera de las tres. Es una capa fija aparte y no
+ * background-attachment: fixed, porque iOS la ignora y estira la foto. Con «menos movimiento» queda fija la pelota y
+ * las otras dos ni se descargan. Esas dos se piden después de cargar la página (app.js pone .fondos-listos en <html>)
+ * para no retrasar la primera; en vertical se usan las versiones verticales. */
 :root { --velo-sitio: linear-gradient(180deg, rgba(14, 18, 22, .66), rgba(14, 18, 22, .8) 70%, rgba(14, 18, 22, .86)); }
 :root[data-theme="light"] { --velo-sitio: linear-gradient(180deg, rgba(242, 244, 247, .84), rgba(242, 244, 247, .9) 70%, rgba(242, 244, 247, .93)); }
-body::before {
-  content: ''; position: fixed; inset: 0; z-index: -1; pointer-events: none;
-  background: var(--velo-sitio), url('estadio-noche.jpg') center 35% / cover no-repeat, var(--fondo);
+.fondo-sitio { position: fixed; inset: 0; z-index: -1; pointer-events: none; background: var(--fondo); }
+.fondo-sitio::after { content: ''; position: absolute; inset: 0; background: var(--velo-sitio); }
+.fondo-sitio__foto {
+  position: absolute; inset: 0; background: center 35% / cover no-repeat; opacity: 0;
+  animation: fondo-turno 24s ease-in-out infinite both;
+}
+.fondo-sitio__foto--pelota { background-image: url('fondo-pelota.jpg'); opacity: 1; animation-delay: -1.5s; }
+.fondo-sitio__foto--atardecer { animation-delay: 6.5s; }
+.fondo-sitio__foto--noche { animation-delay: 14.5s; }
+@media (prefers-reduced-motion: no-preference) {
+  .fondos-listos .fondo-sitio__foto--atardecer { background-image: url('fondo-atardecer.jpg'); }
+  .fondos-listos .fondo-sitio__foto--noche { background-image: url('estadio-noche.jpg'); }
 }
 @media (orientation: portrait) {
-  body::before { background: var(--velo-sitio), url('estadio-noche-vertical.jpg') center 30% / cover no-repeat, var(--fondo); }
+  .fondo-sitio__foto { background-position: center 30%; }
+  .fondo-sitio__foto--pelota { background-image: url('fondo-pelota-vertical.jpg'); }
 }
+@media (orientation: portrait) and (prefers-reduced-motion: no-preference) {
+  .fondos-listos .fondo-sitio__foto--atardecer { background-image: url('fondo-atardecer-vertical.jpg'); }
+  .fondos-listos .fondo-sitio__foto--noche { background-image: url('estadio-noche-vertical.jpg'); }
+}
+/* Cada foto entra en 1,5 s, se queda hasta los 8 s y sale en 1,5 s mientras entra la siguiente. */
+@keyframes fondo-turno { 0% { opacity: 0; } 6.25% { opacity: 1; } 33.33% { opacity: 1; } 39.58% { opacity: 0; } 100% { opacity: 0; } }
 [hidden] { display: none !important; }
 img { max-width: 100%; display: block; }
 a { color: var(--acento); }
@@ -256,35 +276,83 @@ main { flex: 1; outline: none; }
 .donde__direccion .ico { flex: none; width: 44px; height: 44px; padding: 10px; border-radius: 12px; background: var(--chip); color: var(--acento); }
 .donde__nota { margin: 0 0 18px; color: var(--suave); }
 
-/* Planes y precios: franja tipo póster (estadio de noche, negro y dorado), de borde a borde y siempre oscura, también
- * en modo claro: por eso redefine aquí sus colores. El fondo es la foto del estadio arriba (las torres de luces detrás
- * del título, como en el póster) que se funde a negro, más las franjas doradas. Las tarjetas son vidrio oscuro para
- * que el texto no dependa de la foto. Sin animaciones: solo cambios de color al pasar el mouse. */
+/* Planes y precios: franja tipo póster, de borde a borde. En oscuro es estadio de noche, negro y dorado; en claro,
+ * el mismo estadio muy suave y tarjetas blancas. Todos sus colores son variables de la franja (abajo, las del modo
+ * claro), así el botón de tema la cambia igual que al resto. El fondo es la foto del estadio arriba (las torres de
+ * luces detrás del título, como en el póster) que se funde al color de la franja, más las franjas doradas.
+ * Sin animaciones: solo cambios de color al pasar el mouse. */
 .planes {
   --texto: #f2f4f7; --suave: #c3cbd6; --acento: #ffc54d; --foco: #ffc54d; --borde: #6a7482;
   --wa: #25d366; --wa-fondo: rgba(37, 211, 102, .12); --wa-texto: #dcfce7;
-  --vidrio: rgba(255, 255, 255, .06); --linea: rgba(255, 255, 255, .14);
+  --linea: rgba(255, 255, 255, .14);
+  --franja: #07090c;
+  --velo-franja: linear-gradient(180deg, rgba(7, 9, 12, .34) 0, rgba(7, 9, 12, .62) 30vw, #07090c 55vw);
+  --velo-franja-v: linear-gradient(180deg, rgba(7, 9, 12, .3) 0, rgba(7, 9, 12, .6) 90vw, #07090c 140vw);
+  --brillo-franja: rgba(244, 169, 28, .22);
+  --antetitulo: #ffc54d;
+  --titulo-grad: linear-gradient(180deg, #fff6d8 0%, #ffd46b 42%, #f4a91c 100%);
+  --titulo-sombra: drop-shadow(0 3px 0 rgba(0, 0, 0, .45));
+  --pastilla: rgba(10, 13, 17, .72);
+  --tarjeta: linear-gradient(180deg, rgba(24, 29, 37, .86), rgba(12, 15, 20, .92));
+  --tarjeta-sombra: 0 18px 44px rgba(0, 0, 0, .38);
+  --monto: #ffffff;
+  --tono-plata: #d6dce4; --barra-plata: linear-gradient(90deg, #8e99a6, #e6ebf0, #8e99a6);
+  --tono-oro: #ffc54d; --barra-oro: linear-gradient(90deg, #f4a91c, #fff0b8, #f4a91c);
+  --tono-platino: #eef3f8; --barra-platino: linear-gradient(90deg, #a9b7c8, #ffffff, #a9b7c8);
+  --borde-oro: rgba(244, 169, 28, .7);
+  --dia-off: rgba(255, 255, 255, .42); --dia-off-borde: rgba(255, 255, 255, .22);
+  --caja: rgba(14, 17, 22, .82);
+  --celda: rgba(0, 0, 0, .28);
+  --extra-fondo: linear-gradient(135deg, rgba(244, 169, 28, .17), rgba(244, 169, 28, .04) 62%);
   color-scheme: dark;
   position: relative; isolation: isolate; overflow: hidden;
   width: 100vw; margin-inline: calc(50% - 50vw);
   padding: 44px 16px 56px;
-  background: #07090c; color: var(--texto);
+  background: var(--franja); color: var(--texto);
+}
+/* Modo claro: el estadio queda de fondo, muy suave, y el texto pasa a oscuro. Contraste medido del texto chico sobre
+ * la parte más oscura de la foto con el velo claro (#e1e4e8 aprox.): antetítulo 5,3:1, texto de las tarjetas sobre
+ * blanco 7:1 o más; el título dorado oscuro es texto grande (3:1 basta). */
+:root[data-theme="light"] .planes {
+  --texto: #12161b; --suave: #3f4957; --acento: #8a5300; --foco: #8a5300; --borde: #7a8492;
+  --wa: #128c4b; --wa-fondo: rgba(37, 211, 102, .1); --wa-texto: #0a5c33;
+  --linea: rgba(18, 22, 27, .13);
+  --franja: #eef1f5;
+  --velo-franja: linear-gradient(180deg, rgba(238, 241, 245, .8) 0, rgba(238, 241, 245, .9) 30vw, #eef1f5 50vw);
+  --velo-franja-v: linear-gradient(180deg, rgba(238, 241, 245, .8) 0, rgba(238, 241, 245, .9) 90vw, #eef1f5 130vw);
+  --brillo-franja: rgba(244, 169, 28, .28);
+  --antetitulo: #6b4100;
+  --titulo-grad: linear-gradient(180deg, #a86700 0%, #8a5300 50%, #613a00 100%);
+  --titulo-sombra: none;
+  --pastilla: rgba(255, 255, 255, .88);
+  --tarjeta: linear-gradient(180deg, rgba(255, 255, 255, .95), rgba(250, 251, 252, .97));
+  --tarjeta-sombra: 0 14px 34px rgba(18, 22, 27, .1);
+  --monto: #12161b;
+  --tono-plata: #56606e; --barra-plata: linear-gradient(90deg, #9aa5b2, #e3e8ee, #9aa5b2);
+  --tono-oro: #8a5300; --barra-oro: linear-gradient(90deg, #e39a12, #ffd978, #e39a12);
+  --tono-platino: #26303d; --barra-platino: linear-gradient(90deg, #7d8da1, #eef2f6, #7d8da1);
+  --borde-oro: rgba(209, 142, 15, .75);
+  --dia-off: rgba(18, 22, 27, .5); --dia-off-borde: rgba(18, 22, 27, .28);
+  --caja: rgba(255, 255, 255, .9);
+  --celda: rgba(244, 169, 28, .07);
+  --extra-fondo: linear-gradient(135deg, rgba(244, 169, 28, .24), rgba(255, 255, 255, .92) 62%);
+  color-scheme: light;
 }
 .planes__fondo {
   position: absolute; inset: 0; z-index: -1; pointer-events: none;
   background:
-    radial-gradient(36% 18% at 50% 7%, rgba(244, 169, 28, .22), transparent 70%),
-    linear-gradient(180deg, rgba(7, 9, 12, .34) 0, rgba(7, 9, 12, .62) 30vw, #07090c 55vw),
+    radial-gradient(36% 18% at 50% 7%, var(--brillo-franja), transparent 70%),
+    var(--velo-franja),
     url('estadio-noche.jpg') center top / 100% auto no-repeat,
-    #07090c;
+    var(--franja);
 }
 @media (orientation: portrait) and (max-width: 767px) {
   .planes__fondo {
     background:
-      radial-gradient(60% 12% at 50% 5%, rgba(244, 169, 28, .22), transparent 70%),
-      linear-gradient(180deg, rgba(7, 9, 12, .3) 0, rgba(7, 9, 12, .6) 90vw, #07090c 140vw),
+      radial-gradient(60% 12% at 50% 5%, var(--brillo-franja), transparent 70%),
+      var(--velo-franja-v),
       url('estadio-noche-vertical.jpg') center -35vw / 100% auto no-repeat,
-      #07090c;
+      var(--franja);
   }
 }
 /* Franjas doradas en diagonal, arriba a la izquierda y abajo a la derecha, como los bordes del póster. */
@@ -299,17 +367,17 @@ main { flex: 1; outline: none; }
 .planes__cabeza { max-width: 680px; margin: 0 auto 30px; text-align: center; }
 .planes__logo {
   width: 92px; height: 92px; margin: 0 auto 16px; border-radius: 22%;
-  box-shadow: 0 0 0 2px rgba(244, 169, 28, .75), 0 0 44px rgba(244, 169, 28, .4), 0 18px 40px rgba(0, 0, 0, .55);
+  box-shadow: 0 0 0 2px rgba(244, 169, 28, .75), 0 0 44px rgba(244, 169, 28, .4), 0 18px 40px rgba(0, 0, 0, .35);
 }
-.planes__antetitulo { margin: 0 0 6px; font-size: 14px; font-weight: 700; letter-spacing: .2em; text-transform: uppercase; color: var(--acento); }
+.planes__antetitulo { margin: 0 0 6px; font-size: 14px; font-weight: 700; letter-spacing: .2em; text-transform: uppercase; color: var(--antetitulo); }
 .planes__titulo {
   margin: 0 0 18px; font: 700 clamp(2.7rem, 13vw, 4.8rem)/.92 var(--titulos); text-transform: uppercase;
-  background: linear-gradient(180deg, #fff6d8 0%, #ffd46b 42%, #f4a91c 100%); -webkit-background-clip: text; background-clip: text; color: transparent;
-  filter: drop-shadow(0 3px 0 rgba(0, 0, 0, .45));
+  background: var(--titulo-grad); -webkit-background-clip: text; background-clip: text; color: transparent;
+  filter: var(--titulo-sombra);
 }
 .planes__duracion {
   display: inline-flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px 10px; margin: 0;
-  padding: 10px 18px; border-radius: 20px; background: rgba(10, 13, 17, .72); border: 1px solid rgba(244, 169, 28, .5); color: var(--suave);
+  padding: 10px 18px; border-radius: 20px; background: var(--pastilla); border: 1px solid rgba(244, 169, 28, .5); color: var(--suave);
   -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
 }
 .planes__duracion .ico { color: var(--acento); }
@@ -319,18 +387,18 @@ main { flex: 1; outline: none; }
 /* Tarjetas de planes: el tono de cada una (plata, oro y platino) va en el nombre y en la barra de arriba. */
 .planes__lista { list-style: none; margin: 0 0 20px; padding: 0; display: grid; gap: 16px; }
 .plan {
-  --tono: #d6dce4; --barra: linear-gradient(90deg, #8e99a6, #e6ebf0, #8e99a6);
+  --tono: var(--tono-plata); --barra: var(--barra-plata);
   position: relative; display: flex; flex-direction: column; gap: 8px; padding: 24px 20px 20px; border-radius: 20px; overflow: hidden;
-  background: linear-gradient(180deg, rgba(24, 29, 37, .86), rgba(12, 15, 20, .92)); border: 1.5px solid var(--linea);
+  background: var(--tarjeta); border: 1.5px solid var(--linea);
   -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
-  box-shadow: 0 18px 44px rgba(0, 0, 0, .38); transition: border-color .2s ease;
+  box-shadow: var(--tarjeta-sombra); transition: border-color .2s ease;
 }
 .plan::before { content: ''; position: absolute; inset: 0 0 auto; height: 5px; background: var(--barra); }
-.plan--gold { --tono: #ffc54d; --barra: linear-gradient(90deg, #f4a91c, #fff0b8, #f4a91c); border-color: rgba(244, 169, 28, .7); box-shadow: 0 18px 44px rgba(0, 0, 0, .38), 0 0 36px rgba(244, 169, 28, .18); }
-.plan--platinum { --tono: #eef3f8; --barra: linear-gradient(90deg, #a9b7c8, #ffffff, #a9b7c8); }
+.plan--gold { --tono: var(--tono-oro); --barra: var(--barra-oro); border-color: var(--borde-oro); box-shadow: var(--tarjeta-sombra), 0 0 36px rgba(244, 169, 28, .18); }
+.plan--platinum { --tono: var(--tono-platino); --barra: var(--barra-platino); }
 .plan__nombre { margin: 0; font: 700 26px/1 var(--titulos); letter-spacing: .03em; text-transform: uppercase; color: var(--tono); }
 .plan__precio { display: flex; align-items: baseline; gap: 8px; margin: 2px 0 0; }
-.plan__monto { font: 700 66px/.9 var(--titulos); color: #fff; letter-spacing: -.01em; }
+.plan__monto { font: 700 66px/.9 var(--titulos); color: var(--monto); letter-spacing: -.01em; }
 .plan__periodo { font: 700 20px/1 var(--titulos); letter-spacing: .06em; text-transform: uppercase; color: var(--suave); }
 .plan__alterno {
   align-self: flex-start; margin: 2px 0 0; padding: 5px 12px; border-radius: 999px;
@@ -342,29 +410,29 @@ main { flex: 1; outline: none; }
 .dias b {
   flex: 1; max-width: 46px; height: 34px; display: grid; place-items: center; border-radius: 9px;
   font: 700 15px/1 var(--titulos); letter-spacing: .04em; text-transform: uppercase;
-  color: rgba(255, 255, 255, .42); border: 1px dashed rgba(255, 255, 255, .22);
+  color: var(--dia-off); border: 1px dashed var(--dia-off-borde);
 }
 .dias b.dia--si { background: var(--oro); border: 1px solid var(--oro); color: var(--oro-texto); }
 .plan__detalle { margin: 0; color: var(--suave); }
 @media (hover: hover) and (pointer: fine) { .plan:hover { border-color: rgba(244, 169, 28, .85); } }
 
 /* ¿Qué incluye? */
-.incluye { margin: 0 0 20px; padding: 22px 18px 18px; border-radius: 20px; background: rgba(14, 17, 22, .82); border: 1.5px solid var(--linea); }
+.incluye { margin: 0 0 20px; padding: 22px 18px 18px; border-radius: 20px; background: var(--caja); border: 1.5px solid var(--linea); }
 .incluye__titulo { margin: 0 0 16px; font: italic 700 clamp(1.8rem, 8vw, 2.3rem)/1 var(--titulos); text-transform: uppercase; color: var(--acento); text-align: center; }
 .incluye__lista { list-style: none; margin: 0 0 16px; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .incluye__lista li {
   display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 16px 8px; border-radius: 16px; text-align: center;
-  background: rgba(0, 0, 0, .28); border: 1px solid rgba(244, 169, 28, .28); font: 700 18px/1.1 var(--titulos); letter-spacing: .03em; text-transform: uppercase;
+  background: var(--celda); border: 1px solid rgba(244, 169, 28, .3); font: 700 18px/1.1 var(--titulos); letter-spacing: .03em; text-transform: uppercase;
 }
 .incluye__lista .ico { width: 52px; height: 52px; padding: 12px; border-radius: 14px; background: rgba(244, 169, 28, .12); border: 1.5px solid var(--oro); color: var(--acento); }
-.incluye__lema { display: flex; align-items: center; gap: 12px; margin: 0; padding: 12px 16px; border-radius: 14px; background: rgba(244, 169, 28, .1); font-weight: 600; }
+.incluye__lema { display: flex; align-items: center; gap: 12px; margin: 0; padding: 12px 16px; border-radius: 14px; background: rgba(244, 169, 28, .12); font-weight: 600; }
 .incluye__lema .ico { color: var(--acento); }
 
 /* Cumpleaños y cage de bateo */
 .extras { display: grid; gap: 16px; margin: 0 0 36px; }
 .extra {
   display: grid; grid-template-columns: 52px minmax(0, 1fr); gap: 16px; align-items: start; padding: 20px; border-radius: 20px;
-  background: linear-gradient(135deg, rgba(244, 169, 28, .17), rgba(244, 169, 28, .04) 62%); border: 1.5px solid rgba(244, 169, 28, .5);
+  background: var(--extra-fondo); border: 1.5px solid rgba(244, 169, 28, .5);
 }
 .extra__ico { width: 52px; height: 52px; padding: 12px; border-radius: 14px; background: var(--oro); color: var(--oro-texto); }
 .extra h3 { margin: 2px 0 4px; font: 700 24px/1.05 var(--titulos); letter-spacing: .02em; text-transform: uppercase; }
@@ -542,6 +610,24 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--a
 .pie { padding: 22px 0 26px; border-top: 1px solid var(--borde-suave); text-align: center; font-size: 14px; color: var(--tenue); }
 .pie p { margin: 4px 0; }
 .pie a { color: var(--suave); }
+
+/* Volver arriba: botón redondo fijo abajo a la derecha. Aparece (app.js le pone .arriba--visible) al llegar a la
+ * última sección de la portada o al pie, y lleva al inicio de una vez. Invisible, no se puede enfocar ni tocar. */
+.arriba {
+  position: fixed; z-index: 20; right: max(16px, env(safe-area-inset-right)); bottom: calc(16px + env(safe-area-inset-bottom));
+  width: 52px; height: 52px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 50%; cursor: pointer;
+  background: linear-gradient(180deg, var(--oro-2), var(--oro)); color: var(--oro-texto);
+  box-shadow: var(--sombra-oro), 0 8px 24px rgba(0, 0, 0, .35);
+  opacity: 0; visibility: hidden; transform: translateY(14px);
+  transition: opacity .25s ease, transform .25s var(--curva), visibility 0s linear .25s, filter .2s ease;
+}
+.arriba .ico { width: 26px; height: 26px; stroke-width: 2.4; }
+.arriba--visible { opacity: 1; visibility: visible; transform: none; transition: opacity .25s ease, transform .25s var(--curva), visibility 0s, filter .2s ease; }
+.arriba:active { transform: translateY(1px) scale(.96); }
+.arriba:focus-visible { outline: 3px solid var(--foco); outline-offset: 3px; }
+@media (hover: hover) and (pointer: fine) { .arriba:hover { filter: brightness(1.06); } }
+/* En celular el pie deja lugar para que el botón no tape su texto. */
+@media (max-width: 599px) { .pie { padding-bottom: 80px; } }
 
 /* Movimiento */
 @keyframes entrar { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }

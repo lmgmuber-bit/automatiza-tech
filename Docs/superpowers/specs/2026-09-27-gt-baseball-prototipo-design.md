@@ -343,4 +343,27 @@ PHP o HTML», con su **carpeta propia** `domains/gtbaseball.com/public_html`, ai
   bloqueado (403); envío real `GT-MULSF0R6OP` en el dominio con respuesta 200, **sin bloqueos de CSP ni CORS ni
   errores**, y los dos correos recibidos (con el logo del dominio); redirects 301 sin bucle.
 - **Pendiente:** el video para los representantes apuntando al dominio (borrador `guion-guia.json`) y Cloudflare
-  Turnstile (necesita la cuenta de Cloudflare de Luis).
+  Turnstile (necesita la cuenta de Cloudflare de Luis). Los dos quedaron hechos el mismo día (abajo).
+
+## Video guía para representantes y Cloudflare Turnstile (28-sep, EN PROD)
+
+**Video guía.** Reemplaza al de ejemplo dentro de la página. Guion `guion-guia.json` (orientado al papá, reutiliza las
+tomas de Alice ya pagadas; solo 4 líneas nuevas, 277 caracteres). Cierre con gtbaseball.com y WhatsApp; sin la placa
+interna de la academia ni el Google Sheet. 94 s (1:34). La página lo pide con `?v=2` para saltar la caché.
+
+**Turnstile (anti-bot).** Cierra el flanco que mostró la prueba de concurrencia: el límite de n8n no frena una ráfaga
+simultánea, así que la barrera va antes.
+- Página: widget en el paso 5 (render explícito; sitekey pública inyectada al desplegar en `data-turnstile`); el token
+  viaja en `body.turnstile`. Si al tocar «Enviar» aún no hay token, espera hasta 8 s antes de pedir la casilla. Tras un
+  envío fallido el widget se reinicia (el token es de un solo uso).
+- Flujo: «Verificar Turnstile» (POST a `siteverify` con `{{$env.TURNSTILE_SECRET}}`, la Secret vive en Easypanel) y
+  «¿Humano?» van **antes** de Validar, para que un bot no gaste el límite ni marque su id como usado. Sin token o con
+  token inválido → 403 `{ok:false, errores:['turnstile']}`.
+- CSP: `challenges.cloudflare.com` en `script-src`, `connect-src` y `frame-src`.
+- Todo se apaga si gt-config no trae `turnstile_sitekey`.
+- **Verificado en PROD:** un Chrome sin marcas de automatización inscribe (200); el Chrome de Playwright queda retenido
+  en el paso 5 sin mandar nada; un POST directo sin token recibe 403; sin bloqueos de la CSP.
+- **Cómo probarlo:** Managed reta al navegador automatizado (`navigator.webdriver=true`). Para pruebas de punta a punta
+  lanzar Chrome con `--disable-blink-features=AutomationControlled` e `ignoreDefaultArgs: ['--enable-automation']`, y
+  diagnosticar con el `error-callback` y el `before-interactive-callback`. La sitekey de prueba de Cloudflare
+  (`1x00000000000000000000AA`) siempre da token, incluso a bots: no sirve para comparar.

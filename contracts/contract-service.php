@@ -662,6 +662,12 @@ class ContractService {
         $fresh = self::get_by_id($c->id);
         ContractMailer::send_signed_copy($fresh, $signed_path);
         ContractMailer::send_signed_copy_internal($fresh, $signed_path);
+        // Plan de trabajo (inc/plan-trabajo/): un fallo del plan nunca afecta la firma.
+        try {
+            do_action('at_contrato_firmado', $fresh);
+        } catch (\Throwable $e) {
+            error_log('at_contrato_firmado: ' . $e->getMessage());
+        }
         return $fresh;
     }
 

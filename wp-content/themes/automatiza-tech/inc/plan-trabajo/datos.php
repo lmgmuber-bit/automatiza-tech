@@ -289,3 +289,38 @@ function at_pt_cambiar_estado(int $id, string $a, string $nota = ''): bool {
 	$ahora = at_pt_plan($id);
 	return $ahora !== null && $ahora->estado === $a;
 }
+
+/** Feriados de «Ajustes del chat» (automatiza_chat_schedule['holidays'], una fecha por línea). */
+function at_pt_feriados(): array {
+	$o = get_option('automatiza_chat_schedule');
+	return at_pt_feriados_de_texto(is_array($o) ? (string) ($o['holidays'] ?? '') : '');
+}
+
+/** Tabla de tiempos de referencia (opción at_pt_duraciones, JSON o arreglo), normalizada; la de defecto si está vacía o ilegible. */
+function at_pt_duraciones(): array {
+	$raw = get_option('at_pt_duraciones', '');
+	$t = is_array($raw) ? $raw : json_decode((string) $raw, true);
+	$t = is_array($t) ? at_pt_normalizar_duraciones($t) : [];
+	return $t ?: at_pt_duraciones_defecto();
+}
+
+/** Contratos de servicios firmados de todas las fichas operativas del cliente que aún no tienen plan, del más nuevo al más viejo. */
+function at_pt_contratos_sin_plan(int $crm_id): array {
+	if ($crm_id <= 0) {
+		return [];
+	}
+	at_pt_migrar_esquema();
+	global $wpdb;
+	$k = $wpdb->prefix . 'automatiza_contracts';
+	if ($wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $wpdb->esc_like($k))) !== $k) {
+		return [];
+	}
+	return (array) $wpdb->get_results($wpdb->prepare(
+		"SELECT c.* FROM {$k} c
+		 JOIN {$wpdb->prefix}automatiza_tech_clients t ON t.id = c.client_id
+		 LEFT JOIN " . at_pt_tabla() . " p ON p.contrato_id = c.id
+		 WHERE t.crm_cliente_id = %d AND c.type = 'servicios' AND c.status = 'signed' AND p.id IS NULL
+		 ORDER BY c.id DESC",
+		$crm_id
+	));
+}

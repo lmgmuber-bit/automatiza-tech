@@ -148,5 +148,9 @@ try:
             print(f"  {x['name']:<24} id={m.get('id')} status={m.get('status')} category={m.get('category')}")
 finally:
     if wid:
+        try:  # desde el 29-sep n8n no borra un workflow publicado (409): despublicar antes
+            api("POST", f"/workflows/{wid}/deactivate")
+        except Exception:
+            pass
         api("DELETE", f"/workflows/{wid}")
         print("workflow temporal borrado:", wid)

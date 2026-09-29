@@ -1,0 +1,6 @@
+# Buscador privado de planillas: que ningún buscador lo indexe y que el navegador no guarde la página.
+# Las cabeceras de seguridad (CSP, HSTS...) vienen del .htaccess de la raíz.
+<IfModule mod_headers.c>
+  Header set X-Robots-Tag "noindex, nofollow"
+  Header set Cache-Control "no-store"
+</IfModule>

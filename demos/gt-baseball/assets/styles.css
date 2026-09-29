@@ -48,8 +48,8 @@
   --texto: #12161b;
   --suave: #465160;
   --tenue: #5a6473;
-  --acento: #8a5300;
-  --foco: #8a5300;
+  --acento: #7a4900;
+  --foco: #7a4900;
   --anillo: #b07000;
   --error: #b42318;
   --error-fondo: rgba(180, 35, 24, .07);
@@ -89,7 +89,7 @@ body {
  * las otras dos ni se descargan. Esas dos se piden después de cargar la página (app.js pone .fondos-listos en <html>)
  * para no retrasar la primera; en vertical se usan las versiones verticales. */
 :root { --velo-sitio: linear-gradient(180deg, rgba(14, 18, 22, .66), rgba(14, 18, 22, .8) 70%, rgba(14, 18, 22, .86)); }
-:root[data-theme="light"] { --velo-sitio: linear-gradient(180deg, rgba(242, 244, 247, .84), rgba(242, 244, 247, .9) 70%, rgba(242, 244, 247, .93)); }
+:root[data-theme="light"] { --velo-sitio: linear-gradient(180deg, rgba(242, 244, 247, .9), rgba(242, 244, 247, .92) 70%, rgba(242, 244, 247, .94)); }
 .fondo-sitio { position: fixed; inset: 0; z-index: -1; pointer-events: none; background: var(--fondo); }
 .fondo-sitio::after { content: ''; position: absolute; inset: 0; background: var(--velo-sitio); }
 .fondo-sitio__foto {
@@ -290,6 +290,8 @@ main { flex: 1; outline: none; }
   --velo-franja-v: linear-gradient(180deg, rgba(7, 9, 12, .3) 0, rgba(7, 9, 12, .6) 90vw, #07090c 140vw);
   --brillo-franja: rgba(244, 169, 28, .22);
   --antetitulo: #ffc54d;
+  --velo-titulo: rgba(7, 9, 12, .74);
+  --logo-halo: 0 0 0 2px rgba(244, 169, 28, .75), 0 0 44px rgba(244, 169, 28, .4), 0 18px 40px rgba(0, 0, 0, .35);
   --titulo-grad: linear-gradient(180deg, #fff6d8 0%, #ffd46b 42%, #f4a91c 100%);
   --titulo-sombra: drop-shadow(0 3px 0 rgba(0, 0, 0, .45));
   --pastilla: rgba(10, 13, 17, .72);
@@ -300,7 +302,7 @@ main { flex: 1; outline: none; }
   --tono-oro: #ffc54d; --barra-oro: linear-gradient(90deg, #f4a91c, #fff0b8, #f4a91c);
   --tono-platino: #eef3f8; --barra-platino: linear-gradient(90deg, #a9b7c8, #ffffff, #a9b7c8);
   --borde-oro: rgba(244, 169, 28, .7);
-  --dia-off: rgba(255, 255, 255, .42); --dia-off-borde: rgba(255, 255, 255, .22);
+  --dia-off: rgba(255, 255, 255, .52); --dia-off-borde: rgba(255, 255, 255, .26);
   --caja: rgba(14, 17, 22, .82);
   --celda: rgba(0, 0, 0, .28);
   --extra-fondo: linear-gradient(135deg, rgba(244, 169, 28, .17), rgba(244, 169, 28, .04) 62%);
@@ -314,15 +316,17 @@ main { flex: 1; outline: none; }
  * la parte más oscura de la foto con el velo claro (#e1e4e8 aprox.): antetítulo 5,3:1, texto de las tarjetas sobre
  * blanco 7:1 o más; el título dorado oscuro es texto grande (3:1 basta). */
 :root[data-theme="light"] .planes {
-  --texto: #12161b; --suave: #3f4957; --acento: #8a5300; --foco: #8a5300; --borde: #7a8492;
+  --texto: #12161b; --suave: #3f4957; --acento: #7a4900; --foco: #7a4900; --borde: #7a8492;
   --wa: #128c4b; --wa-fondo: rgba(37, 211, 102, .1); --wa-texto: #0a5c33;
   --linea: rgba(18, 22, 27, .13);
   --franja: #eef1f5;
   --velo-franja: linear-gradient(180deg, rgba(238, 241, 245, .8) 0, rgba(238, 241, 245, .9) 30vw, #eef1f5 50vw);
   --velo-franja-v: linear-gradient(180deg, rgba(238, 241, 245, .8) 0, rgba(238, 241, 245, .9) 90vw, #eef1f5 130vw);
   --brillo-franja: rgba(244, 169, 28, .28);
-  --antetitulo: #6b4100;
-  --titulo-grad: linear-gradient(180deg, #a86700 0%, #8a5300 50%, #613a00 100%);
+  --antetitulo: #5c3700;
+  --velo-titulo: rgba(238, 241, 245, .88);
+  --logo-halo: 0 0 0 2px rgba(209, 142, 15, .8), 0 12px 28px rgba(18, 22, 27, .18);
+  --titulo-grad: linear-gradient(180deg, #8a5300 0%, #6e4200 50%, #4f2f00 100%);
   --titulo-sombra: none;
   --pastilla: rgba(255, 255, 255, .88);
   --tarjeta: linear-gradient(180deg, rgba(255, 255, 255, .95), rgba(250, 251, 252, .97));
@@ -332,7 +336,7 @@ main { flex: 1; outline: none; }
   --tono-oro: #8a5300; --barra-oro: linear-gradient(90deg, #e39a12, #ffd978, #e39a12);
   --tono-platino: #26303d; --barra-platino: linear-gradient(90deg, #7d8da1, #eef2f6, #7d8da1);
   --borde-oro: rgba(209, 142, 15, .75);
-  --dia-off: rgba(18, 22, 27, .5); --dia-off-borde: rgba(18, 22, 27, .28);
+  --dia-off: rgba(18, 22, 27, .64); --dia-off-borde: rgba(18, 22, 27, .32);
   --caja: rgba(255, 255, 255, .9);
   --celda: rgba(244, 169, 28, .07);
   --extra-fondo: linear-gradient(135deg, rgba(244, 169, 28, .24), rgba(255, 255, 255, .92) 62%);
@@ -364,10 +368,17 @@ main { flex: 1; outline: none; }
 .planes__fondo::after { bottom: 0; right: 0; -webkit-mask-image: linear-gradient(315deg, #000 10%, transparent 62%); mask-image: linear-gradient(315deg, #000 10%, transparent 62%); }
 
 .planes__marco { position: relative; max-width: 1080px; margin: 0 auto; }
-.planes__cabeza { max-width: 680px; margin: 0 auto 30px; text-align: center; }
+.planes__cabeza { position: relative; isolation: isolate; max-width: 680px; margin: 0 auto 30px; text-align: center; }
+/* Velo suave detrás del antetítulo y el título: las torres de luces de la foto quedan a los lados, no detrás de las
+ * letras (medido sin él: el título en celular bajaba a 2,7:1 sobre un foco y el antetítulo claro a 3,8:1). */
+.planes__cabeza::before {
+  content: ''; position: absolute; z-index: -1; left: 50%; top: 92px; width: min(760px, 118%); height: 190px;
+  transform: translateX(-50%); pointer-events: none;
+  background: radial-gradient(closest-side, var(--velo-titulo) 55%, transparent);
+}
 .planes__logo {
   width: 92px; height: 92px; margin: 0 auto 16px; border-radius: 22%;
-  box-shadow: 0 0 0 2px rgba(244, 169, 28, .75), 0 0 44px rgba(244, 169, 28, .4), 0 18px 40px rgba(0, 0, 0, .35);
+  box-shadow: var(--logo-halo);
 }
 .planes__antetitulo { margin: 0 0 6px; font-size: 14px; font-weight: 700; letter-spacing: .2em; text-transform: uppercase; color: var(--antetitulo); }
 .planes__titulo {
@@ -453,6 +464,7 @@ main { flex: 1; outline: none; }
 @media (min-width: 880px) {
   .planes { padding: 72px 32px 80px; }
   .planes__logo { width: 112px; height: 112px; }
+  .planes__cabeza::before { top: 112px; }
   .planes__lista { grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 24px; }
   .plan { padding: 28px 24px 24px; }
   .plan--gold { transform: translateY(-10px); }

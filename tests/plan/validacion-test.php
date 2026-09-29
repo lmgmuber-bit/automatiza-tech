@@ -415,4 +415,19 @@ ok(act(at_pt_respetar_dias_luis([], $base), 'Pruebas en celular')['origen'] === 
 $borrador = at_pt_aplicar_tabla(at_pt_respetar_dias_luis([], $base), $tab);
 ok([act($borrador, 'Pruebas en celular')['dias_habiles'], act($borrador, 'Pruebas en celular')['origen'], act($borrador, 'Pruebas de pago')['dias_habiles'], act($borrador, 'Pruebas de pago')['origen']] === [2, 'tabla', 1, 'tabla'], 'borrador: una marca luis inventada por la IA no bloquea la tabla; el par (sitio web, pruebas) recibe sus 3 días: 2 y 1');
 
+// Ronda 1 (I1): lo que estimó la IA no puede quedar marcado «tabla» en un borrador.
+$i1 = at_pt_validar_plan(['proyecto' => 'X', 'fases' => [['clave' => 'diseno_desarrollo', 'bloques' => [
+	['nombre' => 'Diseño', 'actividades' => [
+		['nombre' => 'A', 'responsable' => 'at', 'dias_habiles' => 5, 'servicio' => 'sitio_web_tienda', 'etapa' => 'diseno', 'origen' => 'luis'],
+		['nombre' => 'B', 'responsable' => 'at', 'dias_habiles' => 9, 'servicio' => 'sitio_web_tienda', 'etapa' => 'diseno', 'origen' => 'tabla'],
+	]],
+	['nombre' => 'Otro', 'actividades' => [
+		['nombre' => 'C', 'responsable' => 'at', 'dias_habiles' => 40, 'etapa' => 'arranque', 'origen' => 'tabla'],
+	]],
+]]]])['plan'];
+$i1t = at_pt_aplicar_tabla($i1, $tab);
+ok([act($i1t, 'A')['dias_habiles'], act($i1t, 'A')['origen'], act($i1t, 'B')['dias_habiles'], act($i1t, 'B')['origen']] === [5, 'luis', 9, 'ia'], 'I1 caso 1: en un grupo con días de Luis, la IA no puede dejar «tabla» en su actividad (B 9 queda ia; A de Luis intacta)');
+ok([act($i1t, 'C')['dias_habiles'], act($i1t, 'C')['origen']] === [40, 'ia'], 'I1 caso 2: etapa arranque fuera del bloque «Arranque» no conserva «tabla» (C 40 queda ia)');
+ok(act($i1t, 'Reunión de inicio')['origen'] === 'tabla' && act($i1t, 'Entrega de logo, textos y accesos')['origen'] === 'tabla', 'I1: el Arranque fijo conserva su origen tabla');
+
 fin();

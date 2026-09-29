@@ -786,8 +786,8 @@ function at_pt_aplicar_tabla(array $plan, array $tabla): array {
 			foreach (($bloque['actividades'] ?? []) as $ai => $a) {
 				$servicio = (string) ($a['servicio'] ?? '');
 				$etapa = (string) ($a['etapa'] ?? '');
-				if ($etapa === 'arranque') {
-					continue;
+				if ($etapa === 'arranque' && at_pt_clave_nombre((string) ($bloque['nombre'] ?? '')) === 'arranque') {
+					continue; // el bloque fijo conserva su origen; fuera de él, «arranque» no es un par de la tabla
 				}
 				if ($servicio !== '' && in_array($etapa, $etapas_tabla, true) && is_array($tabla[$servicio] ?? null) && isset($tabla[$servicio][$etapa])) {
 					$grupos[$servicio][$etapa][] = [$fi, $bi, $ai];
@@ -800,12 +800,22 @@ function at_pt_aplicar_tabla(array $plan, array $tabla): array {
 	foreach ($grupos as $servicio => $por_etapa) {
 		foreach ($por_etapa as $etapa => $lugares) {
 			$pesos = [];
+			$con_luis = false;
 			foreach ($lugares as [$fi, $bi, $ai]) {
 				$a = $plan['fases'][$fi]['bloques'][$bi]['actividades'][$ai];
 				if (($a['origen'] ?? '') === 'luis') {
-					continue 2; // el grupo tiene días de Luis: no se toca
+					$con_luis = true;
 				}
 				$pesos[] = (int) ($a['dias_habiles'] ?? 1);
+			}
+			if ($con_luis) {
+				// El grupo tiene días de Luis: no se reparte ni se tocan sus días; lo demás lo estimó la IA.
+				foreach ($lugares as [$fi, $bi, $ai]) {
+					if (($plan['fases'][$fi]['bloques'][$bi]['actividades'][$ai]['origen'] ?? '') !== 'luis') {
+						$plan['fases'][$fi]['bloques'][$bi]['actividades'][$ai]['origen'] = 'ia';
+					}
+				}
+				continue;
 			}
 			$dias = at_pt_repartir((int) $tabla[$servicio][$etapa], $pesos);
 			foreach ($lugares as $i => [$fi, $bi, $ai]) {

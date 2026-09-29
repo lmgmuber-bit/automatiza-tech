@@ -816,3 +816,88 @@ function at_pt_aplicar_tabla(array $plan, array $tabla): array {
 	}
 	return $plan;
 }
+
+/* ---------- Marcas de origen entre versiones del plan (Task 2) ---------- */
+
+/** Lugar y clave de cada actividad del plan: [fase, bloque, actividad, clave]. La clave es el nombre normalizado y
+ *  cuántas veces apareció antes ese nombre («revisión interna#1», «revisión interna#2»). No depende del bloque ni de la
+ *  fase: mover una actividad de bloque no la hace nueva; renombrarla, sí (at_pt_luis_perdidas avisa si era de Luis).
+ *  Límite conocido: si la IA inserta otra actividad con el mismo nombre ANTES de una de Luis, la marca y los días de
+ *  Luis pasan a la primera de las dos (no hay otra forma de reconocerlas: la IA no conserva identificadores). */
+function at_pt_recorrer_actividades(array $plan): array {
+	$lugares = [];
+	$vistas = [];
+	foreach (($plan['fases'] ?? []) as $fi => $fase) {
+		foreach (($fase['bloques'] ?? []) as $bi => $bloque) {
+			foreach (($bloque['actividades'] ?? []) as $ai => $a) {
+				$nombre = at_pt_clave_nombre((string) ($a['nombre'] ?? ''));
+				$vistas[$nombre] = ($vistas[$nombre] ?? 0) + 1;
+				$lugares[] = [$fi, $bi, $ai, $nombre . '#' . $vistas[$nombre]];
+			}
+		}
+	}
+	return $lugares;
+}
+
+/** Marca de origen de lo que cambió entre la versión guardada y la nueva: una actividad nueva o cuyos dias_habiles
+ *  cambiaron queda con $marca; las demás conservan el origen guardado (no el que venga en el formulario o de la IA).
+ *  $marca 'luis' (por defecto) al guardar desde el panel: lo cambió Luis a mano. $marca 'ia' en «Pedir cambios»: lo
+ *  cambió o lo agregó la IA, así que el panel lo muestra «IA · revisar» y la IA lo puede volver a cambiar en la
+ *  ronda siguiente. Cualquier otro valor de $marca vale 'luis'. */
+function at_pt_marcar_ediciones(array $anterior, array $nuevo, string $marca = 'luis'): array {
+	$marca = $marca === 'ia' ? 'ia' : 'luis';
+	$guardadas = [];
+	foreach (at_pt_recorrer_actividades($anterior) as [$fi, $bi, $ai, $clave]) {
+		$guardadas[$clave] = $anterior['fases'][$fi]['bloques'][$bi]['actividades'][$ai];
+	}
+	foreach (at_pt_recorrer_actividades($nuevo) as [$fi, $bi, $ai, $clave]) {
+		$a = $nuevo['fases'][$fi]['bloques'][$bi]['actividades'][$ai];
+		$antes = $guardadas[$clave] ?? null;
+		$cambio = $antes === null || (int) ($antes['dias_habiles'] ?? 0) !== (int) ($a['dias_habiles'] ?? 0);
+		$nuevo['fases'][$fi]['bloques'][$bi]['actividades'][$ai]['origen'] = $cambio ? $marca : (string) ($antes['origen'] ?? ($a['origen'] ?? 'ia'));
+	}
+	return $nuevo;
+}
+
+/** «Pedir cambios» con IA (Review Focus 3): las actividades que en $anterior eran 'luis' recuperan sus días y su marca
+ *  aunque la IA los haya cambiado, y la IA no puede crear marcas 'luis' (las que no lo eran vuelven a 'ia'). Con
+ *  $anterior vacío (borrador nuevo) solo baja a 'ia' las marcas 'luis' que invente la IA, para que la tabla de tiempos
+ *  no se salte ese grupo. La ruta REST la llama después de validar y antes de at_pt_aplicar_tabla() (borrador) o de
+ *  at_pt_marcar_ediciones(..., 'ia') (cambios). */
+function at_pt_respetar_dias_luis(array $anterior, array $nuevo): array {
+	$de_luis = [];
+	foreach (at_pt_recorrer_actividades($anterior) as [$fi, $bi, $ai, $clave]) {
+		$a = $anterior['fases'][$fi]['bloques'][$bi]['actividades'][$ai];
+		if (($a['origen'] ?? '') === 'luis') {
+			$de_luis[$clave] = (int) ($a['dias_habiles'] ?? 1);
+		}
+	}
+	foreach (at_pt_recorrer_actividades($nuevo) as [$fi, $bi, $ai, $clave]) {
+		$origen = (string) ($nuevo['fases'][$fi]['bloques'][$bi]['actividades'][$ai]['origen'] ?? '');
+		if (isset($de_luis[$clave])) {
+			$nuevo['fases'][$fi]['bloques'][$bi]['actividades'][$ai]['dias_habiles'] = $de_luis[$clave];
+			$nuevo['fases'][$fi]['bloques'][$bi]['actividades'][$ai]['origen'] = 'luis';
+		} elseif ($origen === 'luis') {
+			$nuevo['fases'][$fi]['bloques'][$bi]['actividades'][$ai]['origen'] = 'ia';
+		}
+	}
+	return $nuevo;
+}
+
+/** Actividades que eran 'luis' en $anterior y ya no están en $nuevo (la IA las renombró o las quitó al pedir cambios):
+ *  sus días no se pueden devolver solos. La ruta de «cambios» (Task 7) suma estos textos a los avisos del plan. */
+function at_pt_luis_perdidas(array $anterior, array $nuevo): array {
+	$en_nuevo = [];
+	foreach (at_pt_recorrer_actividades($nuevo) as [, , , $clave]) {
+		$en_nuevo[$clave] = true;
+	}
+	$avisos = [];
+	foreach (at_pt_recorrer_actividades($anterior) as [$fi, $bi, $ai, $clave]) {
+		$a = $anterior['fases'][$fi]['bloques'][$bi]['actividades'][$ai];
+		if (($a['origen'] ?? '') === 'luis' && !isset($en_nuevo[$clave])) {
+			$n = (int) ($a['dias_habiles'] ?? 1);
+			$avisos[] = 'La IA renombró o quitó «' . $a['nombre'] . '», que tenía ' . ($n === 1 ? '1 día hábil' : "{$n} días hábiles") . ' puestos por ti: revísala en el panel.';
+		}
+	}
+	return $avisos;
+}

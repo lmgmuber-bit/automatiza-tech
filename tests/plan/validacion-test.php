@@ -345,4 +345,74 @@ $tras_tabla = at_pt_validar_plan(at_pt_aplicar_tabla($combinado['plan'], $tab));
 ok($combinado['ok'] && !$tras_tabla['ok'] && $tras_tabla['errores'] === ['El plan suma 138 días hábiles con las revisiones (máximo 130, unas 26 semanas): acórtalo o divide el proyecto.'] && $tras_tabla['plan'] === [], 'los siete servicios juntos: 57 días hábiles de la IA pasan a 138 con la tabla; validar otra vez lo deja en error');
 ok(at_pt_validar_plan($t)['ok'] && at_pt_validar_plan($t)['plan'] === $t, 'validar después de aplicar la tabla conserva días y orígenes (es idempotente)');
 
+// Review Focus 3: Luis edita días a mano y después se reaplica la tabla o pide cambios a la IA: sus días no se pisan.
+function cambiar(array $plan, string $nombre, array $campos): array {
+	foreach ($plan['fases'] as $fi => $f) {
+		foreach ($f['bloques'] as $bi => $b) {
+			foreach ($b['actividades'] as $ai => $a) {
+				if ($a['nombre'] === $nombre) {
+					$plan['fases'][$fi]['bloques'][$bi]['actividades'][$ai] = array_merge($a, $campos);
+				}
+			}
+		}
+	}
+	return $plan;
+}
+$guardado = $t; // plan con la tabla aplicada (bloque anterior); bloques de la fase 1: Arranque, Diseño, Desarrollo, Pagos, Pruebas
+ok(at_pt_marcar_ediciones($guardado, $guardado) === $guardado, 'guardar sin cambios no cambia ningún origen');
+
+// 1) En el panel: Maquetación de 5 a 7 días, una actividad nueva y un origen manipulado en el formulario.
+$form = cambiar($guardado, 'Maquetación', ['dias_habiles' => 7]);
+$form = cambiar($form, 'Propuesta de diseño', ['origen' => 'ia']);
+$form['fases'][0]['bloques'][2]['actividades'][] = ['nombre' => 'Sesión de fotos', 'responsable' => 'cliente', 'dias_habiles' => 2, 'origen' => 'tabla'];
+$editado = at_pt_marcar_ediciones($guardado, at_pt_validar_plan($form)['plan']);
+ok([act($editado, 'Maquetación')['dias_habiles'], act($editado, 'Maquetación')['origen']] === [7, 'luis'], 'días cambiados en el panel: origen luis');
+ok(act($editado, 'Sesión de fotos')['origen'] === 'luis', 'actividad nueva en el panel: origen luis');
+ok([act($editado, 'Propuesta de diseño')['dias_habiles'], act($editado, 'Propuesta de diseño')['origen']] === [3, 'tabla'], 'días iguales: conserva el origen guardado aunque el formulario diga otro');
+ok(act($editado, 'Carrito de compras')['origen'] === 'tabla' && act($editado, 'Reunión de inicio')['origen'] === 'tabla', 'lo que no cambió conserva su origen');
+
+// 2) Se reaplica la tabla: el par (sitio_web_tienda, desarrollo) tiene días de Luis y no se toca.
+$retabla = at_pt_aplicar_tabla($editado, $tab);
+ok(act($retabla, 'Maquetación')['dias_habiles'] === 7 && act($retabla, 'Carrito de compras')['dias_habiles'] === 4 && act($retabla, 'Pasarela de pago')['dias_habiles'] === 1, 'reaplicar la tabla no pisa los 7 días de Luis ni reparte su grupo');
+ok(act($retabla, 'Sesión de fotos')['origen'] === 'luis' && act($retabla, 'Propuesta de diseño')['dias_habiles'] === 3, 'la actividad de Luis sin par sigue siendo de Luis; los demás grupos, igual');
+
+// 3) «Pedir cambios»: la IA cambia los días de Luis, mueve su actividad de bloque, cambia otra e inventa una marca 'luis'.
+//    Orden de la Task 7: validar -> respetar días de Luis -> marcar con 'ia' -> validar -> calcular.
+$ia2 = cambiar($editado, 'Maquetación', ['dias_habiles' => 3, 'origen' => 'ia']);
+$ia2 = cambiar($ia2, 'Carrito de compras', ['dias_habiles' => 6]);
+$ia2['fases'][0]['bloques'][2]['actividades'] = array_values(array_filter($ia2['fases'][0]['bloques'][2]['actividades'], fn($a) => $a['nombre'] !== 'Sesión de fotos'));
+$ia2['fases'][0]['bloques'][1]['actividades'][] = ['nombre' => 'Sesión de fotos', 'responsable' => 'cliente', 'dias_habiles' => 4, 'origen' => 'ia'];
+$ia2['fases'][0]['bloques'][4]['actividades'][] = ['nombre' => 'Revisión de textos', 'responsable' => 'ambos', 'dias_habiles' => 2, 'origen' => 'luis'];
+$respetado = at_pt_respetar_dias_luis($editado, at_pt_validar_plan($ia2)['plan']);
+ok([act($respetado, 'Maquetación')['dias_habiles'], act($respetado, 'Maquetación')['origen']] === [7, 'luis'], 'la IA cambió los días de Luis: vuelven a 7 y a luis');
+ok([act($respetado, 'Sesión de fotos')['dias_habiles'], act($respetado, 'Sesión de fotos')['origen']] === [2, 'luis'], 'la actividad de Luis movida de bloque conserva sus 2 días');
+ok(act($respetado, 'Revisión de textos')['origen'] === 'ia', 'la IA no puede crear una marca luis');
+ok(act($respetado, 'Carrito de compras')['dias_habiles'] === 6 && act($respetado, 'Pruebas en celular')['dias_habiles'] === 7, 'los demás cambios de la IA se aplican; los días de Luis de antes siguen');
+$tras_cambios = at_pt_marcar_ediciones($editado, $respetado, 'ia');
+ok(act($tras_cambios, 'Maquetación')['origen'] === 'luis' && act($tras_cambios, 'Maquetación')['dias_habiles'] === 7 && act($tras_cambios, 'Sesión de fotos')['origen'] === 'luis', 'después de marcar, los días de Luis siguen siendo de Luis');
+ok(act($tras_cambios, 'Carrito de compras')['origen'] === 'ia' && act($tras_cambios, 'Revisión de textos')['origen'] === 'ia', 'lo que la IA cambió o agregó al pedir cambios queda ia («revisar»), nunca luis');
+ok(act($tras_cambios, 'Propuesta de diseño')['origen'] === 'tabla', 'lo que la IA no tocó conserva su origen');
+$ronda2 = at_pt_marcar_ediciones($tras_cambios, at_pt_respetar_dias_luis($tras_cambios, at_pt_validar_plan(cambiar($tras_cambios, 'Carrito de compras', ['dias_habiles' => 3]))['plan']), 'ia');
+ok(act($ronda2, 'Carrito de compras')['dias_habiles'] === 3 && act($ronda2, 'Carrito de compras')['origen'] === 'ia' && act($ronda2, 'Maquetación')['dias_habiles'] === 7, 'segunda ronda: la IA puede volver a cambiar lo que estimó ella; los 7 días de Luis siguen');
+ok(at_pt_marcar_ediciones($editado, $respetado, 'otra') === at_pt_marcar_ediciones($editado, $respetado), 'una marca desconocida vale luis (la del panel)');
+$renombrada = cambiar($editado, 'Maquetación', ['nombre' => 'Maquetación responsive', 'dias_habiles' => 3]);
+ok(at_pt_luis_perdidas($editado, at_pt_validar_plan($renombrada)['plan']) === ['La IA renombró o quitó «Maquetación», que tenía 7 días hábiles puestos por ti: revísala en el panel.'] && at_pt_luis_perdidas($editado, $respetado) === [], 'la IA renombra o quita una actividad de Luis: aviso con sus días; si siguen todas, sin avisos');
+
+// 4) Nombres repetidos: se reconocen por orden de aparición.
+$dup = at_pt_validar_plan(['proyecto' => 'X', 'fases' => [['clave' => 'diseno_desarrollo', 'bloques' => [['nombre' => 'Diseño', 'actividades' => [
+	['nombre' => 'Revisión interna', 'responsable' => 'at', 'dias_habiles' => 1],
+	['nombre' => 'Revisión interna', 'responsable' => 'at', 'dias_habiles' => 4, 'origen' => 'luis'],
+]]]]]])['plan'];
+$dup_ia = $dup;
+$dup_ia['fases'][0]['bloques'][1]['actividades'][0]['dias_habiles'] = 9;
+$dup_ia['fases'][0]['bloques'][1]['actividades'][1]['dias_habiles'] = 9;
+$dup_r = at_pt_respetar_dias_luis($dup, $dup_ia)['fases'][0]['bloques'][1]['actividades'];
+ok([$dup_r[0]['dias_habiles'], $dup_r[0]['origen'], $dup_r[1]['dias_habiles'], $dup_r[1]['origen']] === [9, 'ia', 4, 'luis'], 'dos «Revisión interna»: solo la segunda (la de Luis) recupera sus días');
+ok(array_column(at_pt_recorrer_actividades($dup), 3) === ['reunión de inicio#1', 'entrega de logo, textos y accesos#1', 'revisión interna#1', 'revisión interna#2'], 'claves de actividad: nombre normalizado y número de aparición');
+
+// 5) Borrador nuevo: sin versión anterior, la IA no puede traer marcas luis.
+ok(act(at_pt_respetar_dias_luis([], $base), 'Pruebas en celular')['origen'] === 'ia' && act(at_pt_respetar_dias_luis([], $base), 'Pruebas en celular')['dias_habiles'] === 7, 'borrador nuevo: la marca luis de la IA baja a ia y conserva los días');
+$borrador = at_pt_aplicar_tabla(at_pt_respetar_dias_luis([], $base), $tab);
+ok([act($borrador, 'Pruebas en celular')['dias_habiles'], act($borrador, 'Pruebas en celular')['origen'], act($borrador, 'Pruebas de pago')['dias_habiles'], act($borrador, 'Pruebas de pago')['origen']] === [2, 'tabla', 1, 'tabla'], 'borrador: una marca luis inventada por la IA no bloquea la tabla; el par (sitio web, pruebas) recibe sus 3 días: 2 y 1');
+
 fin();

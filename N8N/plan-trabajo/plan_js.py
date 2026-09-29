@@ -224,3 +224,92 @@ if (!reason) reason = MODO === 'cambios' ? 'Error desconocido al aplicar los cam
 if (reason.length > 900) reason = reason.slice(0, 900) + '…';
 return [{ json: { id, crm: parseInt(ctx.crm_cliente_id, 10) || 0, proyecto: String(ctx.proyecto || ctx.empresa || ('plan ' + id)),
   reason, exec: String($execution.id) } }];""".replace('__MODO__', modo)
+
+
+
+# Task 14 — «3 Render». Nunca enlazar esta URL en un correo (el SMTP de Hostinger rechaza *.easypanel.host).
+RENDERER_BASE = 'https://n8n-propuesta-renderer.kchiba.easypanel.host'
+
+JS_RENDER = r"""
+const NOMBRES_LAMINAS = { cover: 'portada', metodo: 'Método AT', gantt: 'carta Gantt', fase_1: 'fase 1', fase_2: 'fase 2',
+  fase_3: 'fase 3', necesitamos: 'qué necesitamos de ti', reuniones: 'reuniones y soporte', portal: 'sigue tu proyecto',
+  cierre: 'cierre' };
+const nombresLaminas = (l) => (Array.isArray(l) ? l : []).map((s) => NOMBRES_LAMINAS[s] || String(s)).join(', ');
+
+// Decisión 7: portada y cierre del plan reutilizan, sin costo, las fotos de la propuesta (cover y next_steps).
+// manifest = img/manifest.json de la propuesta en el renderer ({lámina: {file, hash}}); base = URL del renderer;
+// uid = unique_link_id de la propuesta. Pone la URL absoluta en render.images (el renderer la copia junto al plan y no
+// genera esa foto) y, si hay propuesta, quita portada y cierre de render.image_briefs: nunca se pagan, porque el panel
+// no las cuenta en el costo (at_pt_costo_fotos). Si la propuesta no tiene esa foto, la lámina va sin foto y se avisa.
+// Nunca lanza y no cambia `render`: devuelve {render (copia), reutilizadas, sin_foto}.
+function reutilizarFotosPlan(render, manifest, base, uid) {
+  const r = JSON.parse(JSON.stringify(esObjetoPlano(render) ? render : {}));
+  const images = esObjetoPlano(r.images) ? r.images : {};
+  const reutilizadas = [];
+  const sin_foto = [];
+  if (!/^[A-Za-z0-9_-]{6,64}$/.test(String(uid || ''))) {
+    r.images = images;
+    return { render: r, reutilizadas, sin_foto };
+  }
+  let m = manifest;
+  if (typeof m === 'string') { try { m = JSON.parse(m); } catch (e) { m = null; } }
+  if (!esObjetoPlano(m)) m = {};
+  const baseOk = /^https?:\/\/[A-Za-z0-9.-]+(:\d+)?$/.test(String(base || ''));
+  for (const [lamina, dePropuesta] of Object.entries(SLIDES_DE_PROPUESTA)) {
+    const e = Object.prototype.hasOwnProperty.call(m, dePropuesta) ? m[dePropuesta] : null;
+    // Nombre de archivo como los que guarda el renderer (<lámina>.<ext>): sin «..», sin barras ni archivos ocultos.
+    const file = esObjetoPlano(e) && typeof e.file === 'string' && /^[A-Za-z0-9_-]+\.[A-Za-z0-9]{2,5}$/.test(e.file) ? e.file : '';
+    if (file && baseOk) {
+      images[lamina] = base + '/p/' + uid + '/img/' + file;
+      reutilizadas.push(lamina);
+    } else if (!images[lamina]) {
+      sin_foto.push(lamina);
+    }
+  }
+  r.image_briefs = (Array.isArray(r.image_briefs) ? r.image_briefs : [])
+    .filter((b) => !(esObjetoPlano(b) && Object.prototype.hasOwnProperty.call(SLIDES_DE_PROPUESTA, b.slide)));
+  r.images = images;
+  return { render: r, reutilizadas, sin_foto };
+}
+
+// Decisión D10: con el plan en uno de estos estados, una vista previa no se dibuja (pisaría la versión final en
+// /p/<codigo>/). WordPress tampoco guarda sus enlaces (POST /vista, Task 7).
+const ESTADOS_SIN_VISTA_PREVIA = ['aprobando', 'listo', 'enviado'];
+
+// Salida del nodo «Render» (fullResponse + neverError): {statusCode, body, headers}; si se cortó la red o venció el
+// tiempo, {error} sin statusCode (onError: continueRegularOutput). También acepta el cuerpo suelto (sin fullResponse).
+// Decisión D11: se reintenta solo lo que puede salir distinto (la red, un 5xx, o un 200 sin presentación o con fotos
+// faltantes). Un 4xx da lo mismo cada vez: el 400 del esquema trae sus motivos en `details` (Task 11), que van a la nota.
+// Nunca lanza.
+function leerRespuestaRender(x) {
+  const j = esObjetoPlano(x) ? x : {};
+  let status = 0;
+  let cuerpo = {};
+  let fallo = '';
+  if (j.statusCode !== undefined && j.statusCode !== null && j.statusCode !== '') {
+    status = Number(j.statusCode) || 0;
+    let b = j.body;
+    if (typeof b === 'string') {
+      try { b = JSON.parse(b); } catch (e) { b = { error: b.slice(0, 200) }; }
+    }
+    cuerpo = esObjetoPlano(b) ? b : {};
+  } else if (j.error) {
+    const e = j.error;
+    fallo = typeof e === 'string' ? e : String(e.message || e.description || 'sin detalle');
+  } else if (Object.keys(j).length) {
+    status = 200;
+    cuerpo = j;
+  } else {
+    fallo = 'sin respuesta';
+  }
+  const d = cuerpo.details;
+  const detalles = (Array.isArray(d) ? d : (d == null || d === '' ? [] : [d])).map((t) => String(t).slice(0, 200)).filter(Boolean).slice(0, 5);
+  const images = status === 200 && esObjetoPlano(cuerpo.images) ? cuerpo.images : {};
+  const missing = Array.isArray(images.missing) ? images.missing.map(String) : [];
+  const url = (u) => (status === 200 && typeof u === 'string' ? u : '');
+  const view_url = url(cuerpo.view_url);
+  const pdf_url = url(cuerpo.pdf_url);
+  const reintentable = status === 0 || status >= 500 || (status === 200 && (!view_url || missing.length > 0));
+  return { status, cuerpo, view_url, pdf_url, images, missing, detalles, fallo, reintentable };
+}
+"""

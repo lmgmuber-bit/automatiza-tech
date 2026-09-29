@@ -876,6 +876,161 @@ def prueba_cambios():
        and 'Volver al borrador' in t['correos'][0]['html'], 'C13: un 422 en cambios → «error» con el motivo de WordPress y correo', me)
 
 
+# ---------------------------------------------------------------- secciones de la Task 14 («3 Render»)
+
+BASE_R = 'https://n8n-propuesta-renderer.kchiba.easypanel.host'
+UID_PROP = 'PRUEBAprop01'
+VISTA = BASE_R + '/p/PRUEBAplan01/index.html'
+PDF = BASE_R + '/p/PRUEBAplan01/presentation.pdf'
+BRIEFS_NUEVAS = [brief(s, t) for s, t in (
+    ('metodo', 'bakers preparing the counter before opening, warm morning light'),
+    ('gantt', 'hands shaping loaves one by one on a floured table'),
+    ('fase_1', 'flour, eggs and wooden tools laid out on a table'),
+    ('fase_2', 'baker handing a warm loaf to the first customer of the day'),
+    ('fase_3', 'baker calmly serving a customer in the afternoon'),
+    ('necesitamos', 'hands gathering bread baskets on a counter'),
+    ('reuniones', 'two bakers talking face to face in the bakery'),
+    ('portal', 'owner resting with a cup of coffee in the bakery at dusk'))]
+BRIEF_COVER = {'slide': 'cover', 'prompt': 'close-up of hands kneading bread dough, shallow depth of field, background completely blurred, ' + CIERRE}
+BRIEF_CIERRE = brief('cierre', 'bakery team celebrating the end of the day')
+
+
+def cuerpo_render(final=True, **cambios):
+    """Cuerpo que arma WordPress (at_pt_armar_render) para el renderer; datos inventados."""
+    b = {'document_type': 'plan', 'unique_id': 'PRUEBAplan01', 'draft': not final, 'company_name': '[PRUEBA] Panadería',
+         'client_name': 'Cliente Prueba', 'proyecto': '[PRUEBA] Sitio de la panadería', 'fecha_firma_larga': '26 de septiembre de 2026',
+         'fecha_inicio': '2026-09-28', 'fecha_fin': '2026-11-25', 'semanas': 9,
+         'metodo': {'hechas': ['diagnostico', 'priorizacion'], 'actual': 'propuesta', 'proximas': ['diseno_desarrollo', 'implementacion', 'soporte']},
+         'fases': PLAN_GUARDADO['fases'], 'cronograma': PLAN_GUARDADO['cronograma'], 'necesitamos_de_ti': ['Logo', 'Textos'],
+         'reuniones': [{'nombre': 'Reunión de inicio', 'detalle': ''}], 'soporte': {'garantia_meses': 3, 'mensuales': []},
+         'portal_url': '', 'agenda': {'whatsapp_url': 'https://wa.me/56900000000?text=prueba', 'web_url': ''},
+         'image_briefs': ([BRIEF_COVER] + BRIEFS_NUEVAS + [BRIEF_CIERRE]) if final else [], 'images': {}}
+    b.update(cambios)
+    return b
+
+
+def leido(render, uid=UID_PROP, estado=None, **extra):
+    """Respuesta de GET /plan/{id}/render (Task 7, D10): cuerpo, código de la propuesta, ficha del CRM (5) y estado del
+    plan («borrador» para una vista previa y «aprobando» para la versión final, si no se dice otro)."""
+    if estado is None:
+        estado = 'borrador' if render.get('draft') else 'aprobando'
+    return [{'statusCode': 200, 'body': dict({'ok': True, 'render': render, 'propuesta_uid': uid, 'crm_cliente_id': 5,
+                                              'estado': estado}, **extra)}]
+
+
+def renderer_ok(pedidas=8, missing=(), sin_vista=False, error=None):
+    """Salida del nodo «Render» (fullResponse + neverError): {statusCode, body}; {error} si se cortó la red."""
+    if error:
+        return {'error': {'message': error}}
+    r = {'images': {'requested': pedidas, 'stored_local': pedidas - len(missing), 'kept_remote': [], 'missing': list(missing), 'reused': 0}}
+    if not sin_vista:
+        r.update(view_url=VISTA, pdf_url=PDF)
+    return {'statusCode': 200, 'body': r, 'headers': {}}
+
+
+def renderer_http(status, body):
+    return {'statusCode': status, 'body': body, 'headers': {}}
+
+
+RECHAZO_ESQUEMA = renderer_http(400, {'error': 'invalid payload', 'details': ['falta el objeto obligatorio: cronograma',
+                                                                            'fases debe traer al menos una fase']})
+
+
+MANIFEST_PROP = {'statusCode': 200, 'body': {'cover': {'file': 'cover.jpg', 'hash': 'a' * 64},
+                                             'next_steps': {'file': 'next_steps.png', 'hash': 'b' * 64},
+                                             'solution': {'file': 'solution.jpg', 'hash': 'c' * 64}}}
+# Respuesta de POST /plan/{id}/vista (Task 7): {ok, estado}. La versión final completa deja el plan «listo».
+VISTA_LISTO = [{'statusCode': 200, 'body': {'ok': True, 'estado': 'listo'}}]
+VISTA_BORRADOR = [{'statusCode': 200, 'body': {'ok': True, 'estado': 'borrador'}}]
+# Manifest del plan en el renderer (todas sus láminas guardadas) y GPT-4o que no ve texto: los usan los valores por
+# defecto de sim() en la sección `render` para los nodos de la revisión de texto de las fotos (ciclo D, D18).
+MANIFEST_PLAN = {'statusCode': 200, 'body': {s: {'file': s + '.jpg', 'hash': 'd' * 64} for s in TODAS}}
+SIN_TEXTO = {'statusCode': 200, 'body': {'choices': [{'message': {'content': '{"con_texto": []}'}}]}}
+
+
+@seccion('render_puras')
+def prueba_render_puras():
+    from plan_js import JS_RENDER, RENDERER_BASE
+    ok(RENDERER_BASE == BASE_R, 'RENDERER_BASE es el renderer de Easypanel (solo para n8n, nunca en un correo)')
+    prog = lib() + JS_RENDER + r"""
+const R = {};
+const render = DATOS.render;
+const copia = JSON.stringify(render);
+R.completo = reutilizarFotosPlan(render, DATOS.manifest, DATOS.base, 'PRUEBAprop01');
+R.no_muta = JSON.stringify(render) === copia;
+R.sin_uid = reutilizarFotosPlan(render, DATOS.manifest, DATOS.base, '');
+R.uid_malo = reutilizarFotosPlan(render, DATOS.manifest, DATOS.base, '../x');
+R.texto = reutilizarFotosPlan(render, JSON.stringify({ cover: { file: 'cover.webp', hash: 'x' } }), DATOS.base, 'PRUEBAprop01');
+R.nulo = reutilizarFotosPlan(render, null, DATOS.base, 'PRUEBAprop01');
+R.ilegible = reutilizarFotosPlan(render, '<html>404</html>', DATOS.base, 'PRUEBAprop01');
+R.arreglo = reutilizarFotosPlan(render, [1, 2], DATOS.base, 'PRUEBAprop01');
+R.malicioso = reutilizarFotosPlan(render, { cover: { file: '../../secreto.jpg' }, next_steps: { file: '.oculto' } }, DATOS.base, 'PRUEBAprop01');
+R.base_mala = reutilizarFotosPlan(render, DATOS.manifest, 'javascript:alert(1)', 'PRUEBAprop01');
+R.dada = reutilizarFotosPlan(Object.assign({}, render, { images: { cover: 'https://example.com/foto.jpg' } }), {}, DATOS.base, 'PRUEBAprop01');
+R.render_nulo = reutilizarFotosPlan(null, DATOS.manifest, DATOS.base, 'PRUEBAprop01');
+R.nombres = nombresLaminas(['gantt', 'necesitamos', 'otra']);
+const L = (x) => leerRespuestaRender(x);
+R.resp = {
+  ok: L(DATOS.r_ok), falta: L(DATOS.r_falta), sin_vista: L(DATOS.r_sin_vista), esquema: L(DATOS.r_400),
+  caido: L(DATOS.r_502), red: L({ error: { message: 'socket hang up' } }), suelto: L(DATOS.r_ok.body),
+  texto: L({ statusCode: 400, body: JSON.stringify(DATOS.r_400.body) }), html: L({ statusCode: 503, body: '<html>Bad gateway</html>' }),
+  clave: L({ statusCode: 401, body: { error: 'unauthorized' } }), nada: L(null),
+};
+R.sin_vista_previa = ESTADOS_SIN_VISTA_PREVIA;
+console.log(JSON.stringify(R));
+"""
+    r, err = node_js(prog, {'render': cuerpo_render(True), 'manifest': MANIFEST_PROP['body'], 'base': BASE_R,
+                            'r_ok': renderer_ok(8), 'r_falta': renderer_ok(8, ['gantt']), 'r_sin_vista': renderer_ok(8, sin_vista=True),
+                            'r_400': RECHAZO_ESQUEMA, 'r_502': renderer_http(502, {'error': 'render failed', 'details': 'Playwright timeout'})})
+    ok(r is not None, 'render_puras: el JavaScript corre con node', err)
+    if r is None:
+        return
+    c = r['completo']
+    ok(c['render']['images'] == {'cover': BASE_R + '/p/PRUEBAprop01/img/cover.jpg', 'cierre': BASE_R + '/p/PRUEBAprop01/img/next_steps.png'},
+       'reutilizarFotosPlan: portada ← cover y cierre ← next_steps de la propuesta, con URL absoluta', c['render']['images'])
+    ok([b['slide'] for b in c['render']['image_briefs']] == NUEVAS, 'reutilizarFotosPlan: portada y cierre salen de las fotos a pagar')
+    ok(c['reutilizadas'] == ['cover', 'cierre'] and c['sin_foto'] == [], 'reutilizarFotosPlan: informa las reutilizadas')
+    ok(r['no_muta'], 'reutilizarFotosPlan: no cambia el objeto que recibe')
+    ok(r['sin_uid']['render']['image_briefs'] == cuerpo_render(True)['image_briefs'] and r['sin_uid']['render']['images'] == {}
+       and r['sin_uid']['reutilizadas'] == [] and r['sin_uid']['sin_foto'] == [],
+       'reutilizarFotosPlan: sin propuesta no toca nada (portada y cierre piden foto nueva)')
+    ok(r['uid_malo']['reutilizadas'] == [] and r['uid_malo']['render']['images'] == {}, 'reutilizarFotosPlan: un uid raro se trata como sin propuesta')
+    ok(r['texto']['reutilizadas'] == ['cover'] and r['texto']['sin_foto'] == ['cierre']
+       and r['texto']['render']['images']['cover'].endswith('/img/cover.webp'), 'reutilizarFotosPlan: lee el manifest aunque llegue como texto')
+    for caso in ('nulo', 'ilegible', 'arreglo', 'base_mala'):
+        x = r[caso]
+        ok(x['reutilizadas'] == [] and x['sin_foto'] == ['cover', 'cierre'] and x['render']['images'] == {}
+           and [b['slide'] for b in x['render']['image_briefs']] == NUEVAS,
+           f'reutilizarFotosPlan: manifest o base {caso} → sin foto y sin pagar portada ni cierre', x['sin_foto'])
+    m = r['malicioso']
+    ok(m['reutilizadas'] == [] and m['render']['images'] == {} and m['sin_foto'] == ['cover', 'cierre'],
+       'reutilizarFotosPlan: nombres de archivo con «..», barras u ocultos no se usan', m)
+    ok(r['dada']['render']['images'] == {'cover': 'https://example.com/foto.jpg'} and r['dada']['sin_foto'] == ['cierre'],
+       'reutilizarFotosPlan: una imagen que ya trae el cuerpo se respeta y no se avisa como faltante')
+    ok(r['render_nulo']['render']['images']['cover'].endswith('/cover.jpg'), 'reutilizarFotosPlan: un cuerpo nulo no lanza')
+    ok(r['nombres'] == 'carta Gantt, qué necesitamos de ti, otra', 'nombresLaminas: nombres legibles para las notas', r['nombres'])
+    ok(r['sin_vista_previa'] == ['aprobando', 'listo', 'enviado'], 'ESTADOS_SIN_VISTA_PREVIA: aprobando, listo y enviado (D10)')
+    x = r['resp']
+    ok(x['ok']['status'] == 200 and x['ok']['view_url'] == VISTA and x['ok']['pdf_url'] == PDF and x['ok']['missing'] == []
+       and x['ok']['reintentable'] is False, 'leerRespuestaRender: 200 completo → enlaces y nada que reintentar', x['ok'])
+    ok(x['falta']['missing'] == ['gantt'] and x['falta']['reintentable'] is True, 'leerRespuestaRender: 200 con fotos faltantes → se reintenta')
+    ok(x['sin_vista']['view_url'] == '' and x['sin_vista']['reintentable'] is True, 'leerRespuestaRender: 200 sin presentación → se reintenta')
+    ok(x['esquema']['status'] == 400 and x['esquema']['reintentable'] is False
+       and x['esquema']['detalles'] == ['falta el objeto obligatorio: cronograma', 'fases debe traer al menos una fase'],
+       'leerRespuestaRender: 400 del esquema con details → no se reintenta y trae los motivos (D11)', x['esquema'])
+    ok(x['caido']['status'] == 502 and x['caido']['reintentable'] is True and x['caido']['detalles'] == ['Playwright timeout'],
+       'leerRespuestaRender: 502 con details en texto → se reintenta y trae el motivo', x['caido'])
+    ok(x['red']['status'] == 0 and x['red']['fallo'] == 'socket hang up' and x['red']['reintentable'] is True,
+       'leerRespuestaRender: error de red o tiempo vencido → se reintenta', x['red'])
+    ok(x['suelto']['status'] == 200 and x['suelto']['view_url'] == VISTA, 'leerRespuestaRender: acepta el cuerpo suelto (sin fullResponse)')
+    ok(x['texto']['detalles'] == x['esquema']['detalles'] and x['texto']['reintentable'] is False,
+       'leerRespuestaRender: un cuerpo que llega como texto JSON se lee igual')
+    ok(x['html']['status'] == 503 and x['html']['reintentable'] is True and x['html']['detalles'] == [] and x['html']['cuerpo'].get('error', '').startswith('<html>'),
+       'leerRespuestaRender: un 503 con HTML → se reintenta, sin romperse', x['html'])
+    ok(x['clave']['reintentable'] is False and x['nada']['status'] == 0 and x['nada']['reintentable'] is True,
+       'leerRespuestaRender: un 401 no se reintenta; una salida vacía cuenta como falla de red')
+
+
 # ==== Las tareas siguientes agregan sus secciones justo antes de esta línea ====
 
 if __name__ == '__main__':

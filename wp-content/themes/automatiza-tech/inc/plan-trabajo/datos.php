@@ -324,3 +324,163 @@ function at_pt_contratos_sin_plan(int $crm_id): array {
 		$crm_id
 	));
 }
+
+/**
+ * Meses de garantía del contrato (marcador garantia_meses_servicio, texto que Luis puede editar al revisar):
+ * el primer número, si está entre 0 y 24; si no está o no se entiende, 3 (el valor por defecto del cierre).
+ */
+function at_pt_db_garantia(array $ph): int {
+	if (preg_match('/\d+/', (string) ($ph['garantia_meses_servicio'] ?? ''), $m)) {
+		$n = (int) $m[0];
+		if ($n >= 0 && $n <= 24) {
+			return $n;
+		}
+	}
+	return 3;
+}
+
+/**
+ * Todo lo que rodea a un plan: contrato y sus marcadores, ficha operativa, propuesta (o null), cliente
+ * del CRM, garantía y los nombres ya resueltos. Empresa (lo que se muestra como company_name): el nombre
+ * comercial de la propuesta si existe; si no, nombre_proyecto o razon_social_cliente del contrato; si no, el
+ * nombre del cliente; nunca vacío. Cliente: quien firma por el cliente en el contrato, si no la propuesta o la
+ * ficha.
+ */
+function at_pt_db_partes(object $fila): array {
+	global $wpdb;
+	$c = at_pt_db_contrato((int) $fila->contrato_id);
+	$ph = $c ? json_decode((string) $c->placeholders, true) : null;
+	$ph = is_array($ph) ? $ph : [];
+	$tech = null;
+	if ((int) $fila->tech_id > 0) {
+		$tech = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$wpdb->prefix}automatiza_tech_clients WHERE id = %d", (int) $fila->tech_id)) ?: null;
+	}
+	$prop = null;
+	if ((int) $fila->propuesta_id > 0) {
+		$prop = $wpdb->get_row($wpdb->prepare(
+			"SELECT id, unique_link_id, client_name, company_name, gamma_prompt_text, transcript_text FROM {$wpdb->prefix}automatiza_propuestas WHERE id = %d",
+			(int) $fila->propuesta_id
+		)) ?: null;
+	}
+	$primero = function (...$valores): string {
+		foreach ($valores as $v) {
+			$v = trim((string) $v);
+			if ($v !== '') {
+				return $v;
+			}
+		}
+		return '';
+	};
+	$cliente = $primero($ph['representante_cliente_nombre'] ?? '', $ph['aceptante_nombre'] ?? '', $prop->client_name ?? '', $tech->name ?? '', $ph['razon_social_cliente'] ?? '');
+	$cliente = $cliente !== '' ? $cliente : 'Cliente';
+	// D9: el nombre comercial de la propuesta; si no, el del contrato (proyecto o razón social); si no, el cliente.
+	$empresa = $primero($prop->company_name ?? '', $ph['nombre_proyecto'] ?? '', $ph['razon_social_cliente'] ?? '', $cliente);
+	$firma = $c ? substr((string) $c->signed_at, 0, 10) : '';
+	$crm_id = (int) ($tech->crm_cliente_id ?? 0);
+	return [
+		'contrato'       => $c,
+		'ph'             => $ph,
+		'tech'           => $tech,
+		'propuesta'      => $prop,
+		'crm_id'         => $crm_id > 0 ? $crm_id : (int) $fila->crm_cliente_id,
+		'empresa'        => $empresa,
+		'cliente'        => $cliente,
+		'proyecto'       => $primero($ph['nombre_proyecto'] ?? '', $empresa),
+		'fecha_firma'    => at_pt_db_fecha_valida($firma) ? $firma : current_time('Y-m-d'),
+		'garantia_meses' => at_pt_db_garantia($ph),
+	];
+}
+
+/**
+ * Datos del cliente para at_pt_armar_render(): código, empresa, cliente, portal ('' sin correo), WhatsApp de AT,
+ * fecha de firma y meses de garantía del contrato (el contrato manda sobre lo que diga el plan: D8).
+ */
+function at_pt_datos_render(object $fila): array {
+	$x = at_pt_db_partes($fila);
+	$portal = ($x['crm_id'] > 0 && function_exists('at_crm_url_portal')) ? (string) at_crm_url_portal($x['crm_id']) : '';
+	$whatsapp = (string) preg_replace('/\D+/', '', function_exists('at_cc_whatsapp_at') ? at_cc_whatsapp_at() : '');
+	return [
+		'codigo'         => (string) $fila->codigo,
+		'company_name'   => $x['empresa'],
+		'client_name'    => $x['cliente'],
+		'portal_url'     => $portal,
+		'whatsapp'       => $whatsapp !== '' ? $whatsapp : '56927002984',
+		'fecha_firma'    => $x['fecha_firma'],
+		'garantia_meses' => $x['garantia_meses'],
+	];
+}
+
+/**
+ * Lo que recibe la IA (GET /plan/{id}/contexto). Lo contratado sale del contrato (ya revisado por
+ * Luis); la propuesta, si existe, aporta solución, pasos y los primeros 3000 caracteres de la reunión;
+ * el rubro sale de la ficha del CRM (las fotos nuevas se describen por rubro, también sin propuesta).
+ */
+function at_pt_contexto(object $fila): array {
+	global $wpdb;
+	$x = at_pt_db_partes($fila);
+	$rubro = '';
+	if ($x['crm_id'] > 0) {
+		$rubro = trim((string) $wpdb->get_var($wpdb->prepare("SELECT rubro FROM {$wpdb->prefix}crm_clientes WHERE id = %d", $x['crm_id'])));
+	}
+	$ph = $x['ph'];
+	$campo = function (string $k) use ($ph): string {
+		return mb_substr(trim((string) ($ph[$k] ?? '')), 0, 4000);
+	};
+	$propuesta = null;
+	if ($x['propuesta']) {
+		$p = $x['propuesta'];
+		$d = function_exists('at_cc_json_de_payload') ? at_cc_json_de_payload((string) $p->gamma_prompt_text) : json_decode((string) $p->gamma_prompt_text, true);
+		$d = is_array($d) ? $d : [];
+		$pasos = [];
+		foreach ((array) ($d['how_it_works'] ?? []) as $s) {
+			if (is_array($s)) {
+				$t = trim((string) ($s['step_title'] ?? ''));
+				$tx = trim((string) ($s['step_text'] ?? ''));
+				$linea = ($t !== '' && $tx !== '') ? $t . ': ' . $tx : $t . $tx;
+			} else {
+				$linea = is_scalar($s) ? trim((string) $s) : '';
+			}
+			if ($linea !== '') {
+				$pasos[] = mb_substr($linea, 0, 500);
+			}
+			if (count($pasos) >= 12) {
+				break;
+			}
+		}
+		$propuesta = [
+			'company_name'     => (string) $p->company_name,
+			'solution_text'    => mb_substr(trim((string) ($d['solution_text'] ?? '')), 0, 4000),
+			'how_it_works'     => $pasos,
+			'extracto_reunion' => mb_substr((string) $p->transcript_text, 0, 3000),
+		];
+	}
+	$plan = at_pt_payload($fila);
+	return [
+		'ok'          => true,
+		'plan_id'     => (int) $fila->id,
+		'codigo'      => (string) $fila->codigo,
+		'estado'      => (string) $fila->estado,
+		'proyecto'    => $x['proyecto'],
+		'empresa'     => $x['empresa'],
+		'cliente'     => $x['cliente'],
+		'fecha_firma' => $x['fecha_firma'],
+		'contrato'    => [
+			'servicios_contratados' => $campo('servicios_contratados'),
+			'alcance'               => $campo('alcance'),
+			'entregables'           => $campo('entregables'),
+			'fases_siguientes'      => $campo('fases_siguientes'),
+			'plazo'                 => $campo('plazo'),
+			// D7: meses de garantía del contrato (garantia_meses_servicio; 3 si no está). La IA los copia en soporte.
+			'garantia_meses'        => $x['garantia_meses'],
+		],
+		'propuesta'   => $propuesta,
+		'tabla'       => at_pt_duraciones(),
+		'slides_foto' => at_pt_slides_foto(),
+		'plan_actual' => $plan ?: null,
+		'comentarios' => (string) ($fila->comentarios ?? ''),
+		// Para el botón de los correos a Luis (pestaña del plan en la ficha del CRM); 0 si la ficha no está enlazada.
+		'crm_cliente_id' => (int) $x['crm_id'],
+		// Rubro de la ficha del CRM (crm_clientes.rubro); '' si no hay ficha enlazada o no lo tiene.
+		'rubro'          => mb_substr($rubro, 0, 100),
+	];
+}

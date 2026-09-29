@@ -38,7 +38,9 @@ const h = entrada.headers || {};
 const body = entrada.body || {};
 const clave = String(body.clave || '');
 const esperada = __ESPERADA__;
-const ip = String(h['x-forwarded-for'] || h['x-real-ip'] || '').split(',')[0].trim() || 'sin-ip';
+// La IP es la ÚLTIMA de X-Forwarded-For (la que agrega el proxy de Easypanel); la primera la puede inventar el cliente.
+const xff = String(h['x-forwarded-for'] || '').split(',').map(x => x.trim()).filter(Boolean);
+const ip = xff[xff.length - 1] || String(h['x-real-ip'] || '').trim() || 'sin-ip';
 const sd = $getWorkflowStaticData('global');
 sd.fallos = sd.fallos || {};
 const ahora = Date.now();
@@ -57,6 +59,7 @@ if (f) delete sd.fallos[ip];
 return [{ json: { ok: true } }];
 """
 
+# Solo los campos que usa el buscador (ubicar al atleta y volver a bajar sus archivos); lo demás queda en el Sheet.
 # Columnas A-Y del Sheet (las escribe «Armar fila y correo» de build.py, en este orden): fecha, tipo, nombre,
 # nacimiento, edad, documento, nacionalidad, teléfono, correo, dirección, representante, teléfono del representante,
 # liga, posición, batea, lanza, estatura, peso, millas, año de firma, foto, planilla, id, forma de pago, comprobante.
@@ -79,15 +82,9 @@ filas.forEach((fila, i) => {
     nacimiento: c(3),
     edad: /^\d{1,2}$/.test(c(4)) ? Number(c(4)) : null,
     documento: c(5),
-    nacionalidad: c(6),
-    telefono: c(7),
-    correo: c(8),
     representante: c(10),
     rep_telefono: c(11),
-    liga: c(12),
     posicion: c(13),
-    batea: c(14),
-    lanza: c(15),
     foto: idDe(c(20)),
     planilla: idDe(c(21)),
     id: c(22),
@@ -159,7 +156,8 @@ def construir(cfg, webhook=None, esperada_js="String($env.GT_BUSCADOR_CLAVE || '
     return {'name': NOMBRE, 'nodes': nodes, 'connections': connections,
             'settings': {'executionOrder': 'v1', 'timezone': 'America/Caracas',
                          # Cada respuesta trae nombres y cédulas de menores: no guardar las ejecuciones exitosas.
-                         'saveDataSuccessExecution': 'none'}}
+                         'saveDataSuccessExecution': 'none', 'saveDataErrorExecution': 'none',
+                         'saveManualExecutions': False}}
 
 
 def pedir(url, cuerpo):

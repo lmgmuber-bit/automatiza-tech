@@ -68,7 +68,7 @@
 }
 
 * { box-sizing: border-box; }
-html { -webkit-text-size-adjust: 100%; }
+html { -webkit-text-size-adjust: 100%; overflow-x: clip; }
 body {
   margin: 0;
   min-height: 100dvh;
@@ -350,7 +350,7 @@ main { flex: 1; outline: none; }
     url('estadio-noche.jpg') center top / 100% auto no-repeat,
     var(--franja);
 }
-@media (orientation: portrait) and (max-width: 767px) {
+@media (orientation: portrait) {
   .planes__fondo {
     background:
       radial-gradient(60% 12% at 50% 5%, var(--brillo-franja), transparent 70%),
@@ -500,13 +500,15 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--a
 .trampa { position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0; }
 .aviso-error { display: flex; gap: 10px; align-items: center; margin: 4px 0 12px; padding: 12px 14px; border-radius: 12px; background: var(--error-fondo); color: var(--error); font-weight: 600; }
 
-.foto { display: grid; grid-template-columns: 104px 1fr; gap: 14px; align-items: center; }
+.foto { display: grid; grid-template-columns: 104px minmax(0, 1fr); gap: 14px; align-items: center; }
 .foto__marco { width: 104px; aspect-ratio: 3 / 4; border-radius: 14px; border: 1.5px dashed var(--borde); background: var(--sup); display: grid; place-items: center; overflow: hidden; color: var(--tenue); }
 .foto__marco.tiene-foto { border-style: solid; border-color: var(--oro); }
 .foto__marco img { width: 100%; height: 100%; object-fit: cover; }
 .foto__vacio { width: 44px; height: 44px; stroke-width: 1.5; }
 .foto__opciones { display: grid; gap: 10px; justify-items: start; }
 .foto__opciones .campo__ayuda { margin: 0; }
+.foto__opciones .boton, .extra .boton { white-space: normal; text-align: center; }
+:root[data-theme="light"] .etiqueta-prueba { color: #5c3700; }
 .foto__input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
 
 .fecha { display: grid; grid-template-columns: 1fr 1.7fr 1.25fr; gap: 10px; }

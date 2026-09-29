@@ -18,8 +18,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../assets/styles.css?v=13">
-<link rel="stylesheet" href="../assets/buscador.css?v=1">
+<link rel="stylesheet" href="../assets/styles.css?v=14">
+<link rel="stylesheet" href="../assets/buscador.css?v=2">
 </head>
 <body class="pagina-buscador">
 <!-- Íconos: Tabler Icons 3.48.0 (MIT). -->
@@ -67,15 +67,17 @@
         <span class="acceso__ico"><svg class="ico" aria-hidden="true"><use href="#i-lock"></use></svg></span>
         <h1 class="acceso__titulo" id="t-acceso">Buscador de planillas</h1>
         <p class="acceso__texto">Solo para la academia. Escribe la clave de acceso para buscar a los atletas inscritos y volver a descargar su planilla.</p>
-        <form id="form-clave" novalidate>
+        <!-- method post y sin name en la clave: si el JS no cargara, un Enter no deja la clave en la URL ni en el log. -->
+        <form id="form-clave" method="post" action="#" novalidate>
+          <input type="text" autocomplete="username" value="academia" hidden aria-hidden="true" tabindex="-1">
           <label class="acceso__label" for="clave">Clave de acceso</label>
           <div class="acceso__campo">
-            <input type="password" id="clave" name="clave" autocomplete="current-password" autocapitalize="off" spellcheck="false" required>
+            <input type="password" id="clave" autocomplete="current-password" autocapitalize="off" spellcheck="false" required>
             <button type="button" class="acceso__ver" id="ver-clave" aria-label="Mostrar la clave" aria-pressed="false">
               <svg class="ico" aria-hidden="true"><use href="#i-eye"></use></svg>
             </button>
           </div>
-          <label class="casilla"><input type="checkbox" id="recordar" checked><span>Recordar la clave en este equipo</span></label>
+          <label class="casilla"><input type="checkbox" id="recordar" checked><span>Recordarla en este teléfono por 30 días</span></label>
           <p class="acceso__error" id="error-clave" role="alert"></p>
           <button type="submit" class="boton boton--principal acceso__entrar" id="btn-entrar">Entrar</button>
         </form>
@@ -88,6 +90,7 @@
         <div>
           <h1 class="lista__titulo" id="t-lista">Atletas inscritos</h1>
           <p class="lista__cuenta" id="cuenta" aria-live="polite"></p>
+          <p class="lista__estado" id="estado-lista" role="status"></p>
         </div>
         <div class="lista__acciones">
           <button type="button" class="boton boton--chico boton--secundario" id="btn-actualizar">
@@ -106,7 +109,7 @@
           <input type="search" id="f-texto" placeholder="Buscar por nombre o cédula" autocomplete="off" spellcheck="false">
         </div>
         <details class="filtros__mas" id="filtros-mas">
-          <summary><svg class="ico" aria-hidden="true"><use href="#i-adjustments-horizontal"></use></svg><span>Filtros</span><span class="filtros__n" id="filtros-n" hidden></span></summary>
+          <summary><svg class="ico" aria-hidden="true"><use href="#i-adjustments-horizontal"></use></svg><span>Filtros y orden</span><span class="filtros__n" id="filtros-n" hidden></span></summary>
           <div class="filtros__grilla">
             <div class="filtro">
               <label for="f-posicion">Posición</label>
@@ -133,37 +136,38 @@
               </select>
             </div>
             <fieldset class="filtro filtro--par">
-              <legend>Edad</legend>
-              <input type="number" id="f-edad-min" inputmode="numeric" min="3" max="40" placeholder="Desde" aria-label="Edad desde">
-              <input type="number" id="f-edad-max" inputmode="numeric" min="3" max="40" placeholder="Hasta" aria-label="Edad hasta">
+              <legend>Edad (años)</legend>
+              <label class="filtro__sub"><span>Desde</span><input type="number" id="f-edad-min" inputmode="numeric" min="3" max="40" placeholder="3"></label>
+              <label class="filtro__sub"><span>Hasta</span><input type="number" id="f-edad-max" inputmode="numeric" min="3" max="40" placeholder="40"></label>
             </fieldset>
             <fieldset class="filtro filtro--par filtro--fechas">
               <legend>Fecha de inscripción</legend>
-              <input type="date" id="f-desde" aria-label="Inscritos desde">
-              <input type="date" id="f-hasta" aria-label="Inscritos hasta">
+              <label class="filtro__sub"><span>Desde</span><input type="date" id="f-desde"></label>
+              <label class="filtro__sub"><span>Hasta</span><input type="date" id="f-hasta"></label>
             </fieldset>
+            <div class="filtro">
+              <label for="f-orden">Ordenar</label>
+              <select id="f-orden">
+                <option value="reciente">Más recientes</option>
+                <option value="antiguo">Más antiguos</option>
+                <option value="nombre">Nombre (A-Z)</option>
+                <option value="edad">Edad (menor a mayor)</option>
+              </select>
+            </div>
+            <div class="filtro">
+              <label for="f-por-pagina">Atletas por página</label>
+              <select id="f-por-pagina"><option>10</option><option selected>20</option><option>50</option></select>
+            </div>
             <label class="casilla filtro--casilla"><input type="checkbox" id="f-pruebas"><span>Mostrar las inscripciones de prueba</span></label>
           </div>
-          <button type="button" class="boton boton--texto" id="btn-limpiar"><svg class="ico" aria-hidden="true"><use href="#i-x"></use></svg><span>Limpiar filtros</span></button>
+          <div class="filtros__pie">
+            <button type="button" class="boton boton--texto" id="btn-limpiar"><svg class="ico" aria-hidden="true"><use href="#i-x"></use></svg><span>Limpiar filtros</span></button>
+            <button type="button" class="boton boton--chico boton--principal filtros__ver" id="btn-ver-resultados">Ver resultados</button>
+          </div>
         </details>
-        <div class="filtros__orden">
-          <div class="filtro filtro--linea">
-            <label for="f-orden">Ordenar</label>
-            <select id="f-orden">
-              <option value="reciente">Más recientes</option>
-              <option value="antiguo">Más antiguos</option>
-              <option value="nombre">Nombre (A-Z)</option>
-              <option value="edad">Edad (menor a mayor)</option>
-            </select>
-          </div>
-          <div class="filtro filtro--linea">
-            <label for="f-por-pagina">Por página</label>
-            <select id="f-por-pagina"><option>10</option><option selected>20</option><option>50</option></select>
-          </div>
-        </div>
       </form>
 
-      <p class="lista__nota"><svg class="ico ico--chico" aria-hidden="true"><use href="#i-lock"></use></svg> Las planillas, fotos y comprobantes se abren con la cuenta de Google que tiene acceso a la carpeta de la academia.</p>
+      <p class="lista__nota"><svg class="ico ico--chico" aria-hidden="true"><use href="#i-lock"></use></svg> Los archivos abren con el Gmail que tiene acceso a la carpeta de la academia.</p>
 
       <div class="tabla-caja">
         <table class="tabla" id="tabla">
@@ -203,6 +207,6 @@
 </div>
 
 <p class="sr-only" id="anuncio" aria-live="polite"></p>
-<script src="../assets/buscador.js?v=1"></script>
+<script src="../assets/buscador.js?v=2"></script>
 </body>
 </html>

@@ -1,8 +1,9 @@
 /* GT Baseball Academy · buscador privado de planillas (buscador/index.html).
  * Pide la clave, trae la lista de inscritos del flujo n8n «GT Baseball · Buscador de planillas» y la filtra, ordena y
  * pagina aquí mismo (son pocos cientos de filas). Nada de los datos se dibuja con innerHTML: todo va por textContent.
- * La clave se guarda en este equipo solo si se marca «Recordar» (si no, dura mientras la pestaña esté abierta).
- * En local (localhost o 127.0.0.1) acepta ?endpoint=<url> para probar contra un receptor de prueba. */
+ * La clave se guarda en este teléfono solo si se marca «Recordar» y vence a los 30 días; si no, dura mientras la
+ * pestaña esté abierta. En local (localhost o 127.0.0.1) acepta ?endpoint=<url local> para probar contra un receptor
+ * de prueba; con ese endpoint no entra sola con la clave guardada. */
 (function () {
   'use strict';
 
@@ -10,24 +11,38 @@
   var app = $('app');
   var CLAVE_ACCESO = 'gt-buscador-clave';
   var CLAVE_TEMA = 'gt-tema';
+  var DIAS_RECORDAR = 30;
+  var ESPERA_MAX_MS = 25000;
   var LOCAL = /^(localhost|127\.0\.0\.1)$/.test(location.hostname);
-  var ENDPOINT = app.getAttribute('data-endpoint');
+  var ENDPOINT_OFICIAL = app.getAttribute('data-endpoint');
+  var ENDPOINT = ENDPOINT_OFICIAL;
   if (LOCAL) {
     var otro = new URLSearchParams(location.search).get('endpoint');
-    if (otro) ENDPOINT = otro;
+    try { if (otro && /^(localhost|127\.0\.0\.1)$/.test(new URL(otro).hostname)) ENDPOINT = otro; } catch (e) { /* url inválida: se ignora */ }
   }
   var MESES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
 
-  var estado = { atletas: [], filtrados: [], pagina: 1, cargando: false };
+  var estado = { atletas: [], filtrados: [], pagina: 1, cargando: false, clave: '' };
 
   // ---------- Almacenamiento (puede no existir en modo privado) ----------
-  function leer(clave) {
-    try { return localStorage.getItem(clave) || sessionStorage.getItem(clave) || ''; } catch (e) { return ''; }
+  // Se guarda {clave, vence}; una clave vencida o con otro formato se descarta.
+  function leerClave() {
+    var crudo = '';
+    try { crudo = localStorage.getItem(CLAVE_ACCESO) || sessionStorage.getItem(CLAVE_ACCESO) || ''; } catch (e) { return ''; }
+    try {
+      var d = JSON.parse(crudo);
+      if (d && typeof d.clave === 'string' && (!d.vence || d.vence > Date.now())) return d.clave;
+    } catch (e) { /* formato viejo o dañado */ }
+    guardarClave('', false);
+    return '';
   }
   function guardarClave(valor, recordar) {
     try {
       localStorage.removeItem(CLAVE_ACCESO); sessionStorage.removeItem(CLAVE_ACCESO);
-      if (valor) (recordar ? localStorage : sessionStorage).setItem(CLAVE_ACCESO, valor);
+      if (valor) {
+        var d = { clave: valor, vence: recordar ? Date.now() + DIAS_RECORDAR * 864e5 : 0 };
+        (recordar ? localStorage : sessionStorage).setItem(CLAVE_ACCESO, JSON.stringify(d));
+      }
     } catch (e) { /* sin almacenamiento: se pedirá la clave cada vez */ }
   }
 
@@ -52,12 +67,22 @@
 
   function anunciar(t) { var a = $('anuncio'); a.textContent = ''; setTimeout(function () { a.textContent = t; }, 60); }
 
+  // Aviso visible bajo el contador (y leído por los lectores de pantalla): error en rojo, éxito breve.
+  var avisoTimer = null;
+  function aviso(texto, tipo) {
+    var el = $('estado-lista');
+    clearTimeout(avisoTimer);
+    el.textContent = texto || '';
+    el.className = 'lista__estado' + (tipo ? ' lista__estado--' + tipo : '');
+    if (tipo === 'ok') avisoTimer = setTimeout(function () { el.textContent = ''; }, 6000);
+  }
+
   // ---------- Vistas ----------
-  function verClave(error) {
+  function verClave(error, marcar) {
     $('vista-lista').hidden = true;
     $('vista-clave').hidden = false;
     $('error-clave').textContent = error || '';
-    $('clave').setAttribute('aria-invalid', error ? 'true' : 'false');
+    $('clave').setAttribute('aria-invalid', error && marcar !== false ? 'true' : 'false');
     if (error) $('clave').focus();
   }
   function verLista() {
@@ -68,23 +93,31 @@
   // ---------- Pedir la lista ----------
   var MENSAJES = {
     401: 'La clave no es correcta. Revísala y vuelve a intentarlo.',
+    '401-guardada': 'La clave guardada en este teléfono ya no sirve. Escribe la clave nueva.',
     429: 'Hubo demasiados intentos con una clave equivocada. Espera 15 minutos y vuelve a intentarlo.',
     503: 'El buscador todavía no está activado. Avísale a AutomatizaTech.',
     red: 'No se pudo conectar. Revisa tu internet y vuelve a intentarlo.',
+    lento: 'El buscador está tardando más de lo normal. Revisa tu internet y vuelve a intentarlo.',
     otro: 'El buscador no respondió bien. Intenta de nuevo en un momento.',
   };
 
   function pedirLista(clave) {
+    var control = typeof AbortController === 'function' ? new AbortController() : null;
+    var corte = setTimeout(function () { if (control) control.abort(); }, ESPERA_MAX_MS);
     return fetch(ENDPOINT, {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ clave: clave }),
-      cache: 'no-store', credentials: 'omit', referrerPolicy: 'no-referrer',
+      cache: 'no-store', credentials: 'omit', referrerPolicy: 'no-referrer', signal: control ? control.signal : undefined,
     }).then(function (r) {
+      clearTimeout(corte);
       return r.json().catch(function () { return {}; }).then(function (d) { return { estado: r.status, datos: d }; });
-    }, function () { return { estado: 0, datos: {} }; });
+    }, function (e) {
+      clearTimeout(corte);
+      return { estado: e && e.name === 'AbortError' ? 'lento' : 0, datos: {} };
+    });
   }
 
   // recordar: true o false guarda la clave (formulario); null no toca lo guardado (entrada automática y Actualizar).
-  function cargar(clave, recordar, entrando) {
+  function cargar(clave, recordar, entrando, automatica) {
     if (estado.cargando) return;
     estado.cargando = true;
     var btn = entrando ? $('btn-entrar') : $('btn-actualizar');
@@ -92,32 +125,38 @@
     var antes = texto.textContent;
     btn.disabled = true;
     texto.textContent = entrando ? 'Entrando…' : 'Actualizando…';
+    if (!entrando) aviso('Actualizando la lista…');
     pedirLista(clave).then(function (res) {
       estado.cargando = false;
       btn.disabled = false;
       texto.textContent = antes;
-      if (res.estado === 200 && res.datos && res.datos.ok && Array.isArray(res.datos.atletas)) {
+      var d = res.datos;
+      if (res.estado === 200 && d && d.ok === true && Array.isArray(d.atletas)) {
         if (recordar !== null) guardarClave(clave, recordar);
-        estado.atletas = res.datos.atletas.map(preparar);
+        estado.atletas = d.atletas.filter(function (a) { return a && typeof a === 'object' && typeof a.nombre === 'string' && a.nombre; }).map(preparar);
         estado.clave = clave;
         verLista();
-        aplicar(!entrando ? false : true);
+        aplicar(!!entrando);
         if (entrando) {
+          aviso('');
           var titulo = $('t-lista');
           titulo.setAttribute('tabindex', '-1');
           titulo.focus({ preventScroll: true });
         } else {
-          anunciar('Lista actualizada.');
+          var h = new Date();
+          aviso('Lista actualizada a las ' + ('0' + h.getHours()).slice(-2) + ':' + ('0' + h.getMinutes()).slice(-2) + '.', 'ok');
         }
         return;
       }
       if (res.estado === 401 || res.estado === 429 || res.estado === 503) {
         if (res.estado === 401) guardarClave('', false);
-        verClave(MENSAJES[res.estado]);
+        if (res.estado === 401 && automatica) verClave(MENSAJES['401-guardada'], false);
+        else verClave(MENSAJES[res.estado]);
         return;
       }
-      if ($('vista-lista').hidden) verClave(res.estado === 0 ? MENSAJES.red : MENSAJES.otro);
-      else anunciar(res.estado === 0 ? MENSAJES.red : MENSAJES.otro);
+      var msg = res.estado === 'lento' ? MENSAJES.lento : (res.estado === 0 ? MENSAJES.red : MENSAJES.otro);
+      if ($('vista-lista').hidden) verClave(msg, false);
+      else aviso(msg, 'error');
     });
   }
 
@@ -125,7 +164,7 @@
     e.preventDefault();
     var clave = $('clave').value.trim();
     if (!clave) { verClave('Escribe la clave de acceso.'); return; }
-    cargar(clave, $('recordar').checked, true);
+    cargar(clave, $('recordar').checked, true, false);
   });
   $('ver-clave').addEventListener('click', function () {
     var campo = $('clave');
@@ -135,46 +174,56 @@
     this.setAttribute('aria-label', ver ? 'Ocultar la clave' : 'Mostrar la clave');
     this.querySelector('use').setAttribute('href', ver ? '#i-eye-off' : '#i-eye');
   });
-  $('btn-actualizar').addEventListener('click', function () { if (estado.clave) cargar(estado.clave, null, false); });
+  $('btn-actualizar').addEventListener('click', function () { if (estado.clave) cargar(estado.clave, null, false, false); });
   $('btn-salir').addEventListener('click', function () {
+    if (!window.confirm('¿Cerrar el buscador en este teléfono? Tendrás que volver a escribir la clave.')) return;
     guardarClave('', false);
-    estado = { atletas: [], filtrados: [], pagina: 1, cargando: false };
+    estado = { atletas: [], filtrados: [], pagina: 1, cargando: false, clave: '' };
+    limpiarCampos();
     $('cuerpo').textContent = '';
+    $('cuenta').textContent = '';
+    $('pagina-txt').textContent = '';
+    aviso('');
     $('clave').value = '';
     verClave('');
     $('clave').focus();
   });
 
   // ---------- Datos ----------
+  function texto(v) { return v == null ? '' : String(v); }
   function normalizar(t) {
-    return String(t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
+    return texto(t).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
   }
-  function soloDigitos(t) { return String(t || '').replace(/\D/g, ''); }
+  function soloDigitos(t) { return texto(t).replace(/\D/g, ''); }
 
   // La fecha del Sheet viene como «AAAA-MM-DD HH:MM» (la escribe el flujo); por si alguien la edita a mano, también
-  // se acepta «DD/MM/AAAA». Devuelve «AAAA-MM-DD» o ''.
+  // se acepta «DD/MM/AAAA». Devuelve «AAAA-MM-DD» o '' si no es una fecha válida.
   function fechaISO(t) {
-    var s = String(t || '').trim();
-    var m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
-    if (m) return m[1] + '-' + m[2] + '-' + m[3];
-    m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
-    if (m) return m[3] + '-' + ('0' + m[2]).slice(-2) + '-' + ('0' + m[1]).slice(-2);
-    return '';
+    var s = texto(t).trim();
+    var a, m, d, r = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (r) { a = r[1]; m = r[2]; d = r[3]; }
+    else if ((r = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/))) { a = r[3]; m = ('0' + r[2]).slice(-2); d = ('0' + r[1]).slice(-2); }
+    else return '';
+    if (+m < 1 || +m > 12 || +d < 1 || +d > 31) return '';
+    return a + '-' + m + '-' + d;
   }
   function fechaCorta(iso, original) {
-    if (!iso) return original || '';
+    if (!iso) return texto(original);
     var p = iso.split('-');
     return Number(p[2]) + ' ' + MESES[Number(p[1]) - 1] + ' ' + p[0];
   }
 
   function preparar(a) {
-    var iso = fechaISO(a.fecha);
+    var edad = typeof a.edad === 'number' && isFinite(a.edad) ? a.edad : null;
     return {
       datos: a,
-      iso: iso,
-      orden: String(a.fecha || ''),
+      edad: edad,
+      iso: fechaISO(a.fecha),
+      orden: texto(a.fecha),
       nombre: normalizar(a.nombre),
+      rep: normalizar(a.representante),
       digitos: soloDigitos(a.documento),
+      telRep: soloDigitos(a.rep_telefono),
       idNorm: normalizar(a.id),
       pago: normalizar(a.pago),
     };
@@ -184,13 +233,16 @@
   function valores() {
     var min = parseInt($('f-edad-min').value, 10);
     var max = parseInt($('f-edad-max').value, 10);
+    min = isNaN(min) ? null : min;
+    max = isNaN(max) ? null : max;
+    if (min !== null && max !== null && min > max) { var t = min; min = max; max = t; } // rango al revés: se corrige solo
     return {
       texto: normalizar($('f-texto').value),
       posicion: $('f-posicion').value,
       pago: normalizar($('f-pago').value),
       comprobante: $('f-comprobante').value,
-      edadMin: isNaN(min) ? null : min,
-      edadMax: isNaN(max) ? null : max,
+      edadMin: min,
+      edadMax: max,
       desde: $('f-desde').value,
       hasta: $('f-hasta').value,
       pruebas: $('f-pruebas').checked,
@@ -201,20 +253,20 @@
 
   function cumple(p, f) {
     var a = p.datos;
-    if (!f.pruebas && a.prueba) return false;
+    if (!f.pruebas && a.prueba === true) return false;
     if (f.texto) {
       var dig = soloDigitos(f.texto);
-      var porCedula = dig.length >= 3 && p.digitos.indexOf(dig) !== -1;
+      var porNumero = dig.length >= 3 && (p.digitos.indexOf(dig) !== -1 || p.telRep.indexOf(dig) !== -1);
       var palabras = f.texto.replace(/[^a-z0-9ñ ]/g, ' ').split(' ').filter(Boolean);
-      var porNombre = palabras.length > 0 && palabras.every(function (w) { return p.nombre.indexOf(w) !== -1; });
+      var enNombre = function (base) { return palabras.length > 0 && palabras.every(function (w) { return base.indexOf(w) !== -1; }); };
       var porId = p.idNorm && p.idNorm.indexOf(f.texto) !== -1;
-      if (!porCedula && !porNombre && !porId) return false;
+      if (!porNumero && !enNombre(p.nombre) && !enNombre(p.rep) && !porId) return false;
     }
     if (f.posicion && a.posicion !== f.posicion) return false;
     if (f.pago && p.pago.indexOf(f.pago) !== 0) return false;
     if (f.comprobante && a.comprobante !== f.comprobante) return false;
-    if (f.edadMin !== null && (a.edad === null || a.edad < f.edadMin)) return false;
-    if (f.edadMax !== null && (a.edad === null || a.edad > f.edadMax)) return false;
+    if (f.edadMin !== null && (p.edad === null || p.edad < f.edadMin)) return false;
+    if (f.edadMax !== null && (p.edad === null || p.edad > f.edadMax)) return false;
     if (f.desde && (!p.iso || p.iso < f.desde)) return false;
     if (f.hasta && (!p.iso || p.iso > f.hasta)) return false;
     return true;
@@ -224,9 +276,9 @@
     var copia = lista.slice();
     copia.sort(function (x, y) {
       if (orden === 'nombre') return x.nombre.localeCompare(y.nombre, 'es');
-      if (orden === 'edad') return (x.datos.edad == null ? 99 : x.datos.edad) - (y.datos.edad == null ? 99 : y.datos.edad) || x.nombre.localeCompare(y.nombre, 'es');
-      if (orden === 'antiguo') return x.orden < y.orden ? -1 : x.orden > y.orden ? 1 : x.datos.fila - y.datos.fila;
-      return x.orden < y.orden ? 1 : x.orden > y.orden ? -1 : y.datos.fila - x.datos.fila;
+      if (orden === 'edad') return (x.edad === null ? 99 : x.edad) - (y.edad === null ? 99 : y.edad) || x.nombre.localeCompare(y.nombre, 'es');
+      if (orden === 'antiguo') return x.orden < y.orden ? -1 : x.orden > y.orden ? 1 : (x.datos.fila || 0) - (y.datos.fila || 0);
+      return x.orden < y.orden ? 1 : x.orden > y.orden ? -1 : (y.datos.fila || 0) - (x.datos.fila || 0);
     });
     return copia;
   }
@@ -251,10 +303,10 @@
   }
 
   // ---------- Dibujo ----------
-  function el(tag, clase, texto) {
+  function el(tag, clase, contenido) {
     var n = document.createElement(tag);
     if (clase) n.className = clase;
-    if (texto != null) n.textContent = texto;
+    if (contenido != null) n.textContent = contenido;
     return n;
   }
   function icono(id) {
@@ -267,84 +319,85 @@
     return svg;
   }
   // Solo ids de Drive con la forma de un id; todo lo demás se descarta, así un dato raro no arma un enlace raro.
-  function idDrive(id) { return /^[A-Za-z0-9_-]{10,}$/.test(String(id || '')) ? String(id) : ''; }
-  function enlace(clase, href, ico, texto, etiqueta) {
+  function idDrive(id) { return typeof id === 'string' && /^[A-Za-z0-9_-]{10,}$/.test(id) ? id : ''; }
+  function enlace(clase, href, ico, contenido, etiqueta) {
     var a = el('a', clase);
     a.href = href; a.target = '_blank'; a.rel = 'noopener noreferrer';
     a.appendChild(icono(ico));
-    a.appendChild(el('span', null, texto));
+    a.appendChild(el('span', null, contenido));
     if (etiqueta) a.setAttribute('aria-label', etiqueta);
     return a;
   }
   function dato(dl, k, v) {
+    v = texto(v);
     if (!v) return;
     dl.appendChild(el('dt', null, k));
     dl.appendChild(el('dd', null, v));
   }
+  var ESTADOS_PAGO = Object.create(null);
+  ESTADOS_PAGO.adjunto = ['Comprobante recibido', 'chip--ok'];
+  ESTADOS_PAGO.pendiente = ['Falta el comprobante', 'chip--falta'];
+  ESTADOS_PAGO.no_aplica = ['Paga en la oficina', 'chip--neutro'];
 
   function fila(p) {
     var a = p.datos;
+    var nombreTxt = texto(a.nombre);
     var tr = el('tr');
-    if (a.prueba) tr.className = 'es-prueba';
+    if (a.prueba === true) tr.className = 'es-prueba';
 
     var tdA = el('td', 'col-atleta');
     tdA.setAttribute('data-etiqueta', 'Atleta');
-    var nombre = el('p', 'atleta__nombre', a.nombre);
-    if (a.prueba) nombre.appendChild(el('span', 'chip chip--prueba', 'Prueba'));
+    var nombre = el('p', 'atleta__nombre', nombreTxt);
+    if (a.prueba === true) nombre.appendChild(el('span', 'chip chip--prueba', 'Prueba'));
     tdA.appendChild(nombre);
-    tdA.appendChild(el('p', 'atleta__doc', a.documento ? 'Cédula ' + a.documento : 'Sin cédula'));
+    tdA.appendChild(el('p', 'atleta__doc', a.documento ? 'Cédula ' + texto(a.documento) : (a.representante ? 'Representante: ' + texto(a.representante) : 'Sin cédula')));
     var det = el('details', 'atleta__mas');
     det.appendChild(el('summary', null, 'Ver datos'));
     var dl = el('dl', 'atleta__datos');
     dato(dl, 'Nacimiento', a.nacimiento);
-    dato(dl, 'Nacionalidad', a.nacionalidad);
-    dato(dl, 'Liga', a.liga);
-    dato(dl, 'Batea / lanza', [a.batea, a.lanza].filter(Boolean).join(' / '));
     dato(dl, 'Representante', a.representante);
     dato(dl, 'Tel. representante', a.rep_telefono);
-    dato(dl, 'Teléfono', a.telefono);
-    dato(dl, 'Correo', a.correo);
     dato(dl, 'N.º de inscripción', a.id);
     det.appendChild(dl);
     tdA.appendChild(det);
     tr.appendChild(tdA);
 
-    var tdE = el('td', 'col-edad', a.edad == null ? '—' : a.edad + ' años');
-    tdE.setAttribute('data-etiqueta', 'Edad');
-    tr.appendChild(tdE);
-
-    var tdP = el('td', 'col-posicion', a.posicion || '—');
-    tdP.setAttribute('data-etiqueta', 'Posición');
-    tr.appendChild(tdP);
-
-    var tdF = el('td', 'col-fecha', fechaCorta(p.iso, a.fecha) || '—');
-    tdF.setAttribute('data-etiqueta', 'Inscripción');
-    tr.appendChild(tdF);
-
-    var tdG = el('td', 'col-pago');
-    tdG.setAttribute('data-etiqueta', 'Pago');
-    var forma = String(a.pago || '').split('·')[0].trim();
-    tdG.appendChild(el('p', 'pago__forma', forma || '—'));
-    var estados = { adjunto: ['Comprobante recibido', 'chip--ok'], pendiente: ['Falta el comprobante', 'chip--falta'], no_aplica: ['Paga en la oficina', 'chip--neutro'] };
-    if (estados[a.comprobante]) tdG.appendChild(el('span', 'chip ' + estados[a.comprobante][1], estados[a.comprobante][0]));
-    tr.appendChild(tdG);
-
+    // Archivos: la planilla es la acción principal; foto y comprobante van aparte, aunque falte la planilla.
     var tdX = el('td', 'col-archivos');
     tdX.setAttribute('data-etiqueta', 'Planilla');
     var planilla = idDrive(a.planilla);
     if (planilla) {
       tdX.appendChild(enlace('boton boton--chico boton--principal archivo', 'https://drive.google.com/uc?export=download&id=' + encodeURIComponent(planilla),
-        'i-download', 'Descargar planilla', 'Descargar la planilla de ' + a.nombre));
-      var extra = el('div', 'archivos__mas');
-      extra.appendChild(enlace('archivo-link', 'https://drive.google.com/file/d/' + encodeURIComponent(planilla) + '/view', 'i-file-type-pdf', 'Ver', 'Ver la planilla de ' + a.nombre));
-      var foto = idDrive(a.foto);
-      if (foto) extra.appendChild(enlace('archivo-link', 'https://drive.google.com/file/d/' + encodeURIComponent(foto) + '/view', 'i-photo', 'Foto', 'Ver la foto de ' + a.nombre));
-      var comp = idDrive(a.comprobante_id);
-      if (comp) extra.appendChild(enlace('archivo-link', 'https://drive.google.com/file/d/' + encodeURIComponent(comp) + '/view', 'i-receipt', 'Comprobante', 'Ver el comprobante de ' + a.nombre));
-      tdX.appendChild(extra);
+        'i-download', 'Descargar planilla', 'Descargar la planilla de ' + nombreTxt));
     } else {
-      tdX.appendChild(el('p', 'archivos__falta', 'Sin planilla guardada'));
+      tdX.appendChild(el('p', 'archivos__falta', 'No se guardó la planilla de esta inscripción. Pídele a AutomatizaTech que la recupere.'));
     }
+    var extra = el('div', 'archivos__mas');
+    if (planilla) extra.appendChild(enlace('archivo-link', 'https://drive.google.com/file/d/' + encodeURIComponent(planilla) + '/view', 'i-file-type-pdf', 'Ver', 'Ver la planilla de ' + nombreTxt));
+    var foto = idDrive(a.foto);
+    if (foto) extra.appendChild(enlace('archivo-link', 'https://drive.google.com/file/d/' + encodeURIComponent(foto) + '/view', 'i-photo', 'Foto', 'Ver la foto de ' + nombreTxt));
+    var comp = idDrive(a.comprobante_id);
+    if (comp) extra.appendChild(enlace('archivo-link', 'https://drive.google.com/file/d/' + encodeURIComponent(comp) + '/view', 'i-receipt', 'Comprobante', 'Ver el comprobante de ' + nombreTxt));
+    if (extra.childNodes.length) tdX.appendChild(extra);
+
+    var tdE = el('td', 'col-edad', p.edad === null ? '—' : p.edad + ' años');
+    tdE.setAttribute('data-etiqueta', 'Edad');
+    var tdP = el('td', 'col-posicion', texto(a.posicion) || '—');
+    tdP.setAttribute('data-etiqueta', 'Posición');
+    var tdF = el('td', 'col-fecha', fechaCorta(p.iso, a.fecha) || '—');
+    tdF.setAttribute('data-etiqueta', 'Inscripción');
+    var tdG = el('td', 'col-pago');
+    tdG.setAttribute('data-etiqueta', 'Pago');
+    var forma = texto(a.pago).split('·')[0].trim();
+    tdG.appendChild(el('p', 'pago__forma', forma || '—'));
+    var est = ESTADOS_PAGO[a.comprobante];
+    if (est) tdG.appendChild(el('span', 'chip ' + est[1], est[0]));
+
+    // Orden en el DOM = orden de la tabla de escritorio; en el celular el CSS sube la planilla junto al nombre.
+    tr.appendChild(tdE);
+    tr.appendChild(tdP);
+    tr.appendChild(tdF);
+    tr.appendChild(tdG);
     tr.appendChild(tdX);
     return tr;
   }
@@ -363,10 +416,15 @@
     visibles.forEach(function (p) { frag.appendChild(fila(p)); });
     cuerpo.appendChild(frag);
 
-    var reales = estado.atletas.filter(function (p) { return !p.datos.prueba; }).length;
+    var reales = estado.atletas.filter(function (p) { return p.datos.prueba !== true; }).length;
+    var pruebas = estado.atletas.length - reales;
     var hayFiltro = !!(f.texto || f.posicion || f.pago || f.comprobante || f.desde || f.hasta || f.edadMin !== null || f.edadMax !== null);
-    $('cuenta').textContent = (total === 1 ? '1 atleta' : total + ' atletas') +
-      (hayFiltro ? ' encontrados de ' + reales + ' inscritos' : (total === 1 ? ' inscrito' : ' inscritos'));
+    var txt;
+    if (hayFiltro) txt = total + (total === 1 ? ' atleta encontrado' : ' atletas encontrados') + ' de ' + reales + ' inscritos';
+    else txt = reales + (reales === 1 ? ' atleta inscrito' : ' atletas inscritos');
+    if (f.pruebas && pruebas) txt += ' (se muestran también ' + pruebas + (pruebas === 1 ? ' de prueba)' : ' de prueba)');
+    $('cuenta').textContent = txt;
+    $('btn-ver-resultados').textContent = total === 1 ? 'Ver 1 atleta' : 'Ver ' + total + ' atletas';
 
     var vacio = total === 0;
     $('vacio').hidden = !vacio;
@@ -393,24 +451,37 @@
   });
   $('filtros').addEventListener('submit', function (e) { e.preventDefault(); aplicar(true); });
 
-  function limpiar() {
+  function limpiarCampos() {
     $('f-texto').value = '';
     ['f-posicion', 'f-pago', 'f-comprobante'].forEach(function (id) { $(id).value = ''; });
     ['f-edad-min', 'f-edad-max', 'f-desde', 'f-hasta'].forEach(function (id) { $(id).value = ''; });
     $('f-pruebas').checked = false;
+    contarFiltros(valores());
+  }
+  function limpiar() {
+    limpiarCampos();
     aplicar(true);
     anunciar('Filtros limpios.');
   }
   $('btn-limpiar').addEventListener('click', limpiar);
   $('btn-limpiar-2').addEventListener('click', limpiar);
 
-  function irA(n) {
-    estado.pagina = n;
-    dibujar(valores());
+  // «Ver resultados» (celular): cierra el panel y lleva a la lista.
+  $('btn-ver-resultados').addEventListener('click', function () {
+    $('filtros-mas').open = false;
+    irALista();
+  });
+
+  function irALista() {
     var cabeza = $('t-lista');
     cabeza.setAttribute('tabindex', '-1');
     cabeza.focus({ preventScroll: true });
     cabeza.scrollIntoView({ block: 'start' });
+  }
+  function irA(n) {
+    estado.pagina = n;
+    dibujar(valores());
+    irALista();
   }
   $('btn-anterior').addEventListener('click', function () { if (estado.pagina > 1) irA(estado.pagina - 1); });
   $('btn-siguiente').addEventListener('click', function () { irA(estado.pagina + 1); });
@@ -418,8 +489,8 @@
   // En escritorio los filtros quedan abiertos; en el celular, cerrados para que se vea la lista.
   if (window.matchMedia('(min-width: 900px)').matches) $('filtros-mas').open = true;
 
-  // ---------- Inicio: si la clave está guardada, entra directo ----------
-  var guardada = leer(CLAVE_ACCESO);
-  if (guardada) cargar(guardada, null, true);
+  // ---------- Inicio: si la clave está guardada (y el endpoint es el oficial), entra directo ----------
+  var guardada = ENDPOINT === ENDPOINT_OFICIAL ? leerClave() : '';
+  if (guardada) cargar(guardada, null, true, true);
   else verClave('');
 })();

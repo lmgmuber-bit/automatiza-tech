@@ -177,3 +177,115 @@ function at_pt_crear_plan(int $contrato_id): int|WP_Error {
 	}
 	return new WP_Error('at_pt_insert', 'No se pudo crear el plan: ' . $wpdb->last_error);
 }
+
+/** Todos los estados que conoce el plan (los de at_pt_transiciones(), de origen y de destino). */
+function at_pt_db_estados(): array {
+	$e = [];
+	foreach (at_pt_transiciones() as $de => $destinos) {
+		$e[(string) $de] = true;
+		foreach ((array) $destinos as $a) {
+			$e[(string) $a] = true;
+		}
+	}
+	return array_keys($e);
+}
+
+/** 'AAAA-MM-DD' que existe en el calendario. */
+function at_pt_db_fecha_valida(string $f): bool {
+	return (bool) preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $f, $m) && checkdate((int) $m[2], (int) $m[3], (int) $m[1]);
+}
+
+/** Enlace http(s) de hasta 500 caracteres; '' si no sirve (nunca se recorta un enlace). */
+function at_pt_db_url($u): string {
+	$u = trim((string) $u);
+	if ($u === '' || strlen($u) > 500 || !preg_match('#^https?://#i', $u)) {
+		return '';
+	}
+	return (string) esc_url_raw($u, ['http', 'https']);
+}
+
+/**
+ * Guarda columnas del plan. Permitidas: estado, fecha_inicio, payload (arreglo → JSON), comentarios,
+ * nota, view_url, pdf_url, enviado_at; las demás (id, contrato_id, codigo, …) se ignoran. Devuelve false
+ * sin tocar nada si el plan no existe, si no viene ninguna permitida o si un valor no sirve (estado
+ * desconocido, fecha inexistente, payload que no es arreglo): nunca se guarda un plan roto.
+ */
+function at_pt_guardar(int $id, array $campos): bool {
+	$datos = [];
+	foreach ($campos as $k => $v) {
+		switch ($k) {
+			case 'estado':
+				if (!in_array((string) $v, at_pt_db_estados(), true)) {
+					return false;
+				}
+				$datos['estado'] = (string) $v;
+				break;
+			case 'fecha_inicio':
+				if ($v === null || $v === '') {
+					$datos['fecha_inicio'] = null;
+				} elseif (at_pt_db_fecha_valida((string) $v)) {
+					$datos['fecha_inicio'] = (string) $v;
+				} else {
+					return false;
+				}
+				break;
+			case 'payload':
+				if ($v === null || $v === []) {
+					$datos['payload'] = null;
+					break;
+				}
+				if (!is_array($v)) {
+					return false;
+				}
+				$json = wp_json_encode($v, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+				if (!is_string($json)) {
+					return false;
+				}
+				$datos['payload'] = $json;
+				break;
+			case 'comentarios':
+				$datos['comentarios'] = mb_substr((string) $v, 0, 4000);
+				break;
+			case 'nota':
+				$datos['nota'] = mb_substr((string) $v, 0, 1000);
+				break;
+			case 'view_url':
+			case 'pdf_url':
+				$datos[$k] = at_pt_db_url($v);
+				break;
+			case 'enviado_at':
+				if ($v === null || $v === '') {
+					$datos['enviado_at'] = null;
+				} elseif (preg_match('/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/', (string) $v)) {
+					$datos['enviado_at'] = (string) $v;
+				} else {
+					return false;
+				}
+				break;
+		}
+	}
+	if (!$datos || !at_pt_plan($id)) {
+		return false;
+	}
+	global $wpdb;
+	return $wpdb->update(at_pt_tabla(), $datos, ['id' => $id]) !== false;
+}
+
+/**
+ * Cambia el estado si la transición es válida (at_pt_transicion_valida). La nota describe el estado
+ * nuevo: cambiar sin nota la deja vacía. Compara y cambia: si otro proceso movió el estado entre la
+ * lectura y la escritura, no se pisa y devuelve false.
+ */
+function at_pt_cambiar_estado(int $id, string $a, string $nota = ''): bool {
+	$f = at_pt_plan($id);
+	if (!$f || !at_pt_transicion_valida((string) $f->estado, $a)) {
+		return false;
+	}
+	global $wpdb;
+	$r = $wpdb->update(at_pt_tabla(), ['estado' => $a, 'nota' => mb_substr($nota, 0, 1000)], ['id' => $id, 'estado' => (string) $f->estado]);
+	if ($r === false) {
+		return false;
+	}
+	$ahora = at_pt_plan($id);
+	return $ahora !== null && $ahora->estado === $a;
+}

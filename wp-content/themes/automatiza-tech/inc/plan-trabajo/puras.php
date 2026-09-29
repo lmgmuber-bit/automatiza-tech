@@ -95,3 +95,111 @@ function at_pt_fecha_larga(string $ymd): string {
 	[$a, $m, $d] = explode('-', $f);
 	return (int) $d . ' de ' . $meses[(int) $m - 1] . ' de ' . $a;
 }
+
+/* ---------- Enumeraciones y tabla de tiempos (Task 2) ---------- */
+
+/** Fases del plan en su orden fijo y con su título fijo (Método AT: lo que viene después de la firma). */
+function at_pt_fases_validas(): array {
+	return ['diseno_desarrollo' => 'Diseño y desarrollo', 'implementacion' => 'Implementación', 'soporte' => 'Soporte y mejora continua'];
+}
+
+/** Quién hace cada actividad. */
+function at_pt_responsables(): array {
+	return ['at' => 'AutomatizaTech', 'cliente' => 'Tú', 'ambos' => 'Ambos'];
+}
+
+/** Etapa de una actividad; '' es «otra» (no calza con la tabla de tiempos). */
+function at_pt_etapas(): array {
+	return ['arranque' => 'Arranque', 'diseno' => 'Diseño', 'desarrollo' => 'Desarrollo', 'pruebas' => 'Pruebas', 'implementacion' => 'Implementación', 'soporte' => 'Soporte', '' => 'Otra'];
+}
+
+/** De dónde sale la duración de una actividad: la tabla de tiempos, la IA (el panel la marca «revisar») o Luis a mano. */
+function at_pt_origenes(): array {
+	return ['tabla' => 'Tabla de tiempos', 'ia' => 'IA · revisar', 'luis' => 'Editado por Luis'];
+}
+
+/** Láminas del plan que pueden llevar foto (image_briefs[].slide), en el orden del documento. */
+function at_pt_slides_foto(): array {
+	return ['cover', 'metodo', 'gantt', 'fase_1', 'fase_2', 'fase_3', 'necesitamos', 'reuniones', 'portal', 'cierre'];
+}
+
+/** Etapas que son columnas de la tabla de tiempos. */
+function at_pt_etapas_tabla(): array {
+	return ['diseno', 'desarrollo', 'pruebas', 'implementacion'];
+}
+
+/** Entero exacto desde un número JSON o un texto de dígitos (5, '5', ' 12 ', 3.0); null si no lo es (3.5, '3,5', true, []). */
+function at_pt_entero(mixed $v): ?int {
+	if (is_int($v)) {
+		return $v;
+	}
+	if (is_float($v) && is_finite($v) && floor($v) === $v && abs($v) < 1e9) {
+		return (int) $v;
+	}
+	if (is_string($v) && preg_match('/^\s*-?\d{1,9}\s*$/', $v)) {
+		return (int) trim($v);
+	}
+	return null;
+}
+
+/** Tabla de tiempos de referencia propuesta (spec §3, días hábiles por etapa). Luis la corrige en «Ajustes del plan». */
+function at_pt_duraciones_defecto(): array {
+	return [
+		'sitio_una_pagina'   => ['nombre' => 'Sitio de una página',           'diseno' => 3, 'desarrollo' => 5,  'pruebas' => 2, 'implementacion' => 1],
+		'sitio_web_tienda'   => ['nombre' => 'Sitio web o tienda',            'diseno' => 5, 'desarrollo' => 10, 'pruebas' => 3, 'implementacion' => 2],
+		'asistente_basico'   => ['nombre' => 'Asistente básico',              'diseno' => 2, 'desarrollo' => 4,  'pruebas' => 2, 'implementacion' => 1],
+		'asistente_avanzado' => ['nombre' => 'Asistente avanzado',            'diseno' => 3, 'desarrollo' => 8,  'pruebas' => 3, 'implementacion' => 2],
+		'plataforma'         => ['nombre' => 'Plataforma o sistema a medida', 'diseno' => 8, 'desarrollo' => 20, 'pruebas' => 5, 'implementacion' => 3],
+		'automatizacion_n8n' => ['nombre' => 'Automatización (flujo n8n)',    'diseno' => 2, 'desarrollo' => 5,  'pruebas' => 2, 'implementacion' => 1],
+		'google_ads'         => ['nombre' => 'Google Ads (puesta en marcha)', 'diseno' => 2, 'desarrollo' => 3,  'pruebas' => 1, 'implementacion' => 1],
+	];
+}
+
+/** Solo las filas válidas de una tabla de tiempos: clave [a-z0-9_]{2,40}, nombre de 1 a 60 caracteres y los cuatro
+ *  números enteros de 0 a 60. Acepta 'clave' => fila o una lista de filas con 'clave' (el formulario de ajustes). Si
+ *  una clave se repite, gana la primera. Quita los campos de más. */
+function at_pt_normalizar_duraciones(array $tabla): array {
+	$out = [];
+	foreach ($tabla as $k => $fila) {
+		if (!is_array($fila)) {
+			continue;
+		}
+		$clave = trim(is_int($k) ? (is_string($fila['clave'] ?? null) ? $fila['clave'] : '') : (string) $k);
+		if (!preg_match('/^[a-z0-9_]{2,40}$/', $clave) || isset($out[$clave])) {
+			continue;
+		}
+		$nombre = is_string($fila['nombre'] ?? null) ? trim($fila['nombre']) : '';
+		$largo = mb_strlen($nombre, 'UTF-8');
+		if ($largo < 1 || $largo > 60) {
+			continue;
+		}
+		$limpia = ['nombre' => $nombre];
+		foreach (at_pt_etapas_tabla() as $etapa) {
+			$n = at_pt_entero($fila[$etapa] ?? null);
+			if ($n === null || $n < 0 || $n > 60) {
+				continue 2;
+			}
+			$limpia[$etapa] = $n;
+		}
+		$out[$clave] = $limpia;
+	}
+	return $out;
+}
+
+/** Bloque fijo «Arranque» (spec §3): reunión de inicio y entrega de insumos del cliente (cláusula 4.2 del contrato:
+ *  el plazo corre desde que recibimos el anticipo y los insumos). Siempre es el primer bloque del plan. */
+function at_pt_arranque(): array {
+	$actividad = static function (string $nombre, string $detalle, string $responsable, int $dias): array {
+		return ['nombre' => $nombre, 'detalle' => $detalle, 'responsable' => $responsable, 'dias_habiles' => $dias,
+			'servicio' => '', 'etapa' => 'arranque', 'origen' => 'tabla', 'en_paralelo' => false, 'desde' => '', 'hasta' => ''];
+	};
+	return [
+		'nombre'      => 'Arranque',
+		'entregable'  => '',
+		'entrega'     => false,
+		'actividades' => [
+			$actividad('Reunión de inicio', 'Nos conocemos, revisamos este plan y acordamos cómo nos comunicamos.', 'ambos', 1),
+			$actividad('Entrega de logo, textos y accesos', 'El plazo corre desde que recibimos el anticipo y estos insumos.', 'cliente', 3),
+		],
+	];
+}

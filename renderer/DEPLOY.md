@@ -114,3 +114,15 @@ costó reconstruir el contexto: leer esto entero antes de tocar el servicio.
   PDF se roza el presupuesto de 210 s: si vuelven a verse degradados, subir
   `CONCURRENCY` a 2 en `src/higgsfield.js` (las mediciones de agosto que
   desaconsejaban paralelizar eran con Soul Standard, no con Soul 2).
+- 2026-09-28, commits `da9a3b2` y `6f053e9` (rama `claude/renderer-links`):
+  `linkify()` en `src/escape.js` convierte las URL `https://…` en enlaces en
+  los párrafos y en los próximos pasos (se aplica después de `escapeHtml`, así
+  que no abre inyección); la tabla de inversión con más de 6 filas usa
+  `.pricing-table.is-dense` (19 px, relleno 6 px) para no desbordar la lámina.
+  Tres pruebas nuevas en `test/template.test.js`, 94/94 en verde. Zip
+  `propuesta-renderer-ENLACES-6f053e9.zip` subido por Luis a Easypanel el
+  mismo día; verificado re-aprobando una propuesta real de 8 filas: CSS nuevo,
+  tabla densa y enlace del demo clicable en la presentación; PDF generado
+  (2,5 MB). Solo
+  cambia lo que se renderice después; las presentaciones ya publicadas quedan
+  como estaban hasta que se vuelvan a aprobar.

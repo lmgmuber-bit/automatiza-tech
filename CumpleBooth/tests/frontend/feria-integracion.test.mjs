@@ -167,7 +167,8 @@ test('integración real 020 + build 021: SQLite aislada, tres fondos adultos y f
   await page.click('input[type=checkbox]');await button('Saltar')
   await page.waitForSelector('[data-feria-welcome] video');await new Promise((done)=>setTimeout(done,1500))
   const intro=await page.$eval('[data-feria-welcome] video',(v)=>({t:v.currentTime,paused:v.paused,muted:v.muted,src:v.currentSrc}));await shot('08-ninos-intro')
-  assert.ok(intro.t>0.3&&!intro.paused&&!intro.muted&&intro.src.includes('welcome-hielo'),'la intro de Hielo suena y avanza: '+JSON.stringify(intro))
+  // Desde el 28-09 la intro se baja de antemano: si alcanzó a bajar, el <video> monta un blob URL en vez del archivo.
+  assert.ok(intro.t>0.3&&!intro.paused&&!intro.muted&&(intro.src.includes('welcome-hielo')||intro.src.startsWith('blob:')),'la intro de Hielo suena y avanza: '+JSON.stringify(intro))
   await pasarIntro();await page.emulateMediaFeatures([{name:'prefers-reduced-motion',value:'reduce'}])
   assert.ok(await page.evaluate(()=>window.__pasos.includes('welcome')),'Hielo muestra su intro antes del menú')
   // Hielo trae Asómate: en Niños se elige primero (26-09). Después, ruleta, personaje y su minijuego como en una fiesta.
@@ -181,6 +182,23 @@ test('integración real 020 + build 021: SQLite aislada, tres fondos adultos y f
   await page.waitForSelector('.feria-result');await shot('09-ninos-foto')
   await button('Guardar y ver mi QR');await page.waitForSelector('.feria-qr');await shot('10-ninos-qr')
   await button('Ver mi diploma');await page.waitForSelector('.feria-diploma img');await shot('11-ninos-diploma')
+
+  // ── Despedida y respaldo de la intro (28-09: en la feria la intro se saltaba y caía directo a la ruleta) ─────
+  // Al terminar, la despedida de la temática antes de volver al selector, como en una fiesta.
+  const vuelta=page.waitForNavigation({waitUntil:'domcontentloaded',timeout:45000})
+  await button('Terminar');await page.waitForSelector('[data-feria-video=despedida]');await shot('11b-ninos-despedida')
+  assert.ok(await page.evaluate(()=>window.__pasos.includes('despedida')),'Hielo despide antes de volver al selector')
+  await vuelta;assert.ok(page.url().includes('/feria.html'),'la despedida vuelve al selector: '+page.url())
+  // Si el video de la intro no llega (wifi caído), queda la tarjeta con el emoji un mínimo antes de seguir: nunca salta de una.
+  await page.setRequestInterception(true)
+  page.on('request',(req)=>req.url().includes('welcome-hielo')?req.abort():req.continue())
+  await page.goto(origin+'/?'+new URLSearchParams({p:fixture.slug,tema:'hielo',modo:'infantil'}),{waitUntil:'networkidle0'})
+  if(await page.$('input[type=checkbox]'))await page.click('input[type=checkbox]')
+  await button('Saltar');const t0=Date.now()
+  await page.waitForSelector('[data-feria-video=welcome] .welcome-car3d-emoji',{timeout:10000});await shot('08c-ninos-intro-respaldo')
+  await page.waitForSelector('[data-step=menu]',{timeout:15000});const duro=Date.now()-t0
+  assert.ok(duro>=3500&&duro<=12000,'la intro de respaldo se ve un mínimo antes de seguir: '+duro+' ms')
+  page.removeAllListeners('request');await page.setRequestInterception(false)
 
   // ── Ruta Asómate dentro de la cabina de feria (26-09, primera corrida) ───────────────────────────────
   // Recorre lo mismo que un niño en la feria: nombre → menú → Asómate → elegir personaje → cámara con la

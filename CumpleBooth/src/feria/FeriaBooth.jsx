@@ -6,6 +6,8 @@ import { filterImage } from './photo.js'
 import { afterName, armIdle, firstName, initialPhotoStep, reservation, returnUrl, takeConsent, upload } from './contract.js'
 import { downloadImage, withRemembrance } from './media.js'
 import { FullscreenButton, useFullscreenOnTap } from './fullscreen.jsx'
+import { prepararVideo, urlDeVideo } from '../videoListo.js'
+import { INTRO_ARRANQUE_MS, alVencer, esperaPorDuracion, restanteMinimo } from './intro.js'
 import './feria.css'
 
 // Niños en feria recupera lo de una fiesta (Luis, 26-09, ya en la feria): el minijuego del personaje antes de la
@@ -13,7 +15,7 @@ import './feria.css'
 // este archivo no dependa del estado de BoothApp; la foto igual sale con número, recuerdo y QR de la feria.
 export default function FeriaBooth({ feria, theme, themeData, characters, filter, base, Spinner, Character, renderPhoto, renderDiploma,
   asomate = null, gameFor = null, Game = null, AsomatePick = null, Capture = null, AsomateReview = null, asomatePerson = null, prepareAsomate = null,
-  welcomeSrc = null, music = null, volantinUrl = null }) {
+  welcomeSrc = null, despedidaSrc = null, music = null, volantinUrl = null }) {
   const [segmenter, setSegmenter] = useState(null)
   const [step, setStep] = useState('name')
   const [name, setName] = useState('')
@@ -37,12 +39,17 @@ export default function FeriaBooth({ feria, theme, themeData, characters, filter
   const heading = useRef(null)
   const child = feria.modo === 'infantil'
   const destination = returnUrl(new URLSearchParams(location.search).get('volver'), feria.slug)
-  const finish = useCallback(() => location.replace(destination), [destination])
+  const leave = useCallback(() => location.replace(destination), [destination])
+  // Al terminar, la despedida de la temática como en una fiesta (Luis, 28-09); sin video se vuelve directo al selector.
+  const finish = useCallback(() => { if (despedidaSrc && held) setStep('despedida'); else leave() }, [despedidaSrc, held, leave])
   const winner = useCallback((value) => { setPerson(value); setStep('character') }, [])
   const camera = useCallback(() => setStep('camera'), [])
   const afterCharacter = useCallback(() => setStep(child && gameFor && person && gameFor(person.name) ? 'juego' : 'camera'), [child, gameFor, person])
   const asomateOk = Boolean(asomate && AsomatePick && Capture && AsomateReview)
   useFullscreenOnTap()
+  // Los videos de la temática se bajan enteros apenas se abre el kiosco, como la despedida en una fiesta: la intro
+  // arranca en el acto aunque el wifi del salón esté lento y no se cae a media descarga (Luis, 28-09).
+  useEffect(() => { prepararVideo(welcomeSrc); prepararVideo(despedidaSrc) }, [welcomeSrc, despedidaSrc])
   const afterWelcome = useCallback(() => setStep(afterName(characters, asomateOk)), [characters, asomateOk])
   const { start: startMusic, muted, toggle: toggleMusic } = useFeriaMusic(music, step)
   // Tras el nombre, la intro de la temática como en una fiesta (Luis, 26-09). El toque del nombre es el gesto
@@ -134,7 +141,8 @@ export default function FeriaBooth({ feria, theme, themeData, characters, filter
       {child && !consent && <label className="feria-consent"><input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} />Soy el adulto responsable y autorizo tomar la foto</label>}
       <button className="feria-primary" disabled={!consent} onClick={() => { setName(firstName(name)); afterNameStep() }}>Continuar <span aria-hidden="true">→</span></button><button className="feria-quiet" disabled={!consent} onClick={() => { setName(''); afterNameStep() }}>Saltar</button>
     </section>}
-    {step === 'welcome' && welcomeSrc && <FeriaWelcome src={welcomeSrc} name={name} onDone={afterWelcome} />}
+    {step === 'welcome' && welcomeSrc && <FeriaVideo marca="welcome" src={welcomeSrc} titulo={name ? '¡Te damos la bienvenida!' : '¡Bienvenidos!'} name={name} emoji="🎉" onDone={afterWelcome} />}
+    {step === 'despedida' && despedidaSrc && <FeriaVideo marca="despedida" src={despedidaSrc} titulo="¡Gracias por venir!" name={name} emoji="👋" onDone={leave} />}
     {step === 'menu' && <section className="feria-panel feria-menu"><span className="feria-eyebrow">{child ? 'ELIGE TU AVENTURA' : 'ELIGE TU FOTO'}</span><h1 ref={heading} tabIndex={-1}>¿Cómo quieres tu foto?</h1>
       <div className="feria-menu-opciones">
         <button className="feria-opcion" onClick={startPersonaje}><span aria-hidden="true">{withCharacters ? '🎡' : '📸'}</span><strong>{withCharacters ? 'Foto con tu personaje' : 'Foto con la temática'}</strong><small>{withCharacters ? 'Gira la ruleta, conoce a tu personaje y juega antes de la foto' : 'Tu foto con el fondo de esta temática'}</small></button>
@@ -186,7 +194,7 @@ function useFeriaMusic(src, step) {
   useEffect(() => {
     const a = audio.current
     if (!a) return
-    if (step === 'welcome' || step === 'character') { a.volume = MUSICA_BAJO_VOZ; return }
+    if (step === 'welcome' || step === 'character' || step === 'despedida') { a.volume = MUSICA_BAJO_VOZ; return }
     if (step === 'juego') {
       a.volume = MUSICA_BAJO_VOZ
       const t = setTimeout(() => { if (audio.current) audio.current.volume = MUSICA }, 6000)
@@ -199,49 +207,46 @@ function useFeriaMusic(src, step) {
   return { start, muted, toggle: () => setMuted((m) => !m) }
 }
 
-// La intro de la temática con las mismas piezas y reglas que ListaInvitados en App.jsx: avanza al terminar, con un
-// toque o si el video falla; el temporizador de seguridad le da lo que le falta a un video que sigue avanzando
-// (tope 45 s), para no cortar a media frase en una tablet lenta.
-function FeriaWelcome({ src, name, onDone }) {
+// La intro y la despedida de la temática, con las mismas piezas que ListaInvitados y VideoScreen en App.jsx, y una
+// regla más (Luis, 28-09: en la feria la intro se saltaba y caía directo a la ruleta): el video se monta desde memoria
+// si ya bajó, se ve aunque la tablet pida menos animaciones, y si no arranca o falla queda una tarjeta con el nombre
+// en vez de saltar. Un toque la termina, como en una fiesta. Los tiempos viven en intro.js.
+function FeriaVideo({ marca, src, titulo, name, emoji, onDone }) {
   const video = useRef(null)
   const timer = useRef(null)
-  const progreso = useRef({ t: -1, desde: Date.now() })
-  const listo = useRef(false)
-  const reduce = useRef(typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches)
+  const estado = useRef({ t: -1, desde: Date.now(), listo: false })
+  const [tarjeta, setTarjeta] = useState(false)
   const terminar = useCallback(() => {
-    if (listo.current) return
-    listo.current = true
+    if (estado.current.listo) return
+    estado.current.listo = true
     clearTimeout(timer.current)
     onDone()
   }, [onDone])
+  const terminarTras = useCallback((ms) => { clearTimeout(timer.current); timer.current = setTimeout(terminar, ms) }, [terminar])
   const vigilar = useCallback((ms) => {
     clearTimeout(timer.current)
     timer.current = setTimeout(() => {
       const v = video.current
-      const avanza = v && !v.ended && !v.paused && v.currentTime > progreso.current.t + 0.05
-      if (avanza && Date.now() - progreso.current.desde < 45000 && Number.isFinite(v.duration)) {
-        progreso.current.t = v.currentTime
-        vigilar(Math.max(800, (v.duration - v.currentTime) * 1000 + 600))
-        return
-      }
+      const paso = alVencer({ video: v ? { ended: v.ended, paused: v.paused, currentTime: v.currentTime, duration: v.duration } : null,
+        ultimoTiempo: estado.current.t, desde: estado.current.desde, ahora: Date.now() })
+      if (paso.accion === 'esperar') { estado.current.t = paso.tiempo; vigilar(paso.ms); return }
+      if (paso.accion === 'tarjeta') { setTarjeta(true); terminarTras(paso.ms); return }
       terminar()
     }, ms)
-  }, [terminar])
+  }, [terminar, terminarTras])
   useEffect(() => {
-    vigilar(reduce.current ? 1200 : 20000)
+    vigilar(INTRO_ARRANQUE_MS)
     return () => clearTimeout(timer.current)
   }, [vigilar])
-  return <div className="welcome-popup" onClick={terminar} data-feria-welcome="">
-    <h2>{name ? '¡Te damos la bienvenida!' : '¡Bienvenidos!'}</h2>
+  const fallo = () => { setTarjeta(true); terminarTras(restanteMinimo(estado.current.desde, Date.now())) }
+  const extra = marca === 'welcome' ? { 'data-feria-welcome': '' } : {}
+  return <div className="welcome-popup" onClick={terminar} data-feria-video={marca} {...extra}>
+    <h2>{titulo}</h2>
     {name && <p className="welcome-name">{name}</p>}
     <div className="welcome-car3d" aria-hidden="true">
-      {reduce.current ? <span className="welcome-car3d-emoji">🎉</span> : <video className="welcome-car3d-video" src={src} autoPlay playsInline ref={video}
-        onLoadedMetadata={(e) => {
-          const d = Number(e.currentTarget?.duration)
-          progreso.current = { t: -1, desde: Date.now() }
-          if (Number.isFinite(d) && d > 0) vigilar(Math.min(30000, d * 1000 + 600))
-        }}
-        onEnded={terminar} onError={terminar} />}
+      {tarjeta ? <span className="welcome-car3d-emoji">{emoji}</span> : <video className="welcome-car3d-video" src={urlDeVideo(src)} autoPlay playsInline ref={video}
+        onLoadedMetadata={(e) => { estado.current.t = -1; const ms = esperaPorDuracion(e.currentTarget?.duration); if (ms) vigilar(ms) }}
+        onEnded={() => terminarTras(restanteMinimo(estado.current.desde, Date.now()))} onError={fallo} />}
     </div>
   </div>
 }

@@ -479,6 +479,7 @@ export default function App() {
     asomate={CONFIG.asomate || null} gameFor={feriaGameFor} Game={Juego} AsomatePick={AsomateElegir} Capture={Capture}
     AsomateReview={AsomatePreview} asomatePerson={personajeDeAsomate} prepareAsomate={prepararAsomateFeria}
     welcomeSrc={FERIA_THEME?.videos?.welcome || THEME_SLUG === 'carreras' ? WELCOME_VIDEO_PRIMARY : null}
+    despedidaSrc={FERIA_THEME?.videos?.despedida ? CONFIG.videos.despedida : null}
     volantinUrl={THEME_SLUG === 'fiestas-patrias' ? BASE + 'juego/volantin/' : null}
     music={MUSIC_ENABLED ? CONFIG.audio.musica : null} />
   return <BoothApp key={slug} />

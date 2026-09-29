@@ -1081,3 +1081,79 @@ function at_pt_costo_fotos(array $image_briefs, bool $hay_propuesta): array {
 		'usd_max'      => round($n * AT_PT_USD_POR_FOTO * 2 + $revision * 2, 4),
 	];
 }
+
+/* ---------- Cuerpo que WordPress manda al renderer (Task 4) ---------- */
+
+/** Mensaje del enlace «Por WhatsApp con Tech» del cierre del documento (spec §7). */
+function at_pt_texto_whatsapp_agenda(string $codigo): string {
+	return 'Hola Tech, quiero agendar la llamada de seguimiento de mi plan de trabajo (código ' . $codigo . ')';
+}
+
+/** Cuerpo de POST /render del renderer con document_type 'plan' (forma en el esqueleto). $datos = ['codigo',
+ *  'company_name', 'client_name', 'portal_url', 'whatsapp', 'fecha_firma', 'garantia_meses'] (at_pt_datos_render(),
+ *  Task 5). company_name ya viene en el orden de la decisión D9 (company_name de la propuesta -> nombre_proyecto o
+ *  razon_social_cliente del contrato -> nombre del cliente); si aun así llega vacío, se usa el nombre del cliente o
+ *  el del proyecto, porque el renderer lo exige no vacío. garantia_meses es la del contrato firmado (decisión D8): si
+ *  es un entero >= 0 (número o texto de dígitos) reemplaza soporte.garantia_meses del plan, incluido el 0 (el
+ *  contrato no promete garantía, el documento tampoco); si falta o no es un entero >= 0, queda la del plan. El
+ *  contrato manda. $final false = vista previa
+ *  (draft true, sin fotos: image_briefs vacío); $final true = image_briefs del plan. 'images' sale como objeto JSON
+ *  vacío ({}) para que n8n le agregue las fotos reutilizadas por lámina (un [] de PHP llegaría como arreglo y
+ *  JSON.stringify perdería esas claves). portal_url solo si es http(s); sin correo no hay portal y la lámina «Sigue tu
+ *  proyecto» va sin enlace (Review Focus 4). agenda.web_url queda '' en la Etapa 1. */
+function at_pt_armar_render(array $plan, array $datos, bool $final): array {
+	$codigo = trim((string) ($datos['codigo'] ?? ''));
+	$empresa = trim((string) ($datos['company_name'] ?? ''));
+	$cliente = trim((string) ($datos['client_name'] ?? ''));
+	$cronograma = is_array($plan['cronograma'] ?? null) ? $plan['cronograma'] : [];
+	$soporte = is_array($plan['soporte'] ?? null) ? $plan['soporte'] : ['garantia_meses' => 3, 'mensuales' => []];
+	$garantia = at_pt_entero($datos['garantia_meses'] ?? null);
+	if ($garantia !== null && $garantia >= 0) {
+		$soporte['garantia_meses'] = $garantia; // decisión D8: el contrato manda, también con 0 (sin garantía)
+	}
+	$proyecto = trim((string) ($plan['proyecto'] ?? ''));
+	if ($proyecto === '') {
+		$proyecto = $empresa !== '' ? $empresa : 'Tu proyecto';
+	}
+	if ($empresa === '') {
+		// Persona natural sin empresa: el renderer exige company_name no vacío (validatePlanPayload).
+		$empresa = $cliente !== '' ? $cliente : $proyecto;
+	}
+	$fecha_firma = at_pt_ymd((string) ($datos['fecha_firma'] ?? ''));
+	if ($fecha_firma === '') {
+		$fecha_firma = at_pt_ymd((string) ($plan['fecha_firma'] ?? ''));
+	}
+	$telefono = (string) preg_replace('/\D/', '', (string) ($datos['whatsapp'] ?? ''));
+	if (strlen($telefono) === 9 && $telefono[0] === '9') {
+		$telefono = '56' . $telefono; // mismo criterio que at_cc_telefono_normalizado()
+	}
+	$portal = trim((string) ($datos['portal_url'] ?? ''));
+	if (!preg_match('#^https?://\S+$#i', $portal)) {
+		$portal = '';
+	}
+	return [
+		'document_type'     => 'plan',
+		'unique_id'         => $codigo,
+		'draft'             => !$final,
+		'company_name'      => $empresa,
+		'client_name'       => $cliente,
+		'proyecto'          => $proyecto,
+		'fecha_firma_larga' => at_pt_fecha_larga($fecha_firma),
+		'fecha_inicio'      => (string) ($cronograma['inicio'] ?? ($plan['fecha_inicio'] ?? '')),
+		'fecha_fin'         => (string) ($cronograma['fin'] ?? ''),
+		'semanas'           => (int) ($cronograma['semanas'] ?? 0),
+		'metodo'            => ['hechas' => ['diagnostico', 'priorizacion'], 'actual' => 'propuesta', 'proximas' => ['diseno_desarrollo', 'implementacion', 'soporte']],
+		'fases'             => array_values($plan['fases'] ?? []),
+		'cronograma'        => $cronograma,
+		'necesitamos_de_ti' => array_values($plan['necesitamos_de_ti'] ?? []),
+		'reuniones'         => array_values($plan['reuniones'] ?? []),
+		'soporte'           => $soporte,
+		'portal_url'        => $portal,
+		'agenda'            => [
+			'whatsapp_url' => $telefono === '' ? '' : 'https://wa.me/' . $telefono . '?text=' . rawurlencode(at_pt_texto_whatsapp_agenda($codigo)),
+			'web_url'      => '',
+		],
+		'image_briefs'      => $final ? array_values($plan['image_briefs'] ?? []) : [],
+		'images'            => new stdClass(),
+	];
+}

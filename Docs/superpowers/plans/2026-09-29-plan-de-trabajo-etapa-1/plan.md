@@ -5345,6 +5345,15 @@ at_pt_guardar($pid, ['estado' => 'aprobando']);
 pt_pedir('POST', "/plan/{$pid}/vista", ['modo' => 'draft', 'ok' => false, 'view_url' => '', 'pdf_url' => '', 'faltan' => [], 'nota' => 'renderer HTTP 500']);
 ok(at_pt_plan($pid)->estado === 'aprobando' && at_pt_plan($pid)->view_url === $base . '/index.html' && at_pt_plan($pid)->nota === '', '4) plan «aprobando»: el resultado de una vista previa vieja no se anota');
 at_pt_guardar($pid, ['estado' => 'listo']);
+// D18: la nota de una versión final completa (fotos revisadas, o el aviso de las que siguen con texto) se guarda, no se borra.
+$revisadas = 'Fotos revisadas con GPT-4o: sin texto';
+at_pt_guardar($pid, ['estado' => 'aprobando', 'nota' => '']);
+$r = pt_pedir('POST', "/plan/{$pid}/vista", ['modo' => 'final', 'ok' => true, 'view_url' => $base . '/index.html', 'pdf_url' => $base . '/presentation.pdf', 'faltan' => [], 'nota' => $revisadas]);
+ok(at_pt_plan($pid)->estado === 'listo' && ($r->get_data()['estado'] ?? '') === 'listo' && at_pt_plan($pid)->nota === $revisadas, '4) versión final completa con nota: «listo» y la nota queda guardada (D18)');
+at_pt_guardar($pid, ['estado' => 'listo', 'nota' => '']);
+$r = pt_pedir('POST', "/plan/{$pid}/vista", ['modo' => 'final', 'ok' => true, 'view_url' => $base . '/index.html', 'pdf_url' => $base . '/presentation.pdf', 'faltan' => [], 'nota' => $revisadas]);
+ok(at_pt_plan($pid)->estado === 'listo' && at_pt_plan($pid)->nota === $revisadas, '4) versión final completa repetida con el plan ya «listo»: la nota también se guarda');
+at_pt_guardar($pid, ['estado' => 'listo', 'nota' => '']);
 
 // 5) n8n avisa un error.
 at_pt_guardar($pid2, ['estado' => 'generando', 'nota' => '']);
@@ -5465,8 +5474,13 @@ function at_pt_rest_vista(WP_REST_Request $r) {
 	if ($modo === 'final') {
 		$completa = $ok && $view !== '' && !$faltan;
 		if ($completa && (string) $f->estado === 'aprobando') {
-			at_pt_cambiar_estado($id, 'listo', '');
-		} elseif (!$completa) {
+			// D18: la nota (fotos revisadas, o el aviso de las que siguen con texto) se guarda con el estado.
+			at_pt_cambiar_estado($id, 'listo', $nota);
+		} elseif ($completa) {
+			if ($nota !== '') {
+				at_pt_guardar($id, ['nota' => $nota]);
+			}
+		} else {
 			$motivo = 'La versión final no quedó completa'
 				. ($faltan ? ': faltan las fotos de ' . implode(', ', $faltan) : '')
 				. ($nota !== '' ? ' (' . $nota . ')' : '') . '.';
@@ -5520,7 +5534,7 @@ for t in tests/plan/*-wp-test.php; do printf '%-42s ' "$t"; "$PHP" "$t" 2>&1 | t
 for t in rest contrato; do printf '%-42s ' "tests/cierre/$t-wp-test.php"; "$PHP" "$SCR/plan-trabajo/sin-red.php" "tests/cierre/$t-wp-test.php" 2>/dev/null | tail -1; done
 git status --short
 ```
-Expected: `No syntax errors detected`, 27 líneas `ok   …`, `TODO OK`, `exit=0` (si falla solo «1) el renderer recibe … la
+Expected: `No syntax errors detected`, 29 líneas `ok   …`, `TODO OK`, `exit=0` (si falla solo «1) el renderer recibe … la
 garantía del contrato (6)», el defecto está en `at_pt_armar_render()`, Task 4, decisión D8); las cuatro pruebas puras → `TODO OK`; las diez
 pruebas WordPress del plan (`datos`, `datos-ajustes`, `datos-contexto`, `datos-guardar`, `disparador`, `firma`,
 `firma-contrato`, `rest-borrador`, `rest-contexto`, `rest-render`) → `TODO OK`; las dos del cierre que comparten el

@@ -76,6 +76,15 @@ at_pt_guardar($pid, ['estado' => 'aprobando']);
 pt_pedir('POST', "/plan/{$pid}/vista", ['modo' => 'draft', 'ok' => false, 'view_url' => '', 'pdf_url' => '', 'faltan' => [], 'nota' => 'renderer HTTP 500']);
 ok(at_pt_plan($pid)->estado === 'aprobando' && at_pt_plan($pid)->view_url === $base . '/index.html' && at_pt_plan($pid)->nota === '', '4) plan «aprobando»: el resultado de una vista previa vieja no se anota');
 at_pt_guardar($pid, ['estado' => 'listo']);
+// D18: la nota de una versión final completa (fotos revisadas, o el aviso de las que siguen con texto) se guarda, no se borra.
+$revisadas = 'Fotos revisadas con GPT-4o: sin texto';
+at_pt_guardar($pid, ['estado' => 'aprobando', 'nota' => '']);
+$r = pt_pedir('POST', "/plan/{$pid}/vista", ['modo' => 'final', 'ok' => true, 'view_url' => $base . '/index.html', 'pdf_url' => $base . '/presentation.pdf', 'faltan' => [], 'nota' => $revisadas]);
+ok(at_pt_plan($pid)->estado === 'listo' && ($r->get_data()['estado'] ?? '') === 'listo' && at_pt_plan($pid)->nota === $revisadas, '4) versión final completa con nota: «listo» y la nota queda guardada (D18)');
+at_pt_guardar($pid, ['estado' => 'listo', 'nota' => '']);
+$r = pt_pedir('POST', "/plan/{$pid}/vista", ['modo' => 'final', 'ok' => true, 'view_url' => $base . '/index.html', 'pdf_url' => $base . '/presentation.pdf', 'faltan' => [], 'nota' => $revisadas]);
+ok(at_pt_plan($pid)->estado === 'listo' && at_pt_plan($pid)->nota === $revisadas, '4) versión final completa repetida con el plan ya «listo»: la nota también se guarda');
+at_pt_guardar($pid, ['estado' => 'listo', 'nota' => '']);
 
 // 5) n8n avisa un error.
 at_pt_guardar($pid2, ['estado' => 'generando', 'nota' => '']);

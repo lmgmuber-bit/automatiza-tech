@@ -237,8 +237,13 @@ function at_pt_rest_vista(WP_REST_Request $r) {
 	if ($modo === 'final') {
 		$completa = $ok && $view !== '' && !$faltan;
 		if ($completa && (string) $f->estado === 'aprobando') {
-			at_pt_cambiar_estado($id, 'listo', '');
-		} elseif (!$completa) {
+			// D18: la nota (fotos revisadas, o el aviso de las que siguen con texto) se guarda con el estado.
+			at_pt_cambiar_estado($id, 'listo', $nota);
+		} elseif ($completa) {
+			if ($nota !== '') {
+				at_pt_guardar($id, ['nota' => $nota]);
+			}
+		} else {
 			$motivo = 'La versión final no quedó completa'
 				. ($faltan ? ': faltan las fotos de ' . implode(', ', $faltan) : '')
 				. ($nota !== '' ? ' (' . $nota . ')' : '') . '.';

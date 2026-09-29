@@ -1982,6 +1982,9 @@ class AutomatizaTech_CRM_AI {
                         <button class="ficha-tab" data-target="tab-general">📋 General</button>
                         <button class="ficha-tab" data-target="tab-proyectos">🚀 Proyectos <span class="ficha-tab-badge"><?php echo count($proyectos); ?></span></button>
                         <button class="ficha-tab" data-target="tab-operacion">📜 Contratos y operación</button>
+                        <?php if (is_array($cliente) && function_exists('at_pt_render_pestana') && current_user_can('manage_options')): ?>
+                        <button class="ficha-tab" data-target="tab-plan">🗓️ Plan de trabajo</button>
+                        <?php endif; ?>
                         <?php endif; ?>
                     </div>
                     
@@ -2238,6 +2241,14 @@ class AutomatizaTech_CRM_AI {
                         <?php endif; ?>
                     </div>
                     </div><!-- /tab-operacion -->
+                    <?php if (is_array($cliente) && function_exists('at_pt_render_pestana') && current_user_can('manage_options')): ?>
+                    <!-- Tab: Plan de trabajo (inc/plan-trabajo/panel.php) -->
+                    <div class="ficha-tab-content" id="tab-plan">
+                    <div class="ficha-card">
+                        <?php at_pt_render_pestana($cliente); ?>
+                    </div>
+                    </div><!-- /tab-plan -->
+                    <?php endif; ?>
                     <?php endif; ?>
                 </div>
                 

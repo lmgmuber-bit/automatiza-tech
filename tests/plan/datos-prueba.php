@@ -205,3 +205,85 @@ function pt_pedir(string $metodo, string $ruta, $cuerpo = null, $clave = true, a
 	}
 	return rest_do_request($r);
 }
+
+/** Plan como lo devuelve la IA (sin fechas ni origen): sitio de una página + capacitación + soporte, con fotos para las 10 láminas. */
+function pt_plan_ia(): array {
+	$foto = function (string $slide, string $prompt): array { return ['slide' => $slide, 'prompt' => $prompt]; };
+	return [
+		'proyecto' => '[PRUEBA] Sitio de una página',
+		'fases'    => [
+			['clave' => 'diseno_desarrollo', 'descripcion' => 'Diseñamos y construimos tu sitio.', 'bloques' => [
+				['nombre' => 'Diseño', 'entrega' => true, 'entregable' => 'Maqueta aprobada', 'actividades' => [
+					['nombre' => 'Maqueta de la portada', 'detalle' => 'Estructura y estilo', 'responsable' => 'at', 'dias_habiles' => 2, 'servicio' => 'sitio_una_pagina', 'etapa' => 'diseno'],
+				]],
+				['nombre' => 'Desarrollo', 'entrega' => false, 'entregable' => 'Sitio en pruebas', 'actividades' => [
+					['nombre' => 'Construcción del sitio', 'detalle' => '', 'responsable' => 'at', 'dias_habiles' => 4, 'servicio' => 'sitio_una_pagina', 'etapa' => 'desarrollo'],
+				]],
+			]],
+			['clave' => 'implementacion', 'descripcion' => 'Publicamos y te capacitamos.', 'bloques' => [
+				['nombre' => 'Puesta en marcha', 'entrega' => false, 'entregable' => 'Sitio publicado', 'actividades' => [
+					['nombre' => 'Publicación en tu dominio', 'detalle' => '', 'responsable' => 'at', 'dias_habiles' => 2, 'servicio' => 'sitio_una_pagina', 'etapa' => 'implementacion'],
+					['nombre' => 'Capacitación', 'detalle' => '', 'responsable' => 'ambos', 'dias_habiles' => 1, 'servicio' => '', 'etapa' => ''],
+				]],
+			]],
+			['clave' => 'soporte', 'descripcion' => 'Te acompañamos después de la entrega.', 'bloques' => [
+				['nombre' => 'Acompañamiento', 'entrega' => false, 'entregable' => '', 'actividades' => [
+					['nombre' => 'Ajustes de la primera semana', 'detalle' => '', 'responsable' => 'at', 'dias_habiles' => 5, 'servicio' => '', 'etapa' => 'soporte'],
+				]],
+			]],
+		],
+		'hitos'             => [['nombre' => 'Diseño aprobado', 'despues_de' => 'Diseño']],
+		'necesitamos_de_ti' => ['Logo y colores', 'Textos de la empresa'],
+		'reuniones'         => [['nombre' => 'Reunión de inicio', 'detalle' => 'Revisamos el plan juntos']],
+		'soporte'           => ['garantia_meses' => 3, 'mensuales' => []],
+		'image_briefs'      => [
+			$foto('cover', 'close up of hands on a notebook, blurred office background'),
+			$foto('metodo', 'small team planning on a table with sticky notes, hands only'),
+			$foto('gantt', 'wall calendar next to a wooden desk, soft light'),
+			$foto('fase_1', 'designer sketching on paper, hands only'),
+			$foto('fase_2', 'person smiling at a laptop, screen facing away'),
+			$foto('fase_3', 'handshake at a small shop counter'),
+			$foto('necesitamos', 'folder with colorful papers on a desk'),
+			$foto('reuniones', 'two people on a video call, screen facing away'),
+			$foto('portal', 'person checking a phone, screen facing away'),
+			$foto('cierre', 'small business team celebrating in their shop'),
+		],
+	];
+}
+
+/** Todas las actividades del plan, en orden. */
+function pt_actividades(array $plan): array {
+	$r = [];
+	foreach ((array) ($plan['fases'] ?? []) as $f) {
+		foreach ((array) ($f['bloques'] ?? []) as $b) {
+			foreach ((array) ($b['actividades'] ?? []) as $a) {
+				$r[] = $a;
+			}
+		}
+	}
+	return $r;
+}
+
+/** La primera actividad con ese nombre; null si no hay. */
+function pt_actividad(array $plan, string $nombre): ?array {
+	foreach (pt_actividades($plan) as $a) {
+		if (($a['nombre'] ?? '') === $nombre) {
+			return $a;
+		}
+	}
+	return null;
+}
+
+/** El plan con los campos de la actividad $nombre cambiados. */
+function pt_editar_actividad(array $plan, string $nombre, array $cambios): array {
+	foreach ((array) ($plan['fases'] ?? []) as $i => $f) {
+		foreach ((array) ($f['bloques'] ?? []) as $j => $b) {
+			foreach ((array) ($b['actividades'] ?? []) as $k => $a) {
+				if (($a['nombre'] ?? '') === $nombre) {
+					$plan['fases'][$i]['bloques'][$j]['actividades'][$k] = array_merge($a, $cambios);
+				}
+			}
+		}
+	}
+	return $plan;
+}

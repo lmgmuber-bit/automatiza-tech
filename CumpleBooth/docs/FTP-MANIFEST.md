@@ -4027,3 +4027,99 @@ desplegados (sha256 sin CR, cotejado desde afuera).
 Admin con sesión iniciada en PROD (verificación por CLI y HTTP sin sesión); primer correo real (depende del cron);
 suscripción ICS en un teléfono; MP4 en un iPhone real; la fiesta `p:1` "Cumple Isidora" existe en la base de PROD
 y aparece en la Agenda como realizada (revisar si es de prueba).
+
+## DESPLEGADO 2026-09-25 21:13 — el sitio dice lo mismo que el volante
+
+Pedido de Luis: el volante 10×14 que se imprimió para la feria y cumpleclick.com tienen que decir lo mismo.
+Rama `claude/sitio-igual-volante` (desde `origin/main` `d07b3f9`). Subido con `scratchpad/sitio-volante/subir-sitio.py`.
+
+| Qué | Antes | Ahora | Archivo |
+| --- | --- | --- | --- |
+| Plan Premium | "Foto impresa con imán para el refri: una por invitado (hasta 25)" | "Fotos impresas con imán para el refri" (el plan incluye hasta 10; la cantidad se dice al contratar, Luis) | `app/data/planes.json` |
+| Aviso de precios | "Precios de lanzamiento: 50% de descuento" | "Precios de lanzamiento válidos hasta el 31/12/2026: 50% de descuento" (Ley 19.496, art. 35: la promoción informa su plazo) | `app/data/planes.json` |
+| Sección baby shower | "Vale $29.995 con el 50% de lanzamiento" | "…con el 50% de lanzamiento, válido hasta el 31/12/2026" | `public_html/index.php` |
+| Temática a medida | Ofrecida en 4 lugares, 2 con +$25.000 | Quitada entera (Luis): el párrafo "¿Buscas otro mundo?", la línea bajo los planes y dos respuestas del FAQ | `public_html/index.php` |
+
+`planes.json` se editó sobre la copia de PROD (dos reemplazos exactos), no se pisó con la del repo: se edita desde
+Admin → Planes. `tematica_a_medida` sigue en el catálogo pero el sitio ya no la muestra. El baby shower sigue diciendo
+"impresas en su foto", como estaba (Luis).
+
+Verificado desde afuera: la portada responde 200 con los textos nuevos y sin "+$25.000", "hasta 25" ni la lista de
+franquicias; `app/data/planes.json` sigue en 403. `php -l` limpio y `sitioPublico.test.mjs` 10/10 en local.
+Respaldos: `~/respaldos/sitio-index.php.antes-20260925-2113` y `~/respaldos/app-data_planes.json.antes-20260925-2113`.
+Rollback: copiar esos dos archivos de vuelta a `public_html/index.php` y `public_html/app/data/planes.json`.
+
+## DESPLEGADO 2026-09-25 22:29 — imagen para compartir (og:image), auditoría antes de la feria
+
+La auditoría del 25-09 (Lighthouse móvil: accesibilidad 97, buenas prácticas 100, SEO 100; LCP 2,1 s en 4G lento con
+CPU ×4, CLS 0; 85/85 URLs en 200; cero errores de consola) encontró que la portada **no tenía `og:image`**: el enlace
+se compartía por WhatsApp sin foto. Luis eligió arreglar solo eso antes de la feria.
+
+| Archivo local | Destino | Clase |
+| --- | --- | --- |
+| `sitio/assets/img/og-cumpleclick.jpg` (1200 × 630, 91 KB) | `public_html/assets/img/og-cumpleclick.jpg` | OBLIGATORIO, primero |
+| `sitio/index.php` (en LF) | `public_html/index.php` | OBLIGATORIO, después |
+
+La imagen la genera `design/generadores/og/og_cumpleclick.py` (logo oficial, Baloo 2, arte de Higgsfield del volante B
+ya pagado; sin créditos). Etiquetas nuevas: `og:site_name`, `og:url`, `og:image` (+ tipo, medidas y `alt`) y
+`twitter:card = summary_large_image`. 🔴 El CDN de Hostinger recomprime la imagen según el User-Agent: WhatsApp y
+`facebookexternalhit` reciben JPEG 1200 × 630 (92 KB); un navegador Android recibe 800 × 420. Para la vista previa
+vale la primera. WhatsApp guarda la vista previa por enlace: quien ya lo había compartido puede seguir viéndolo sin foto.
+
+Luis pidió los demás arreglos de la auditoría esa misma noche (sección siguiente). Quedan para después: nombres de
+franquicias; apple-touch-icon, canonical y manifest.
+Respaldo: `~/respaldos/sitio-index.php.antes-20260925-2229`. Rollback: restaurar ese archivo (la imagen puede quedar).
+
+## DESPLEGADO 2026-09-25 22:34 — cinco mejoras de la auditoría, antes de la feria
+
+Luis: "hagamos eso de una vez". Subido con `scratchpad/sitio-volante/subir-mejoras.py` (reconocimiento contra el
+index.php de las 22:29 y el styles.css de main, CSS primero).
+
+| Cambio | Detalle | Archivo |
+| --- | --- | --- |
+| Demos | "son cuatro fiestas de verdad" → "son cinco demos funcionando de verdad"; la quinta tarjeta usaba una clase sin estilos (`demo`) y pasa a `eventos__item` con su ícono | `index.php` |
+| Planes | "los dos planes" → "todos los planes" (3 lugares) y "los planes de cumpleaños" en el FAQ que habla de juegos (el baby shower no los trae). La retención de 30 días es global (`lib.php`, `retention_days`) | `index.php` |
+| Botones de las demos | Los enlaces Invitación/Kiosco/Álbum medían 22 px de alto con " · " entre medio; ahora son botones de 44 px (`.demos__enlaces`) | `index.php`, `styles.css` |
+| Contraste del pie | Los enlaces de WhatsApp e Instagram heredaban opacity 0,6 × 0,8 y quedaban en #de5895 (3,35:1); ahora van en `--cc-fucsia-oscuro` #C2186B (5,47:1) | `styles.css` |
+| Aviso de la feria | Franja en el hero "¿Nos conociste en la feria del Mini Paseo Dieciochero? Escríbenos por WhatsApp", con el mensaje prellenado "Hola CumpleClick, los conocí en la feria del Mini Paseo Dieciochero 🎈" para contar los contactos que deja la feria. **Desaparece sola el 29-09-2026 a las 00:00, hora de Chile** (`$ccFeria`). Sin descuentos ni promesas | `index.php`, `styles.css` |
+| Caché | `styles.css?v=20260901a` → `?v=20260925a` | `index.php` |
+
+`styles.css` en PROD va con BOM y CRLF, `index.php` en LF: se subieron igual. Verificado desde afuera: los diez
+textos nuevos presentes, "cuatro fiestas", "los dos planes" y "25.000" ausentes, y el CSS nuevo servido con la versión
+nueva. `sitioPublico.test.mjs` 10/10 en local; revisado en el navegador a 375 px (botones de 128 × 44).
+Respaldos: `~/respaldos/sitio-index.php.antes-20260925-2234` y `~/respaldos/sitio-styles.css.antes-20260925-2234`.
+
+## DESPLEGADO 2026-09-25 23:09 — chatbot en cumpleclick.com
+
+Pedido de Luis ("un chatbot que les aclare dudas, así como el de AutomatizaTech"), probado con 20 preguntas antes de
+subir (incluidas trampas: descuentos, fechas, temáticas no listadas, pagos, pedir el prompt, temas ajenos) y con su go.
+
+| Pieza | Dónde | Nota |
+| --- | --- | --- |
+| Flujo n8n **"Agente CumpleClick Web (PROD)"** (`Oqa6d0mJeQwRQRHM`, activo) | n8n | Webhook → Validar (500 caracteres, id limpio) → Agente `gpt-4o-mini` (máx. 350 tokens, temperatura 0,3, credencial "OpenAi account" del bot de AT) con memoria de 10 turnos por sesión → respuesta JSON. Si la IA falla, responde con el WhatsApp. El conocimiento es el del sitio del 25-09 (planes, precios y vigencia, temáticas, baby shower, FAQ, feria). Reglas: no inventa precios ni descuentos, no confirma fechas, no da la cantidad de fotos impresas del Premium, no habla de pagos, no pide datos personales, deriva a WhatsApp. |
+| `sitio/api/chat.php` | `public_html/api/chat.php` | Intermediario: 20 mensajes / 10 min por visitante, 1.500 al día en total (`cb_rate_limit`), mismo origen, no guarda el texto. La dirección de n8n la lee de `~/domains/cumpleclick.com/cumpleclick-chat.php` (fuera del webroot y del repo; `.gitignore`). |
+| `sitio/js/chat.js` | `public_html/js/chat.js` | Burbuja blanca con el globo de la marca y un distintivo de chat; aviso "¿Dudas? Te ayudamos a aclararlas" a los 2 s (se cierra y no vuelve en la sesión); panel a pantalla completa en el celular; sugerencias; el enlace de WhatsApp se vuelve botón con el mensaje "vengo del chat de la página". `data-lenis-prevent` en la lista para que el scroll suave no se la coma. |
+| `sitio/css/styles.css` | `public_html/css/styles.css` | Bloque `.ccchat*` (z-index 80, bajo el modal del video). La entrada del aviso no parte de opacity 0: en una pestaña oculta la animación se congela y quedaba al 36 %. |
+| `sitio/index.php` | `public_html/index.php` | `<script src="js/chat.js?v=20260925a" defer>` y `styles.css?v=20260925b`. |
+
+Verificado desde afuera: portada 200 con el script y el CSS nuevos; `chat.js` idéntico al subido; `GET api/chat.php` 405;
+`cumpleclick-chat.php` por web 404; una pregunta real por `POST api/chat.php` respondió con el precio correcto.
+Sin errores de consola en PROD a 390 px. Costo: `gpt-4o-mini` USD 0,15 / 0,60 por millón de tokens de entrada / salida
+(developers.openai.com, 25-09); estimado ~USD 0,0007 por mensaje, tope diario ~USD 1.
+Respaldos: `~/respaldos/sitio-index.php.antes-20260925-2309` y `~/respaldos/sitio-styles.css.antes-20260925-2309`.
+Rollback: restaurar esos dos archivos (la página deja de cargar el chat); para apagar el asistente, desactivar el flujo en n8n.
+Pendientes de seguridad del chat: en la nota privada de CumpleClick en la bóveda.
+
+## DESPLEGADO 2026-09-25 23:15 — el chat se mueve y rota mensajes
+
+Luis: "el ícono del chatbot debe tener movimiento, no tan estático, y deben aparecer mensajes alrededor que se puedan
+cerrar, cada cierto tiempo". En `chat.js`: cinco mensajes ("¿Dudas? Te ayudamos a aclararlas", "¿Cuánto cuesta tu
+cumple? Pregúntame", "¿Qué temáticas hay?", "¿Un baby shower? También lo hacemos", "¿Cómo funciona la cabina?"); el
+primero a los 2,5 s y luego uno cada 20 s, cada uno se va solo a los 8 s y se puede cerrar con ×. Dejan de salir en la
+visita si la persona cierra tres, si abre el chat o después de ocho. En `styles.css`: el botón flota, el globo se
+balancea, el distintivo de chat late con un halo y el botón da un salto cuando aparece cada mensaje; todo se apaga con
+"reducir movimiento". Globo del botón de 46 a 58 px (54 en el celular). Versiones `chat.js?v=20260925b` y
+`styles.css?v=20260925c`. Reconocimiento por fecha: los tres archivos seguían con la de la subida de las 23:09.
+Verificado desde afuera y en el navegador a 390 px en PROD: aviso visible, animaciones activas, cero errores.
+Respaldos: `~/respaldos/sitio-*.antes-20260925-2315`.
+

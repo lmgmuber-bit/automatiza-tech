@@ -58,7 +58,7 @@ if (is_file($ccLibPlanes)) {
 }
 if (!$ccPlanes['planes']) {
     $ccPlanes = [
-        'promo' => ['activa' => true, 'texto' => 'Precios de lanzamiento', 'porcentaje' => 50],
+        'promo' => ['activa' => true, 'texto' => 'Precios de lanzamiento válidos hasta el 31/12/2026', 'porcentaje' => 50],
         'tematica_a_medida' => 25000,
         'planes' => [
             ['slug' => 'magico', 'nombre' => 'Plan Mágico', 'precio' => 34995, 'precio_antes' => 69990,
@@ -93,6 +93,12 @@ $ccPrecio = static function ($monto): string {
     return '$' . number_format((int) $monto, 0, ',', '.');
 };
 
+/* Aviso de la feria del 26-09-2026 (Feria de Emprendedores Mini Paseo Dieciochero, Royal Art Academy): se ve
+   hasta el lunes 28 a medianoche, hora de Chile, y después desaparece solo. El WhatsApp llega con el mensaje
+   prellenado para saber qué contactos dejó la feria (el QR del volante ya está impreso y no lleva marca). */
+$ccFeria = new DateTimeImmutable('now', new DateTimeZone('America/Santiago'))
+    < new DateTimeImmutable('2026-09-29 00:00:00', new DateTimeZone('America/Santiago'));
+
 $e = static function ($s): string {
     return htmlspecialchars((string) $s, ENT_QUOTES, 'UTF-8');
 };
@@ -123,6 +129,14 @@ $ccWa = static function (string $mensaje) use ($ccWaDigitos): string {
   <meta property="og:locale" content="es_CL">
   <meta property="og:title" content="CumpleClick — Su personaje favorito, su foto, su recuerdo">
   <meta property="og:description" content="De la invitación al álbum: la fiesta completa. Cabina temática con personajes que saludan por su nombre, juegos y las fotos de todos en un solo recuerdo.">
+  <meta property="og:site_name" content="CumpleClick">
+  <meta property="og:url" content="https://cumpleclick.com/">
+  <meta property="og:image" content="https://cumpleclick.com/assets/img/og-cumpleclick.jpg">
+  <meta property="og:image:type" content="image/jpeg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="CumpleClick: mucho más que una cabina de fotos. Invitación, cabina, juegos y álbum para tu cumple.">
+  <meta name="twitter:card" content="summary_large_image">
   <link rel="icon" type="image/svg+xml" href="assets/cumpleclick-mark.svg">
   <!-- El orden de estas cuatro lineas se midio, no se eligio por gusto.
        `globo-render.webp` ES el elemento LCP de la pagina, asi que su preload
@@ -132,7 +146,7 @@ $ccWa = static function (string $mensaje) use ($ccWaDigitos): string {
        bloquea el render; las tipografias van ultimas porque tienen
        `font-display: swap` y el texto se pinta sin esperarlas. -->
   <link rel="preload" href="assets/img/globo-render.webp" as="image" type="image/webp">
-  <link rel="stylesheet" href="css/styles.css?v=20260901a">
+  <link rel="stylesheet" href="css/styles.css?v=20260925c">
   <link rel="preload" href="fonts/baloo-2-latin-800-normal.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="fonts/baloo-2-latin-600-normal.woff2" as="font" type="font/woff2" crossorigin>
   <!-- ?v= no es adorno. `styles.css` y `main.js` tienen nombre FIJO, asi que
@@ -191,6 +205,9 @@ $ccWa = static function (string $mensaje) use ($ccWaDigitos): string {
     <section class="hero" id="hero">
       <div class="hero__inner">
         <div class="hero__copy">
+          <?php if ($ccFeria): ?>
+          <a class="feria-aviso" href="<?= $e($ccWa('Hola CumpleClick, los conocí en la feria del Mini Paseo Dieciochero 🎈')) ?>" target="_blank" rel="noopener"><span aria-hidden="true">👋</span> ¿Nos conociste en la feria del Mini Paseo Dieciochero? <strong>Escríbenos por WhatsApp</strong></a>
+          <?php endif; ?>
           <h1 class="hero__title"><span>Su personaje favorito.</span> <em>Su foto.</em> <span>Su recuerdo.</span></h1>
           <p class="hero__sub">Acompañamos la fiesta entera: la <strong>invitación</strong> que se abre en el celular, la <strong>cabina</strong> que le da a cada invitado su personaje y su foto al instante, los <strong>juegos</strong>, y el <strong>álbum</strong> con los recuerdos de todos. 🎈</p>
           <div class="hero__ctas">
@@ -322,10 +339,6 @@ $ccWa = static function (string $mensaje) use ($ccWaDigitos): string {
           <h3>KPop Demon Hunters</h3>
         </li>
       </ul>
-      <!-- Estos mundos se producen a pedido. El porqué de la redacción está en
-           el commit c99ebda; no se detalla acá porque los comentarios del HTML
-           se sirven al público y se leen con ver-código-fuente. -->
-      <p class="mundos__mas" data-reveal>¿Buscas otro mundo? Paw Patrol, Princesas, Dinosaurios, La Sirenita, Toy Story, Mickey… <a href="#precios">lo creamos a medida para tu fiesta</a>, con sus personajes, su ruleta y sus saludos.</p>
     </section>
 
     <!-- 3b · BABY SHOWER -->
@@ -359,23 +372,23 @@ $ccWa = static function (string $mensaje) use ($ccWaDigitos): string {
         <li class="eventos__item" data-reveal><span aria-hidden="true">🔮</span><h3>Las apuestas</h3><p>El momento que a todos les gusta. Quedan en un <strong>tablero privado</strong> que los papás abren después, y muchos imprimen.</p></li>
         <li class="eventos__item" data-reveal><span aria-hidden="true">📖</span><h3>El álbum</h3><p>Las fotos de la cabina más las que suban los invitados desde su celular, en una revista que se hojea.</p></li>
       </ul>
-      <p class="mundos__mas" data-reveal>¿Todavía no saben el nombre o el sexo? <strong>Está pensado para eso.</strong> La invitación funciona igual, y si la fiesta es justamente para revelarlo, mejor. <a href="#demos">Mírala funcionando</a>. Vale <strong>$29.995</strong> con el 50% de lanzamiento, e incluye la invitación, las apuestas y el álbum.</p>
+      <p class="mundos__mas" data-reveal>¿Todavía no saben el nombre o el sexo? <strong>Está pensado para eso.</strong> La invitación funciona igual, y si la fiesta es justamente para revelarlo, mejor. <a href="#demos">Mírala funcionando</a>. Vale <strong>$29.995</strong> con el 50% de lanzamiento, válido hasta el 31/12/2026, e incluye la invitación, las apuestas y el álbum.</p>
     </section>
 
     <!-- 3c · DEMOS EN VIVO -->
     <section class="eventos section" id="demos">
       <div class="section__head" data-reveal>
         <h2>Míralo funcionando, ahora</h2>
-        <p>No son pantallazos: son cuatro fiestas de verdad, andando en este momento. Ábrelas y recórrelas como lo haría un invitado.</p>
+        <p>No son pantallazos: son cinco demos funcionando de verdad, en este momento. Ábrelas y recórrelas como lo haría un invitado.</p>
       </div>
       <ul class="eventos__grid">
         <li class="eventos__item" data-reveal>
           <span aria-hidden="true">❄️</span>
           <h3>Frozen · Plan Premium</h3>
           <p>El recorrido completo, con El Show 3D y la invitación que se reproduce sola.</p>
-          <p>
-            <a href="/app/invitacion.php?t=87b2e06044fd27b9d4a843bb9f29c64b" target="_blank" rel="noopener">Invitación</a> ·
-            <a href="/app/?p=demo-frozen-vip" target="_blank" rel="noopener">Kiosco</a> ·
+          <p class="demos__enlaces">
+            <a href="/app/invitacion.php?t=87b2e06044fd27b9d4a843bb9f29c64b" target="_blank" rel="noopener">Invitación</a>
+            <a href="/app/?p=demo-frozen-vip" target="_blank" rel="noopener">Kiosco</a>
             <a href="/app/album.html?t=96789256198e514179437a936fa2b4b0" target="_blank" rel="noopener">Álbum</a>
           </p>
         </li>
@@ -383,9 +396,9 @@ $ccWa = static function (string $mensaje) use ($ccWaDigitos): string {
           <span aria-hidden="true">🏁</span>
           <h3>Cars · Plan Mágico</h3>
           <p>El mismo kiosco en el plan de entrada, y la invitación que se descubre con el dedo.</p>
-          <p>
-            <a href="/app/invitacion.php?t=f68083b420e9954c3f81755f39b1c84d" target="_blank" rel="noopener">Invitación</a> ·
-            <a href="/app/?p=demo-carreras" target="_blank" rel="noopener">Kiosco</a> ·
+          <p class="demos__enlaces">
+            <a href="/app/invitacion.php?t=f68083b420e9954c3f81755f39b1c84d" target="_blank" rel="noopener">Invitación</a>
+            <a href="/app/?p=demo-carreras" target="_blank" rel="noopener">Kiosco</a>
             <a href="/app/album.html?t=5d94780468f7cb75692e95862f470752" target="_blank" rel="noopener">Álbum</a>
           </p>
         </li>
@@ -393,9 +406,9 @@ $ccWa = static function (string $mensaje) use ($ccWaDigitos): string {
           <span aria-hidden="true">🌸</span>
           <h3>Baby shower · Amanda</h3>
           <p>Bebé entre Rosas, con la lista de regalos y las apuestas ya hechas.</p>
-          <p>
-            <a href="/app/invitacion.php?t=995acd5d483ad29ed70e3693c59f3ec8" target="_blank" rel="noopener">Invitación</a> ·
-            <a href="/app/?p=demo-bs-nina" target="_blank" rel="noopener">Kiosco</a> ·
+          <p class="demos__enlaces">
+            <a href="/app/invitacion.php?t=995acd5d483ad29ed70e3693c59f3ec8" target="_blank" rel="noopener">Invitación</a>
+            <a href="/app/?p=demo-bs-nina" target="_blank" rel="noopener">Kiosco</a>
             <a href="/app/album.html?t=f733b4e82c90f90511e0a06956a81717" target="_blank" rel="noopener">Álbum</a>
           </p>
         </li>
@@ -403,18 +416,19 @@ $ccWa = static function (string $mensaje) use ($ccWaDigitos): string {
           <span aria-hidden="true">☁️</span>
           <h3>Baby shower · Tomás</h3>
           <p>Bebé en las Nubes. Fíjate en los dos contadores de la invitación.</p>
-          <p>
-            <a href="/app/invitacion.php?t=53975b2d7c8365c9cf440850b0028522" target="_blank" rel="noopener">Invitación</a> ·
-            <a href="/app/?p=demo-bs-nino" target="_blank" rel="noopener">Kiosco</a> ·
+          <p class="demos__enlaces">
+            <a href="/app/invitacion.php?t=53975b2d7c8365c9cf440850b0028522" target="_blank" rel="noopener">Invitación</a>
+            <a href="/app/?p=demo-bs-nino" target="_blank" rel="noopener">Kiosco</a>
             <a href="/app/album.html?t=816d26c2258966fa3eec3f7b5135dae8" target="_blank" rel="noopener">Álbum</a>
           </p>
         </li>
-        <li class="demo" data-reveal>
+        <li class="eventos__item" data-reveal>
+          <span aria-hidden="true">🦒</span>
           <h3>Baby shower · aún no saben</h3>
           <p>Bebé Safari, sin nombre ni sexo todavía. Así se ve cuando la fiesta es justamente para revelarlo.</p>
-          <p>
-            <a href="/app/invitacion.php?t=3cfccd0a5c3c8599a95ea47d2531439c" target="_blank" rel="noopener">Invitación</a> ·
-            <a href="/app/?p=demo-bs-safari" target="_blank" rel="noopener">Kiosco</a> ·
+          <p class="demos__enlaces">
+            <a href="/app/invitacion.php?t=3cfccd0a5c3c8599a95ea47d2531439c" target="_blank" rel="noopener">Invitación</a>
+            <a href="/app/?p=demo-bs-safari" target="_blank" rel="noopener">Kiosco</a>
             <a href="/app/album.html?t=7665791dcfbf47ed1d3442c08c4a7dc7" target="_blank" rel="noopener">Álbum</a>
           </p>
         </li>
@@ -479,7 +493,6 @@ $ccWa = static function (string $mensaje) use ($ccWaDigitos): string {
         </article>
         <?php endforeach; ?>
       </div>
-      <p class="precios__medida" data-reveal>¿Quieres una temática a la medida? <strong>La creamos por +<?= $e($ccPrecio($ccPlanes['tematica_a_medida'])) ?>.</strong></p>
     </section>
 
     <!-- 5 · POR QUÉ CUMPLECLICK (diferenciadores + invitaciones digitales) -->
@@ -494,7 +507,7 @@ $ccWa = static function (string $mensaje) use ($ccWaDigitos): string {
         </li>
         <li class="porque__item" data-depth>
           <h3>Un recuerdo que queda</h3>
-          <p>En los dos planes, todas las fotos quedan en el <strong>Álbum Recuerdo</strong>, que la familia comparte con los invitados por un enlace privado. Con Premium, además, los papás tienen su propia galería con todo el material de la fiesta.</p>
+          <p>En todos los planes, las fotos quedan en el <strong>Álbum Recuerdo</strong>, que la familia comparte con los invitados por un enlace privado. Con Premium, además, los papás tienen su propia galería con todo el material de la fiesta.</p>
         </li>
         <li class="porque__item" data-depth>
           <h3>Llegamos y nos encargamos</h3>
@@ -504,7 +517,7 @@ $ccWa = static function (string $mensaje) use ($ccWaDigitos): string {
       <aside class="invitaciones" data-depth>
         <div class="invitaciones__txt">
           <h3>Y la invitación, ¿ya la tienes?</h3>
-          <p>Va <strong>incluida en los dos planes</strong>: una invitación web de tu misma temática, con la fecha, el lugar y el mapa, lista para compartir por WhatsApp. 💌</p>
+          <p>Va <strong>incluida en todos los planes</strong>: una invitación web de tu misma temática, con la fecha, el lugar y el mapa, lista para compartir por WhatsApp. 💌</p>
           <p>En el <strong>Plan Premium</strong> se reproduce sola, como una película corta: capítulos en video, música y una voz que cuenta la historia. En el <strong>Mágico</strong>, el invitado la va descubriendo con el dedo.</p>
         </div>
         <a class="btn btn--ghost" href="<?= $e($ccWa('Hola CumpleClick, quiero una invitación digital 💌')) ?>" target="_blank" rel="noopener">Quiero mi invitación</a>
@@ -572,18 +585,11 @@ $ccWa = static function (string $mensaje) use ($ccWaDigitos): string {
         </details>
         <details class="faq__item" data-reveal>
           <summary>¿Se puede personalizar con el nombre del cumpleañero?</summary>
-          <!-- El precio de la temática a medida se dice en UN solo lugar: más
-               abajo, +$25.000 (design/MANUAL-DE-MARCA.md:89). Acá va solo lo
-               que está incluido. -->
-          <p>Sí: los diplomas llevan su nombre y la temática es la que él o ella elija, sin costo extra. Si quieres una que no esté en la lista, la creamos a medida.</p>
-        </details>
-        <details class="faq__item" data-reveal>
-          <summary>¿Qué pasa si la temática de mi hijo no está en la lista?</summary>
-          <p>La creamos a medida por <strong>+$25.000</strong>: sus personajes, su ruleta y sus saludos, igual de cuidados que los nuestros.</p>
+          <p>Sí: los diplomas llevan su nombre y la temática es la que él o ella elija, sin costo extra.</p>
         </details>
         <details class="faq__item" data-reveal>
           <summary>¿Hacen algo más para la fiesta?</summary>
-          <p>Sí: hoy la fiesta va completa —invitación digital, cabina con sus juegos y Álbum Recuerdo—, y todo eso está incluido en los dos planes. Lo que viene después: animadoras y proveedores, para armar la fiesta entera en un solo lugar.</p>
+          <p>Sí: hoy la fiesta va completa —invitación digital, cabina con sus juegos y Álbum Recuerdo—, y todo eso está incluido en los planes de cumpleaños. Lo que viene después: animadoras y proveedores, para armar la fiesta entera en un solo lugar.</p>
         </details>
         <details class="faq__item" data-reveal>
           <summary>¿Pueden participar en un evento de empresa?</summary>
@@ -591,7 +597,7 @@ $ccWa = static function (string $mensaje) use ($ccWaDigitos): string {
         </details>
         <details class="faq__item" data-reveal>
           <summary>¿Cómo se cuidan las fotos y los datos?</summary>
-          <p>Los datos del formulario se usan solo para responder tu solicitud. Las fotos de la fiesta se conservan 30 días después del evento —en los dos planes— para que alcancen a descargarlas, y el enlace del Álbum Recuerdo es privado. En el Plan Premium, los papás tienen además su propia galería.</p>
+          <p>Los datos del formulario se usan solo para responder tu solicitud. Las fotos de la fiesta se conservan 30 días después del evento —en todos los planes— para que alcancen a descargarlas, y el enlace del Álbum Recuerdo es privado. En el Plan Premium, los papás tienen además su propia galería.</p>
         </details>
       </div>
     </section>
@@ -651,5 +657,6 @@ $ccWa = static function (string $mensaje) use ($ccWaDigitos): string {
   <script src="vendor/ScrollTrigger.min.js" defer></script>
   <script src="vendor/lenis.min.js" defer></script>
   <script src="js/main.js?v=20260901a" defer></script>
+  <script src="js/chat.js?v=20260925b" defer></script>
 </body>
 </html>

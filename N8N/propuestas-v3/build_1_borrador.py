@@ -5,6 +5,7 @@ Solo referencia credenciales por id; no contiene secretos.
 """
 import json, os
 from fotos_guard import JS_LIMPIAR_FOTOS
+from json_guard import JS_LEER_JSON
 from correos import correo_borrador
 
 CRED_OPENAI = {'openAiApi': {'id': 'g52IEXpRfN5r7jKw', 'name': 'OpenAi account'}}
@@ -46,7 +47,8 @@ Reglas:
   · Qué mostrar en cada lámina: cover = primer plano de las manos o de un detalle del oficio del rubro; challenge = el negocio en su momento más exigente (por ejemplo, un mesón lleno un viernes en la noche); solution = un cliente del rubro disfrutando el producto o el servicio; benefits = la gente del negocio contenta atendiendo; how_it_works = manos haciendo el trabajo del rubro (preparar, envolver, entregar); pricing = un detalle del producto del rubro como bodegón; next_steps = una escena esperanzadora del rubro (una entrega que llega, un brindis, un equipo celebrando); extra_N = otra escena distinta del mismo rubro.
   · cover: SIEMPRE un primer plano de una persona o un objeto del rubro, con el fondo completamente desenfocado o con cielo detrás; nunca estadios, fachadas, calles, galerías ni muros de fondo (ahí el modelo de imagen inventa carteles).
   · Si el producto del rubro lleva etiqueta o pantalla (botellas, latas, cajas, celulares, libros), muéstralo sin etiqueta, de espaldas, apagado o desenfocado, o muestra el producto en uso (un vaso servido en vez de la botella); escríbelo así en el prompt (por ejemplo "unlabeled bottle", "phone screen facing away").
-  · Nunca pantallas con contenido, sitios web, gráficos, documentos, pizarras, letreros, carteles, marcadores, menús ni texto de ningún tipo.
+  · Nunca pantallas con contenido, sitios web, gráficos, documentos, pizarras, letreros, carteles, marcadores, menús ni texto de ningún tipo; tampoco hojas con dibujos, planos, bocetos o instrucciones (salen garabatos que parecen letras).
+  · En una tienda, sala de ventas o supermercado, la escena va en primer plano con el fondo desenfocado: las góndolas y los letreros del fondo traen texto.
   · Cada prompt termina con: "no signs, no labels, no text, no lettering, no logos, no watermarks".
 - No inventes datos del cliente (teléfonos, direcciones, precios, años) que no estén en la transcripción.
 - correo_cliente: es el correo con el que Luis enviará la propuesta al cliente. Mismo tratamiento (tú/usted) que la propuesta. Sin saludo ni firma (la plantilla ya pone «Estimado/a <nombre>,» y «Atentamente, El equipo de Automatiza Tech»). Sin montos. No menciones enlaces, botones ni adjuntos (la plantilla los agrega). Cálido y concreto, con algo propio de la reunión."""
@@ -54,11 +56,10 @@ Reglas:
 PROMPT_BOT = """Escribe el system prompt de un asistente virtual de demostración para este negocio, en español de Chile. Estructura: identidad (1 párrafo); TONO (tú o usted según el rubro, breve, sin emojis si el rubro es delicado); ATENCIÓN URGENTE (si aplica al rubro: primero empatía, luego el contacto directo del negocio); SERVICIOS; PRECIOS (solo los que aparezcan en la transcripción, con la aclaración de que un asesor confirma); REGLAS (no inventar datos; derivar a un humano cuando hay intención clara de contratar pidiendo nombre, teléfono y comuna). Usa solo datos que estén en la transcripción. Devuelve solo el texto del system prompt."""
 
 CODE_ARMAR = r"""// Reglas que no se le confían al modelo: formato JSON, precios y cantidad de láminas extra.
-let raw = $('Redactar propuesta').first().json.message.content;
-if (typeof raw === 'string') {
-  raw = raw.trim().replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/, '');
-}
-const d = typeof raw === 'string' ? JSON.parse(raw) : raw;
+// leerJsonModelo (json_guard.py): JSON.parse estricto; solo tolera llaves «}» de más al final. Si la respuesta
+// no se puede leer o no es un objeto, lanza y «0 Avisar error» le escribe a Luis.
+const d = leerJsonModelo($('Redactar propuesta').first().json.message.content);
+if (!esObjetoPlano(d)) throw new Error('la respuesta del modelo no es un objeto JSON');
 const body = $('Webhook (Entrada)').first().json.body || {};
 const prueba = body.prueba === true;
 d.pricing_rows = (d.pricing_rows || []).map((r) => ({ service: String(r.service || 'Servicio'), price_usd: 0, price_label: 'Por confirmar' }));
@@ -107,7 +108,7 @@ nodes = [
                                   {'content': "={{ $('Webhook (Entrada)').item.json.body.transcript }}"}]},
           'options': {'temperature': 0.4}, 'requestOptions': {}},
          credentials=CRED_OPENAI),
-    node('b4', 'Armar payload', 'n8n-nodes-base.code', 2, [660, 0], {'jsCode': JS_LIMPIAR_FOTOS + '\n' + CODE_ARMAR}),
+    node('b4', 'Armar payload', 'n8n-nodes-base.code', 2, [660, 0], {'jsCode': JS_LIMPIAR_FOTOS + '\n' + JS_LEER_JSON + '\n' + CODE_ARMAR}),
     node('b5', 'Crear en WordPress', 'n8n-nodes-base.httpRequest', 4.2, [880, 0],
          {'method': 'POST', 'url': f'{WP}/proposal', 'authentication': 'genericCredentialType',
           'genericAuthType': 'httpHeaderAuth', 'sendBody': True, 'specifyBody': 'json',

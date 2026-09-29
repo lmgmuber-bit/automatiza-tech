@@ -8,6 +8,7 @@ Solo referencia credenciales por id; no contiene secretos.
 """
 import json, os
 from correos import correo_cambios_ok, correo_cambios_error
+from json_guard import JS_LEER_JSON
 
 CRED_OPENAI = {'openAiApi': {'id': 'g52IEXpRfN5r7jKw', 'name': 'OpenAi account'}}
 CRED_SMTP = {'smtp': {'id': 'dyhVFWmjRNC45ccA', 'name': 'SMTP account PROD'}}
@@ -20,7 +21,7 @@ LUIS = 'lmgm.0303@gmail.com'
 VER = 'https://automatizatech.cl/ver-presentacion.php?id='
 PANEL = 'https://automatizatech.cl/wp-admin/admin.php?page=automatiza-proposals&edit_id='
 
-PROMPT_CAMBIOS = """Recibes el JSON de una propuesta comercial y los comentarios del consultor. Devuelve SOLO el objeto JSON de la propuesta, directamente (no lo envuelvas en otra clave como "propuesta"; sin texto antes ni después, sin bloques de código), con SOLO los cambios que piden los comentarios; todo lo demás queda idéntico, con la misma forma y claves. No toques pricing_rows, pricing_note ni unique_id (se descartan igual). Mantén español de Chile y el mismo tratamiento (tú/usted). Si un comentario pide cambiar precios, ignóralo: los precios se editan en el panel. Si pide una lámina extra nueva, agrégala en extra_slides (máximo 2) y su image_brief extra_N con el mismo cierre de prohibiciones que las demás. Si un comentario pide cambiar una foto, reescribe solo ese image_brief: foto realista del rubro del cliente (se permiten personas en acción); la de cover siempre en primer plano con el fondo desenfocado; productos con etiqueta o pantalla, sin etiqueta, de espaldas o apagados; nunca pantallas con contenido, letreros, carteles, documentos ni texto. Si un comentario pide cambiar el correo al cliente (asunto, introducción, qué incluye o cierre), o si los cambios que aplicas modifican la solución, los servicios o fases, o los próximos pasos, ajusta correo_cliente para que siga calzando con la propuesta, con el mismo tratamiento y sin montos; si no, deja correo_cliente idéntico."""
+PROMPT_CAMBIOS = """Recibes el JSON de una propuesta comercial y los comentarios del consultor. Devuelve SOLO el objeto JSON de la propuesta, directamente (no lo envuelvas en otra clave como "propuesta"; sin texto antes ni después, sin bloques de código), con SOLO los cambios que piden los comentarios; todo lo demás queda idéntico, con la misma forma y claves. No toques pricing_rows, pricing_note ni unique_id (se descartan igual). Mantén español de Chile y el mismo tratamiento (tú/usted). Si un comentario pide cambiar precios, ignóralo: los precios se editan en el panel. Si pide una lámina extra nueva, agrégala en extra_slides (máximo 2) y su image_brief extra_N con el mismo cierre de prohibiciones que las demás. Cuando el consultor nombra una lámina por su número, cuenta así: 1 la portada (cover), 2 «El desafío actual» (challenge), 3 «Nuestra solución» (solution), 4 «Beneficios clave» (benefits), 5 «¿Cómo funciona?» (how_it_works), después las láminas extra que ya existan en extra_slides (extra_1 y extra_2), luego «Inversión» (pricing), «Próximos pasos» (next_steps) y al final la de contacto, que no tiene foto. La foto de una lámina es el image_brief con ese mismo nombre de slide; nunca crees image_briefs para láminas que no existen. Si un comentario pide cambiar una foto, reescribe solo ese image_brief: foto realista del rubro del cliente (se permiten personas en acción); la de cover siempre en primer plano con el fondo desenfocado; productos con etiqueta o pantalla, sin etiqueta, de espaldas o apagados; nunca pantallas con contenido, letreros, carteles, documentos, hojas con dibujos, planos o instrucciones, ni texto; en una tienda o sala de ventas, primer plano con el fondo desenfocado. Si un comentario pide cambiar el correo al cliente (asunto, introducción, qué incluye o cierre), o si los cambios que aplicas modifican la solución, los servicios o fases, o los próximos pasos, ajusta correo_cliente para que siga calzando con la propuesta, con el mismo tratamiento y sin montos; si no, deja correo_cliente idéntico."""
 
 CODE_PAYLOAD = r"""// Une las dos ramas: con comentario (lo aplicó el modelo) o sin comentario (solo cambiaron precios).
 // Nunca lanza: si algo no cuadra devuelve ok=false con el motivo, para marcar la propuesta en error.
@@ -34,14 +35,24 @@ if ($('Aplicar comentarios').isExecuted) {
     reason = 'El modelo no respondió al aplicar los comentarios' + (ia && ia.error ? ': ' + (ia.error.message || ia.error) : '');
   } else {
     try {
-      if (typeof c === 'string') c = c.trim().replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/, '');
-      const parsed = typeof c === 'string' ? JSON.parse(c) : c;
+      // leerJsonModelo (json_guard.py): JSON.parse estricto; solo tolera llaves «}» de más al final
+      // (medido: ejecución 408862, una «}» extra tumbó un cambio bien aplicado).
+      const parsed = leerJsonModelo(c);
+      if (!esObjetoPlano(parsed)) throw new Error('la respuesta no es un objeto JSON');
       // El modelo a veces imita la forma de la entrada y devuelve {propuesta: {...}} (medido: ejecución 403689).
-      const candidato = parsed && parsed.propuesta && typeof parsed.propuesta === 'object' ? parsed.propuesta : parsed;
+      // Si el envoltorio trae algo más que la propuesta (y los comentarios de la entrada), es ambiguo.
+      const envuelta = esObjetoPlano(parsed.propuesta);
+      if (envuelta && Object.keys(parsed).some((k) => k !== 'propuesta' && k !== 'comentarios')) {
+        throw new Error('la respuesta mezcla la propuesta con otras claves');
+      }
+      const candidato = envuelta ? parsed.propuesta : parsed;
+      // Una nota o un «antes/después» no es la propuesta: toda clave debe ser de la propuesta.
+      const ajenas = Object.keys(candidato).filter((k) => !(k in (estado.payload || {})) && !CLAVES_PROPUESTA.includes(k));
+      if (ajenas.length) throw new Error('la respuesta trae claves que no son de la propuesta: ' + ajenas.join(', '));
       // Lo que el modelo omita se conserva de lo guardado: nunca se manda a WordPress un payload incompleto.
       p = Object.assign({}, estado.payload, candidato);
     } catch (e) {
-      reason = 'El modelo devolvió un JSON inválido al aplicar los comentarios';
+      reason = 'No se pudo usar la respuesta del modelo al aplicar los comentarios: ' + (e && e.message ? e.message : String(e));
     }
   }
 }
@@ -119,7 +130,7 @@ nodes = [
                                   {'content': "={{ JSON.stringify({ comentarios: $json.body.ultimo_comentario, propuesta: $json.body.payload }) }}"}]},
           'options': {'temperature': 0.2}, 'requestOptions': {}},
          credentials=CRED_OPENAI, onError='continueRegularOutput'),
-    node('c5', 'Payload final', 'n8n-nodes-base.code', 2, [880, 0], {'jsCode': CODE_PAYLOAD}),
+    node('c5', 'Payload final', 'n8n-nodes-base.code', 2, [880, 0], {'jsCode': JS_LEER_JSON + '\n' + CODE_PAYLOAD}),
     iff('c6', '¿Payload OK?', [1100, 0], '={{ $json.ok }}'),
     wp_http('c7', 'Guardar y volver a borrador', [1320, -120], 'POST',
             f"={WP}/proposal/{{{{ $json.id }}}}/state",

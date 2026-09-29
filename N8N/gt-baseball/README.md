@@ -90,15 +90,19 @@ Página privada para que la academia ubique a un atleta ya inscrito y vuelva a d
 Página /buscador/ → POST /webhook/gt-baseball-buscador { clave }
   → Revisar clave: compara con {{$env.GT_BUSCADOR_CLAVE}} sin cortar en el primer carácter distinto
        · sin la variable (o con menos de 12 caracteres) → 503 { error: 'sin_configurar' }
-       · clave equivocada → 401; tras 8 fallos desde una IP en 15 min → 429 (datos estáticos del flujo)
+       · clave equivocada → 401; tras 8 fallos desde una IP en 15 min → 429 (datos estáticos del flujo; la IP es la
+         última de X-Forwarded-For, la que agrega el proxy, porque la primera la puede inventar el cliente)
   → Leer Sheet (Inscripciones!A2:Y, credencial Google Sheets PROD)
-  → Armar lista: un objeto por fila con los campos que usa el buscador (sin dirección, estatura ni peso)
+  → Armar lista: un objeto por fila con los 16 campos que usa el buscador (nombre, cédula, nacimiento, edad, posición,
+    representante y su teléfono, fecha, pago, comprobante e ids de Drive); lo demás queda solo en el Sheet
   → { ok: true, total, atletas: [...] } con Cache-Control: no-store
 ```
 
 - **La clave** la elige Luis y la pone en Easypanel, en la variable `GT_BUSCADOR_CLAVE` del servicio n8n, igual que
-  `TURNSTILE_SECRET`. Nunca va en el repo ni en el flujo. En la página, Jeffer la escribe una vez: con «Recordar» queda
-  en el `localStorage` de su equipo; sin eso dura mientras la pestaña esté abierta. «Salir» la borra.
+  `TURNSTILE_SECRET` (🔴 en el servicio **n8n**, no en el del renderer de propuestas, y redesplegar para que la lea).
+  Nunca va en el repo ni en el flujo. En la página, Jeffer la escribe una vez: con «Recordar» queda en el
+  `localStorage` de su teléfono y **vence a los 30 días**; sin eso dura mientras la pestaña esté abierta. «Salir» pide
+  confirmación y la borra junto con la búsqueda.
 - **La página** filtra, ordena y pagina sola: búsqueda por nombre (sin importar tildes) o cédula (sin importar puntos
   ni la V), posición, forma de pago, comprobante (recibido, falta o no aplica), edad y fecha de inscripción. Las
   inscripciones de prueba (columna B = PRUEBA) se ocultan salvo que se pidan.
@@ -107,7 +111,11 @@ Página /buscador/ → POST /webhook/gt-baseball-buscador { clave }
 - Todo se dibuja con `textContent` (nada de `innerHTML` con datos) y solo se arman enlaces con ids que tienen forma de
   id de Drive. El `?endpoint=` de prueba solo funciona en `localhost` y `127.0.0.1`.
 - `buscador/.htaccess` agrega `X-Robots-Tag: noindex, nofollow` y `Cache-Control: no-store`; la CSP viene de la raíz.
-- No guarda las ejecuciones exitosas (traen nombres y cédulas de menores).
+- No guarda ejecuciones exitosas, con error ni manuales (traen nombres y cédulas de menores).
+- `buscador/.htaccess` trae una CSP propia más estricta que la de la portada (sin Turnstile ni cdnjs; solo el script
+  de tema en línea, por su hash). Si se cambia ese `<script>` de `buscador/index.html`, hay que recalcular el hash.
+- Auditoría del 29-sep (4 auditores + verificador escéptico por hallazgo): 36 hallazgos confirmados, ninguno grave;
+  corregidos en el commit `9a4de83`. XSS probado con 30 registros hostiles: nada se ejecuta.
 
 ## Configuración fuera del repo
 

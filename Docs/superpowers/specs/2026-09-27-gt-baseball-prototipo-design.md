@@ -378,6 +378,11 @@ borra o edita algo por error.
 - **Editor:** el permiso de Jeffer pasó de lector a editor. El conector de Google Drive de Claude está en otra cuenta
   y no puede tocar archivos de `contacto@`, así que se hizo con las credenciales de n8n mediante un flujo temporal
   (`n8n_temp.py`, en los respaldos).
+- **Carpeta de fotos, planillas y comprobantes:** compartida con Jeffer como **lector** (pedido de Luis), porque sin
+  eso los enlaces del Sheet le pedían acceso. Verificado:
+  - lector en la carpeta y en los archivos de adentro;
+  - sigue siendo editor del Sheet, que vive en esa carpeta (vale el permiso mayor);
+  - sin acceso a la carpeta de respaldos, que está fuera, en la raíz de `contacto@`.
 - **Protecciones** (reversibles en Datos → Proteger hojas y rangos):
   - la fila 1 (encabezados) solo la puede cambiar `contacto@`, porque de ella depende cómo el sistema agrega filas;
   - las columnas A–Y, de la fila 2 hacia abajo, muestran una advertencia antes de editar o borrar.

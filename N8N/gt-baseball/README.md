@@ -13,6 +13,7 @@ pruebas y decisiones en `Docs/superpowers/specs/2026-09-27-gt-baseball-prototipo
 | Direcciones viejas | `automatizatech.cl/demos/gt-baseball/` (v1) y `…/v2/` | Redirigen 301 a `https://gtbaseball.com/` |
 | Flujo v1 | «GT Baseball · Inscripciones (prototipo)» (`1ooWxClFzc6vGb3W`) | Activo pero sin uso (su página redirige). Congelado: etiqueta git `gt-baseball-v1` |
 | Google Sheet | «GT Baseball Academy · Inscripciones», Drive de `contacto@automatizatech.cl` | Jeffer es **editor** desde el 28-sep. Fila 1 bloqueada; columnas A–Y con advertencia |
+| Carpeta de Drive | «GT Baseball Academy · Inscripciones (prototipo)»: fotos, planillas, comprobantes y el Sheet | Jeffer es **lector** desde el 28-sep, para que le abran los enlaces del Sheet. En el Sheet sigue siendo editor (vale el permiso mayor). La carpeta de respaldos está fuera y es privada |
 
 El código de `demos/gt-baseball/` es el que se sirve en gtbaseball.com.
 

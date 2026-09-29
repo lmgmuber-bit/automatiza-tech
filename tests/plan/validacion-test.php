@@ -91,4 +91,151 @@ $paralelas = at_pt_dias_bloque(['actividades' => [
 ok($paralelas === 8, 'días de un bloque con paralelas: 5 (con 2 en paralelo) + 3 (con 1 en paralelo) = 8');
 ok(at_pt_dias_bloque(['actividades' => [['dias_habiles' => 1, 'en_paralelo' => true], ['dias_habiles' => 2]]]) === 3 && at_pt_dias_bloque(['actividades' => []]) === 0, 'la primera nunca es paralela; bloque vacío: 0');
 
+// Validación del plan: un plan como lo devuelve la IA, con desorden y detalles que hay que normalizar.
+$ia = [
+	'proyecto'    => '  [PRUEBA] Sitio web de Cliente Prueba ',
+	'fecha_firma' => '2026-09-29 18:40:12',
+	'fases'       => [
+		['clave' => 'soporte', 'titulo' => 'Otro título', 'bloques' => [
+			['nombre' => 'Garantía', 'actividades' => [
+				['nombre' => 'Ajustes menores', 'responsable' => 'at', 'dias_habiles' => 10, 'etapa' => 'soporte'],
+			]],
+		]],
+		['clave' => 'diseno_desarrollo', 'descripcion' => "Diseñamos y construimos tu sitio.\r\n\r\n\r\nTú apruebas cada avance.\t", 'bloques' => [
+			['nombre' => 'Diseño', 'entregable' => 'Maqueta aprobada', 'entrega' => true, 'actividades' => [
+				['nombre' => 'Propuesta de diseño', 'responsable' => 'AT', 'dias_habiles' => '3', 'servicio' => 'sitio_web_tienda', 'etapa' => 'diseno', 'en_paralelo' => true],
+				['nombre' => 'Ajustes de diseño', 'responsable' => 'at', 'dias_habiles' => 2, 'servicio' => 'Sitio_Web_Tienda', 'etapa' => 'DISENO', 'origen' => 'inventado', 'en_paralelo' => 'sí'],
+			]],
+			['nombre' => 'Bloque vacío', 'actividades' => []],
+		]],
+		['clave' => 'implementacion', 'bloques' => [
+			['nombre' => 'Puesta en marcha', 'actividades' => [
+				['nombre' => 'Publicación del sitio', 'responsable' => 'at', 'dias_habiles' => 1, 'servicio' => 'sitio_web_tienda', 'etapa' => 'implementacion', 'origen' => 'tabla'],
+			]],
+		]],
+	],
+	'hitos' => [
+		['nombre' => 'Diseño aprobado', 'despues_de' => ' diseño '],
+		['nombre' => 'Hito fantasma', 'despues_de' => 'No existe'],
+		['nombre' => 'Entrega estimada', 'despues_de' => 'Puesta en marcha'],
+	],
+	'necesitamos_de_ti' => [],
+	'reuniones'         => ['Reunión de inicio', ['nombre' => 'Entrega y capacitación', 'detalle' => 'Una hora por videollamada']],
+	'soporte'           => ['garantia_meses' => '3', 'mensuales' => ['Google Ads: gestión mensual']],
+	'image_briefs'      => [
+		['slide' => 'metodo', 'prompt' => "team of a small bakery  kneading dough together,\n warm light"],
+		['slide' => 'metodo', 'prompt' => 'otra foto para la misma lámina'],
+		['slide' => 'inventada', 'prompt' => 'x'],
+		['slide' => 'gantt', 'prompt' => ''],
+		['slide' => 'fase_1', 'prompt' => str_repeat('a', 1201)],
+	],
+	'cronograma' => ['basura' => true],
+];
+$v = at_pt_validar_plan($ia);
+$p = $v['plan'];
+ok($v['ok'] === true && $v['errores'] === [], 'plan de la IA con desorden: válido y sin errores');
+ok(array_column($p['fases'], 'clave') === ['diseno_desarrollo', 'implementacion', 'soporte'], 'fases en su orden fijo aunque vengan desordenadas');
+ok(array_column($p['fases'], 'titulo') === ['Diseño y desarrollo', 'Implementación', 'Soporte y mejora continua'], 'títulos fijos por clave (se ignora el de la IA)');
+ok(array_column($p['fases'][0]['bloques'], 'nombre') === ['Arranque', 'Diseño'], 'el Arranque va al inicio de la primera fase y el bloque vacío se quita');
+ok($p['fases'][0]['bloques'][0] === at_pt_arranque(), 'el bloque Arranque es el fijo');
+ok($p['proyecto'] === '[PRUEBA] Sitio web de Cliente Prueba' && $p['version'] === 1, 'proyecto recortado y versión 1');
+ok($p['fecha_firma'] === '2026-09-29' && $p['fecha_inicio'] === '', 'fecha de firma sin hora; fecha de inicio vacía hasta calcular');
+ok($p['fases'][0]['descripcion'] === "Diseñamos y construimos tu sitio.\n\nTú apruebas cada avance.", 'descripción: conserva el párrafo, sin \\r, sin tabulador y sin líneas vacías de más');
+$d1 = $p['fases'][0]['bloques'][1]['actividades'][0];
+$d2 = $p['fases'][0]['bloques'][1]['actividades'][1];
+ok($d1['responsable'] === 'at' && $d1['dias_habiles'] === 3 && $d1['origen'] === 'ia', 'responsable «AT» -> at; días «3» -> 3; sin origen -> ia');
+ok($d1['en_paralelo'] === false && $d2['en_paralelo'] === true, 'la primera actividad de un bloque nunca es paralela; «sí» es paralela');
+ok($d2['servicio'] === 'sitio_web_tienda' && $d2['etapa'] === 'diseno' && $d2['origen'] === 'ia', 'servicio y etapa en minúsculas; origen inventado -> ia');
+ok($p['fases'][1]['bloques'][0]['actividades'][0]['origen'] === 'tabla', 'un origen válido se conserva');
+ok($p['fases'][0]['bloques'][1]['entrega'] === true && $p['fases'][1]['bloques'][0]['entrega'] === false && $p['fases'][0]['bloques'][1]['entregable'] === 'Maqueta aprobada', 'entrega y entregable');
+ok($d1['desde'] === '' && $d1['hasta'] === '' && $p['cronograma'] === [], 'desde, hasta y cronograma vacíos hasta calcular (se ignora el cronograma que mande la IA)');
+ok($p['hitos'] === [['nombre' => 'Diseño aprobado', 'despues_de' => 'Diseño', 'fecha' => '']], 'hitos: el nombre exacto del bloque; fuera el que apunta a un bloque que no existe y la «Entrega estimada» (la pone el cronograma)');
+ok(in_array('El hito «Hito fantasma» se descartó: no existe el bloque «No existe».', $v['avisos'], true), 'aviso legible del hito descartado');
+ok($p['necesitamos_de_ti'] === at_pt_necesitamos_defecto() && in_array('«Qué necesitamos de ti» venía vacío: se usó la lista de siempre (logo, textos y accesos).', $v['avisos'], true), 'qué necesitamos de ti vacío: lista de siempre, con aviso');
+ok($p['reuniones'] === [['nombre' => 'Reunión de inicio', 'detalle' => ''], ['nombre' => 'Entrega y capacitación', 'detalle' => 'Una hora por videollamada']], 'reuniones como texto o como objeto');
+ok($p['soporte'] === ['garantia_meses' => 3, 'mensuales' => ['Google Ads: gestión mensual']], 'soporte: garantía entera y mensuales como texto');
+ok($p['image_briefs'] === [['slide' => 'metodo', 'prompt' => 'team of a small bakery kneading dough together, warm light']], 'fotos: una por lámina válida, sin vacías ni de más de 1.200 caracteres');
+ok(count(array_filter($v['avisos'], fn($a) => strpos($a, 'Se descartó') === 0)) === 4, 'cuatro avisos de fotos descartadas (repetida, lámina inventada, sin descripción y demasiado larga)');
+ok(array_keys($p) === ['version', 'proyecto', 'fecha_firma', 'fecha_inicio', 'fases', 'hitos', 'necesitamos_de_ti', 'reuniones', 'soporte', 'image_briefs', 'cronograma'], 'claves del plan normalizado, en orden');
+ok(at_pt_validar_plan($p)['plan'] === $p, 'validar dos veces da lo mismo (el panel vuelve a guardar sin duplicar el Arranque)');
+$con_arranque = $ia;
+$con_arranque['fases'][1]['bloques'] = array_merge([['nombre' => ' arranque ', 'actividades' => [['nombre' => 'Kickoff', 'responsable' => 'ambos', 'dias_habiles' => 2]]]], $ia['fases'][1]['bloques']);
+ok(array_column(at_pt_validar_plan($con_arranque)['plan']['fases'][0]['bloques'], 'nombre') === ['arranque', 'Diseño'], 'si la primera fase ya trae un bloque «Arranque», no se agrega otro');
+$por_clave = at_pt_validar_plan(['proyecto' => 'X', 'fases' => ['implementacion' => ['bloques' => [['nombre' => 'Puesta en marcha', 'actividades' => [['nombre' => 'Publicación', 'responsable' => 'at', 'dias_habiles' => 1]]]]]]]);
+ok($por_clave['ok'] && $por_clave['plan']['fases'][0]['clave'] === 'implementacion' && $por_clave['plan']['fases'][0]['bloques'][0]['nombre'] === 'Arranque', 'fases como objeto con la clave por nombre; el Arranque va a la primera fase que exista');
+$repetida = at_pt_validar_plan(['proyecto' => 'X', 'fases' => [
+	['clave' => 'soporte', 'bloques' => [['nombre' => 'Garantía', 'actividades' => [['nombre' => 'Ajustes', 'responsable' => 'at', 'dias_habiles' => 5]]]]],
+	['clave' => 'soporte', 'bloques' => [['nombre' => 'Mejora continua', 'actividades' => [['nombre' => 'Reunión mensual', 'responsable' => 'ambos', 'dias_habiles' => 1]]]]],
+]]);
+ok($repetida['ok'] && array_column($repetida['plan']['fases'][0]['bloques'], 'nombre') === ['Arranque', 'Garantía', 'Mejora continua'] && in_array('La fase «Soporte y mejora continua» venía repetida: se juntaron sus bloques.', $repetida['avisos'], true), 'una fase repetida se junta con aviso');
+$etiquetas = at_pt_validar_plan(['proyecto' => 'X', 'fases' => [['clave' => 'Implementación', 'bloques' => [['nombre' => 'Puesta en marcha', 'actividades' => [['nombre' => 'Publicación', 'responsable' => 'Tú', 'dias_habiles' => 1], ['nombre' => 'Capacitación', 'responsable' => 'AutomatizaTech', 'dias_habiles' => 1]]]]]]]);
+ok($etiquetas['ok'] && $etiquetas['plan']['fases'][0]['clave'] === 'implementacion' && array_column($etiquetas['plan']['fases'][0]['bloques'][1]['actividades'], 'responsable') === ['cliente', 'at'], 'la IA escribe la etiqueta en vez de la clave («Implementación», «Tú», «AutomatizaTech»): se entiende sin error');
+ok(at_pt_clave_de(' SOPORTE Y MEJORA CONTINUA ', at_pt_fases_validas()) === 'soporte' && at_pt_clave_de('ambos', at_pt_responsables()) === 'ambos' && at_pt_clave_de('el equipo', at_pt_responsables()) === '' && at_pt_clave_de(3, at_pt_responsables()) === '', 'clave desde la clave o desde la etiqueta; lo demás no calza');
+
+// Review Focus 2: lo que la IA devuelve mal deja el plan en error con un motivo legible y nunca un plan a medias.
+ok(at_pt_validar_entrada('esto no es JSON') === ['ok' => false, 'errores' => ['La IA no devolvió un plan en JSON válido (un objeto con fases).'], 'avisos' => [], 'plan' => []] && at_pt_validar_entrada(null)['plan'] === [] && at_pt_validar_entrada(42)['ok'] === false, 'JSON inválido, ausente o de otro tipo: error legible y sin plan');
+ok(at_pt_validar_entrada("```json\n" . json_encode($ia) . "\n```")['plan'] === $v['plan'] && at_pt_validar_entrada($ia) === $v, 'el plan en texto (con cerco) o como objeto: lo mismo que validar el objeto');
+$arranque_ia = at_pt_validar_entrada($con_arranque, true);
+ok(array_column($arranque_ia['plan']['fases'][0]['bloques'], 'nombre') === ['Arranque', 'Diseño'] && $arranque_ia['plan']['fases'][0]['bloques'][0] === at_pt_arranque() && $arranque_ia['avisos'][0] === 'La IA mandó su propio bloque «Arranque»: se usó el fijo (reunión de inicio y entrega de logo, textos y accesos).', 'borrador nuevo: el «Arranque» de la IA se cambia por el fijo, que trae la entrega de insumos de la cláusula 4.2');
+$arranque_tarde = $ia;
+$arranque_tarde['fases'][2]['bloques'][] = ['nombre' => 'Arranque', 'actividades' => [['nombre' => 'Kickoff', 'responsable' => 'ambos', 'dias_habiles' => 1]]];
+$bloques_arranque = 0;
+foreach (at_pt_validar_entrada($arranque_tarde, true)['plan']['fases'] as $f) {
+	foreach ($f['bloques'] as $b) {
+		$bloques_arranque += at_pt_clave_nombre($b['nombre']) === 'arranque' ? 1 : 0;
+	}
+}
+ok($bloques_arranque === 1, 'un «Arranque» de la IA en otra fase tampoco queda: un solo Arranque, al inicio');
+$mal = at_pt_validar_plan([]);
+ok($mal['ok'] === false && $mal['errores'] === ['El plan no trae fases.'] && $mal['plan'] === [], 'plan vacío: error «El plan no trae fases.» y sin plan');
+$mal = at_pt_validar_plan([['clave' => 'diseno_desarrollo']]);
+ok($mal['ok'] === false && strpos($mal['errores'][0], 'llegó una lista') !== false && $mal['plan'] === [], 'una lista en vez de un objeto: error legible');
+$mal = at_pt_validar_plan(['proyecto' => 'X', 'fases' => [['clave' => 'marketing', 'bloques' => []], ['clave' => 'implementacion', 'bloques' => [['nombre' => 'Puesta en marcha', 'actividades' => [['nombre' => 'Publicación', 'responsable' => 'at', 'dias_habiles' => 1]]]]]]]);
+ok($mal['ok'] === false && $mal['errores'] === ['Fase desconocida: «marketing» (las válidas son diseno_desarrollo, implementacion y soporte).'] && $mal['plan'] === [], 'fase desconocida: error aunque las demás estén bien');
+$dias = function ($d) {
+	return at_pt_validar_plan(['proyecto' => 'X', 'fases' => [['clave' => 'diseno_desarrollo', 'bloques' => [['nombre' => 'Diseño', 'actividades' => [['nombre' => 'Maqueta', 'responsable' => 'at', 'dias_habiles' => $d]]]]]]]);
+};
+ok($dias(0)['errores'] === ['Diseño y desarrollo › Diseño › «Maqueta»: dice 0 días hábiles (deben ser de 1 a 60).'] && $dias(0)['plan'] === [], 'días 0: error legible y sin plan');
+ok($dias(200)['errores'] === ['Diseño y desarrollo › Diseño › «Maqueta»: dice 200 días hábiles (deben ser de 1 a 60).'], 'días 200: error legible');
+ok($dias(2.5)['errores'] === ['Diseño y desarrollo › Diseño › «Maqueta»: los días hábiles no son un número entero («2.5»; deben ser de 1 a 60).'] && $dias('tres')['ok'] === false && $dias(null)['ok'] === false, 'días con decimales, en palabras o ausentes: error');
+ok($dias(1)['ok'] && $dias(60)['ok'] && $dias('60')['ok'], 'días 1 y 60 son válidos');
+$resp = at_pt_validar_plan(['proyecto' => 'X', 'fases' => [['clave' => 'diseno_desarrollo', 'bloques' => [['nombre' => 'Diseño', 'actividades' => [['nombre' => 'Maqueta', 'responsable' => 'el equipo', 'dias_habiles' => 2]]]]]]]);
+ok($resp['errores'] === ['Diseño y desarrollo › Diseño › «Maqueta»: responsable desconocido «el equipo» (debe ser at, cliente o ambos).'], 'responsable desconocido: error legible');
+$texto = function ($nombre) {
+	return at_pt_validar_plan(['proyecto' => 'X', 'fases' => [['clave' => 'diseno_desarrollo', 'bloques' => [['nombre' => 'Diseño', 'actividades' => [['nombre' => $nombre, 'responsable' => 'at', 'dias_habiles' => 2]]]]]]]);
+};
+$enorme = $texto(str_repeat('texto roto ', 500));
+ok($enorme['ok'] === false && $enorme['errores'] === ['Diseño y desarrollo › Diseño › actividad 1: el texto es demasiado largo (5.499 caracteres; máximo 120).'] && $enorme['plan'] === [], 'texto enorme (más de 4 veces el tope): error legible y sin plan');
+$largo = $texto(str_repeat('a', 130));
+$nombre_largo = $largo['plan']['fases'][0]['bloques'][1]['actividades'][0]['nombre'];
+ok($largo['ok'] && mb_strlen($nombre_largo) === 120 && substr($nombre_largo, -3) === '…' && in_array('Diseño y desarrollo › Diseño › actividad 1: se acortó a 120 caracteres.', $largo['avisos'], true), 'texto algo largo: se acorta a 120 con «…» y aviso');
+ok($texto(['una', 'lista'])['errores'] === ['Diseño y desarrollo › Diseño › actividad 1: no es texto.'] && $texto('')['errores'] === ['Diseño y desarrollo › Diseño: la actividad 1 no tiene nombre.'], 'nombre que no es texto o vacío: error');
+ok($texto("con\x00control y\ttab")['plan']['fases'][0]['bloques'][1]['actividades'][0]['nombre'] === 'con control y tab', 'caracteres de control fuera');
+$vacio = at_pt_validar_plan(['proyecto' => 'X', 'fases' => [['clave' => 'diseno_desarrollo', 'bloques' => [['nombre' => 'Diseño', 'actividades' => []]]]]]);
+ok($vacio['ok'] === false && $vacio['errores'] === ['El plan no trae actividades (aparte del arranque).'] && $vacio['plan'] === [], 'ninguna actividad: error legible');
+$solo_arranque = at_pt_validar_plan(['proyecto' => 'X', 'fases' => [['clave' => 'diseno_desarrollo', 'bloques' => [at_pt_arranque()]]]]);
+ok($solo_arranque['ok'] === false && $solo_arranque['errores'] === ['El plan no trae actividades (aparte del arranque).'], 'solo el arranque tampoco es un plan');
+$sin_proyecto = at_pt_validar_plan(['fases' => [['clave' => 'soporte', 'bloques' => [['nombre' => 'Garantía', 'actividades' => [['nombre' => 'Ajustes', 'responsable' => 'at', 'dias_habiles' => 1]]]]]]]);
+ok($sin_proyecto['ok'] && $sin_proyecto['plan']['proyecto'] === '' && $sin_proyecto['avisos'][0] === 'El plan no trae el nombre del proyecto.', 'sin nombre de proyecto: aviso, no error (el render usa el nombre de la empresa)');
+
+// Topes (Review Focus 6): más no cabe legible en la carta Gantt.
+$bloque = fn(string $n, int $acts = 1, int $dias = 1, bool $entrega = false) => ['nombre' => $n, 'entrega' => $entrega, 'actividades' => array_map(fn($i) => ['nombre' => "{$n} {$i}", 'responsable' => 'at', 'dias_habiles' => $dias], range(1, $acts))];
+$muchos = at_pt_validar_plan(['proyecto' => 'X', 'fases' => [['clave' => 'diseno_desarrollo', 'bloques' => array_map(fn($i) => $bloque("B{$i}"), range(1, 14))]]]);
+ok($muchos['ok'] === false && $muchos['errores'] === ['El plan trae 15 bloques contando el arranque (máximo 14): la carta Gantt no cabe legible. Junta bloques o divide el proyecto.'], '15 bloques con el arranque: error');
+ok(at_pt_validar_plan(['proyecto' => 'X', 'fases' => [['clave' => 'diseno_desarrollo', 'bloques' => array_map(fn($i) => $bloque("B{$i}"), range(1, 13))]]])['ok'], '14 bloques con el arranque: válido');
+$once = at_pt_validar_plan(['proyecto' => 'X', 'fases' => [['clave' => 'diseno_desarrollo', 'bloques' => [$bloque('Grande', 11)]]]]);
+ok($once['ok'] === false && $once['errores'] === ['Diseño y desarrollo › Grande: trae 11 actividades (máximo 10 por bloque).'], '11 actividades en un bloque: error');
+$sesenta = at_pt_validar_plan(['proyecto' => 'X', 'fases' => [['clave' => 'diseno_desarrollo', 'bloques' => array_map(fn($i) => $bloque("B{$i}", 9), range(1, 7))]]]);
+ok($sesenta['ok'] === false && $sesenta['errores'] === ['El plan trae 65 actividades (máximo 60).'], '65 actividades con el arranque: error');
+$lento = at_pt_validar_plan(['proyecto' => 'X', 'fases' => [['clave' => 'diseno_desarrollo', 'bloques' => [$bloque('Largo', 3, 40, true)]]]]);
+ok($lento['ok'] === true, '4 de arranque + 3 × 40 + 5 de revisión = 129 días hábiles: válido');
+$muy_lento = at_pt_validar_plan(['proyecto' => 'X', 'fases' => [['clave' => 'diseno_desarrollo', 'bloques' => [$bloque('Largo', 3, 40, true), $bloque('Extra', 1, 2)]]]]);
+ok($muy_lento['errores'] === ['El plan suma 131 días hábiles con las revisiones (máximo 130, unas 26 semanas): acórtalo o divide el proyecto.'], '131 días hábiles: error');
+
+// Una respuesta desbordada de la IA no llena la nota del plan: hasta 25 mensajes de cada tipo.
+$desborde = at_pt_validar_plan(['proyecto' => 'X', 'fases' => [['clave' => 'soporte', 'bloques' => [['nombre' => 'Garantía', 'actividades' => [['nombre' => 'Ajustes', 'responsable' => 'at', 'dias_habiles' => 1]]]]]], 'image_briefs' => array_fill(0, 1500, ['slide' => 'inventada', 'prompt' => 'x'])]);
+ok($desborde['ok'] && count($desborde['avisos']) === 26 && end($desborde['avisos']) === '… y 1.477 avisos más.', '1.502 avisos: quedan los 25 primeros y «… y 1.477 avisos más.»');
+$ceros = at_pt_validar_plan(['proyecto' => 'X', 'fases' => [['clave' => 'diseno_desarrollo', 'bloques' => array_map(fn($i) => $bloque("C{$i}", 10, 0), range(1, 3))]]]);
+ok(!$ceros['ok'] && count($ceros['errores']) === 26 && end($ceros['errores']) === '… y 5 errores más.' && $ceros['plan'] === [], '30 errores: quedan los 25 primeros y «… y 5 errores más.»');
+
 fin();

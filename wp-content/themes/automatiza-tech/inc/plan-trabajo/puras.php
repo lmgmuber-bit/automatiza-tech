@@ -345,3 +345,381 @@ function at_pt_dias_bloque(array $bloque): int {
 	}
 	return $fin + 1;
 }
+
+/* ---------- Validación del plan (Task 2) ---------- */
+
+/** Clave de una enumeración desde lo que mandó la IA: la clave misma («AT», « cliente ») o su etiqueta («Tú»,
+ *  «Implementación», «Soporte y mejora continua»), sin distinguir mayúsculas ni espacios de más. '' si no calza.
+ *  Así un valor inequívoco no deja el plan en «error». */
+function at_pt_clave_de(mixed $v, array $opciones): string {
+	if (!is_string($v)) {
+		return '';
+	}
+	$buscado = at_pt_clave_nombre($v);
+	foreach ($opciones as $clave => $etiqueta) {
+		if ($buscado === at_pt_clave_nombre((string) $clave) || $buscado === at_pt_clave_nombre((string) $etiqueta)) {
+			return (string) $clave;
+		}
+	}
+	return '';
+}
+
+/** Una actividad normalizada (las diez claves, en orden), o null si no se puede usar (el motivo va a $errores). */
+function at_pt_validar_actividad(mixed $a, string $donde, int $n, array &$errores, array &$avisos): ?array {
+	if (!is_array($a)) {
+		$errores[] = "{$donde}: la actividad {$n} no tiene la forma esperada.";
+		return null;
+	}
+	$antes = count($errores);
+	$nombre = at_pt_texto($a['nombre'] ?? null, 120, "{$donde} › actividad {$n}", $errores, $avisos);
+	if ($nombre === '') {
+		if (count($errores) === $antes) {
+			$errores[] = "{$donde}: la actividad {$n} no tiene nombre.";
+		}
+		return null;
+	}
+	$aqui = "{$donde} › «{$nombre}»";
+	$responsable = at_pt_clave_de($a['responsable'] ?? null, at_pt_responsables());
+	if ($responsable === '') {
+		$errores[] = "{$aqui}: responsable desconocido «" . at_pt_mostrar($a['responsable'] ?? null) . '» (debe ser at, cliente o ambos).';
+		$responsable = 'ambos';
+	}
+	$dias = at_pt_entero($a['dias_habiles'] ?? null);
+	if ($dias === null || $dias < 1 || $dias > 60) {
+		$errores[] = $dias === null
+			? "{$aqui}: los días hábiles no son un número entero («" . at_pt_mostrar($a['dias_habiles'] ?? null) . '»; deben ser de 1 a 60).'
+			: "{$aqui}: dice {$dias} días hábiles (deben ser de 1 a 60).";
+		$dias = 1;
+	}
+	$servicio = is_string($a['servicio'] ?? null) ? strtolower(trim($a['servicio'])) : '';
+	$etapa = is_string($a['etapa'] ?? null) ? strtolower(trim($a['etapa'])) : '';
+	$origen = is_string($a['origen'] ?? null) ? strtolower(trim($a['origen'])) : '';
+	return [
+		'nombre'       => $nombre,
+		'detalle'      => at_pt_texto($a['detalle'] ?? null, 300, "{$aqui}: detalle", $errores, $avisos),
+		'responsable'  => $responsable,
+		'dias_habiles' => $dias,
+		'servicio'     => preg_match('/^[a-z0-9_]{2,40}$/', $servicio) ? $servicio : '',
+		'etapa'        => isset(at_pt_etapas()[$etapa]) ? $etapa : '',
+		'origen'       => isset(at_pt_origenes()[$origen]) ? $origen : 'ia',
+		'en_paralelo'  => at_pt_booleano($a['en_paralelo'] ?? false),
+		'desde'        => '',
+		'hasta'        => '',
+	];
+}
+
+/** Un bloque normalizado, o null si no sirve: sin forma o sin nombre (error) o sin actividades (se quita con aviso). */
+function at_pt_validar_bloque(mixed $b, string $fase, int $n, array &$errores, array &$avisos): ?array {
+	if (!is_array($b)) {
+		$errores[] = "{$fase}: el bloque {$n} no tiene la forma esperada.";
+		return null;
+	}
+	$antes = count($errores);
+	$nombre = at_pt_texto($b['nombre'] ?? null, 80, "{$fase} › bloque {$n}", $errores, $avisos);
+	if ($nombre === '') {
+		if (count($errores) === $antes) {
+			$errores[] = "{$fase}: el bloque {$n} no tiene nombre.";
+		}
+		return null;
+	}
+	$donde = "{$fase} › {$nombre}";
+	$bloque = [
+		'nombre'      => $nombre,
+		'entregable'  => at_pt_texto($b['entregable'] ?? null, 200, "{$donde}: entregable", $errores, $avisos),
+		'entrega'     => at_pt_booleano($b['entrega'] ?? false),
+		'actividades' => [],
+	];
+	$actividades = $b['actividades'] ?? [];
+	if (!is_array($actividades)) {
+		$errores[] = "{$donde}: las actividades no tienen la forma esperada.";
+		return null;
+	}
+	if (count($actividades) > AT_PT_MAX_ACTIVIDADES_BLOQUE) {
+		$errores[] = "{$donde}: trae " . count($actividades) . ' actividades (máximo ' . AT_PT_MAX_ACTIVIDADES_BLOQUE . ' por bloque).';
+	}
+	$k = 0;
+	foreach ($actividades as $a) {
+		$act = at_pt_validar_actividad($a, $donde, ++$k, $errores, $avisos);
+		if ($act === null) {
+			continue;
+		}
+		if ($bloque['actividades'] === []) {
+			$act['en_paralelo'] = false; // la primera de un bloque nunca es paralela
+		}
+		$bloque['actividades'][] = $act;
+	}
+	if ($bloque['actividades'] === []) {
+		if (count($errores) === $antes) {
+			$avisos[] = "{$donde}: el bloque no trae actividades y se quitó.";
+		}
+		return null;
+	}
+	return $bloque;
+}
+
+/** Valida y normaliza el plan que manda la IA o el panel (forma en el esqueleto). Devuelve
+ *  ['ok' => bool, 'errores' => string[], 'avisos' => string[], 'plan' => array]. Con errores, 'plan' es [] para que
+ *  nunca se guarde un plan roto. Normaliza: títulos fijos por clave, fases en su orden (las repetidas se juntan),
+ *  Arranque al inicio de la primera fase si falta, textos recortados, días enteros de 1 a 60, primera actividad de
+ *  cada bloque no paralela, hitos solo sobre bloques que existen, un brief de foto por lámina válida; desde, hasta,
+ *  fechas de hitos y cronograma quedan vacíos (los llena at_pt_calcular_fechas). Fase y responsable se aceptan por
+ *  clave o por etiqueta. Hasta 25 errores y 25 avisos. Es idempotente: validar un plan ya validado da lo mismo, así
+ *  que se vuelve a validar después de aplicar la tabla o devolver los días de Luis (pueden pasar el tope de días). */
+function at_pt_validar_plan(array $plan): array {
+	$errores = [];
+	$avisos = [];
+	if ($plan !== [] && array_is_list($plan)) {
+		return ['ok' => false, 'errores' => ['El plan no tiene la forma esperada: llegó una lista y no un objeto con fases.'], 'avisos' => [], 'plan' => []];
+	}
+	$out = [
+		'version'           => 1,
+		'proyecto'          => at_pt_texto($plan['proyecto'] ?? null, 120, 'Nombre del proyecto', $errores, $avisos),
+		'fecha_firma'       => is_string($plan['fecha_firma'] ?? null) ? at_pt_ymd($plan['fecha_firma']) : '',
+		'fecha_inicio'      => is_string($plan['fecha_inicio'] ?? null) ? at_pt_ymd($plan['fecha_inicio']) : '',
+		'fases'             => [],
+		'hitos'             => [],
+		'necesitamos_de_ti' => [],
+		'reuniones'         => [],
+		'soporte'           => ['garantia_meses' => 3, 'mensuales' => []],
+		'image_briefs'      => [],
+		'cronograma'        => [],
+	];
+	if ($out['proyecto'] === '') {
+		$avisos[] = 'El plan no trae el nombre del proyecto.';
+	}
+
+	// Fases: conocidas, en su orden fijo y con su título fijo.
+	$titulos = at_pt_fases_validas();
+	$fases_in = $plan['fases'] ?? null;
+	if (!is_array($fases_in) || $fases_in === []) {
+		$errores[] = 'El plan no trae fases.';
+		$fases_in = [];
+	}
+	$por_clave = [];
+	$n = 0;
+	foreach ($fases_in as $k => $f) {
+		$n++;
+		if (!is_array($f)) {
+			$errores[] = "La fase {$n} no tiene la forma esperada.";
+			continue;
+		}
+		$clave_in = $f['clave'] ?? (is_string($k) ? $k : null);
+		$clave = at_pt_clave_de($clave_in, $titulos);
+		if ($clave === '') {
+			$errores[] = 'Fase desconocida: «' . at_pt_mostrar($clave_in) . '» (las válidas son diseno_desarrollo, implementacion y soporte).';
+			continue;
+		}
+		$bloques = $f['bloques'] ?? [];
+		if (!is_array($bloques)) {
+			$errores[] = "{$titulos[$clave]}: los bloques no tienen la forma esperada.";
+			$bloques = [];
+		}
+		if (isset($por_clave[$clave])) {
+			$avisos[] = "La fase «{$titulos[$clave]}» venía repetida: se juntaron sus bloques.";
+			$por_clave[$clave]['bloques'] = array_merge($por_clave[$clave]['bloques'], array_values($bloques));
+			continue;
+		}
+		$por_clave[$clave] = ['descripcion' => $f['descripcion'] ?? null, 'bloques' => array_values($bloques)];
+	}
+	foreach ($titulos as $clave => $titulo) {
+		if (!isset($por_clave[$clave])) {
+			continue;
+		}
+		$fase = [
+			'clave'       => $clave,
+			'titulo'      => $titulo,
+			'descripcion' => at_pt_texto($por_clave[$clave]['descripcion'], 600, "{$titulo}: descripción", $errores, $avisos, true),
+			'bloques'     => [],
+		];
+		foreach ($por_clave[$clave]['bloques'] as $j => $b) {
+			$bloque = at_pt_validar_bloque($b, $titulo, $j + 1, $errores, $avisos);
+			if ($bloque !== null) {
+				$fase['bloques'][] = $bloque;
+			}
+		}
+		if ($fase['bloques'] === []) {
+			$avisos[] = "La fase «{$titulo}» quedó sin bloques y se quitó.";
+			continue;
+		}
+		$out['fases'][] = $fase;
+	}
+
+	// Arranque fijo al inicio de la primera fase, si no está.
+	if ($out['fases'] !== []) {
+		$tiene_arranque = false;
+		foreach ($out['fases'][0]['bloques'] as $b) {
+			$tiene_arranque = $tiene_arranque || at_pt_clave_nombre($b['nombre']) === 'arranque';
+		}
+		if (!$tiene_arranque) {
+			array_unshift($out['fases'][0]['bloques'], at_pt_arranque());
+		}
+	}
+
+	// Tamaño: actividades propias, bloques, actividades y días hábiles en secuencia.
+	$n_bloques = 0;
+	$n_actividades = 0;
+	$n_propias = 0;
+	$dias_plan = 0;
+	foreach ($out['fases'] as $f) {
+		foreach ($f['bloques'] as $b) {
+			$n_bloques++;
+			$n_actividades += count($b['actividades']);
+			if (at_pt_clave_nombre($b['nombre']) !== 'arranque') {
+				$n_propias += count($b['actividades']);
+			}
+			$dias_plan += at_pt_dias_bloque($b) + ($b['entrega'] ? AT_PT_DIAS_REVISION : 0);
+		}
+	}
+	if ($n_propias === 0 && $errores === []) {
+		$errores[] = 'El plan no trae actividades (aparte del arranque).';
+	}
+	if ($n_bloques > AT_PT_MAX_BLOQUES) {
+		$errores[] = "El plan trae {$n_bloques} bloques contando el arranque (máximo " . AT_PT_MAX_BLOQUES . '): la carta Gantt no cabe legible. Junta bloques o divide el proyecto.';
+	}
+	if ($n_actividades > AT_PT_MAX_ACTIVIDADES) {
+		$errores[] = "El plan trae {$n_actividades} actividades (máximo " . AT_PT_MAX_ACTIVIDADES . ').';
+	}
+	if ($dias_plan > AT_PT_MAX_DIAS_PLAN) {
+		$errores[] = "El plan suma {$dias_plan} días hábiles con las revisiones (máximo " . AT_PT_MAX_DIAS_PLAN . ', unas 26 semanas): acórtalo o divide el proyecto.';
+	}
+
+	// Hitos: solo sobre un bloque que existe (el nombre exacto del bloque queda en despues_de).
+	$bloques_por_nombre = [];
+	foreach ($out['fases'] as $f) {
+		foreach ($f['bloques'] as $b) {
+			$bloques_por_nombre[at_pt_clave_nombre($b['nombre'])] ??= $b['nombre'];
+		}
+	}
+	$hitos = is_array($plan['hitos'] ?? null) ? array_values($plan['hitos']) : [];
+	foreach ($hitos as $i => $h) {
+		$nombre = at_pt_texto(is_array($h) ? ($h['nombre'] ?? null) : null, 80, 'Hito ' . ($i + 1), $errores, $avisos);
+		if ($nombre === '' || at_pt_clave_nombre($nombre) === 'entrega estimada') {
+			continue; // sin nombre no se muestra; «Entrega estimada» la agrega siempre el cronograma
+		}
+		$despues = is_string($h['despues_de'] ?? null) ? at_pt_clave_nombre($h['despues_de']) : '';
+		if (!isset($bloques_por_nombre[$despues])) {
+			$avisos[] = "El hito «{$nombre}» se descartó: no existe el bloque «" . at_pt_mostrar($h['despues_de'] ?? null) . '».';
+			continue;
+		}
+		if (count($out['hitos']) >= 10) {
+			$avisos[] = "El hito «{$nombre}» se descartó: máximo 10 hitos.";
+			continue;
+		}
+		$out['hitos'][] = ['nombre' => $nombre, 'despues_de' => $bloques_por_nombre[$despues], 'fecha' => ''];
+	}
+
+	// Qué necesitamos de ti (máximo 12).
+	$necesitamos = is_array($plan['necesitamos_de_ti'] ?? null) ? array_values($plan['necesitamos_de_ti']) : [];
+	foreach ($necesitamos as $i => $x) {
+		$t = at_pt_texto(is_array($x) ? ($x['nombre'] ?? $x['texto'] ?? null) : $x, 160, 'Qué necesitamos de ti, punto ' . ($i + 1), $errores, $avisos);
+		if ($t !== '' && count($out['necesitamos_de_ti']) < 12) {
+			$out['necesitamos_de_ti'][] = $t;
+		}
+	}
+	if ($out['necesitamos_de_ti'] === []) {
+		$out['necesitamos_de_ti'] = at_pt_necesitamos_defecto();
+		$avisos[] = '«Qué necesitamos de ti» venía vacío: se usó la lista de siempre (logo, textos y accesos).';
+	}
+
+	// Reuniones (máximo 8; cada una puede venir como texto o como {nombre, detalle}).
+	$reuniones = is_array($plan['reuniones'] ?? null) ? array_values($plan['reuniones']) : [];
+	foreach ($reuniones as $i => $r) {
+		$q = 'Reunión ' . ($i + 1);
+		$nombre = at_pt_texto(is_array($r) ? ($r['nombre'] ?? null) : $r, 80, $q, $errores, $avisos);
+		$detalle = is_array($r) ? at_pt_texto($r['detalle'] ?? null, 200, "{$q}: detalle", $errores, $avisos) : '';
+		if ($nombre !== '' && count($out['reuniones']) < 8) {
+			$out['reuniones'][] = ['nombre' => $nombre, 'detalle' => $detalle];
+		}
+	}
+	if ($out['reuniones'] === []) {
+		$out['reuniones'] = at_pt_reuniones_defecto();
+		$avisos[] = 'Las reuniones venían vacías: se usó la lista de siempre (inicio, seguimiento del plan, entrega y capacitación).';
+	}
+
+	// Soporte: garantía de 0 a 24 meses (3 por defecto, como garantia_meses_servicio en
+	// inc/cierre-cliente/puras.php:428) y hasta 6 servicios mensuales como texto.
+	$soporte = is_array($plan['soporte'] ?? null) ? $plan['soporte'] : [];
+	$garantia = at_pt_entero($soporte['garantia_meses'] ?? 3);
+	if ($garantia === null || $garantia < 0 || $garantia > 24) {
+		$avisos[] = 'La garantía no era un número de 0 a 24 meses: quedó en 3.';
+		$garantia = 3;
+	}
+	$out['soporte']['garantia_meses'] = $garantia;
+	$mensuales = is_array($soporte['mensuales'] ?? null) ? array_values($soporte['mensuales']) : [];
+	foreach ($mensuales as $i => $m) {
+		$t = at_pt_texto(is_array($m) ? ($m['nombre'] ?? null) : $m, 160, 'Servicio mensual ' . ($i + 1), $errores, $avisos);
+		if ($t !== '' && count($out['soporte']['mensuales']) < 6) {
+			$out['soporte']['mensuales'][] = $t;
+		}
+	}
+
+	// Fotos: una por lámina válida, con descripción de 1 a 1.200 caracteres (no se recorta: se perdería el cierre de
+	// prohibiciones que agrega fotos_guard en n8n).
+	$slides = at_pt_slides_foto();
+	$vistos = [];
+	$briefs = is_array($plan['image_briefs'] ?? null) ? array_values($plan['image_briefs']) : [];
+	foreach ($briefs as $b) {
+		$slide = is_array($b) && is_string($b['slide'] ?? null) ? trim($b['slide']) : '';
+		$prompt = is_array($b) && is_string($b['prompt'] ?? null) && mb_check_encoding($b['prompt'], 'UTF-8')
+			? trim((string) preg_replace('/\s+/u', ' ', $b['prompt'])) : '';
+		if (!in_array($slide, $slides, true)) {
+			$avisos[] = 'Se descartó la foto de la lámina «' . at_pt_mostrar(is_array($b) ? ($b['slide'] ?? null) : $b) . '»: esa lámina no existe en el plan.';
+			continue;
+		}
+		if (isset($vistos[$slide])) {
+			$avisos[] = "Se descartó una segunda foto para la lámina «{$slide}».";
+			continue;
+		}
+		if ($prompt === '' || mb_strlen($prompt, 'UTF-8') > 1200) {
+			$avisos[] = "Se descartó la foto de la lámina «{$slide}»: " . ($prompt === '' ? 'no trae descripción.' : 'la descripción pasa de 1.200 caracteres.');
+			continue;
+		}
+		$vistos[$slide] = true;
+		$out['image_briefs'][] = ['slide' => $slide, 'prompt' => $prompt];
+	}
+
+	// Una respuesta desbordada de la IA no llena la nota del plan (TEXT, 64 KB): hasta 25 mensajes de cada tipo.
+	if (count($errores) > 25) {
+		$resto = number_format(count($errores) - 25, 0, ',', '.');
+		$errores = array_slice($errores, 0, 25);
+		$errores[] = "… y {$resto} errores más.";
+	}
+	if (count($avisos) > 25) {
+		$resto = number_format(count($avisos) - 25, 0, ',', '.');
+		$avisos = array_slice($avisos, 0, 25);
+		$avisos[] = "… y {$resto} avisos más.";
+	}
+
+	$ok = $errores === [];
+	return ['ok' => $ok, 'errores' => $errores, 'avisos' => $avisos, 'plan' => $ok ? $out : []];
+}
+
+/** Lo que llega en «plan» a POST /plan/{id}/borrador: un objeto o el texto de la IA. Mismo resultado que
+ *  at_pt_validar_plan(); si no hay un objeto JSON, error legible y plan vacío (Review Focus 2). Con $borrador true
+ *  (un borrador nuevo de la IA) se quitan los bloques «Arranque» que traiga la IA, en cualquier fase, para que entre el
+ *  fijo con la entrega de insumos de la cláusula 4.2; en «cambios» y en el panel se conserva el Arranque guardado, que
+ *  Luis puede editar. */
+function at_pt_validar_entrada(mixed $plan, bool $borrador = false): array {
+	if (is_string($plan)) {
+		$plan = at_pt_plan_de_json($plan);
+	}
+	if (!is_array($plan)) {
+		return ['ok' => false, 'errores' => ['La IA no devolvió un plan en JSON válido (un objeto con fases).'], 'avisos' => [], 'plan' => []];
+	}
+	$quitados = 0;
+	if ($borrador && is_array($plan['fases'] ?? null)) {
+		foreach ($plan['fases'] as $k => $f) {
+			if (!is_array($f) || !is_array($f['bloques'] ?? null)) {
+				continue;
+			}
+			$quedan = array_values(array_filter($f['bloques'], static fn($b): bool => !(is_array($b) && is_string($b['nombre'] ?? null) && at_pt_clave_nombre($b['nombre']) === 'arranque')));
+			$quitados += count($f['bloques']) - count($quedan);
+			$plan['fases'][$k]['bloques'] = $quedan;
+		}
+	}
+	$v = at_pt_validar_plan($plan);
+	if ($quitados > 0) {
+		array_unshift($v['avisos'], 'La IA mandó su propio bloque «Arranque»: se usó el fijo (reunión de inicio y entrega de logo, textos y accesos).');
+	}
+	return $v;
+}

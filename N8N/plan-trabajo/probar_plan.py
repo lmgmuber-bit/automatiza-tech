@@ -738,6 +738,144 @@ def prueba_borrador():
     ok(not t['correos'], 'B14: otros avisos de WordPress no mandan correo (los muestra el panel)')
 
 
+@seccion('cambios')
+def prueba_cambios():
+    from build_plan_2_cambios import PROMPT_CAMBIOS  # noqa: F401  (vuelve a escribir plan-2-cambios.json)
+    revisar_workflow('plan-2-cambios.json', 'Plan de trabajo · 2 Cambios', 'plan-v1-cambios')
+    ok('easypanel' not in json.dumps(cargar('plan-2-cambios.json')), '2 Cambios: no toca el renderer ni enlaza a *.easypanel.host')
+    faltan = [x for x in TOPES_PROMPT if x not in PROMPT_CAMBIOS]
+    ok(not faltan, 'PROMPT_CAMBIOS: dice los mismos topes que valida WordPress y pide no mandar el «Arranque»', faltan)
+    GUARDADO_OK = {'statusCode': 200, 'body': {'ok': True, 'errores': [], 'avisos': []}}
+    MARCADO = {'statusCode': 200, 'body': {'ok': True}}
+    hook = {'id': 9, 'codigo': 'PRUEBAplan01'}
+    ctx = contexto(estado='cambios', plan_actual=PLAN_GUARDADO, comentarios='Agrega la capacitación y cambia la foto del método.')
+
+    # 1. Luis editó los días de «Diseño de la portada» (7, origen «luis»); el modelo los cambia a 2: vuelven a 7.
+    resp = json.loads(json.dumps(PLAN_GUARDADO))
+    del resp['cronograma']
+    for _, _, a in actividades(resp):
+        a.pop('desde', None)
+        a.pop('hasta', None)
+    actividad(resp, 'Diseño de la portada').update(dias_habiles=2, origen='ia')
+    actividad(resp, 'Construcción del sitio').update(origen='luis', dias_habiles=12)
+    resp['fases'][1]['bloques'][0]['actividades'].append(act('Capacitación del equipo', 'ambos', 1))
+    resp['image_briefs'][0] = {'slide': 'metodo', 'prompt': 'baker opening the shutters of the bakery at dawn'}
+    t = simular('plan-2-cambios.json', webhook=hook, http={'Leer contexto': [{'statusCode': 200, 'body': ctx}], 'Guardar borrador': [GUARDADO_OK]},
+                openai={'Aplicar cambios': [{'content': json.dumps(resp, ensure_ascii=False)}]})
+    sin_error(t, 'C1')
+    g = llamadas(t, 'Guardar borrador')
+    ok(len(g) == 1 and g[0]['url'] == WP + '/plan/9/borrador' and g[0]['body']['origen'] == 'cambios', 'C1: POST /plan/9/borrador con origen «cambios»', g)
+    plan = g[0]['body']['plan'] if g else PLAN_GUARDADO
+    portada = actividad(plan, 'Diseño de la portada') or {}
+    ok(portada.get('dias_habiles') == 7 and portada.get('origen') == 'luis',
+       'C1: los días que Luis editó a mano no se pisan (7, «luis») aunque el modelo los cambie a 2', portada)
+    # Lo que n8n MANDA; WordPress vuelve a marcar el origen al guardar (at_pt_respetar_dias_luis y
+    # at_pt_marcar_ediciones(…, 'ia'), Tasks 2 y 7) con la misma regla.
+    ok((actividad(plan, 'Construcción del sitio') or {}).get('origen') == 'ia',
+       'C1: el modelo no puede marcar «luis»: la actividad de la tabla a la que le cambió los días va «ia» (revisar)')
+    ok((actividad(plan, 'Diseño del catálogo') or {}).get('origen') == 'tabla', 'C1: una actividad de la tabla que no cambió va «tabla»')
+    ok((actividad(plan, 'Capacitación del equipo') or {}).get('origen') == 'ia', 'C1: la actividad nueva va «ia»')
+    ok(plan['image_briefs'][0]['prompt'] == 'baker opening the shutters of the bakery at dawn, ' + CIERRE
+       and plan['image_briefs'][1] == PLAN_GUARDADO['image_briefs'][1], 'C1: la foto pedida cambia y la otra queda idéntica (mismo hash)')
+    o = t['openai'].get('Aplicar cambios', [{}])[0]
+    pedido = json.loads(o.get('user') or '{}')
+    ok(o.get('temperature') == 0.2 and o.get('system') == PROMPT_CAMBIOS and pedido.get('comentarios') == ctx['comentarios'],
+       'C1: gpt-4o a 0,2 con PROMPT_CAMBIOS y los comentarios de Luis')
+    pa = pedido.get('plan_actual') or {}
+    ok('cronograma' not in pa and all('desde' not in a and 'hasta' not in a for _, _, a in actividades(pa)) and pa.get('fases'),
+       'C1: el modelo recibe el plan sin fechas (las recalcula WordPress)')
+    ok('Arranque' not in [b['nombre'] for f in pa.get('fases', []) for b in f['bloques']]
+       and (pedido.get('contrato') or {}).get('garantia_meses') == 6,
+       'C1: el modelo no recibe el bloque «Arranque» (D12) y sí los meses de garantía del contrato (D7)')
+    ok(plan['fases'][0]['bloques'][0] == PLAN_GUARDADO['fases'][0]['bloques'][0],
+       'C1: a WordPress el «Arranque» vuelve tal como estaba guardado', plan['fases'][0]['bloques'][0])
+    ok(pedido.get('slides_foto') == NUEVAS and pedido.get('rubro') == '[PRUEBA] Panadería',
+       'C1: con propuesta, el modelo solo puede describir láminas nuevas, del rubro del cliente')
+
+    # 2. Sin comentarios: no se llama al modelo y el plan guardado vuelve tal cual.
+    t = simular('plan-2-cambios.json', webhook=hook, http={'Leer contexto': [{'statusCode': 200, 'body': dict(ctx, comentarios='  ')}],
+                'Guardar borrador': [GUARDADO_OK]}, openai={})
+    sin_error(t, 'C2')
+    g = llamadas(t, 'Guardar borrador')
+    ok(not t['openai'] and g and g[0]['body']['plan'] == PLAN_GUARDADO, 'C2: sin comentarios, sin OpenAI, y el plan vuelve idéntico')
+
+    # 3. Respuesta parcial (solo fases): lo demás se conserva.
+    t = simular('plan-2-cambios.json', webhook=hook, http={'Leer contexto': [{'statusCode': 200, 'body': ctx}], 'Guardar borrador': [GUARDADO_OK]},
+                openai={'Aplicar cambios': [{'content': json.dumps({'fases': resp['fases']}, ensure_ascii=False)}]})
+    g = llamadas(t, 'Guardar borrador')
+    p3 = g[0]['body']['plan'] if g else {}
+    ok(p3.get('image_briefs') == PLAN_GUARDADO['image_briefs'] and p3.get('hitos') == PLAN_GUARDADO['hitos'],
+       'C3: lo que el modelo omite se conserva del plan guardado')
+
+    # 4. Una nota suelta, 5. sin plan guardado, 6. respuesta cortada, 7. envuelta, 8. vacía.
+    t = simular('plan-2-cambios.json', webhook=hook, http={'Leer contexto': [{'statusCode': 200, 'body': ctx}], 'Marcar error': [MARCADO]},
+                openai={'Aplicar cambios': [{'content': '{"nota": "ya está listo"}'}]})
+    me = llamadas(t, 'Marcar error')
+    ok(me and 'claves que no son del plan: nota' in me[0]['body']['nota'] and not llamadas(t, 'Guardar borrador'), 'C4: una nota no pasa como cambio', me)
+    ok(t['correos'] and t['correos'][0]['asunto'].endswith('no se pudieron aplicar los cambios al plan') and 'Volver al borrador' in t['correos'][0]['html'],
+       'C4: correo de cambios con el siguiente paso')
+    t = simular('plan-2-cambios.json', webhook=hook, http={'Leer contexto': [{'statusCode': 200, 'body': dict(ctx, plan_actual=None)}], 'Marcar error': [MARCADO]}, openai={})
+    me = llamadas(t, 'Marcar error')
+    ok(not t['openai'] and me and me[0]['body']['nota'].startswith('El plan no tiene un borrador guardado al que aplicarle cambios'),
+       'C5: sin plan guardado → error, sin gastar en OpenAI', me)
+    t = simular('plan-2-cambios.json', webhook=hook, http={'Leer contexto': [{'statusCode': 200, 'body': ctx}], 'Marcar error': [MARCADO]},
+                openai={'Aplicar cambios': [{'content': json.dumps(resp)[:500]}]})
+    me = llamadas(t, 'Marcar error')
+    ok(me and me[0]['body']['nota'].startswith('La respuesta del modelo no es un JSON válido'), 'C6: respuesta cortada → error', me)
+    t = simular('plan-2-cambios.json', webhook=hook, http={'Leer contexto': [{'statusCode': 200, 'body': ctx}], 'Guardar borrador': [GUARDADO_OK]},
+                openai={'Aplicar cambios': [{'content': json.dumps({'comentarios': 'x', 'plan_actual': resp})}]})
+    ok(len(llamadas(t, 'Guardar borrador')) == 1, 'C7: {"plan_actual": …, "comentarios": …} se desenvuelve y se guarda')
+    t = simular('plan-2-cambios.json', webhook=hook, http={'Leer contexto': [{'statusCode': 200, 'body': ctx}], 'Marcar error': [MARCADO]},
+                openai={'Aplicar cambios': [{'content': '{}'}]})
+    me = llamadas(t, 'Marcar error')
+    ok(me and 'no trae ninguna parte del plan' in me[0]['body']['nota'], 'C8: {} → error', me)
+
+    # 9. Respuesta parcial: solo la fase que cambió y solo la foto pedida → a WordPress va el plan entero.
+    impl = json.loads(json.dumps(resp['fases'][1]))
+    parcial = {'fases': [impl], 'image_briefs': [{'slide': 'metodo', 'prompt': 'baker opening the shutters of the bakery at dawn'}]}
+    t = simular('plan-2-cambios.json', webhook=hook, http={'Leer contexto': [{'statusCode': 200, 'body': ctx}], 'Guardar borrador': [GUARDADO_OK]},
+                openai={'Aplicar cambios': [{'content': json.dumps(parcial, ensure_ascii=False)}]})
+    g = llamadas(t, 'Guardar borrador')
+    p9 = g[0]['body']['plan'] if g else {'fases': []}
+    ok([f['clave'] for f in p9['fases']] == ['diseno_desarrollo', 'implementacion', 'soporte']
+       and (actividad(p9, 'Diseño de la portada') or {}).get('dias_habiles') == 7 and actividad(p9, 'Capacitación del equipo'),
+       'C9: si el modelo devuelve solo la fase que cambió, las otras fases (con los días de Luis) no se pierden', [f.get('clave') for f in p9['fases']])
+    ok([b['slide'] for b in p9.get('image_briefs', [])] == ['metodo', 'gantt'] and p9['image_briefs'][1] == PLAN_GUARDADO['image_briefs'][1],
+       'C9: si el modelo devuelve solo la foto pedida, las demás quedan idénticas')
+
+    # 10. Llegó tarde: el plan ya no está en «cambios» (Luis lo destrabó y volvió al borrador, u otra ejecución lo guardó).
+    for estado in ('borrador', 'aprobando'):
+        t = simular('plan-2-cambios.json', webhook=hook, http={'Leer contexto': [{'statusCode': 200, 'body': dict(ctx, estado=estado)}]}, openai={})
+        sin_error(t, f'C10 {estado}')
+        ok(not t['openai'] and not llamadas(t, 'Guardar borrador') and not llamadas(t, 'Marcar error') and not t['correos'],
+           f'C10: plan en «{estado}» → no se piden cambios, no se guarda, no se marca error ni se escribe')
+    t = simular('plan-2-cambios.json', webhook=hook, http={'Leer contexto': [{'statusCode': 200, 'body': dict(ctx, estado='error')}],
+                'Guardar borrador': [GUARDADO_OK]}, openai={'Aplicar cambios': [{'content': json.dumps(resp, ensure_ascii=False)}]})
+    ok(len(llamadas(t, 'Guardar borrador')) == 1, 'C10: plan en «error» → los cambios se aplican (WordPress los acepta)')
+    t = simular('plan-2-cambios.json', webhook=hook, http={'Leer contexto': [{'statusCode': 200, 'body': dict(ctx, estado='generando', plan_actual=None)}]}, openai={})
+    ok(not llamadas(t, 'Marcar error') and not t['correos'], 'C10: un plan que se está generando no se pasa a «error» por un pedido de cambios viejo')
+
+    # 11. WordPress responde 409 al guardar: no se pasa a «error» el plan que ya siguió.
+    tarde = {'statusCode': 409, 'body': {'ok': False, 'errores': ['El plan está en «borrador»: este cambios llegó tarde y no se aplica.'], 'avisos': []}}
+    t = simular('plan-2-cambios.json', webhook=hook, http={'Leer contexto': [{'statusCode': 200, 'body': ctx}], 'Guardar borrador': [tarde]},
+                openai={'Aplicar cambios': [{'content': json.dumps(resp, ensure_ascii=False)}]})
+    sin_error(t, 'C11')
+    ok(len(llamadas(t, 'Guardar borrador')) == 1 and not llamadas(t, 'Marcar error') and not t['correos'], 'C11: 409 → sin «error» ni correo')
+
+    # 12. Guardado sin vista previa y 13. un 422 de WordPress en cambios.
+    sin_vista = {'statusCode': 200, 'body': {'ok': True, 'errores': [], 'avisos': ['No se pudo pedir la vista previa: sin respuesta']}}
+    t = simular('plan-2-cambios.json', webhook=hook, http={'Leer contexto': [{'statusCode': 200, 'body': ctx}], 'Guardar borrador': [sin_vista]},
+                openai={'Aplicar cambios': [{'content': json.dumps(resp, ensure_ascii=False)}]})
+    ok(not llamadas(t, 'Marcar error') and len(t['correos']) == 1 and t['correos'][0]['asunto'].endswith('cambios del plan guardados sin vista previa'),
+       'C12: cambios guardados sin vista previa → correo a Luis', [c['asunto'] for c in t['correos']])
+    rechazo = {'statusCode': 422, 'body': {'ok': False, 'errores': ['Días hábiles fuera de rango (1 a 60) en «Capacitación del equipo»: 0'], 'avisos': []}}
+    t = simular('plan-2-cambios.json', webhook=hook, http={'Leer contexto': [{'statusCode': 200, 'body': ctx}], 'Guardar borrador': [rechazo],
+                'Marcar error': [MARCADO]}, openai={'Aplicar cambios': [{'content': json.dumps(resp, ensure_ascii=False)}]})
+    me = llamadas(t, 'Marcar error')
+    ok(me and me[0]['body']['nota'].startswith('WordPress rechazó el plan: Días hábiles fuera de rango') and t['correos']
+       and 'Volver al borrador' in t['correos'][0]['html'], 'C13: un 422 en cambios → «error» con el motivo de WordPress y correo', me)
+
+
 # ==== Las tareas siguientes agregan sus secciones justo antes de esta línea ====
 
 if __name__ == '__main__':

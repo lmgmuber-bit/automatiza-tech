@@ -21,6 +21,12 @@ Los recordatorios de citas (72h, 24h, 1h), los de seguimiento (8 AM, 8 PM), el a
 
 `n8n_validate_workflow` sobre los siete flujos: todos válidos, 0 errores. Queda un aviso heredado en el Followup ("Mark WA Sent in WP" usa `continueOnFail`), un nodo que este cambio no toca. En PROD ningún flujo había enviado todavía un mensaje con plantilla al cerrar el 25-sep: las primeras ejecuciones no tenían citas en la ventana.
 
+**Verificación del 29-sep** (solo lectura, `diagnostico/wa_verificar_envios.py`):
+
+- **Primera plantilla real:** una alerta de ARGOS (`alerta_argos`) el 27-sep a las 14:06 UTC. Meta informó `sent`, `delivered` y `read` en 22 s, cobrada como Utility (`billable: true`: fuera de la ventana de 24 h). Antes del cambio esas alertas morían con 131047; la última, el 25-sep a las 06:49 UTC.
+- **Ningún recordatorio salió del 25 al 29-sep:** 72h, 24h y 1h corrieron 661 veces, 8 AM y 8 PM 7 y el Followup ninguna, sin citas en la ventana. La prueba con un lead sigue pendiente.
+- **El bot cambió el 27-sep** (otra sesión, cierre de cliente: 8 nodos nuevos y una regla `btn_propuesta_` al final de "Button Action"). Las rutas de los botones de este cambio siguen iguales y `pruebas/test_bot_expresiones.js` pasa sobre la versión publicada.
+
 | Plantilla | ID en Meta | Flujo |
 |---|---|---|
 | `recordatorio_cita_72h` | 1269500156254629 | WhatsApp Recordatorio 72h (`KFqFTgc0o4bOe0xv`) |
@@ -67,7 +73,7 @@ Pruebas locales (Node, sin tocar n8n): `node pruebas/test_builds.js` (12), `test
 
 - El estado de la cuenta de WhatsApp Business (verificación, límites de envío, facturación) está en la nota privada de la bóveda, junto a los respaldos.
 - Comportamiento heredado del bot: **cancelar una demo la borra sin preguntar**; **reagendar borra la cita antes** de mostrar el calendario.
-- Los fallos que Meta avisa **después** del envío (webhook `statuses`) siguen sin registrarse. Hacerlo con ARGOS arma un bucle (el aviso de ARGOS fallaría y dispararía otro): hay que excluir los mensajes a Luis y avisar por correo.
+- Los fallos que Meta avisa **después** del envío llegan por el webhook `statuses`. Desde el 27-sep el bot los reenvía todos a WordPress (ruta de estados del cierre de cliente), pero WordPress solo los registra si el mensaje es de una propuesta: los de estos flujos todavía se pierden (ver Pendiente). Avisarlos con ARGOS armaría un bucle (el aviso de ARGOS fallaría y dispararía otro).
 
 ## Trampas encontradas al aplicar
 
@@ -78,7 +84,7 @@ Pruebas locales (Node, sin tocar n8n): `node pruebas/test_builds.js` (12), `test
 ## Pendiente
 
 1. Prueba de punta a punta: una cita por la web con el número de Luis y tocar "Sí, confirmo"; verificar en el webhook de statuses que el mensaje quedó **entregado** y en el CRM que se registró la confirmación.
-2. Registrar los `statuses` `failed` con la exclusión anti-bucle.
+2. Avisar a Luis cuando un recordatorio no se entrega. Decisión de Luis del 29-sep: el mismo camino que las propuestas. Los 6 flujos le pasan a WordPress el `wamid` que enviaron, y si llega un `failed` de ese `wamid` sale un correo a Luis con el cliente, la cita y el motivo, una vez por mensaje y sin reintento. Los mensajes de ARGOS no se registran, así que no hay bucle. Se hace en una rama aparte.
 3. Pendientes de la cuenta de Meta, de Luis: ver la nota de la bóveda.
 
 Fuentes: [precios de Meta](https://developers.facebook.com/documentation/business-messaging/whatsapp/pricing), [revisión de plantillas (hasta 24 h)](https://developers.facebook.com/documentation/business-messaging/whatsapp/templates/template-review), [botón de plantilla en el webhook](https://developers.facebook.com/documentation/business-messaging/whatsapp/webhooks/reference/messages/button), [límites de mensajería](https://developers.facebook.com/docs/whatsapp/messaging-limits/), [health status](https://developers.facebook.com/documentation/business-messaging/whatsapp/support/health-status/), [códigos de error](https://developers.facebook.com/documentation/business-messaging/whatsapp/support/error-codes), [precios por país (Sleekflow)](https://sleekflow.io/blog/whatsapp-business-price).

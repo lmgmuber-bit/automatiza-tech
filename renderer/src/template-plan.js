@@ -1,5 +1,5 @@
 const { escapeHtml, linkify } = require('./escape');
-const { STYLE, SCRIPT, backgroundStyle, logoMark, renderDeckControls } = require('./template');
+const { STYLE, SCRIPT, CONTACT_ICONS, LOGO_URL, backgroundStyle, logoMark, renderDeckControls } = require('./template');
 
 // Plan de trabajo: el documento que acompaña al contrato de servicios firmado. Usa el mismo estilo, logo
 // y modo presentación que la propuesta (piezas que exporta template.js, sin cambiarlas) y suma sus
@@ -694,6 +694,184 @@ const ESTILO_FASES = `
   }
 `;
 
+// Listas largas: más de 6 insumos van en dos columnas y más de 14 en tres, con letra más chica; más de 5
+// reuniones o servicios mensuales achican la letra y más de 8 esconden el detalle. En cuanto una lista se
+// compacta, cada punto muestra a lo más dos líneas (ESTILO_CIERRE). Así una lista en los topes que acepta
+// at_pt_validar_plan (12 insumos de 160 letras, 8 reuniones con detalle de 200, 6 servicios mensuales de 160)
+// cabe en la lámina en vez de salirse por abajo.
+function claseLista(n, dosColumnas) {
+  if (dosColumnas) return n > 14 ? ' is-muy-denso is-tres-columnas' : n > 6 ? ' is-denso is-dos-columnas' : '';
+  return n > 8 ? ' is-muy-denso' : n > 5 ? ' is-denso' : '';
+}
+
+function renderNecesitamosSlide(data, index, imageUrl) {
+  const items = (Array.isArray(data && data.necesitamos_de_ti) ? data.necesitamos_de_ti : []).map(texto).filter((s) => s.trim());
+  const lista = items.length
+    ? `<ul class="plan-lista${claseLista(items.length, true)}">${items.map((s) => `<li>${escapeHtml(s)}</li>`).join('')}</ul>`
+    : '<p class="plan-desc">Te avisamos en la reunión de inicio si falta algo para partir.</p>';
+  return `
+    <section class="slide plan-contenido plan-necesitamos">
+      <div class="slide-bg" style="${fondoContenido(imageUrl, index)}"></div>
+      ${logoMark()}
+      <div class="plan-texto plan-angosto plan-anima">
+        <p class="eyebrow">${numero(index)} · Tu parte</p>
+        <div class="accent-bar"></div>
+        <h2>Qué necesitamos de ti</h2>
+        ${lista}
+        <p class="plan-clausula">El plazo corre desde que recibimos el anticipo y estos insumos. Si la entrega se atrasa, las fechas se corren en los mismos días (cláusula 4.2 del contrato).</p>
+      </div>
+    </section>`;
+}
+
+function renderReunionesSlide(data, index, imageUrl) {
+  const reuniones = (Array.isArray(data && data.reuniones) ? data.reuniones : [])
+    .map((r) => (r && typeof r === 'object' ? r : { nombre: texto(r) }))
+    .filter((r) => texto(r.nombre).trim());
+  const s = data && data.soporte && typeof data.soporte === 'object' ? data.soporte : {};
+  const meses = Math.round(Number(s.garantia_meses) || 0);
+  // `mensuales` puede traer textos u objetos {nombre, detalle}: se muestran los dos.
+  const mensuales = (Array.isArray(s.mensuales) ? s.mensuales : [])
+    .map((m) => (m && typeof m === 'object' ? [texto(m.nombre), texto(m.detalle)].filter((x) => x.trim()).join(': ') : texto(m)))
+    .filter((x) => x.trim());
+  const listaReuniones = reuniones.length
+    ? `<ul class="plan-lista${claseLista(reuniones.length, false)}">${reuniones
+        .map((r) => `<li><b>${escapeHtml(r.nombre)}</b>${texto(r.detalle).trim() ? `<span>${escapeHtml(r.detalle)}</span>` : ''}</li>`)
+        .join('')}</ul>`
+    : '<p class="plan-desc">Coordinamos cada reunión contigo con anticipación.</p>';
+  const garantia =
+    meses > 0
+      ? `<p class="plan-desc"><b>Garantía de ${meses} ${meses === 1 ? 'mes' : 'meses'}:</b> corregimos sin costo los errores de lo entregado que aparezcan en ${
+          meses === 1 ? 'el mes siguiente' : `los ${meses} meses siguientes`
+        } a la entrega final, salvo los que vengan de cambios hechos por terceros o por ti (cláusula de Garantía de tu contrato).</p>`
+      : '';
+  const listaMensuales = mensuales.length
+    ? `<p class="plan-sub">Servicios mensuales</p><ul class="plan-lista${claseLista(mensuales.length, false)}">${mensuales
+        .map((x) => `<li>${escapeHtml(x)}</li>`)
+        .join('')}</ul>`
+    : '';
+  const soporte = garantia || listaMensuales ? `${garantia}${listaMensuales}` : '<p class="plan-desc">Te acompañamos después de la entrega.</p>';
+  return `
+    <section class="slide plan-contenido plan-reuniones">
+      <div class="slide-bg" style="${fondoContenido(imageUrl, index)}"></div>
+      ${logoMark()}
+      <div class="plan-texto plan-anima">
+        <p class="eyebrow">${numero(index)} · Acompañamiento</p>
+        <div class="accent-bar"></div>
+        <h2>Reuniones y soporte</h2>
+        <div class="plan-columnas">
+          <div><p class="plan-sub">Reuniones</p>${listaReuniones}</div>
+          <div><p class="plan-sub">Soporte</p>${soporte}</div>
+        </div>
+      </div>
+    </section>`;
+}
+
+function renderPortalSlide(data, index, imageUrl) {
+  const url = urlSegura(data && data.portal_url);
+  const accion = url
+    ? `<a class="plan-boton" href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">Entrar a mi portal</a>`
+    : '<p class="plan-desc">Pídenos el enlace a tu portal cuando quieras.</p>';
+  return `
+    <section class="slide plan-contenido plan-portal">
+      <div class="slide-bg" style="${fondoContenido(imageUrl, index)}"></div>
+      ${logoMark()}
+      <div class="plan-texto plan-angosto plan-anima">
+        <p class="eyebrow">${numero(index)} · Tu portal</p>
+        <div class="accent-bar"></div>
+        <h2>Sigue tu proyecto</h2>
+        <p class="plan-desc">En tu portal de cliente ves, cuando quieras:</p>
+        <ul class="plan-lista">
+          <li><b>Tus contratos</b><span>Firmados y a la mano.</span></li>
+          <li><b>Tu proyecto</b><span>Su avance, sus fechas y su estado.</span></li>
+          <li><b>El historial</b><span>Reuniones, seguimientos, notas y pagos.</span></li>
+        </ul>
+        <p class="plan-clausula">Todo queda documentado.</p>
+        ${accion}
+      </div>
+    </section>`;
+}
+
+function renderCierreSlide(data, index, imageUrl) {
+  const agenda = data && data.agenda && typeof data.agenda === 'object' ? data.agenda : {};
+  const whatsapp = urlSegura(agenda.whatsapp_url) || 'https://wa.me/56927002984';
+  const web = urlSegura(agenda.web_url);
+  const enlace = (href, icono, titulo, sub) =>
+    `<a class="cierre-enlace" href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer"><span class="contact-icon" aria-hidden="true">${
+      CONTACT_ICONS[icono] || ''
+    }</span><span><b>${titulo}</b><small>${sub}</small></span></a>`;
+  const enlaces = [
+    enlace(whatsapp, 'whatsapp', 'Por WhatsApp con Tech', 'Escríbenos y agendamos contigo'),
+    web ? enlace(web, 'web', 'En el sitio web', 'Elige el día y la hora que te acomoden') : '',
+  ].join('');
+  const foto = imageUrl
+    ? ` style="background-image: linear-gradient(180deg, rgba(10,20,32,.62), rgba(10,20,32,.9)), url('${escapeHtml(
+        imageUrl
+      )}'); background-size: cover; background-position: center;"`
+    : '';
+  const codigo = texto(data && data.unique_id).trim();
+  return `
+    <section class="slide slide-closing plan-cierre">
+      <div class="closing-left"${foto}>
+        <a href="https://automatizatech.cl" target="_blank" rel="noopener noreferrer"><img class="closing-logo" src="${LOGO_URL}" alt="AutomatizaTech" /></a>
+      </div>
+      <div class="closing-right">
+        <p class="eyebrow">${numero(index)} · Próximo paso</p>
+        <h2>Agenda tu llamada de seguimiento</h2>
+        <p class="cierre-texto">Revisemos juntos este plan y resolvamos tus dudas antes de partir.</p>
+        <div class="cierre-enlaces">${enlaces}</div>
+        ${codigo ? `<p class="cierre-codigo">Código de tu plan: <b>${escapeHtml(codigo)}</b></p>` : ''}
+        <a class="pdf-button" href="presentation.pdf" download>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M7 11l5 5 5-5M4 19h16" /></svg>
+          Descargar el plan en PDF
+        </a>
+      </div>
+    </section>`;
+}
+
+const ESTILO_CIERRE = `
+  .plan-contenido .plan-texto.plan-angosto { width: 1000px; top: 240px; }
+  .plan-sub { color: #00d9c0; font-size: 18px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; margin-bottom: 14px; }
+  .plan-lista { list-style: none; display: flex; flex-direction: column; gap: 18px; margin-bottom: 26px; }
+  .plan-lista li { position: relative; padding-left: 44px; color: #dbe4ee; font-size: 26px; line-height: 1.35; overflow-wrap: anywhere;
+    display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  .plan-lista li::before { content: '✓'; position: absolute; left: 0; top: 2px; width: 30px; height: 30px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center; font-size: 17px; font-weight: 800; color: #06222a; background: #00d9c0; }
+  .plan-lista li b { color: #fff; }
+  .plan-lista li span { display: block; color: #b8c6d6; font-size: 21px; margin-top: 2px; }
+  .plan-lista.is-denso { gap: 10px; }
+  .plan-lista.is-denso li { font-size: 21px; }
+  .plan-lista.is-denso li span { font-size: 18px; }
+  .plan-lista.is-denso li, .plan-lista.is-dos-columnas li, .plan-lista.is-tres-columnas li { -webkit-line-clamp: 2; }
+  .plan-columnas .plan-lista:last-child { margin-bottom: 0; }
+  .plan-lista.is-muy-denso { gap: 6px; }
+  .plan-lista.is-muy-denso li { font-size: 18px; padding-left: 34px; -webkit-line-clamp: 2; }
+  .plan-lista.is-muy-denso li::before { width: 24px; height: 24px; font-size: 14px; top: 0; }
+  .plan-lista.is-muy-denso li span { display: none; }
+  .plan-lista.is-dos-columnas, .plan-lista.is-tres-columnas { display: block; column-gap: 44px; }
+  .plan-lista.is-dos-columnas { columns: 2; }
+  .plan-lista.is-tres-columnas { columns: 3; }
+  .plan-lista.is-dos-columnas li, .plan-lista.is-tres-columnas li { break-inside: avoid; margin-bottom: 12px; }
+  .plan-clausula { color: #fff; font-size: 22px; line-height: 1.5; padding: 18px 24px; border-left: 4px solid #00d9c0;
+    background: rgba(0,217,192,.1); border-radius: 0 12px 12px 0; margin-bottom: 26px; max-width: 900px; }
+  .plan-columnas { display: grid; grid-template-columns: 1fr 1fr; gap: 56px; }
+  .plan-columnas .plan-desc { -webkit-line-clamp: 6; font-size: 23px; }
+  .plan-boton { display: inline-flex; align-items: center; font-size: 22px; font-weight: 700; color: #06222a; background: #00d9c0;
+    text-decoration: none; border-radius: 999px; padding: 18px 34px; }
+  .plan-cierre .closing-left { flex-direction: column; }
+  .plan-cierre .closing-right .eyebrow { margin-bottom: 14px; }
+  .cierre-texto { color: #c9d4e0; font-size: 26px; line-height: 1.5; margin-bottom: 34px; max-width: 820px; }
+  .cierre-enlaces { display: flex; flex-direction: column; gap: 18px; align-items: flex-start; }
+  .cierre-enlace { display: inline-flex; align-items: center; gap: 20px; text-decoration: none; padding: 18px 30px 18px 20px;
+    border-radius: 18px; background: rgba(0,217,192,.1); border: 1px solid rgba(0,217,192,.4); min-width: 560px; }
+  .cierre-enlace .contact-icon { width: 58px; height: 58px; }
+  .cierre-enlace .contact-icon svg { width: 28px; height: 28px; }
+  .cierre-enlace b { display: block; color: #fff; font-size: 27px; }
+  .cierre-enlace small { display: block; color: #9fb3c8; font-size: 19px; margin-top: 4px; }
+  .cierre-enlace:hover { background: rgba(0,217,192,.2); }
+  .cierre-codigo { color: #9fb3c8; font-size: 19px; margin-top: 28px; }
+  .cierre-codigo b { color: #fff; letter-spacing: .06em; }
+`;
+
 // === Documento ===
 
 function renderPlanHtml(data, images = {}) {
@@ -720,4 +898,4 @@ ${renderDeckControls()}
 </html>`;
 }
 
-module.exports = { renderPlanHtml, lunesDe, semanaIndice, diasEntre, fechaLarga, fechaCorta, rangoCorto, diasTexto, urlSegura, filasGantt, medidasGantt, renderGantt, renderGanttSlide, renderMetodoSlide, paginarBloques, renderFaseSlide };
+module.exports = { renderPlanHtml, lunesDe, semanaIndice, diasEntre, fechaLarga, fechaCorta, rangoCorto, diasTexto, urlSegura, filasGantt, medidasGantt, renderGantt, renderGanttSlide, renderMetodoSlide, paginarBloques, renderFaseSlide, renderNecesitamosSlide, renderReunionesSlide, renderPortalSlide, renderCierreSlide };

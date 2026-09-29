@@ -305,3 +305,92 @@ test('los textos de las fases se escapan', () => {
   assert.ok(!html.includes('<script>x'));
   assert.ok(html.includes('Reunión &lt;script&gt;x&lt;/script&gt;'));
 });
+
+// --- Qué necesitamos, reuniones, portal y cierre -----------------------------
+
+test('«Qué necesitamos de ti» lista los insumos y la regla de la cláusula 4.2', () => {
+  const html = tp.renderNecesitamosSlide(planCorto(), 8, '');
+  assert.ok(html.includes('<h2>Qué necesitamos de ti</h2>'));
+  assert.ok(html.includes('<li>Logo y colores de tu marca</li>'));
+  assert.ok(html.includes('El plazo corre desde que recibimos el anticipo y estos insumos.'));
+  assert.ok(html.includes('cláusula 4.2 del contrato'));
+  assert.ok(tp.renderNecesitamosSlide({}, 8, '').includes('Te avisamos en la reunión de inicio si falta algo para partir.'));
+});
+
+test('«Reuniones y soporte» lista las reuniones, la garantía y los servicios mensuales', () => {
+  const plan = planCorto();
+  plan.soporte = { garantia_meses: 3, mensuales: ['Mantención del sitio', { nombre: 'Campañas', detalle: 'Google Ads' }] };
+  const html = tp.renderReunionesSlide(plan, 9, '');
+  assert.ok(html.includes('<li><b>Reunión de inicio</b><span>Revisamos juntos este plan y los insumos.</span></li>'));
+  assert.ok(html.includes('<li><b>Entrega y capacitación</b></li>'));
+  assert.ok(html.includes('<b>Garantía de 3 meses:</b>'));
+  // Misma exclusión que la cláusula de Garantía del contrato y sin número: la numeración cambió cuando se
+  // agregó la cláusula de IA (12.1 pasó a 13.1) y los contratos firmados antes citan la otra.
+  assert.ok(
+    html.includes('los 3 meses siguientes a la entrega final, salvo los que vengan de cambios hechos por terceros o por ti (cláusula de Garantía de tu contrato)')
+  );
+  assert.ok(!html.includes('13.1'));
+  assert.ok(html.includes('<li>Mantención del sitio</li>'));
+  assert.ok(html.includes('<li>Campañas: Google Ads</li>'));
+  // La garantía es la del contrato (at_pt_armar_render la toma de ahí, decisión D8) y el renderer la muestra
+  // tal como llega, sin un valor propio: 6 meses dice 6, 1 dice «mes» y 0 no promete garantía.
+  const garantia = (meses) => tp.renderReunionesSlide({ ...planCorto(), soporte: { garantia_meses: meses, mensuales: [] } }, 9, '');
+  assert.ok(garantia(6).includes('<b>Garantía de 6 meses:</b>') && garantia(6).includes('en los 6 meses siguientes a la entrega final'));
+  assert.ok(!garantia(6).includes('3 meses'));
+  assert.ok(garantia(1).includes('<b>Garantía de 1 mes:</b>') && garantia(1).includes('en el mes siguiente a la entrega final'));
+  assert.ok(!garantia(0).includes('Garantía de') && garantia(0).includes('Te acompañamos después de la entrega.'));
+  const sinNada = tp.renderReunionesSlide({}, 9, '');
+  assert.ok(sinNada.includes('Coordinamos cada reunión contigo con anticipación.'));
+  assert.ok(sinNada.includes('Te acompañamos después de la entrega.'));
+});
+
+test('«Sigue tu proyecto» enlaza al portal del cliente', () => {
+  const html = tp.renderPortalSlide(planCorto(), 10, '');
+  assert.ok(html.includes('<h2>Sigue tu proyecto</h2>'));
+  for (const parte of ['Tus contratos', 'Tu proyecto', 'El historial', 'Todo queda documentado.']) {
+    assert.ok(html.includes(parte), `falta ${parte}`);
+  }
+  assert.ok(
+    html.includes(
+      '<a class="plan-boton" href="https://automatizatech.cl/?crm_view=timeline&amp;cid=999&amp;token=prueba-token" target="_blank" rel="noopener noreferrer">Entrar a mi portal</a>'
+    )
+  );
+});
+
+test('cliente sin correo (sin portal): la lámina sale igual, sin enlace', () => {
+  for (const portal_url of ['', undefined, 'javascript:alert(1)']) {
+    const html = tp.renderPortalSlide({ ...planCorto(), portal_url }, 10, '');
+    assert.ok(html.includes('<h2>Sigue tu proyecto</h2>'));
+    assert.ok(!html.includes('class="plan-boton"'));
+    assert.ok(!html.includes('javascript:'));
+    assert.ok(html.includes('Pídenos el enlace a tu portal cuando quieras.'));
+  }
+});
+
+test('el cierre trae los enlaces para agendar: WhatsApp siempre, la web solo si viene', () => {
+  const plan = planCorto();
+  const html = tp.renderCierreSlide(plan, 11, '');
+  assert.ok(html.includes('<h2>Agenda tu llamada de seguimiento</h2>'));
+  assert.ok(html.includes(`<a class="cierre-enlace" href="${plan.agenda.whatsapp_url}" target="_blank" rel="noopener noreferrer">`));
+  assert.ok(html.includes('<b>Por WhatsApp con Tech</b>'));
+  assert.ok(!html.includes('En el sitio web'), 'sin web_url no hay enlace web');
+  assert.ok(html.includes('Código de tu plan: <b>PlanPrueba01</b>'));
+  assert.ok(html.includes('class="pdf-button" href="presentation.pdf" download'));
+  assert.ok(html.includes('Descargar el plan en PDF'));
+
+  const conWeb = tp.renderCierreSlide({ ...plan, agenda: { ...plan.agenda, web_url: 'https://automatizatech.cl/ver-plan.php?id=PlanPrueba01&agendar=1' } }, 11, '');
+  assert.ok(conWeb.includes('href="https://automatizatech.cl/ver-plan.php?id=PlanPrueba01&amp;agendar=1"'));
+  assert.ok(conWeb.includes('<b>En el sitio web</b>'));
+});
+
+test('sin enlace de WhatsApp válido, el cierre usa el número de AutomatizaTech', () => {
+  const html = tp.renderCierreSlide({ unique_id: 'PlanPrueba01', agenda: { whatsapp_url: 'http://malo', web_url: 'javascript:x' } }, 11, '');
+  assert.ok(html.includes('href="https://wa.me/56927002984"'));
+  assert.ok(!html.includes('javascript:'));
+});
+
+test('el cierre usa la foto de próximos pasos si viene, y el logo encima', () => {
+  const html = tp.renderCierreSlide(planCorto(), 11, 'img/cierre.png');
+  assert.ok(html.includes("url('img/cierre.png')"));
+  assert.ok(html.includes('class="closing-logo"'));
+});

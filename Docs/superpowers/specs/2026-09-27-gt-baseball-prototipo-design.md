@@ -409,3 +409,40 @@ borra o edita algo por error.
 - **Trampa cerrada:** `deploy_gt.py subir` apuntaba a `/demos/gt-baseball/v2/`, que ahora tiene el `.htaccess` que
   redirige al dominio. Subir ahí lo habría pisado y habría vuelto a publicar el sitio en la dirección vieja. Ahora el
   script se niega a subir y queda solo para armar copias locales.
+
+## Planes y precios, fondos de estadio, volver arriba y buscador de planillas (29-sep, EN LOCAL)
+
+Rama `claude/gt-baseball-planes`, sin subir a PROD: Luis la revisa en la copia local y da el ok.
+
+- **Franja «Planes y precios»** (pedido de Luis con el póster de la academia): va después de la portada, de borde a
+  borde, con el logo del sitio, los tres planes (Plata $10 diarios; Gold $25 semanal o $85 mensual, lunes, miércoles y
+  viernes; Platinum $30 semanal o $100 mensual, de lunes a viernes), la duración (1 h 30 min, intensivo), «¿Qué
+  incluye?», cumpleaños y alquiler del cage de bateo (cada uno con WhatsApp y su propio mensaje) y el cierre «Tu futuro
+  en el béisbol empieza aquí». Solo lleva lo que dice el póster. Sigue el botón de tema: sus colores son variables de la
+  franja redefinidas en modo claro (Luis vio que no cambiaba).
+- **Fondos:** imágenes generadas con Soul 2 por la API de Higgsfield (autorizado por Luis; unos USD 0,003 cada una).
+  - Se descartó una que traía el logo de MLB y un marcador con letras.
+  - A las que se usan se les borraron (con `delogo`) carteles, pantallas y marcas borrosas. También se comprimieron
+    sus luces altas para que ningún foco quede blanco puro detrás del texto.
+  - Luis eligió la pelota y pidió **las tres turnándose**, en este orden: pelota, atardecer y estadio de noche. Van
+    en horizontal y en vertical, con un fundido de 1,5 s, y cada una se queda unos 8 s (ciclo de 24 s).
+  - Con «menos movimiento» queda la pelota y no se bajan las otras dos. Las fotos 2 y 3 se piden después de cargar
+    la página.
+  - Encima va un velo del color del tema. La franja de planes usa el estadio de noche, con las torres de luces a los
+    lados del título, como en el póster.
+- **Volver al inicio:** botón redondo dorado abajo a la derecha que aparece al llegar a «¿Dónde estamos?» o al pie,
+  solo en la portada; lleva arriba (suave, salvo con «menos movimiento») y deja el foco en el contenido.
+- **Buscador de planillas** (`/buscador/`, sin enlace en la portada): Jeffer entra con una clave y busca por nombre o
+  cédula, posición, pago, edad y fecha, y vuelve a descargar la planilla desde Drive. Luis eligió la clave de acceso
+  en vez de un enlace secreto: son datos de menores y un reenvío por WhatsApp los expondría. Diseño y seguridad en
+  `N8N/gt-baseball/README.md` (sección «Buscador de planillas»).
+- **Contraste medido sobre la foto** (auditoría con Playwright, peor píxel detrás de cada texto): se corrigieron el
+  enlace del video y «García Training» en claro, el título y el antetítulo de la franja, y los días apagados.
+  - Cambios: acento claro #7a4900, velo claro más espeso arriba y un velo suave detrás del título de la franja.
+  - En tema claro el logo de la franja va sin halo dorado.
+- **Pruebas** (en `…\respaldos\…\pago\`):
+  - `probar-fondos-arriba.cjs`: 26 comprobaciones, todas bien.
+  - `probar-buscador.cjs`: 54, todas bien, contra el receptor de prueba `mock_buscador.py`.
+  - `build_buscador.py --probar`: contra el Sheet real, en un flujo temporal que se borra. Dio 401 con la clave
+    mala, 200 con las 3 filas y 429 tras 8 fallos.
+  - Sin probar todavía: un celular físico.

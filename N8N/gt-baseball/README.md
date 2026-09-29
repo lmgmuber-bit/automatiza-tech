@@ -14,6 +14,7 @@ pruebas y decisiones en `Docs/superpowers/specs/2026-09-27-gt-baseball-prototipo
 | Flujo v1 | «GT Baseball · Inscripciones (prototipo)» (`1ooWxClFzc6vGb3W`) | Activo pero sin uso (su página redirige). Congelado: etiqueta git `gt-baseball-v1` |
 | Google Sheet | «GT Baseball Academy · Inscripciones», Drive de `contacto@automatizatech.cl` | Jeffer es **editor** desde el 28-sep. Fila 1 bloqueada; columnas A–Y con advertencia |
 | Carpeta de Drive | «GT Baseball Academy · Inscripciones (prototipo)»: fotos, planillas, comprobantes y el Sheet | Jeffer es **lector** desde el 28-sep, para que le abran los enlaces del Sheet. En el Sheet sigue siendo editor (vale el permiso mayor). La carpeta de respaldos está fuera y es privada |
+| Buscador de planillas | Página `gtbaseball.com/buscador/` (sin enlace en la portada) y flujo «GT Baseball · Buscador de planillas» (webhook `gt-baseball-buscador`), que arma `build_buscador.py` | **En local** (29-sep, rama `claude/gt-baseball-planes`), probado con un flujo temporal contra el Sheet real. Para publicarlo falta que Luis ponga `GT_BUSCADOR_CLAVE` en Easypanel y dé el ok |
 
 El código de `demos/gt-baseball/` es el que se sirve en gtbaseball.com.
 
@@ -80,6 +81,34 @@ se baja una versión de antes del error. Además, el Sheet tiene su propio histo
 
 Para recuperar algo: bajar la versión buena del respaldo y copiar de vuelta las filas al Sheet original.
 
+## Buscador de planillas
+
+Página privada para que la academia ubique a un atleta ya inscrito y vuelva a descargar su planilla (pedido de Luis,
+29-sep). No está enlazada desde la portada: Luis le pasa el enlace a Jeffer.
+
+```
+Página /buscador/ → POST /webhook/gt-baseball-buscador { clave }
+  → Revisar clave: compara con {{$env.GT_BUSCADOR_CLAVE}} sin cortar en el primer carácter distinto
+       · sin la variable (o con menos de 12 caracteres) → 503 { error: 'sin_configurar' }
+       · clave equivocada → 401; tras 8 fallos desde una IP en 15 min → 429 (datos estáticos del flujo)
+  → Leer Sheet (Inscripciones!A2:Y, credencial Google Sheets PROD)
+  → Armar lista: un objeto por fila con los campos que usa el buscador (sin dirección, estatura ni peso)
+  → { ok: true, total, atletas: [...] } con Cache-Control: no-store
+```
+
+- **La clave** la elige Luis y la pone en Easypanel, en la variable `GT_BUSCADOR_CLAVE` del servicio n8n, igual que
+  `TURNSTILE_SECRET`. Nunca va en el repo ni en el flujo. En la página, Jeffer la escribe una vez: con «Recordar» queda
+  en el `localStorage` de su equipo; sin eso dura mientras la pestaña esté abierta. «Salir» la borra.
+- **La página** filtra, ordena y pagina sola: búsqueda por nombre (sin importar tildes) o cédula (sin importar puntos
+  ni la V), posición, forma de pago, comprobante (recibido, falta o no aplica), edad y fecha de inscripción. Las
+  inscripciones de prueba (columna B = PRUEBA) se ocultan salvo que se pidan.
+- **Las planillas, fotos y comprobantes son enlaces de Drive**: solo abren con una cuenta de Google con acceso a la
+  carpeta (Jeffer es lector). Un enlace reenviado no alcanza para ver el archivo.
+- Todo se dibuja con `textContent` (nada de `innerHTML` con datos) y solo se arman enlaces con ids que tienen forma de
+  id de Drive. El `?endpoint=` de prueba solo funciona en `localhost` y `127.0.0.1`.
+- `buscador/.htaccess` agrega `X-Robots-Tag: noindex, nofollow` y `Cache-Control: no-store`; la CSP viene de la raíz.
+- No guarda las ejecuciones exitosas (traen nombres y cédulas de menores).
+
 ## Configuración fuera del repo
 
 El repositorio es público: destinatarios, ids de la carpeta, del Sheet y de la carpeta de respaldos, el correo de la
@@ -99,6 +128,8 @@ La copia durable y todos los scripts están en `C:\Users\luis_\respaldos\deploy-
 python N8N/gt-baseball/build.py <ruta>/gt-config.json --publicar           # flujo de inscripción
 python N8N/gt-baseball/build_respaldo.py <ruta>/gt-config.json --publicar  # flujo de respaldo
 python N8N/gt-baseball/build_respaldo.py <ruta>/gt-config.json --probar    # respaldo una vez, flujo temporal
+python N8N/gt-baseball/build_buscador.py <ruta>/gt-config.json --probar    # buscador en flujo temporal (clave aleatoria)
+python N8N/gt-baseball/build_buscador.py <ruta>/gt-config.json --publicar  # flujo del buscador
 python deploy_dominio.py reconocer | subir | verificar                     # sitio en gtbaseball.com
 ```
 
@@ -125,6 +156,13 @@ Viven en `…\respaldos\…\pago\`, fuera del repo, porque usan la configuració
 - **Sin efectos, en la página local** (puerto 8774, armada con `deploy_gt.py armar`): `probar-pago.cjs`,
   `probar-campos-navegador.cjs`, `probar-salir.cjs`, `probar-firma-aviso.cjs`, `probar-video-guia.cjs`.
 - **Concurrencia:** `carga-concurrencia.py` (flujo temporal aislado que se borra al terminar).
+- **Portada nueva (29-sep), en la copia local:** `capturas-planes.cjs` (franja en 7 tamaños y los dos temas),
+  `capturas-opciones-fondo.cjs` y `probar-fondos-arriba.cjs` (rotación de los 3 fondos, «menos movimiento» y el botón
+  «Volver al inicio»).
+- **Buscador, en la copia local:** `mock_buscador.py` (receptor de prueba en el puerto 8775, con 37 atletas inventados;
+  se bloquea tras 8 claves malas hasta reiniciarlo) y `probar-buscador.cjs` (54 comprobaciones: clave, búsqueda, cada
+  filtro, orden, paginación, enlaces, «Salir», celular, tema claro y el 429). Se abre con
+  `/buscador/?endpoint=http://127.0.0.1:8775/`.
 - **En PROD:** `e2e-turnstile.cjs` (el humano pasa, el bot queda retenido) y `verif-guia-dominio.cjs`. Las que
   inscriben dejan filas de prueba que hay que borrar a mano.
 - 🔴 **Turnstile en modo Managed retiene al Chrome de Playwright** (`navigator.webdriver=true`), y eso es lo

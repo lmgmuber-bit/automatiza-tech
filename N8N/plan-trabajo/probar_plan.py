@@ -503,6 +503,74 @@ console.log(JSON.stringify(R));
        'restituirArranque: lo que Luis editó en el «Arranque» (5 días, «luis») se conserva', ent)
 
 
+@seccion('correos')
+def prueba_correos():
+    from correos_plan import JS_PANEL, correo_error_plan, correo_sin_vista
+    r, err = node_js(JS_PANEL + "console.log(JSON.stringify([urlPanel(5, 9), urlPanel(0, 9), urlPanel('abc', 9), urlPanel(5, 0), urlPanel(null, null)]));")
+    ok(r == ['https://automatizatech.cl/wp-admin/admin.php?page=automatiza-crm-ficha&id=5&pt=9#tab-plan',
+             'https://automatizatech.cl/wp-admin/admin.php?page=automatiza-crm-clientes',
+             'https://automatizatech.cl/wp-admin/admin.php?page=automatiza-crm-clientes',
+             'https://automatizatech.cl/wp-admin/admin.php?page=automatiza-crm-ficha&id=5#tab-plan',
+             'https://automatizatech.cl/wp-admin/admin.php?page=automatiza-crm-clientes'],
+       'urlPanel: ficha del cliente en la pestaña del plan; sin ficha conocida, la lista de clientes', r or err)
+    try:
+        correo_error_plan('otro')
+        ok(False, 'correo_error_plan: un flujo desconocido se rechaza')
+    except ValueError:
+        ok(True, 'correo_error_plan: un flujo desconocido se rechaza')
+
+    def correr(codigo, datos):
+        js = ("const $ = (n) => ({ isExecuted: n in DATOS, first: () => ({ json: DATOS[n] }) });\n"
+              "const $execution = { id: '777' };\n"
+              "const salida = (function () {\n" + codigo + "\n})();\nconsole.log(JSON.stringify(salida[0].json));")
+        return node_js(js, datos)
+
+    motivo = {'id': 9, 'crm': 5, 'proyecto': '[PRUEBA] Sitio <b>de</b> la panadería', 'reason': 'La respuesta no es JSON\nsegunda línea', 'exec': '777'}
+    for flujo, frase, siguiente in (('borrador', 'no se pudo generar el borrador del plan', 'Reintentar borrador'),
+                                    ('cambios', 'no se pudieron aplicar los cambios al plan', 'Volver al borrador')):
+        r, err = correr(correo_error_plan(flujo), {'Motivo del error': motivo, 'Marcar error': {'statusCode': 200}})
+        ok(r is not None, f'correo {flujo}: el código corre', err)
+        if r is None:
+            continue
+        h = r['html']
+        ok(r['asunto'] == '⚠️ [PRUEBA] Sitio <b>de</b> la panadería · ' + frase, f'correo {flujo}: asunto', r['asunto'])
+        ok('Plan de trabajo · aviso interno' in h and 'Propuestas · aviso interno' not in h, f'correo {flujo}: rótulo del plan')
+        ok('easypanel' not in h, f'correo {flujo}: no enlaza a *.easypanel.host')
+        ok('automatiza-crm-ficha&amp;id=5&amp;pt=9#tab-plan' in h, f'correo {flujo}: botón a la pestaña del plan en la ficha')
+        ok('&lt;b&gt;de&lt;/b&gt;' in h and '<b>de</b>' not in h, f'correo {flujo}: escapa el nombre del proyecto')
+        ok(siguiente in h and 'segunda línea' in h and 'La respuesta no es JSON<br>' in h, f'correo {flujo}: motivo y siguiente paso')
+        ok('777' in h and 'Nada de esto le llegó al cliente' in h, f'correo {flujo}: ejecución y aviso de que el cliente no recibió nada')
+        ok('el envío lo haces tú' not in h and 'Aviso automático del plan de trabajo de AutomatizaTech. Nada de esto le llega al cliente.' in h,
+           f'correo {flujo}: pie del plan (en la Etapa 1 nada se le envía al cliente)')
+        r2, _ = correr(correo_error_plan(flujo), {'Motivo del error': dict(motivo, crm=0), 'Marcar error': {'error': {'message': 'ECONNRESET'}}})
+        h2 = (r2 or {}).get('html', '')
+        trabado = 'generando' if flujo == 'borrador' else 'cambios'
+        ok('Tampoco se pudo marcar el plan como error' in h2 and 'sin respuesta' in h2 and f'«{trabado}»' in h2 and 'Destrabar' in h2,
+           f'correo {flujo}: si tampoco se pudo marcar el error, lo dice y sugiere «Destrabar»')
+        ok('automatiza-crm-clientes' in h2, f'correo {flujo}: sin ficha conocida, enlaza a la lista de clientes')
+
+    try:
+        correo_sin_vista('otro')
+        ok(False, 'correo_sin_vista: un flujo desconocido se rechaza')
+    except ValueError:
+        ok(True, 'correo_sin_vista: un flujo desconocido se rechaza')
+    guardado = {'Webhook': {'body': {'id': 9}},
+                'Leer contexto': {'statusCode': 200, 'body': {'proyecto': '[PRUEBA] Sitio <b>de</b> la panadería', 'crm_cliente_id': 5}},
+                'Guardar borrador': {'statusCode': 200, 'body': {'ok': True, 'errores': [], 'avisos': [
+                    'Se descartó la foto de la lámina «gantt»: no trae descripción.', 'No se pudo pedir la vista previa: HTTP 404']}}}
+    for flujo, frase in (('borrador', 'borrador del plan guardado sin vista previa'), ('cambios', 'cambios del plan guardados sin vista previa')):
+        r, err = correr(correo_sin_vista(flujo), guardado)
+        ok(r is not None, f'correo sin vista {flujo}: el código corre', err)
+        if r is None:
+            continue
+        h = r['html']
+        ok(r['asunto'] == '⚠️ [PRUEBA] Sitio <b>de</b> la panadería · ' + frase, f'correo sin vista {flujo}: asunto', r['asunto'])
+        ok('No se pudo pedir la vista previa: HTTP 404' in h and 'gantt' not in h and 'Guardar y recalcular' in h and 'borrador listo' in h,
+           f'correo sin vista {flujo}: dice por qué no llega el aviso «borrador listo» y cómo pedir la vista previa')
+        ok('automatiza-crm-ficha&amp;id=5&amp;pt=9#tab-plan' in h and 'easypanel' not in h and '&lt;b&gt;de&lt;/b&gt;' in h and '777' in h,
+           f'correo sin vista {flujo}: botón a la pestaña del plan, proyecto escapado y ejecución')
+
+
 # ==== Las tareas siguientes agregan sus secciones justo antes de esta línea ====
 
 if __name__ == '__main__':

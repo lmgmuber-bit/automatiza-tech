@@ -1020,3 +1020,64 @@ function at_pt_calcular_fechas(array $plan, string $inicio, array $feriados): ar
 	];
 	return $plan;
 }
+
+/* ---------- Estados del plan y costo de fotos (Task 4) ---------- */
+
+/** Estados del plan y a cuáles puede pasar cada uno. «Destrabar» es generando, cambios o aprobando -> error; desde
+ *  error se reintenta el borrador (-> generando) o se vuelve al borrador (-> borrador). 'enviado' es de la Etapa 2. */
+function at_pt_transiciones(): array {
+	return [
+		'generando' => ['borrador', 'error'],
+		'borrador'  => ['borrador', 'cambios', 'aprobando', 'error'],
+		'cambios'   => ['borrador', 'error'],
+		'aprobando' => ['listo', 'error'],
+		'listo'     => ['borrador', 'cambios', 'aprobando', 'enviado'],
+		'error'     => ['generando', 'borrador', 'cambios', 'aprobando'],
+		'enviado'   => [],
+	];
+}
+
+/** ¿Puede el plan pasar de $de a $a? Un estado desconocido no pasa a ninguno. */
+function at_pt_transicion_valida(string $de, string $a): bool {
+	return in_array($a, at_pt_transiciones()[$de] ?? [], true);
+}
+
+// Tarifa de lista por foto: la misma de at_propuesta_costo_fotos() (inc/proposals-flow.php:108 y :124, Soul 2,
+// US$0,0032 c/u al 2026-09-20). Se copia aquí para que las pruebas puras no dependan de proposals-flow.php. Si cambia
+// el modelo o la tarifa (spec §5: qwen-image o recraft se decide al implementar), cambiar los dos lados.
+const AT_PT_USD_POR_FOTO = 0.0032;
+
+// Revisión de texto de las fotos en «3 Render» (decisión D18, cambiada por Luis el 29-sep): una consulta a GPT-4o con
+// las fotos nuevas. Es la misma cifra que suma at_propuesta_costo_fotos() para «3 Final» de las propuestas
+// (inc/proposals-flow.php:121, 27-sep): ≈ US$0,026 por consulta con 9 fotos 16:9 en detail high, según la tarifa y
+// el conteo de imágenes de la documentación de OpenAI, NO medido en una factura; con 8 o 10 fotos se usa la misma cifra
+// (el mismo criterio que el panel de propuestas). Hasta dos consultas si hay que rehacer fotos. Si cambia el modelo o
+// la tarifa, cambiar aquí, en inc/proposals-flow.php y en los docstrings de build_3_final.py y build_plan_3_render.py.
+const AT_PT_USD_REVISION = 0.026;
+
+/** Fotos nuevas del plan y su costo, para mostrar antes de «Aprobar» (decisión 7). Cuenta un brief válido por lámina
+ *  (lámina de at_pt_slides_foto() y descripción no vacía). Si hay propuesta, 'cover' y 'cierre' no cuentan: se
+ *  reutilizan sus fotos y no se vuelven a revisar (las propuestas generadas desde el 27-sep ya pasaron por la misma
+ *  revisión en «3 Final»). Con al menos una foto nueva se suma la revisión de texto (D18): 'usd_lista' = fotos + una
+ *  consulta; 'usd_max' = cada foto dos veces (rehecha por texto) y dos consultas, como at_propuesta_costo_fotos(). Sin
+ *  fotos nuevas no hay revisión ni costo. */
+function at_pt_costo_fotos(array $image_briefs, bool $hay_propuesta): array {
+	$slides = at_pt_slides_foto();
+	$reutilizadas = $hay_propuesta ? ['cover', 'cierre'] : [];
+	$nuevas = [];
+	foreach ($image_briefs as $b) {
+		$slide = is_array($b) && is_string($b['slide'] ?? null) ? trim($b['slide']) : '';
+		$prompt = is_array($b) && is_string($b['prompt'] ?? null) ? trim($b['prompt']) : '';
+		if ($prompt !== '' && in_array($slide, $slides, true) && !in_array($slide, $reutilizadas, true)) {
+			$nuevas[$slide] = true;
+		}
+	}
+	$n = count($nuevas);
+	$revision = $n > 0 ? AT_PT_USD_REVISION : 0.0;
+	return [
+		'fotos'        => $n,
+		'usd_lista'    => round($n * AT_PT_USD_POR_FOTO + $revision, 4),
+		'usd_revision' => $revision,
+		'usd_max'      => round($n * AT_PT_USD_POR_FOTO * 2 + $revision * 2, 4),
+	];
+}

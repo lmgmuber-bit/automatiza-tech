@@ -723,3 +723,96 @@ function at_pt_validar_entrada(mixed $plan, bool $borrador = false): array {
 	}
 	return $v;
 }
+
+/* ---------- Tabla de tiempos -> días (Task 2) ---------- */
+
+/** Reparte $total días entre actividades en proporción a $pesos (los días que propuso la IA): método del resto mayor
+ *  con mínimo 1 por actividad. Se da a cada una la parte entera de su cuota (al menos 1); lo que falta va de a un día
+ *  a las de mayor fracción (empate: la que va primero), sin contar las que subieron al mínimo de 1, que ya recibieron
+ *  más que su cuota; si el mínimo de 1 hizo pasarse, se quita a la más pasada de su cuota. Así a la que la IA le
+ *  estimó más nunca le tocan menos días que a otra. Si $total es menor que la cantidad de actividades, 1 a cada una.
+ *  Cuentas en enteros: sin errores de coma. */
+function at_pt_repartir(int $total, array $pesos): array {
+	$pesos = array_map(static fn($p): int => max(1, (int) $p), array_values($pesos));
+	$n = count($pesos);
+	if ($n === 0) {
+		return [];
+	}
+	if ($total <= $n) {
+		return array_fill(0, $n, 1);
+	}
+	$suma = array_sum($pesos);
+	$dias = [];
+	$resto = [];
+	foreach ($pesos as $i => $p) {
+		$entero = intdiv($total * $p, $suma);
+		$dias[$i] = max(1, $entero);
+		// La que subió al mínimo de 1 ya recibió más que su cuota: no compite por los días que faltan.
+		$resto[$i] = $entero >= 1 ? ($total * $p) % $suma : -1;
+	}
+	$falta = $total - array_sum($dias);
+	if ($falta > 0) {
+		$orden = array_keys($pesos);
+		usort($orden, static fn(int $a, int $b): int => [$resto[$b], $a] <=> [$resto[$a], $b]);
+		for ($k = 0; $k < $falta; $k++) {
+			$dias[$orden[$k % $n]]++;
+		}
+	}
+	while (array_sum($dias) > $total) {
+		$quitar = null;
+		$exceso_max = null;
+		foreach ($dias as $i => $d) {
+			$exceso = $d * $suma - $total * $pesos[$i]; // (días - cuota) × suma, en enteros
+			if ($d > 1 && ($exceso_max === null || $exceso >= $exceso_max)) {
+				$quitar = $i;
+				$exceso_max = $exceso;
+			}
+		}
+		$dias[$quitar]--;
+	}
+	return $dias;
+}
+
+/** Pone los días de la tabla de tiempos donde calza. Para cada par (servicio, etapa) con el servicio en la tabla y la
+ *  etapa en diseño, desarrollo, pruebas o implementación, reparte el total de la tabla entre las actividades de ese
+ *  par en todo el plan (at_pt_repartir, pesos = los días de la IA) y las marca 'tabla'. Si el par tiene alguna
+ *  actividad 'luis', no se toca (Review Focus 3). Las que no calzan y no son 'luis' quedan 'ia'. Las de la etapa
+ *  'arranque' (el bloque fijo) conservan su origen. */
+function at_pt_aplicar_tabla(array $plan, array $tabla): array {
+	$etapas_tabla = at_pt_etapas_tabla();
+	$grupos = [];
+	foreach (($plan['fases'] ?? []) as $fi => $fase) {
+		foreach (($fase['bloques'] ?? []) as $bi => $bloque) {
+			foreach (($bloque['actividades'] ?? []) as $ai => $a) {
+				$servicio = (string) ($a['servicio'] ?? '');
+				$etapa = (string) ($a['etapa'] ?? '');
+				if ($etapa === 'arranque') {
+					continue;
+				}
+				if ($servicio !== '' && in_array($etapa, $etapas_tabla, true) && is_array($tabla[$servicio] ?? null) && isset($tabla[$servicio][$etapa])) {
+					$grupos[$servicio][$etapa][] = [$fi, $bi, $ai];
+				} elseif (($a['origen'] ?? '') !== 'luis') {
+					$plan['fases'][$fi]['bloques'][$bi]['actividades'][$ai]['origen'] = 'ia';
+				}
+			}
+		}
+	}
+	foreach ($grupos as $servicio => $por_etapa) {
+		foreach ($por_etapa as $etapa => $lugares) {
+			$pesos = [];
+			foreach ($lugares as [$fi, $bi, $ai]) {
+				$a = $plan['fases'][$fi]['bloques'][$bi]['actividades'][$ai];
+				if (($a['origen'] ?? '') === 'luis') {
+					continue 2; // el grupo tiene días de Luis: no se toca
+				}
+				$pesos[] = (int) ($a['dias_habiles'] ?? 1);
+			}
+			$dias = at_pt_repartir((int) $tabla[$servicio][$etapa], $pesos);
+			foreach ($lugares as $i => [$fi, $bi, $ai]) {
+				$plan['fases'][$fi]['bloques'][$bi]['actividades'][$ai]['dias_habiles'] = $dias[$i];
+				$plan['fases'][$fi]['bloques'][$bi]['actividades'][$ai]['origen'] = 'tabla';
+			}
+		}
+	}
+	return $plan;
+}

@@ -238,4 +238,111 @@ ok($desborde['ok'] && count($desborde['avisos']) === 26 && end($desborde['avisos
 $ceros = at_pt_validar_plan(['proyecto' => 'X', 'fases' => [['clave' => 'diseno_desarrollo', 'bloques' => array_map(fn($i) => $bloque("C{$i}", 10, 0), range(1, 3))]]]);
 ok(!$ceros['ok'] && count($ceros['errores']) === 26 && end($ceros['errores']) === '… y 5 errores más.' && $ceros['plan'] === [], '30 errores: quedan los 25 primeros y «… y 5 errores más.»');
 
+// Reparto proporcional de la tabla de tiempos, con resto
+ok(at_pt_repartir(5, [2, 2, 2]) === [2, 2, 1], '5 días entre tres actividades de 2: cuotas 1,67; los 2 días que sobran van a las primeras -> 2, 2 y 1');
+ok(at_pt_repartir(10, [3, 1]) === [8, 2], '10 días con pesos 3 y 1: cuotas 7,5 y 2,5; el empate de fracciones lo gana la primera -> 8 y 2');
+ok(at_pt_repartir(10, [4, 4, 1]) === [5, 4, 1], '10 días con pesos 4, 4 y 1: cuotas 4,44, 4,44 y 1,11 -> 5, 4 y 1');
+ok(at_pt_repartir(20, [5, 10, 5]) === [5, 10, 5], 'si los pesos ya suman el total, quedan iguales');
+ok(at_pt_repartir(8, [1, 1, 1]) === [3, 3, 2], '8 días entre tres iguales: 3, 3 y 2');
+ok(at_pt_repartir(4, [1, 1, 100]) === [1, 1, 2], 'mínimo 1: a las chicas les toca 1 y a la grande el resto');
+ok(at_pt_repartir(2, [5, 5, 5]) === [1, 1, 1] && at_pt_repartir(0, [3]) === [1], 'total menor que la cantidad (o cero): 1 a cada una');
+ok(at_pt_repartir(7, []) === [], 'sin actividades, nada');
+ok(at_pt_repartir(5, [3, 2, 1]) === [2, 2, 1], 'diseño = 5 con la IA en 3, 2 y 1: la que subió al mínimo de 1 no se lleva el día que sobra -> 2, 2 y 1');
+$suma_ok = true;
+foreach ([[13, [1, 2, 3, 4]], [60, [60, 1, 1]], [9, [7, 7, 7, 7, 7, 7, 7, 7]], [31, [2, 9, 4]], [59, [1, 1, 1, 60]]] as [$t, $w]) {
+	$r = at_pt_repartir($t, $w);
+	$suma_ok = $suma_ok && array_sum($r) === $t && min($r) >= 1;
+}
+ok($suma_ok, 'el reparto siempre suma el total de la tabla y ninguna actividad queda en 0');
+$monotono = true;
+foreach ([[5, [3, 2, 1]], [5, [28, 17, 11]], [71, [2, 16, 1, 42, 39]], [18, [58, 56, 52, 13, 27, 33, 34, 23, 59, 36]]] as [$t, $w]) {
+	$r = at_pt_repartir($t, $w);
+	foreach ($w as $i => $wi) {
+		foreach ($w as $j => $wj) {
+			$monotono = $monotono && !($wi > $wj && $r[$i] < $r[$j]);
+		}
+	}
+}
+ok($monotono, 'proporcional: a la que la IA le estimó más días nunca le tocan menos que a otra');
+
+// Tabla -> días en un plan: por par (servicio, etapa) en todo el plan
+$tab = at_pt_duraciones_defecto();
+$base = at_pt_validar_plan([
+	'proyecto' => '[PRUEBA] Tienda de Cliente Prueba',
+	'fases' => [
+		['clave' => 'diseno_desarrollo', 'bloques' => [
+			['nombre' => 'Diseño', 'entrega' => true, 'actividades' => [
+				['nombre' => 'Propuesta de diseño', 'responsable' => 'at', 'dias_habiles' => 2, 'servicio' => 'sitio_web_tienda', 'etapa' => 'diseno'],
+				['nombre' => 'Ajustes de diseño', 'responsable' => 'at', 'dias_habiles' => 2, 'servicio' => 'sitio_web_tienda', 'etapa' => 'diseno'],
+			]],
+			['nombre' => 'Desarrollo', 'actividades' => [
+				['nombre' => 'Maquetación', 'responsable' => 'at', 'dias_habiles' => 4, 'servicio' => 'sitio_web_tienda', 'etapa' => 'desarrollo'],
+				['nombre' => 'Carrito de compras', 'responsable' => 'at', 'dias_habiles' => 4, 'servicio' => 'sitio_web_tienda', 'etapa' => 'desarrollo'],
+				['nombre' => 'Integración con WhatsApp', 'responsable' => 'at', 'dias_habiles' => 3, 'servicio' => 'asistente_basico', 'etapa' => 'desarrollo', 'en_paralelo' => true],
+				['nombre' => 'Carga de productos', 'responsable' => 'cliente', 'dias_habiles' => 3, 'servicio' => 'sitio_web_tienda'],
+			]],
+			['nombre' => 'Pagos', 'actividades' => [
+				['nombre' => 'Pasarela de pago', 'responsable' => 'at', 'dias_habiles' => 1, 'servicio' => 'sitio_web_tienda', 'etapa' => 'desarrollo'],
+				['nombre' => 'Diseño de la app', 'responsable' => 'at', 'dias_habiles' => 6, 'servicio' => 'app_movil', 'etapa' => 'diseno', 'origen' => 'tabla'],
+			]],
+			['nombre' => 'Pruebas', 'entrega' => true, 'actividades' => [
+				['nombre' => 'Pruebas en celular', 'responsable' => 'at', 'dias_habiles' => 7, 'servicio' => 'sitio_web_tienda', 'etapa' => 'pruebas', 'origen' => 'luis'],
+				['nombre' => 'Pruebas de pago', 'responsable' => 'ambos', 'dias_habiles' => 2, 'servicio' => 'sitio_web_tienda', 'etapa' => 'pruebas'],
+			]],
+		]],
+		['clave' => 'implementacion', 'bloques' => [
+			['nombre' => 'Puesta en marcha', 'actividades' => [
+				['nombre' => 'Publicación', 'responsable' => 'at', 'dias_habiles' => 1, 'servicio' => 'sitio_web_tienda', 'etapa' => 'implementacion'],
+				['nombre' => 'Capacitación', 'responsable' => 'ambos', 'dias_habiles' => 1, 'etapa' => 'implementacion'],
+			]],
+		]],
+		['clave' => 'soporte', 'bloques' => [
+			['nombre' => 'Garantía', 'actividades' => [
+				['nombre' => 'Ajustes menores', 'responsable' => 'at', 'dias_habiles' => 10, 'servicio' => 'sitio_web_tienda', 'etapa' => 'soporte'],
+			]],
+		]],
+	],
+])['plan'];
+function act(array $plan, string $nombre): ?array {
+	foreach ($plan['fases'] as $f) {
+		foreach ($f['bloques'] as $b) {
+			foreach ($b['actividades'] as $a) {
+				if ($a['nombre'] === $nombre) {
+					return $a;
+				}
+			}
+		}
+	}
+	return null;
+}
+$t = at_pt_aplicar_tabla($base, $tab);
+$dias_origen = fn(string $n) => [act($t, $n)['dias_habiles'], act($t, $n)['origen']];
+ok($dias_origen('Propuesta de diseño') === [3, 'tabla'] && $dias_origen('Ajustes de diseño') === [2, 'tabla'], 'sitio web o tienda, diseño = 5: la IA dijo 2 y 2 -> 3 y 2, origen tabla');
+ok($dias_origen('Maquetación') === [5, 'tabla'] && $dias_origen('Carrito de compras') === [4, 'tabla'] && $dias_origen('Pasarela de pago') === [1, 'tabla'], 'desarrollo = 10 repartido entre bloques distintos: 4, 4 y 1 -> 5, 4 y 1');
+ok($dias_origen('Integración con WhatsApp') === [4, 'tabla'], 'asistente básico, desarrollo = 4 aunque la IA dijo 3');
+ok($dias_origen('Publicación') === [2, 'tabla'], 'sitio web o tienda, implementación = 2');
+ok($dias_origen('Carga de productos') === [3, 'ia'] && $dias_origen('Capacitación') === [1, 'ia'] && $dias_origen('Ajustes menores') === [10, 'ia'], 'sin etapa, sin servicio o etapa de soporte: días de la IA, origen ia');
+ok($dias_origen('Diseño de la app') === [6, 'ia'], 'servicio que no está en la tabla: origen ia aunque la IA diga tabla');
+ok($dias_origen('Pruebas en celular') === [7, 'luis'] && $dias_origen('Pruebas de pago') === [2, 'ia'], 'Review Focus 3: el par con días de Luis no se toca (7 de Luis y 2 de la IA quedan)');
+ok($dias_origen('Reunión de inicio') === [1, 'tabla'] && $dias_origen('Entrega de logo, textos y accesos') === [3, 'tabla'], 'el Arranque fijo no cambia');
+ok(at_pt_aplicar_tabla($t, $tab) === $t, 'aplicar la tabla dos veces da lo mismo');
+$tab_luis = $tab;
+$tab_luis['sitio_web_tienda']['diseno'] = 8;
+$t2 = at_pt_aplicar_tabla($base, $tab_luis);
+ok(act($t2, 'Propuesta de diseño')['dias_habiles'] === 4 && act($t2, 'Ajustes de diseño')['dias_habiles'] === 4, 'con la tabla corregida por Luis (diseño = 8): 4 y 4');
+unset($tab_luis['asistente_basico']);
+ok(act(at_pt_aplicar_tabla($base, $tab_luis), 'Integración con WhatsApp') === array_merge(act($base, 'Integración con WhatsApp'), ['origen' => 'ia']), 'si Luis quita un servicio de la tabla, sus actividades quedan con los días de la IA y origen ia');
+ok(act(at_pt_aplicar_tabla($base, []), 'Maquetación')['origen'] === 'ia' && act(at_pt_aplicar_tabla($base, []), 'Maquetación')['dias_habiles'] === 4, 'tabla vacía: todo queda de la IA');
+
+// Review Focus 6: la tabla puede pasar el tope de días, así que el plan se valida otra vez después de aplicarla.
+$por_servicio = fn(string $bloque, string $etapa, bool $entrega) => ['nombre' => $bloque, 'entrega' => $entrega, 'actividades' => array_map(fn($s) => ['nombre' => "{$bloque} · {$s}", 'responsable' => 'at', 'dias_habiles' => 1, 'servicio' => $s, 'etapa' => $etapa], array_keys($tab))];
+$combinado = at_pt_validar_plan(['proyecto' => '[PRUEBA] Proyecto combinado', 'fases' => [
+	['clave' => 'diseno_desarrollo', 'bloques' => [$por_servicio('Diseño', 'diseno', true), $por_servicio('Desarrollo', 'desarrollo', true), $por_servicio('Pruebas', 'pruebas', true)]],
+	['clave' => 'implementacion', 'bloques' => [$por_servicio('Puesta en marcha', 'implementacion', false)]],
+	['clave' => 'soporte', 'bloques' => [['nombre' => 'Garantía', 'actividades' => [['nombre' => 'Ajustes', 'responsable' => 'at', 'dias_habiles' => 10]]]]],
+]]);
+$tras_tabla = at_pt_validar_plan(at_pt_aplicar_tabla($combinado['plan'], $tab));
+ok($combinado['ok'] && !$tras_tabla['ok'] && $tras_tabla['errores'] === ['El plan suma 138 días hábiles con las revisiones (máximo 130, unas 26 semanas): acórtalo o divide el proyecto.'] && $tras_tabla['plan'] === [], 'los siete servicios juntos: 57 días hábiles de la IA pasan a 138 con la tabla; validar otra vez lo deja en error');
+ok(at_pt_validar_plan($t)['ok'] && at_pt_validar_plan($t)['plan'] === $t, 'validar después de aplicar la tabla conserva días y orígenes (es idempotente)');
+
 fin();

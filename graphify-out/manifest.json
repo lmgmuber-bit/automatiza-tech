@@ -4715,8 +4715,8 @@
     "semantic_hash": ""
   },
   "CLAUDE.md": {
-    "mtime": 1790677353.382653,
-    "ast_hash": "4aabe545a857af7acda8d1e4729e7dab",
+    "mtime": 1790680819.8667881,
+    "ast_hash": "aa5ff46132e1bfbc98bf575c7a03dab2",
     "semantic_hash": ""
   },
   "CONTEXTO_COMPLETO.md": {
@@ -10820,8 +10820,8 @@
     "semantic_hash": ""
   },
   "N8N/PROD/wa-plantillas-2026-09-24/aplicar_recordatorios.py": {
-    "mtime": 1790366714.423514,
-    "ast_hash": "fbe9600145e895c22716011ad97a3c78",
+    "mtime": 1790680782.3771825,
+    "ast_hash": "1806259ba1d8f6c88f7074963027e715",
     "semantic_hash": ""
   },
   "N8N/PROD/wa-plantillas-2026-09-24/codigo-nodos/argos_generar.py": {
@@ -10910,28 +10910,28 @@
     "semantic_hash": ""
   },
   "N8N/PROD/wa-plantillas-2026-09-24/plantillas-meta/wa_crear_plantilla_argos.py": {
-    "mtime": 1790296731.1385255,
-    "ast_hash": "fc38e20033cc38087d5eae6120154625",
+    "mtime": 1790680782.382837,
+    "ast_hash": "5020a784eaa79d7814eef2d48a9df6c4",
     "semantic_hash": ""
   },
   "N8N/PROD/wa-plantillas-2026-09-24/plantillas-meta/wa_crear_plantillas.py": {
-    "mtime": 1790296731.1351683,
-    "ast_hash": "3921e174679739c2713d0e7e6a68c785",
+    "mtime": 1790680782.3848386,
+    "ast_hash": "6754e006eec350541e696e941923a2ea",
     "semantic_hash": ""
   },
   "N8N/PROD/wa-plantillas-2026-09-24/plantillas-meta/wa_crear_plantillas_2.py": {
-    "mtime": 1790296731.136174,
-    "ast_hash": "666f1070e65306b367f241e7cfa51a2f",
+    "mtime": 1790680782.3858361,
+    "ast_hash": "c83971c3e9ae3b7abafd62d236c45140",
     "semantic_hash": ""
   },
   "N8N/PROD/wa-plantillas-2026-09-24/plantillas-meta/wa_estado_cuenta.py": {
-    "mtime": 1790296731.1444852,
-    "ast_hash": "831a735f1379b30c22391c2fab1e43da",
+    "mtime": 1790680782.3878417,
+    "ast_hash": "bac6ce84bf208f206a4f4d01bedb969b",
     "semantic_hash": ""
   },
   "N8N/PROD/wa-plantillas-2026-09-24/plantillas-meta/wa_estado_plantillas.py": {
-    "mtime": 1790354513.2008526,
-    "ast_hash": "ca891386c7390d570a5b58b2ca9216b8",
+    "mtime": 1790680782.388834,
+    "ast_hash": "46e13e5511823a52986a2e846bec5b20",
     "semantic_hash": ""
   },
   "N8N/PROD/wa-plantillas-2026-09-24/pruebas/test_argos.js": {
@@ -10960,8 +10960,8 @@
     "semantic_hash": ""
   },
   "N8N/PROD/wa-plantillas-2026-09-24/README.md": {
-    "mtime": 1790677313.5900102,
-    "ast_hash": "e98169d7368fee1f3f906d4c520c6b99",
+    "mtime": 1790680819.868437,
+    "ast_hash": "c1834bb90d572b099094a4a7b47aa8d3",
     "semantic_hash": ""
   },
   "N8N/PROD/wa-plantillas-2026-09-24/codigo-nodos/argos_url_historial.txt": {

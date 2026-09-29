@@ -96,10 +96,11 @@ meses (Magic Photography). Ver anexo A.4.
 - Pruebas: `tests/frontend/feriaIntro.test.mjs` (4) y la E2E `feria-integracion.test.mjs` (despedida y tarjeta de
   respaldo con el video abortado). Suite completa: 243 pruebas, 242 pasan, 1 omitida (la de ADB), 0 fallas.
 
-**Para PROD (con el go de Luis, con respaldo y verificación desde afuera):** `app/index.html`, `app/feria.html` y los
-assets que referencian (`assets/main-B0T6cgEh.js`, `feria-DvWbXH6O.js`, `feria-DFqILw4W.js`, `browser-BeMEBtOm.js`,
-`client-eulB1LW-.js`, `themeVars-BWg77og2.js`, `main-BQAKXBRo.css`, `feria-DS66PGN6.css`); los assets primero y los
-dos HTML al final. Sin migración.
+**Para PROD (con respaldo y verificación desde afuera):** cotejado contra PROD el 29-sep, solo hacen falta dos
+archivos: `app/assets/main-B0T6cgEh.js` (nuevo, no reemplaza nada) y `app/index.html` al final. Los demás assets que
+referencia el `index.html` ya están en PROD con los mismos bytes. `feria.html` **no se toca**: el selector no cambió
+y PROD sirve el suyo con otros nombres de trozo. Sin migración. Detalle y vuelta atrás en `FTP-MANIFEST.md`
+(PENDIENTE 2026-09-29).
 
 ### 4.2 Eventos escolares (ticket `AT-CUMPLECLICK-024`)
 

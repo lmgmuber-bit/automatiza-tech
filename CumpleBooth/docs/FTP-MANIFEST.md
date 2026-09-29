@@ -4208,3 +4208,41 @@ No subir `src/`, tests, node_modules, evidencias, ADB, fixtures, SQLite, fotos d
 - El diploma se guarda en la tablet; el QR es de la foto. Entrega por QR del diploma requeriría acordar un contrato adicional, que no se inventó aquí.
 - La fuente del modelo quedó en `src/feria/models/` para respetar los archivos autorizados; Vite la emite en `vendor/mediapipe/selfie_segmenter.tflite`. Se reutiliza el mismo WASM instalado. Proveniencia y SHA-256 en `models/NOTICE.md`.
 - Sin nombres de franquicias en el nuevo copy. Las imágenes/nombres de personajes siguen viniendo del catálogo existente de 020.
+
+## PENDIENTE 2026-09-29 — feria: la intro siempre se ve y la temática se despide (LOCAL, SIN DEPLOY)
+
+Rama `claude/feria-prod`, commit `0357996`, PR lmgmuber-bit/automatiza-tech#58. Luis reportó el 28-sep que en la
+feria del 26-sep la intro se saltaba y el niño caía directo a la ruleta.
+
+**Qué cambia:** el video de bienvenida se baja entero al abrir el kiosco (`videoListo.js`), se ve aunque la tablet
+pida menos animaciones y, si no arranca o falla, queda una tarjeta con el nombre un mínimo de 4 s
+(`src/feria/intro.js`). Al terminar, la despedida de la temática antes de volver al selector. Solo afecta al modo
+feria: una fiesta normal usa `ListaInvitados` y `VideoScreen`, que no se tocaron.
+
+**Estado de PROD cotejado por HTTP el 29-sep:** `app/index.html` referencia `assets/main-BUofv_7z.js` (quinta subida
+del 26-sep, commit `089b1ac`). `app/feria.html` referencia `feria-B6aDrb3_.js` y `feria-CtKgOs8Z.js`.
+
+| Orden | Clase | Local | PROD |
+|---|---|---|---|
+| 1 | OBLIGATORIO | `CumpleBooth/dist/assets/main-B0T6cgEh.js` | `public_html/app/assets/main-B0T6cgEh.js` (nuevo) |
+| 2 | OBLIGATORIO | `CumpleBooth/dist/index.html` | `public_html/app/index.html` (reemplaza) |
+
+Ya están en PROD con los mismos bytes (no subir): `browser-BeMEBtOm.js`, `client-eulB1LW-.js`, `feria-DS66PGN6.css`,
+`feria-DvWbXH6O.js`, `feria-DFqILw4W.js`, `main-BQAKXBRo.css`, `themeVars-BWg77og2.js`, `three.module-Y-ql4QRg.js`,
+`vision_bundle-Cd7_-YIR.js`. **No subir `dist/feria.html`**: el selector no cambió. Sin migración, sin PHP.
+
+**Respaldo y vuelta atrás:** respaldar `app/index.html` antes; volver atrás es restaurarlo. `main-BUofv_7z.js` se
+deja en `assets/` para los navegadores que lo tengan en caché.
+
+**Verificación desde afuera:** `index.html` con los bytes del local y referencia a `main-B0T6cgEh.js`; el asset con
+`Content-Type` de JavaScript y los mismos bytes; `api.php?p=samantha-hielo` y `api.php?p=luciano-spidey` iguales que
+antes; los videos `welcome` y `despedida` de cada temática responden 200.
+
+**Pruebas en local:** `node --test tests/frontend/*.test.mjs` con el backend E2E: 243 pruebas, 242 pasan, 1 omitida
+(ADB), 0 fallas. La E2E cubre la despedida y la tarjeta de respaldo con el video abortado.
+
+### No probado
+
+- Tablet física con un niño.
+- El caso real del 26-sep no se reprodujo: la causa exacta (modo "menos animaciones" de la tablet o video que no
+  arrancó con el wifi del lugar) es la hipótesis más probable, no un hecho medido.

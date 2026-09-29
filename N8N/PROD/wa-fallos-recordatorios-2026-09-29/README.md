@@ -1,5 +1,19 @@
 # Aviso a Luis cuando un recordatorio de WhatsApp no se entrega (2026-09-29)
 
+**EN PROD desde el 29-sep, con autorización de Luis.**
+
+- **08:13 (hora de Chile):** el PHP (commit `57800e3`). Respaldo en el servidor: `~/respaldos/wa-fallos-antes-20260929-081312.tar.gz`.
+- **08:14:** los 6 flujos. Respaldos en la bóveda privada: `90-Archive/respaldos-n8n/2026-09-29-wa-fallos-recordatorios/`.
+- **Verificado:**
+  - Las huellas de los 3 archivos coinciden, `php -l` pasa con el PHP de PROD (8.3.33) y el sitio y `wp-json` responden 200.
+  - Las rutas `whatsapp-envio` y de estados responden 401 sin clave.
+  - En cada flujo, la versión publicada solo cambió en la rama nueva, y `n8n_validate_workflow` da 0 errores en los 6.
+  - `debug.log` no tiene errores nuevos.
+- **Prueba real autorizada por Luis (08:15):** un wamid falso de la cita 2000000000, que no existe, anotado y marcado `failed` (131026).
+  - WordPress guardó la anotación y la marca de «ya avisado».
+  - No registró fallo del correo en `debug.log`.
+  - El correo debía llegarle a Luis con el asunto «El cliente de la cita 2000000000 no recibió el recordatorio de WhatsApp».
+
 ## Qué resuelve
 
 Desde el 25-sep los recordatorios de WhatsApp salen con plantillas de Meta (`N8N/PROD/wa-plantillas-2026-09-24/`, en `main`). Aun así, Meta puede aceptar un envío (`200` + `wamid`) y no entregarlo, por ejemplo porque el número no tiene WhatsApp (131026). Ese fallo solo llega después, por el webhook del bot.

@@ -68,9 +68,12 @@
   // ---------- WhatsApp de la academia ----------
   var WHATSAPP = (app.getAttribute('data-whatsapp') || '').replace(/\D/g, '');
   if (WHATSAPP.length >= 8) {
-    var enlaceWa = 'https://wa.me/' + WHATSAPP + '?text=' +
-      encodeURIComponent('Hola, quiero información sobre las inscripciones de GT Baseball Academy.');
-    document.querySelectorAll('[data-whatsapp-link]').forEach(function (a) { a.href = enlaceWa; a.hidden = false; });
+    // Cada enlace puede traer su propio mensaje (data-whatsapp-texto), como los de cumpleaños y cage de bateo.
+    document.querySelectorAll('[data-whatsapp-link]').forEach(function (a) {
+      var texto = a.getAttribute('data-whatsapp-texto') || 'Hola, quiero información sobre las inscripciones de GT Baseball Academy.';
+      a.href = 'https://wa.me/' + WHATSAPP + '?text=' + encodeURIComponent(texto);
+      a.hidden = false;
+    });
   }
 
   // ---------- Logo de la portada: inclinación con el mouse, giro al tocar, pausa fuera de pantalla ----------

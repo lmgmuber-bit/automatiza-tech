@@ -13,3 +13,4 @@ require_once __DIR__ . '/datos.php';
 require_once __DIR__ . '/disparador.php';
 require_once __DIR__ . '/rest.php';
 require_once __DIR__ . '/ajustes.php';
+require_once __DIR__ . '/panel.php';

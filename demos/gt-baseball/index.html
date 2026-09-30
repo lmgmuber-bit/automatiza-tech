@@ -11,6 +11,15 @@
   // Tema antes de pintar: oscuro por defecto (la marca); el apoderado puede pasar a claro con el botón.
   (function () {
     try { if (localStorage.getItem('gt-tema') === 'light') document.documentElement.setAttribute('data-theme', 'light'); } catch (e) {}
+    // Primera foto del fondo: se pide ya, la que corresponde al tema y a la orientación.
+    try {
+      var claro = document.documentElement.getAttribute('data-theme') === 'light';
+      var vertical = window.matchMedia('(orientation: portrait)').matches;
+      var l = document.createElement('link');
+      l.rel = 'preload'; l.as = 'image';
+      l.href = 'assets/fondo-' + (claro ? 'claro-' : '') + 'pelota' + (vertical ? '-vertical' : '') + '.jpg';
+      document.head.appendChild(l);
+    } catch (e) {}
   })();
 </script>
 <link rel="icon" type="image/png" href="assets/favicon.png">
@@ -18,9 +27,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/styles.css?v=14">
-<link rel="preload" as="image" href="assets/fondo-pelota-vertical.jpg" media="(orientation: portrait)">
-<link rel="preload" as="image" href="assets/fondo-pelota.jpg" media="(orientation: landscape)">
+<link rel="stylesheet" href="assets/styles.css?v=15">
 </head>
 <body>
 <!-- Fondo del sitio: tres fotos que se turnan (pelota, atardecer y estadio de noche). Ver styles.css. -->

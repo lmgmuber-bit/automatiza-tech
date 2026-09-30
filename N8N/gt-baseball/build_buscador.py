@@ -28,6 +28,8 @@ PATH = 'gt-baseball-buscador'
 ORIGENES = 'https://gtbaseball.com,https://www.gtbaseball.com,http://localhost:8771,http://127.0.0.1:8774'
 SHEETS = {'googleSheetsOAuth2Api': {'id': 'xWQj9WmGzqGKwQtb', 'name': 'Google Sheets PROD'}}
 FALLOS_MAX = 8
+MAX_FOTOS = 24
+DRIVE = {'googleDriveOAuth2Api': {'id': 'fXrMhILaDWpAj8Ue', 'name': 'Google Drive account'}}
 VENTANA_MIN = 15
 
 JS_CLAVE = r"""
@@ -56,7 +58,8 @@ if (dif !== 0) {
   return [{ json: { ok: false, codigo: 401, error: 'clave' } }];
 }
 if (f) delete sd.fallos[ip];
-return [{ json: { ok: true } }];
+// Qué se pide: la lista (por defecto) o las miniaturas de unas fotos (los ids se validan después contra el Sheet).
+return [{ json: { ok: true, accion: body.accion === 'fotos' ? 'fotos' : 'lista', ids: Array.isArray(body.ids) ? body.ids.slice(0, 50) : [] } }];
 """
 
 # Solo los campos que usa el buscador (ubicar al atleta y volver a bajar sus archivos); lo demás queda en el Sheet.
@@ -93,7 +96,32 @@ filas.forEach((fila, i) => {
     comprobante_id: compId,
   });
 });
-return [{ json: { ok: true, total: atletas.length, atletas } }];
+// Fotos: solo ids que estén en la columna de fotos del Sheet, así nadie puede pedir otros archivos del Drive.
+const pedido = $('Revisar clave').first().json;
+if (pedido.accion === 'fotos') {
+  const permitidas = new Set(atletas.map(a => a.foto).filter(Boolean));
+  const ids = [...new Set(pedido.ids.filter(x => typeof x === 'string' && /^[A-Za-z0-9_-]{10,80}$/.test(x) && permitidas.has(x)))].slice(0, __MAX_FOTOS__);
+  if (!ids.length) return [{ json: { modo: 'fotos_vacio', ok: true, fotos: {} } }];
+  return ids.map(id => ({ json: { modo: 'foto', id } }));
+}
+return [{ json: { modo: 'lista', ok: true, total: atletas.length, atletas } }];
+"""
+
+# Miniaturas: une cada respuesta con su id (mismo orden) y solo acepta imágenes chicas.
+JS_FOTOS = r"""
+const metas = $('Leer foto').all();
+const items = $input.all();
+const fotos = {};
+for (let i = 0; i < items.length; i++) {
+  const id = metas[i] && metas[i].json && metas[i].json.id;
+  const bin = items[i].binary && items[i].binary.data;
+  if (!id || !bin || !/^image\/(jpeg|png|webp)$/.test(bin.mimeType || '')) continue;
+  try {
+    const buf = await this.helpers.getBinaryDataBuffer(i, 'data');
+    if (buf.length > 0 && buf.length < 200000) fotos[id] = 'data:' + bin.mimeType + ';base64,' + buf.toString('base64');
+  } catch (e) { /* esa foto se omite */ }
+}
+return [{ json: { ok: true, fotos } }];
 """
 
 
@@ -133,7 +161,22 @@ def construir(cfg, webhook=None, esperada_js="String($env.GT_BUSCADOR_CLAVE || '
             'authentication': 'predefinedCredentialType', 'nodeCredentialType': 'googleSheetsOAuth2Api',
             'sendQuery': True, 'queryParameters': {'parameters': [{'name': 'valueRenderOption', 'value': 'FORMATTED_VALUE'}]},
             'options': {}}, credentials=SHEETS, onError='continueRegularOutput'),
-        code('b5', 'Armar lista', [880, -100], JS_LISTA),
+        code('b5', 'Armar lista', [880, -100], JS_LISTA.replace('__MAX_FOTOS__', str(MAX_FOTOS))),
+        si('b9', '¿Fotos?', [1100, -300], "={{ $json.modo === 'foto' }}"),
+        node('b10', 'Leer foto', 'n8n-nodes-base.httpRequest', 4.2, [1320, -400], {
+            'method': 'GET', 'url': '=https://www.googleapis.com/drive/v3/files/{{ $json.id }}',
+            'authentication': 'predefinedCredentialType', 'nodeCredentialType': 'googleDriveOAuth2Api',
+            'sendQuery': True, 'queryParameters': {'parameters': [{'name': 'fields', 'value': 'id,mimeType,thumbnailLink'}]},
+            'options': {}}, credentials=DRIVE, onError='continueRegularOutput'),
+        node('b11', 'Bajar miniatura', 'n8n-nodes-base.httpRequest', 4.2, [1540, -400], {
+            'method': 'GET', 'url': r"={{ ($json.thumbnailLink || 'https://invalid.invalid/').replace(/=s\d+$/, '=s200') }}",
+            'authentication': 'predefinedCredentialType', 'nodeCredentialType': 'googleDriveOAuth2Api',
+            'options': {'response': {'response': {'responseFormat': 'file', 'outputPropertyName': 'data'}}}},
+            credentials=DRIVE, onError='continueRegularOutput'),
+        code('b12', 'Armar fotos', [1760, -400], JS_FOTOS),
+        node('b13', 'Responder fotos', 'n8n-nodes-base.respondToWebhook', 1.1, [1980, -400], {
+            'respondWith': 'json', 'responseBody': '={{ JSON.stringify($json) }}',
+            'options': {'responseCode': 200, **sin_cache}}),
         si('b6', '¿Lista?', [1100, -100], '={{ $json.ok }}'),
         node('b7', 'Responder lista', 'n8n-nodes-base.respondToWebhook', 1.1, [1320, -200], {
             'respondWith': 'json', 'responseBody': '={{ JSON.stringify($json) }}',
@@ -145,7 +188,9 @@ def construir(cfg, webhook=None, esperada_js="String($env.GT_BUSCADOR_CLAVE || '
     nombre_webhook = nodes[0]['name']
     enlaces = [(nombre_webhook, 0, 'Revisar clave'), ('Revisar clave', 0, '¿Clave correcta?'),
                ('¿Clave correcta?', 0, 'Leer Sheet'), ('¿Clave correcta?', 1, 'Responder error'),
-               ('Leer Sheet', 0, 'Armar lista'), ('Armar lista', 0, '¿Lista?'),
+               ('Leer Sheet', 0, 'Armar lista'), ('Armar lista', 0, '¿Fotos?'),
+               ('¿Fotos?', 0, 'Leer foto'), ('Leer foto', 0, 'Bajar miniatura'), ('Bajar miniatura', 0, 'Armar fotos'),
+               ('Armar fotos', 0, 'Responder fotos'), ('¿Fotos?', 1, '¿Lista?'),
                ('¿Lista?', 0, 'Responder lista'), ('¿Lista?', 1, 'Responder error')]
     connections = {}
     for a, salida, b in enlaces:
@@ -205,6 +250,13 @@ def probar(cfg):
         ok(all(a.get('edad') is None or 3 <= a['edad'] <= 40 for a in atletas), 'edades numéricas y razonables')
         print('  pruebas:', sum(1 for a in atletas if a.get('prueba')), '· reales:', sum(1 for a in atletas if not a.get('prueba')),
               '· comprobante:', {e: sum(1 for a in atletas if a.get('comprobante') == e) for e in ('adjunto', 'pendiente', 'no_aplica', '')})
+        con_foto = [a for a in atletas if a.get('foto')]
+        if con_foto:
+            ajeno = next((a['planilla'] for a in atletas if a.get('planilla')), '')
+            est, rf = pedir(url, {'clave': clave, 'accion': 'fotos', 'ids': [con_foto[0]['foto'], ajeno, 'x<script>']})
+            fotos = rf.get('fotos') or {}
+            ok(est == 200 and list(fotos) == [con_foto[0]['foto']], f'fotos: {len(fotos)} devuelta(s); la planilla y el id falso se ignoran')
+            ok(all(v.startswith('data:image/') and len(v) < 300000 for v in fotos.values()), f'miniatura como data URL ({sum(len(v) for v in fotos.values())} caracteres)')
         # Límite: 8 fallos desde la misma IP bloquean (429), incluso con la clave buena, hasta que pase la ventana.
         cods = [pedir(url, {'clave': 'mala-' + str(i)})[0] for i in range(FALLOS_MAX)]
         est_bloq, _ = pedir(url, {'clave': clave})

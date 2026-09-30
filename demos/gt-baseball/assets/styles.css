@@ -89,7 +89,7 @@ body {
  * las otras dos ni se descargan. Esas dos se piden después de cargar la página (app.js pone .fondos-listos en <html>)
  * para no retrasar la primera; en vertical se usan las versiones verticales. */
 :root { --velo-sitio: linear-gradient(180deg, rgba(14, 18, 22, .66), rgba(14, 18, 22, .8) 70%, rgba(14, 18, 22, .86)); }
-:root[data-theme="light"] { --velo-sitio: linear-gradient(180deg, rgba(242, 244, 247, .9), rgba(242, 244, 247, .92) 70%, rgba(242, 244, 247, .94)); }
+:root[data-theme="light"] { --velo-sitio: linear-gradient(180deg, rgba(242, 244, 247, .74), rgba(242, 244, 247, .84) 55%, rgba(242, 244, 247, .9)); }
 .fondo-sitio { position: fixed; inset: 0; z-index: -1; pointer-events: none; background: var(--fondo); }
 .fondo-sitio::after { content: ''; position: absolute; inset: 0; background: var(--velo-sitio); }
 .fondo-sitio__foto {
@@ -110,6 +110,20 @@ body {
 @media (orientation: portrait) and (prefers-reduced-motion: no-preference) {
   .fondos-listos .fondo-sitio__foto--atardecer { background-image: url('fondo-atardecer-vertical.jpg'); }
   .fondos-listos .fondo-sitio__foto--noche { background-image: url('estadio-noche-vertical.jpg'); }
+}
+/* Tema claro: tres fotos de día (pelota en el pasto, estadio con cielo azul y el diamante con luz de mañana, Soul 2,
+ * 29-sep, sin texto) en los mismos turnos, con un velo claro más liviano para que la foto se note (pedido de Luis). */
+:root[data-theme="light"] .fondo-sitio__foto--pelota { background-image: url('fondo-claro-pelota.jpg'); }
+@media (prefers-reduced-motion: no-preference) {
+  :root[data-theme="light"].fondos-listos .fondo-sitio__foto--atardecer { background-image: url('fondo-claro-estadio.jpg'); }
+  :root[data-theme="light"].fondos-listos .fondo-sitio__foto--noche { background-image: url('fondo-claro-diamante.jpg'); }
+}
+@media (orientation: portrait) {
+  :root[data-theme="light"] .fondo-sitio__foto--pelota { background-image: url('fondo-claro-pelota-vertical.jpg'); }
+}
+@media (orientation: portrait) and (prefers-reduced-motion: no-preference) {
+  :root[data-theme="light"].fondos-listos .fondo-sitio__foto--atardecer { background-image: url('fondo-claro-estadio-vertical.jpg'); }
+  :root[data-theme="light"].fondos-listos .fondo-sitio__foto--noche { background-image: url('fondo-claro-diamante-vertical.jpg'); }
 }
 /* Cada foto entra en 1,5 s, se queda hasta los 8 s y sale en 1,5 s mientras entra la siguiente. */
 @keyframes fondo-turno { 0% { opacity: 0; } 6.25% { opacity: 1; } 33.33% { opacity: 1; } 39.58% { opacity: 0; } 100% { opacity: 0; } }
@@ -286,6 +300,8 @@ main { flex: 1; outline: none; }
   --wa: #25d366; --wa-fondo: rgba(37, 211, 102, .12); --wa-texto: #dcfce7;
   --linea: rgba(255, 255, 255, .14);
   --franja: #07090c;
+  --foto-franja: url('estadio-noche.jpg');
+  --foto-franja-v: url('estadio-noche-vertical.jpg');
   --velo-franja: linear-gradient(180deg, rgba(7, 9, 12, .34) 0, rgba(7, 9, 12, .62) 30vw, #07090c 55vw);
   --velo-franja-v: linear-gradient(180deg, rgba(7, 9, 12, .3) 0, rgba(7, 9, 12, .6) 90vw, #07090c 140vw);
   --brillo-franja: rgba(244, 169, 28, .22);
@@ -320,8 +336,10 @@ main { flex: 1; outline: none; }
   --wa: #128c4b; --wa-fondo: rgba(37, 211, 102, .1); --wa-texto: #0a5c33;
   --linea: rgba(18, 22, 27, .13);
   --franja: #eef1f5;
-  --velo-franja: linear-gradient(180deg, rgba(238, 241, 245, .8) 0, rgba(238, 241, 245, .9) 30vw, #eef1f5 50vw);
-  --velo-franja-v: linear-gradient(180deg, rgba(238, 241, 245, .8) 0, rgba(238, 241, 245, .9) 90vw, #eef1f5 130vw);
+  --foto-franja: url('fondo-claro-estadio.jpg');
+  --foto-franja-v: url('fondo-claro-estadio-vertical.jpg');
+  --velo-franja: linear-gradient(180deg, rgba(238, 241, 245, .6) 0, rgba(238, 241, 245, .84) 30vw, #eef1f5 50vw);
+  --velo-franja-v: linear-gradient(180deg, rgba(238, 241, 245, .6) 0, rgba(238, 241, 245, .84) 90vw, #eef1f5 130vw);
   --brillo-franja: rgba(244, 169, 28, .28);
   --antetitulo: #5c3700;
   --velo-titulo: rgba(238, 241, 245, .88);
@@ -347,7 +365,7 @@ main { flex: 1; outline: none; }
   background:
     radial-gradient(36% 18% at 50% 7%, var(--brillo-franja), transparent 70%),
     var(--velo-franja),
-    url('estadio-noche.jpg') center top / 100% auto no-repeat,
+    var(--foto-franja) center top / 100% auto no-repeat,
     var(--franja);
 }
 @media (orientation: portrait) {
@@ -355,7 +373,7 @@ main { flex: 1; outline: none; }
     background:
       radial-gradient(60% 12% at 50% 5%, var(--brillo-franja), transparent 70%),
       var(--velo-franja-v),
-      url('estadio-noche-vertical.jpg') center -35vw / 100% auto no-repeat,
+      var(--foto-franja-v) center -35vw / 100% auto no-repeat,
       var(--franja);
   }
 }

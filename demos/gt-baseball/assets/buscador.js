@@ -22,7 +22,7 @@
   }
   var MESES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
 
-  var estado = { atletas: [], filtrados: [], pagina: 1, cargando: false, clave: '' };
+  var estado = { atletas: [], filtrados: [], pagina: 1, cargando: false, clave: '', fotos: {} };
 
   // ---------- Almacenamiento (puede no existir en modo privado) ----------
   // Se guarda {clave, vence}; una clave vencida o con otro formato se descarta.
@@ -178,7 +178,7 @@
   $('btn-salir').addEventListener('click', function () {
     if (!window.confirm('¿Cerrar el buscador en este teléfono? Tendrás que volver a escribir la clave.')) return;
     guardarClave('', false);
-    estado = { atletas: [], filtrados: [], pagina: 1, cargando: false, clave: '' };
+    estado = { atletas: [], filtrados: [], pagina: 1, cargando: false, clave: '', fotos: {} };
     limpiarCampos();
     $('cuerpo').textContent = '';
     $('cuenta').textContent = '';
@@ -347,10 +347,20 @@
 
     var tdA = el('td', 'col-atleta');
     tdA.setAttribute('data-etiqueta', 'Atleta');
+    // Foto (miniatura que llega aparte, solo para la página visible) + nombre y cédula.
+    var cabeza = el('div', 'atleta__cabeza');
+    var marco = el('span', 'atleta__foto');
+    marco.appendChild(icono('i-user'));
+    var fotoId = idDrive(a.foto);
+    if (fotoId) marco.setAttribute('data-foto-id', fotoId);
+    cabeza.appendChild(marco);
+    var textos = el('div', 'atleta__textos');
     var nombre = el('p', 'atleta__nombre', nombreTxt);
     if (a.prueba === true) nombre.appendChild(el('span', 'chip chip--prueba', 'Prueba'));
-    tdA.appendChild(nombre);
-    tdA.appendChild(el('p', 'atleta__doc', a.documento ? 'Cédula ' + texto(a.documento) : (a.representante ? 'Representante: ' + texto(a.representante) : 'Sin cédula')));
+    textos.appendChild(nombre);
+    textos.appendChild(el('p', 'atleta__doc', a.documento ? 'Cédula ' + texto(a.documento) : (a.representante ? 'Representante: ' + texto(a.representante) : 'Sin cédula')));
+    cabeza.appendChild(textos);
+    tdA.appendChild(cabeza);
     var det = el('details', 'atleta__mas');
     det.appendChild(el('summary', null, 'Ver datos'));
     var dl = el('dl', 'atleta__datos');
@@ -415,6 +425,7 @@
     var frag = document.createDocumentFragment();
     visibles.forEach(function (p) { frag.appendChild(fila(p)); });
     cuerpo.appendChild(frag);
+    cargarFotos(visibles);
 
     var reales = estado.atletas.filter(function (p) { return p.datos.prueba !== true; }).length;
     var pruebas = estado.atletas.length - reales;
@@ -435,6 +446,51 @@
     $('pagina-txt').textContent = 'Página ' + estado.pagina + ' de ' + paginas;
     $('btn-anterior').disabled = estado.pagina <= 1;
     $('btn-siguiente').disabled = estado.pagina >= paginas;
+  }
+
+  // ---------- Fotos ----------
+  // Se piden al flujo solo las de la página visible (de a 24, el tope del flujo) y quedan en memoria mientras la
+  // página está abierta; nunca en el almacenamiento del teléfono. Solo se aceptan data URL de imagen.
+  var FOTO_OK = /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+\/=]+$/;
+  function pintarFotos() {
+    document.querySelectorAll('#cuerpo [data-foto-id]').forEach(function (marco) {
+      var v = estado.fotos[marco.getAttribute('data-foto-id')];
+      if (!v || marco.querySelector('img')) return;
+      var img = document.createElement('img');
+      img.alt = ''; img.width = 56; img.height = 56; img.decoding = 'async';
+      img.src = v;
+      marco.appendChild(img);
+      marco.classList.add('con-foto');
+    });
+  }
+  function cargarFotos(visibles) {
+    var faltan = [];
+    visibles.forEach(function (p) {
+      var id = idDrive(p.datos.foto);
+      if (id && !(id in estado.fotos) && faltan.indexOf(id) === -1) faltan.push(id);
+    });
+    pintarFotos();
+    if (!faltan.length || !estado.clave) return;
+    faltan.forEach(function (id) { estado.fotos[id] = null; }); // pendiente: no se vuelve a pedir
+    var clave = estado.clave;
+    for (var i = 0; i < faltan.length; i += 24) {
+      (function (lote) {
+        fetch(ENDPOINT, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, cache: 'no-store', credentials: 'omit',
+          referrerPolicy: 'no-referrer', body: JSON.stringify({ clave: clave, accion: 'fotos', ids: lote }),
+        }).then(function (r) { return r.ok ? r.json() : {}; }).then(function (d) {
+          if (estado.clave !== clave) return; // se salió o cambió la clave mientras tanto
+          var f = (d && d.fotos) || {};
+          lote.forEach(function (id) {
+            var v = Object.prototype.hasOwnProperty.call(f, id) ? f[id] : '';
+            estado.fotos[id] = typeof v === 'string' && FOTO_OK.test(v) ? v : false;
+          });
+          pintarFotos();
+        }, function () {
+          lote.forEach(function (id) { if (estado.fotos[id] === null) delete estado.fotos[id]; }); // se reintenta después
+        });
+      })(faltan.slice(i, i + 24));
+    }
   }
 
   // ---------- Eventos de los filtros ----------

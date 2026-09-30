@@ -369,8 +369,9 @@ WhatsApp con las casillas de siempre; lo decide Luis en ese formulario).
   4 una por fase `fase_1..fase_3` (actividades con responsable, días y fechas; entregable; «qué aprobamos juntos»);
   5 `necesitamos` qué necesitamos de ti + cláusula 4.2; 6 `reuniones` reuniones y soporte; 7 `portal` «Sigue tu
   proyecto» (contratos, avance y fechas, historial; todo queda documentado; enlace a `portal_url` si viene);
-  8 `cierre` «Agenda tu llamada de seguimiento» con enlaces tocables `agenda.whatsapp_url` y `agenda.web_url` (solo si
-  no está vacío). Mismo estilo, logo, modo presentación, `is-draft` y aviso `at-deck-lamina` que la propuesta.
+  8 `cierre` «Agenda tu llamada de seguimiento» con enlaces tocables `agenda.whatsapp_url` y `agenda.web_url` (este solo si
+  no está vacío; si `agenda.whatsapp_url` viene vacío, el enlace de WhatsApp cae al número público de AT
+  `https://wa.me/56927002984`: decisión de la Task 12). Mismo estilo, logo, modo presentación, `is-draft` y aviso `at-deck-lamina` que la propuesta.
 - Pruebas: `test/template-plan.test.js`, `test/schema-plan.test.js`, `test/server-plan.test.js` y la de «propuesta
   igual byte a byte».
 
@@ -435,7 +436,9 @@ D11. Flujo 3: un 400 del renderer con `details` no se reintenta y `details` va a
     red y fotos faltantes (máximo 3 renders en total por corrida, contando la retoma por texto de D18).
 D12. Prompts (Task 13): incluyen los topes que valida WordPress (13 bloques, 10 actividades por bloque, 58 actividades en
     total, 1 a 60 días por actividad, 130 días hábiles con 5 de revisión por bloque con entrega, 10 hitos, fases y
-    responsables por su clave) y piden **no** mandar el bloque «Arranque» (lo pone WordPress).
+    responsables por su clave) y piden **no** mandar el bloque «Arranque» (lo pone WordPress). El tope de 130 días
+    hábiles lo cuenta WordPress con el Arranque (4 días: reunión de inicio 1 + entrega de insumos 3) dentro, y como el
+    modelo no manda ese bloque, **el tope que ve el modelo es de 126 días más 4 del Arranque** (los prompts lo dicen).
 D13. `N8N/plan-trabajo/plan_js.py` es el módulo compartido de JS de los tres builders (lo define el Grupo E).
 D14. Sitio de prueba: la Task 0 deja `wp-admin` como copia, `auth_redirect()` reemplazado en el router con la cookie de
     prueba y las constantes `AT_N8N_PLAN_*` en el `wp-config.php` del sitio (Step 4b). Las Tasks 6 y 9 no repiten esos

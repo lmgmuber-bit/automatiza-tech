@@ -410,9 +410,10 @@ borra o edita algo por error.
   redirige al dominio. Subir ahí lo habría pisado y habría vuelto a publicar el sitio en la dirección vieja. Ahora el
   script se niega a subir y queda solo para armar copias locales.
 
-## Planes y precios, fondos de estadio, volver arriba y buscador de planillas (29-sep, EN LOCAL)
+## Planes y precios, fondos de estadio, volver arriba y buscador de planillas (29-sep, EN PROD)
 
-Rama `claude/gt-baseball-planes`, sin subir a PROD: Luis la revisa en la copia local y da el ok.
+Rama `claude/gt-baseball-planes`. Luis la revisó en la copia local y dio el ok: se subió a gtbaseball.com el 29-sep
+y se amplió el 30-sep (sección siguiente).
 
 - **Franja «Planes y precios»** (pedido de Luis con el póster de la academia): va después de la portada, de borde a
   borde, con el logo del sitio, los tres planes (Plata $10 diarios; Gold $25 semanal o $85 mensual, lunes, miércoles y
@@ -446,3 +447,37 @@ Rama `claude/gt-baseball-planes`, sin subir a PROD: Luis la revisa en la copia l
   - `build_buscador.py --probar`: contra el Sheet real, en un flujo temporal que se borra. Dio 401 con la clave
     mala, 200 con las 3 filas y 429 tras 8 fallos.
   - Sin probar todavía: un celular físico.
+
+## Auditoría, fotos, fondos de día y listado en PDF (30-sep, EN PROD)
+
+Todo subido a gtbaseball.com con el ok de Luis y verificado desde afuera (archivos iguales a los locales por md5,
+cabeceras y un navegador real contra el dominio).
+
+- **Auditoría** (4 auditores y un verificador escéptico por hallazgo): 36 hallazgos confirmados, ninguno grave, todos
+  corregidos (commit `9a4de83`). XSS probado con 30 registros hostiles.
+- **Clave del buscador:** `GT_BUSCADOR_CLAVE` va en el servicio **n8n** de Easypanel (no en el propuesta-renderer) y
+  necesita redesplegar el servicio para que el flujo la lea; sin ella el flujo responde 503.
+- **Fotos de los atletas en el buscador:** miniaturas de 200 px que el flujo (`iRrajevFH6Jpopv3`, 13 nodos) entrega
+  solo para ids de la columna de fotos del Sheet y solo para la página visible.
+- **Tema claro con fotos de día** (pedido de Luis: las oscuras casi no se veían en claro): pelota en el pasto, estadio
+  con cielo azul y diamante con luz de mañana, en los mismos turnos y con un velo claro más liviano.
+- **Buscador, pedido del 30-sep:**
+  - Tiene el mismo fondo de estadio que la portada (oscuro o de día según el tema). Antes era un color liso.
+  - «Descargar listado en PDF» aparece con la lista cargada. Arma en el navegador un A4 apaisado con:
+    - el logo, el nombre de la academia y la fecha y hora en que se generó;
+    - los criterios usados;
+    - todos los atletas que deja la búsqueda (no solo la página visible), en el orden elegido;
+    - por cada atleta: cédula, edad, posición, representante, teléfono, inscripción, forma de pago y comprobante
+      (verde si llegó, rojo si falta);
+    - el encabezado repetido en cada hoja y «Página X de Y».
+  - El PDF usa jsPDF 4.2.1, el mismo de la planilla, pedido recién al primer clic y con SRI. La CSP del buscador
+    permite solo ese archivo de cdnjs. El logo sale del `<img>` del encabezado pasado por un canvas, sin otra
+    descarga. No lleva fotos.
+  - La flecha dorada «Volver al inicio» aparece al bajar más allá de la búsqueda.
+- **Pendiente:** «Descargar planilla» da 403 cuando la primera cuenta de Google del navegador no tiene acceso
+  (`authuser=0`). Por ahora se usa «Ver» y se cambia de cuenta; queda propuesto que el botón abra el visor de Drive.
+- **Pruebas** (en `…\respaldos\…\pago\`):
+  - `probar-pdf-buscador.cjs`: 31 comprobaciones, todas bien. Aplica la CSP real, descarga el PDF y lo lee con
+    pypdf (nombres, tildes, criterios, logo y hojas).
+  - `probar-buscador.cjs`: 57, todas bien.
+  - Sin probar todavía: un celular físico y el PDF con los datos reales.

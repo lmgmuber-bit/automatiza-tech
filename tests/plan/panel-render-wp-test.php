@@ -84,6 +84,28 @@ foreach ((array) ($cr9['hitos'] ?? []) as $h9) {
 ok($hito9 === '2026-11-10' && ($cr9['fin'] ?? '') === '2026-11-17', 'punto de partida: el hito «Entrega estimada» es 2026-11-10 y el fin del cronograma 2026-11-17 (' . $hito9 . ' / ' . ($cr9['fin'] ?? '') . ')');
 ok(strpos($h, 'Entrega estimada: 10 nov 2026') !== false && strpos($h, 'Entrega estimada: 17 nov 2026') === false, 'la caja «Fechas estimadas» muestra la entrega estimada del hito (10 nov 2026), no el fin del soporte');
 
+// I1 (revisión final): el panel ya no limpia los textos al guardar (los deja tal cual, con «<» y «&»), así que todo lo que
+// dibuja se escapa: un <script> guardado en una actividad, en su detalle, en la fase o en «qué necesitamos» sale como texto.
+$pl_x = at_pt_payload(at_pt_plan((int) $f2->id));
+$pl_x_antes = $pl_x;
+foreach ($pl_x['fases'] as $i => $fase) {
+	foreach ($fase['bloques'] as $j => $blq) {
+		foreach ($blq['actividades'] as $k => $ac) {
+			if (($ac['nombre'] ?? '') === 'Construcción del sitio') {
+				$pl_x['fases'][$i]['bloques'][$j]['actividades'][$k]['nombre'] = '<script>alert(1)</script>';
+				$pl_x['fases'][$i]['bloques'][$j]['actividades'][$k]['detalle'] = '"><img src=x onerror=alert(2)>';
+			}
+		}
+	}
+}
+$pl_x['fases'][0]['descripcion'] = '<script>alert(3)</script>';
+$pl_x['necesitamos_de_ti'] = ['<script>alert(4)</script>'];
+at_pt_guardar((int) $f2->id, ['payload' => $pl_x]);
+$hx = pestana($c2['crm'], ['pt' => (string) $f2->id]);
+ok(strpos($hx, '<script>alert(') === false && strpos($hx, '<img src=x') === false, 'un <script> o un <img> guardado en el plan no llega sin escapar al panel');
+ok(strpos($hx, '&lt;script&gt;alert(1)&lt;/script&gt;') !== false && strpos($hx, '&lt;script&gt;alert(3)&lt;/script&gt;') !== false && strpos($hx, '&lt;script&gt;alert(4)&lt;/script&gt;') !== false, 'sale escapado en el nombre, la descripción de la fase y «qué necesitamos»');
+at_pt_guardar((int) $f2->id, ['payload' => $pl_x_antes]);
+
 // ---------- Sin propuesta y sin correo (Review Focus 4) ----------
 $c3 = ptc_cliente($m . 'd', '');
 $k3 = ptc_contrato($c3['tech'], $m . 'd', null);

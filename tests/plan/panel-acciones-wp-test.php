@@ -179,6 +179,31 @@ $r = accion_plan('at_pt_guardar', releer($fila), post_guardar(releer($fila), $g3
 $fila = releer($fila);
 ok(msg($r) === 'guardado' && $fila->estado === 'borrador', 'Guardar desde «listo»: vuelve a borrador');
 
+// I1 (revisión final): el panel no altera los textos de la IA. sanitize_text_field dejaba «< 50» como «&lt; 50», se
+// comía «<cliente>» y el «%ab» de «100%ab»; la clave de la actividad cambiaba y se marcaba «luis» sin que Luis la tocara,
+// y el documento mostraba «&lt;» literal. Se guarda desde el panel tal cual llegó (los caracteres de control y los largos
+// los limpia at_pt_validar_plan y toda la salida se escapa al dibujar).
+$raro_ia = 'Configurar <cliente>.cl';
+$raro_tabla = 'Pruebas con < 50 usuarios';
+$pl_raro = con_campo(con_campo($g3, 'Ajustes de la primera semana', 'nombre', $raro_ia), 'Maqueta de la portada', 'nombre', $raro_tabla);
+$pl_raro = con_campo(con_campo($pl_raro, $raro_ia, 'detalle', 'Carga 100%ab lista, R&D y <b>negrita</b>'), $raro_tabla, 'detalle', 'Sube < 5 MB y %41 <tag>');
+at_pt_guardar((int) $fila->id, ['payload' => $pl_raro]);
+$fila = releer($fila);
+$antes_raro = ptc_actividad(at_pt_payload($fila), $raro_ia);
+$textos_raros = [
+	'proyecto' => 'Sitio <cliente> con 100%ab de carga', 'necesitamos_de_ti' => "Logo < 5 MB\nAccesos %41 y <tag>",
+	'reuniones' => 'Inicio <x> | Detalle < 3 horas', 'hitos' => 'Diseño aprobado | Diseño', 'mensuales' => "Mantención <sitio> 100%ab\nR&D",
+];
+$r = accion_plan('at_pt_guardar', $fila, post_guardar($fila, $pl_raro, '2026-10-13', $textos_raros));
+$g5 = at_pt_payload(releer($fila));
+$a_ia = ptc_actividad($g5, $raro_ia);
+$a_tabla = ptc_actividad($g5, $raro_tabla);
+ok(msg($r) === 'guardado' && $a_ia !== [] && $a_tabla !== [], 'textos con «<», «%xx» y «<tag>»: la actividad se guarda con su nombre tal cual llegó');
+ok(($a_ia['detalle'] ?? '') === 'Carga 100%ab lista, R&D y <b>negrita</b>' && ($a_tabla['detalle'] ?? '') === 'Sube < 5 MB y %41 <tag>', 'el detalle queda idéntico (sin «&lt;», sin perder «%ab» ni «<tag>»)');
+ok(($antes_raro['origen'] ?? '') === 'ia' && ($a_ia['origen'] ?? '') === 'ia' && ($a_tabla['origen'] ?? '') === 'tabla' && (int) ($a_ia['dias_habiles'] ?? 0) === (int) ($antes_raro['dias_habiles'] ?? -1), 'Luis no tocó esas actividades: el origen sigue «ia» y «tabla», sin marcarse «luis»');
+ok(($g5['proyecto'] ?? '') === 'Sitio <cliente> con 100%ab de carga' && ($g5['necesitamos_de_ti'] ?? []) === ['Logo < 5 MB', 'Accesos %41 y <tag>'], 'proyecto y «qué necesitamos» quedan idénticos');
+ok(($g5['reuniones'][0]['nombre'] ?? '') === 'Inicio <x>' && ($g5['reuniones'][0]['detalle'] ?? '') === 'Detalle < 3 horas' && ($g5['soporte']['mensuales'] ?? null) === ['Mantención <sitio> 100%ab', 'R&D'], 'reuniones y servicios mensuales quedan idénticos');
+
 // ============ Pedir cambios ============
 $r = accion_plan('at_pt_cambios', $fila, ['comentarios' => '   ']);
 ok(msg($r) === 'sin_comentarios' && releer($fila)->estado === 'borrador' && !$r['n8n'], 'Pedir cambios sin comentarios: no hace nada');

@@ -522,6 +522,18 @@ function at_pt_fecha_inicio_elegida(string $pedida, object $fila, array $plan, a
 }
 
 /**
+ * Texto tal cual llegó, sin tocarlo: '' si no es un valor simple (un arreglo o un objeto no es un texto). Los textos del
+ * plan no pasan por sanitize_text_field/sanitize_textarea_field: quitan «<…>» y los «%xx», y dejan «< 50» como «&lt; 50»,
+ * con lo que el panel cambiaba lo que escribió la IA y la clave de la actividad (at_pt_marcar_ediciones la marcaba «luis»
+ * sin que Luis la tocara). Lo que llega de plan_json ya viene sin barras (se decodifica de wp_unslash); los campos
+ * sueltos de $_POST se pasan por wp_unslash() antes. at_pt_validar_plan() limpia los caracteres de control y recorta
+ * los largos, y todo lo que se dibuja se escapa (esc_attr, esc_textarea, esc_html).
+ */
+function at_pt_cadena(mixed $v): string {
+	return is_scalar($v) ? (string) $v : '';
+}
+
+/**
  * Plan guardado + lo que llegó del panel: las fases que armó plan-trabajo.js (plan_json, con el detalle de cada
  * actividad) y los textos de las láminas (proyecto, qué necesitamos, reuniones, hitos y servicios mensuales).
  * Conserva lo que el panel no edita (image_briefs, fecha_firma, soporte.garantia_meses…): la garantía viene del
@@ -546,8 +558,8 @@ function at_pt_plan_desde_panel(array $anterior, array $editado, array $textos):
 					continue;
 				}
 				$acts[] = [
-					'nombre'       => sanitize_text_field((string) ($a['nombre'] ?? '')),
-					'detalle'      => sanitize_textarea_field((string) ($a['detalle'] ?? '')),
+					'nombre'       => at_pt_cadena($a['nombre'] ?? ''),
+					'detalle'      => at_pt_cadena($a['detalle'] ?? ''),
 					'responsable'  => sanitize_key((string) ($a['responsable'] ?? '')),
 					'dias_habiles' => is_numeric($a['dias_habiles'] ?? null) ? (int) $a['dias_habiles'] : 0,
 					'servicio'     => sanitize_key((string) ($a['servicio'] ?? '')),
@@ -557,15 +569,15 @@ function at_pt_plan_desde_panel(array $anterior, array $editado, array $textos):
 				];
 			}
 			$bloques[] = [
-				'nombre'      => sanitize_text_field((string) ($b['nombre'] ?? '')),
-				'entregable'  => sanitize_text_field((string) ($b['entregable'] ?? '')),
+				'nombre'      => at_pt_cadena($b['nombre'] ?? ''),
+				'entregable'  => at_pt_cadena($b['entregable'] ?? ''),
 				'entrega'     => !empty($b['entrega']),
 				'actividades' => $acts,
 			];
 		}
 		$fases[] = [
 			'clave'       => sanitize_key((string) ($f['clave'] ?? '')),
-			'descripcion' => sanitize_textarea_field((string) ($f['descripcion'] ?? '')),
+			'descripcion' => at_pt_cadena($f['descripcion'] ?? ''),
 			'bloques'     => $bloques,
 		];
 	}
@@ -638,11 +650,11 @@ function at_pt_accion_guardar(): void {
 		at_pt_volver($crm, $id, 'json_invalido');
 	}
 	$textos = [
-		'proyecto'          => sanitize_text_field(wp_unslash($_POST['proyecto'] ?? '')),
-		'necesitamos_de_ti' => sanitize_textarea_field(wp_unslash($_POST['necesitamos_de_ti'] ?? '')),
-		'reuniones'         => sanitize_textarea_field(wp_unslash($_POST['reuniones'] ?? '')),
-		'hitos'             => sanitize_textarea_field(wp_unslash($_POST['hitos'] ?? '')),
-		'mensuales'         => sanitize_textarea_field(wp_unslash($_POST['mensuales'] ?? '')),
+		'proyecto'          => at_pt_cadena(wp_unslash($_POST['proyecto'] ?? '')),
+		'necesitamos_de_ti' => at_pt_cadena(wp_unslash($_POST['necesitamos_de_ti'] ?? '')),
+		'reuniones'         => at_pt_cadena(wp_unslash($_POST['reuniones'] ?? '')),
+		'hitos'             => at_pt_cadena(wp_unslash($_POST['hitos'] ?? '')),
+		'mensuales'         => at_pt_cadena(wp_unslash($_POST['mensuales'] ?? '')),
 	];
 	$v = at_pt_validar_plan(at_pt_plan_desde_panel($anterior, $editado, $textos));
 	if (empty($v['ok'])) {

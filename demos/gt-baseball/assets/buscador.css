@@ -173,3 +173,13 @@
   .col-archivos { width: 1%; white-space: nowrap; }
   .archivos__mas { justify-content: flex-start; }
 }
+
+/* Descarga del listado en PDF: franja entre los filtros y la lista, con cuántos atletas lleva. */
+.exportar {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px;
+  margin: 0 0 14px; padding: 12px 14px 12px 16px; border-radius: 16px;
+  background: var(--sup); border: 1.5px solid var(--borde-suave);
+}
+.exportar__txt { margin: 0; font-weight: 600; color: var(--suave); }
+.exportar .boton[aria-busy="true"] { opacity: .7; cursor: progress; }
+@media (max-width: 520px) { .exportar .boton { width: 100%; } }

@@ -3,7 +3,9 @@
  * pagina aquí mismo (son pocos cientos de filas). Nada de los datos se dibuja con innerHTML: todo va por textContent.
  * La clave se guarda en este teléfono solo si se marca «Recordar» y vence a los 30 días; si no, dura mientras la
  * pestaña esté abierta. En local (localhost o 127.0.0.1) acepta ?endpoint=<url local> para probar contra un receptor
- * de prueba; con ese endpoint no entra sola con la clave guardada. */
+ * de prueba; con ese endpoint no entra sola con la clave guardada.
+ * «Descargar listado en PDF» arma aquí mismo (jsPDF, el mismo de la planilla) un A4 apaisado con el logo, los
+ * criterios usados y todos los atletas que deja la búsqueda, en el orden elegido. */
 (function () {
   'use strict';
 
@@ -436,6 +438,8 @@
     if (f.pruebas && pruebas) txt += ' (se muestran también ' + pruebas + (pruebas === 1 ? ' de prueba)' : ' de prueba)');
     $('cuenta').textContent = txt;
     $('btn-ver-resultados').textContent = total === 1 ? 'Ver 1 atleta' : 'Ver ' + total + ' atletas';
+    $('exportar').hidden = total === 0;
+    $('exportar-txt').textContent = (hayFiltro ? 'Resultado de la búsqueda: ' : 'Todos los inscritos: ') + (total === 1 ? '1 atleta' : total + ' atletas');
 
     var vacio = total === 0;
     $('vacio').hidden = !vacio;
@@ -544,6 +548,222 @@
 
   // En escritorio los filtros quedan abiertos; en el celular, cerrados para que se vea la lista.
   if (window.matchMedia('(min-width: 900px)').matches) $('filtros-mas').open = true;
+
+  // ---------- Listado en PDF ----------
+  // jsPDF se pide recién al primer clic (la planilla de la portada usa el mismo archivo, con la misma huella SRI).
+  var JSPDF_URL = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/4.2.1/jspdf.umd.min.js';
+  var JSPDF_SRI = 'sha512-plOdviVmws4Y3JAvbnpfKb2hVxKM1lCwsi3vmElYRj+tiDLffZ4FVUj5a8vyKJ9pIgl8JCAHEJ4D1iUKBecswg==';
+  var cargaJsPDF = null;
+  function cargarJsPDF() {
+    if (window.jspdf && window.jspdf.jsPDF) return Promise.resolve(window.jspdf.jsPDF);
+    if (cargaJsPDF) return cargaJsPDF;
+    cargaJsPDF = new Promise(function (ok, mal) {
+      var s = document.createElement('script');
+      s.src = JSPDF_URL; s.integrity = JSPDF_SRI; s.crossOrigin = 'anonymous'; s.referrerPolicy = 'no-referrer';
+      s.onload = function () { if (window.jspdf && window.jspdf.jsPDF) ok(window.jspdf.jsPDF); else mal(new Error('jspdf')); };
+      s.onerror = function () { cargaJsPDF = null; s.remove(); mal(new Error('jspdf')); };
+      document.head.appendChild(s);
+    });
+    return cargaJsPDF;
+  }
+  // El logo sale del mismo <img> del encabezado (ya descargado), pasado por un canvas: no se pide nada más a la red.
+  function logoDataUrl() {
+    var img = document.querySelector('.marca__logo');
+    return new Promise(function (ok) {
+      function listo() {
+        try {
+          var c = document.createElement('canvas');
+          c.width = img.naturalWidth; c.height = img.naturalHeight;
+          c.getContext('2d').drawImage(img, 0, 0);
+          ok(c.width ? c.toDataURL('image/jpeg', 0.92) : null);
+        } catch (e) { ok(null); }
+      }
+      if (!img) ok(null);
+      else if (img.complete) listo();
+      else { img.addEventListener('load', listo); img.addEventListener('error', function () { ok(null); }); }
+    });
+  }
+
+  // La fuente estándar del PDF (WinAnsi) no dibuja emojis ni letras fuera del latín: se quitan (igual que planilla.js).
+  var WINANSI_EXTRA = '€‚ƒ„…†‡ˆ‰Š‹ŒŽ‘’“”•–—˜™š›œžŸ';
+  function pdfTexto(v) {
+    var t = texto(v).normalize('NFC'), out = '';
+    for (var i = 0; i < t.length; i++) {
+      var c = t.charAt(i), code = t.charCodeAt(i);
+      if ((code >= 32 && code <= 126) || (code >= 160 && code <= 255) || WINANSI_EXTRA.indexOf(c) !== -1) out += c;
+    }
+    return out.replace(/\s+/g, ' ').trim();
+  }
+  function hoyISO(d) { return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); }
+
+  // Lo que se buscó, en palabras, para el encabezado del PDF.
+  function criterios(f) {
+    var c = [];
+    var buscado = $('f-texto').value.trim();
+    if (buscado) c.push('Búsqueda: «' + buscado + '»');
+    if (f.posicion) c.push('Posición: ' + f.posicion);
+    if (f.pago) c.push('Forma de pago: ' + $('f-pago').value);
+    if (f.comprobante) c.push('Comprobante: ' + $('f-comprobante').selectedOptions[0].textContent);
+    if (f.edadMin !== null && f.edadMax !== null) c.push('Edad: de ' + f.edadMin + ' a ' + f.edadMax + ' años');
+    else if (f.edadMin !== null) c.push('Edad: desde ' + f.edadMin + ' años');
+    else if (f.edadMax !== null) c.push('Edad: hasta ' + f.edadMax + ' años');
+    if (f.desde && f.hasta) c.push('Inscritos del ' + fechaCorta(f.desde) + ' al ' + fechaCorta(f.hasta));
+    else if (f.desde) c.push('Inscritos desde el ' + fechaCorta(f.desde));
+    else if (f.hasta) c.push('Inscritos hasta el ' + fechaCorta(f.hasta));
+    if (!c.length) c.push('Todos los atletas inscritos (sin filtros)');
+    if (f.pruebas) c.push('Incluye las inscripciones de prueba');
+    var filtros = c.join('   ·   ');
+    return filtros + '   ·   Orden: ' + $('f-orden').selectedOptions[0].textContent;
+  }
+
+  var COMPROBANTE_PDF = Object.create(null);
+  COMPROBANTE_PDF.adjunto = ['Recibido', [5, 96, 58]];
+  COMPROBANTE_PDF.pendiente = ['Falta', [180, 35, 24]];
+  COMPROBANTE_PDF.no_aplica = ['Paga en la oficina', [110, 116, 124]];
+
+  function armarPDF(JsPDF, logo, lista, f) {
+    var ORO = [214, 142, 12], GRIS = [110, 116, 124], TINTA = [20, 22, 26];
+    var W = 297, H = 210, M = 12, ANCHO = W - M * 2;
+    var COLS = [['N.º', 9], ['Atleta', 50], ['Cédula', 25], ['Edad', 12], ['Posición', 29], ['Representante', 40],
+      ['Teléfono rep.', 28], ['Inscripción', 22], ['Forma de pago', 23], ['Comprobante', 35]]; // suman 273 = ANCHO
+    var doc = new JsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4', compress: true });
+    doc.setProperties({ title: 'Listado de atletas - GT Baseball Academy', author: 'GT Baseball Academy', creator: 'AutomatizaTech' });
+    var ahora = new Date();
+    var generado = fechaCorta(hoyISO(ahora)) + ', ' + ('0' + ahora.getHours()).slice(-2) + ':' + ('0' + ahora.getMinutes()).slice(-2);
+    var y;
+
+    function encabezado(primera) {
+      var alto = primera ? 22 : 14;
+      if (logo) { try { doc.addImage(logo, 'JPEG', M, 9, alto, alto, undefined, 'FAST'); } catch (e) { /* sin logo antes que sin PDF */ } }
+      var x = M + (logo ? alto + 5 : 0);
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(primera ? 17 : 12); doc.setTextColor.apply(doc, TINTA);
+      doc.text('LISTADO DE ATLETAS', x, primera ? 16 : 14.5);
+      doc.setFontSize(primera ? 9.5 : 8); doc.setTextColor.apply(doc, ORO);
+      doc.text('GARCÍA TRAINING · GT BASEBALL ACADEMY', x, primera ? 22 : 19.5);
+      if (primera) {
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor.apply(doc, GRIS);
+        doc.text('Generado el ' + generado + '   ·   ' + (lista.length === 1 ? '1 atleta' : lista.length + ' atletas'), x, 27.5);
+        y = 38;
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(7.5); doc.setTextColor.apply(doc, TINTA);
+        doc.text('CRITERIOS', M, y);
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor.apply(doc, GRIS);
+        var lineas = doc.splitTextToSize(pdfTexto(criterios(f)), ANCHO - 20);
+        doc.text(lineas, M + 20, y);
+        y += (lineas.length - 1) * 3.8 + 4;
+      } else {
+        y = 9 + alto + 4;
+      }
+      doc.setDrawColor.apply(doc, ORO); doc.setLineWidth(0.6);
+      doc.line(M, y, W - M, y);
+      y += 2.5;
+      // Cabeza de la tabla (se repite en cada hoja).
+      doc.setFillColor.apply(doc, TINTA);
+      doc.rect(M, y, ANCHO, 7, 'F');
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(7.3); doc.setTextColor(255, 255, 255);
+      var cx = M;
+      COLS.forEach(function (c) { doc.text(c[0].toUpperCase(), cx + 1.8, y + 4.7); cx += c[1]; });
+      y += 7;
+    }
+
+    encabezado(true);
+    var LINEA = 3.7;
+    lista.forEach(function (p, i) {
+      var a = p.datos;
+      var comp = COMPROBANTE_PDF[a.comprobante];
+      var celdas = [
+        String(i + 1),
+        pdfTexto(a.nombre) + (a.prueba === true ? ' (prueba)' : ''),
+        pdfTexto(a.documento) || '-',
+        p.edad === null ? '-' : String(p.edad),
+        pdfTexto(a.posicion) || '-',
+        pdfTexto(a.representante) || '-',
+        pdfTexto(a.rep_telefono) || '-',
+        pdfTexto(fechaCorta(p.iso, a.fecha)) || '-',
+        pdfTexto(texto(a.pago).split('·')[0]) || '-',
+        comp ? comp[0] : '-',
+      ];
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5);
+      var partidas = celdas.map(function (t, k) {
+        var l = doc.splitTextToSize(t, COLS[k][1] - 3.6);
+        return l.length > 3 ? l.slice(0, 3) : l;
+      });
+      var lineas = Math.max.apply(null, partidas.map(function (l) { return l.length; }));
+      var alto = lineas * LINEA + 3.2;
+      if (y + alto > H - 14) { doc.addPage(); encabezado(false); }
+      if (i % 2 === 1) { doc.setFillColor(244, 245, 247); doc.rect(M, y, ANCHO, alto, 'F'); }
+      doc.setFontSize(8.5); // la cabeza de una hoja nueva la deja en 7,3
+      var cx = M;
+      partidas.forEach(function (l, k) {
+        doc.setFont('helvetica', k === 1 ? 'bold' : 'normal');
+        if (k === 9 && comp) doc.setTextColor.apply(doc, comp[1]);
+        else if (k === 0) doc.setTextColor.apply(doc, GRIS);
+        else doc.setTextColor.apply(doc, TINTA);
+        doc.text(l, cx + 1.8, y + 4.4);
+        cx += COLS[k][1];
+      });
+      doc.setDrawColor(222, 224, 228); doc.setLineWidth(0.2);
+      doc.line(M, y + alto, W - M, y + alto);
+      y += alto;
+    });
+
+    var total = doc.getNumberOfPages();
+    for (var n = 1; n <= total; n++) {
+      doc.setPage(n);
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor.apply(doc, GRIS);
+      doc.text('GT Baseball Academy · Datos de uso interno y exclusivo de la academia', M, H - 7);
+      doc.text('Página ' + n + ' de ' + total, W - M, H - 7, { align: 'right' });
+    }
+    return doc;
+  }
+
+  $('btn-pdf').addEventListener('click', function () {
+    var btn = this;
+    if (btn.getAttribute('aria-busy') === 'true') return;
+    clearTimeout(espera);
+    aplicar(false); // por si quedó una búsqueda escrita sin aplicar todavía
+    var f = valores();
+    var lista = estado.filtrados.slice();
+    if (!lista.length) return;
+    var etiqueta = btn.querySelector('span');
+    var antes = etiqueta.textContent;
+    btn.setAttribute('aria-busy', 'true');
+    etiqueta.textContent = 'Preparando el PDF…';
+    Promise.all([cargarJsPDF(), logoDataUrl()]).then(function (r) {
+      armarPDF(r[0], r[1], lista, f).save('GT-Baseball-atletas-' + hoyISO(new Date()) + '.pdf');
+      aviso('Listado descargado: ' + (lista.length === 1 ? '1 atleta.' : lista.length + ' atletas.'), 'ok');
+    }).catch(function () {
+      aviso('No se pudo armar el PDF. Revisa tu internet y vuelve a intentarlo.', 'error');
+    }).then(function () {
+      btn.removeAttribute('aria-busy');
+      etiqueta.textContent = antes;
+    });
+  });
+
+  // ---------- Volver al inicio ----------
+  // La flecha aparece cuando la búsqueda ya quedó arriba, fuera de la pantalla, y lleva al inicio de una vez (suave,
+  // salvo con «menos movimiento»); después deja el foco en el título de la lista para el teclado.
+  (function () {
+    var btn = $('btn-arriba');
+    var sinMovimiento = window.matchMedia('(prefers-reduced-motion: reduce)');
+    if ('IntersectionObserver' in window) {
+      new IntersectionObserver(function (entradas) {
+        var e = entradas[0];
+        var ver = !e.isIntersecting && e.boundingClientRect.bottom < 0;
+        btn.classList.toggle('arriba--visible', ver);
+        btn.tabIndex = ver ? 0 : -1;
+      }).observe($('filtros'));
+    }
+    btn.addEventListener('click', function () {
+      window.scrollTo({ top: 0, behavior: sinMovimiento.matches ? 'auto' : 'smooth' });
+      var titulo = $('t-lista');
+      titulo.setAttribute('tabindex', '-1');
+      titulo.focus({ preventScroll: true });
+    });
+  })();
+
+  // Fondo de estadio: las fotos 2 y 3 se piden recién con la página cargada (ver .fondo-sitio en styles.css).
+  if (document.readyState === 'complete') document.documentElement.classList.add('fondos-listos');
+  else window.addEventListener('load', function () { document.documentElement.classList.add('fondos-listos'); });
 
   // ---------- Inicio: si la clave está guardada (y el endpoint es el oficial), entra directo ----------
   var guardada = ENDPOINT === ENDPOINT_OFICIAL ? leerClave() : '';

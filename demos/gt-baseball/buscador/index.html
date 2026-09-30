@@ -19,9 +19,11 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../assets/styles.css?v=15">
-<link rel="stylesheet" href="../assets/buscador.css?v=3">
+<link rel="stylesheet" href="../assets/buscador.css?v=4">
 </head>
 <body class="pagina-buscador">
+<!-- Fondo de estadio que se turna (el mismo de la portada, con sus fotos de día en el tema claro): ver .fondo-sitio en styles.css. -->
+<div class="fondo-sitio" aria-hidden="true"><span class="fondo-sitio__foto fondo-sitio__foto--pelota"></span><span class="fondo-sitio__foto fondo-sitio__foto--atardecer"></span><span class="fondo-sitio__foto fondo-sitio__foto--noche"></span></div>
 <!-- Íconos: Tabler Icons 3.48.0 (MIT). -->
 <svg xmlns="http://www.w3.org/2000/svg" class="sprite" aria-hidden="true" focusable="false">
 <symbol id="i-user" viewBox="0 0 24 24"><path d="M8 7a4 4 0 1 0 8 0a4 4 0 0 0 -8 0"/><path d="M6 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2"/></symbol>
@@ -40,6 +42,7 @@
 <symbol id="i-lock" viewBox="0 0 24 24"><path d="M5 13a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v6a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2v-6"/><path d="M11 16a1 1 0 1 0 2 0a1 1 0 0 0 -2 0"/><path d="M8 11v-4a4 4 0 1 1 8 0v4"/></symbol>
 <symbol id="i-receipt" viewBox="0 0 24 24"><path d="M5 21v-16a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v16l-3 -2l-2 2l-2 -2l-2 2l-2 -2l-3 2m4 -14h6m-6 4h6m-2 4h2"/></symbol>
 <symbol id="i-file-type-pdf" viewBox="0 0 24 24"><path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M5 12v-7a2 2 0 0 1 2 -2h7l5 5v4"/><path d="M5 18h1.5a1.5 1.5 0 0 0 0 -3h-1.5v6"/><path d="M17 18h2"/><path d="M20 15h-3v6"/><path d="M11 15v6h1a2 2 0 0 0 2 -2v-2a2 2 0 0 0 -2 -2h-1"/></symbol>
+<symbol id="i-arrow-up" viewBox="0 0 24 24"><path d="M12 5l0 14"/><path d="M18 11l-6 -6"/><path d="M6 11l6 -6"/></symbol>
 <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6l-12 12"/><path d="M6 6l12 12"/></symbol>
 <symbol id="i-door-exit" viewBox="0 0 24 24"><path d="M13 12v.01"/><path d="M3 21h18"/><path d="M5 21v-16a2 2 0 0 1 2 -2h7.5m2.5 10.5v7.5"/><path d="M14 7h7m-3 -3l3 3l-3 3"/></symbol>
 </svg>
@@ -168,6 +171,14 @@
         </details>
       </form>
 
+      <!-- Descarga del listado: lo que dejan la búsqueda y los filtros (todas las páginas, en el orden elegido). -->
+      <div class="exportar" id="exportar" hidden>
+        <p class="exportar__txt" id="exportar-txt"></p>
+        <button type="button" class="boton boton--chico boton--principal" id="btn-pdf">
+          <svg class="ico" aria-hidden="true"><use href="#i-file-type-pdf"></use></svg><span>Descargar listado en PDF</span>
+        </button>
+      </div>
+
       <p class="lista__nota"><svg class="ico ico--chico" aria-hidden="true"><use href="#i-lock"></use></svg> Los archivos abren con el Gmail que tiene acceso a la carpeta de la academia.</p>
 
       <div class="tabla-caja">
@@ -207,7 +218,12 @@
   </footer>
 </div>
 
+<!-- Volver al inicio: aparece al bajar más allá de la búsqueda y lleva arriba de una vez. -->
+<button type="button" class="arriba" id="btn-arriba" aria-label="Volver al inicio" title="Volver al inicio" tabindex="-1">
+  <svg class="ico" aria-hidden="true"><use href="#i-arrow-up"></use></svg>
+</button>
+
 <p class="sr-only" id="anuncio" aria-live="polite"></p>
-<script src="../assets/buscador.js?v=3"></script>
+<script src="../assets/buscador.js?v=4"></script>
 </body>
 </html>

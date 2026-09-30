@@ -116,8 +116,14 @@ Página /buscador/ → POST /webhook/gt-baseball-buscador { clave }
   hasta 24 por pedido: así la credencial de Drive no sirve para leer otros archivos de `contacto@`. La página las pide
   solo para la página visible y las guarda en memoria, nunca en el teléfono.
 - No guarda ejecuciones exitosas, con error ni manuales (traen nombres y cédulas de menores).
-- `buscador/.htaccess` trae una CSP propia más estricta que la de la portada (sin Turnstile ni cdnjs; solo el script
-  de tema en línea, por su hash). Si se cambia ese `<script>` de `buscador/index.html`, hay que recalcular el hash.
+- **Listado en PDF (30-sep):** «Descargar listado en PDF» arma en el navegador (jsPDF 4.2.1, el mismo de la planilla,
+  pedido recién al primer clic y con SRI) un A4 apaisado con el logo, los criterios usados y **todos** los atletas que
+  deja la búsqueda, en el orden elegido; no pasa por n8n. Mismo día: el buscador tiene el fondo de estadio de la portada
+  (fotos oscuras o de día según el tema) y la flecha «Volver al inicio», que aparece al bajar más allá de la búsqueda.
+  Prueba: `probar-pdf-buscador.cjs` (junto a los scripts de despliegue; aplica la CSP real y lee el PDF con pypdf).
+- `buscador/.htaccess` trae una CSP propia más estricta que la de la portada (sin Turnstile; de cdnjs solo el archivo
+  de jsPDF; solo el script de tema en línea, por su hash). Si se cambia ese `<script>` de `buscador/index.html`, hay que
+  recalcular el hash.
 - Auditoría del 29-sep (4 auditores + verificador escéptico por hallazgo): 36 hallazgos confirmados, ninguno grave;
   corregidos en el commit `9a4de83`. XSS probado con 30 registros hostiles: nada se ejecuta.
 

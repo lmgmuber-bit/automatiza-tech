@@ -115,3 +115,7 @@ Rules:
 ## Incidente de seguridad 2026-08-26
 
 - **Incidente de seguridad 2026-08-26 (LEER antes de tocar ARGOS, secretos o el Reel Diario):** `Docs/2026-08-26-INCIDENTE-SEGURIDAD-N8N-Y-REEL-DIARIO.md`. Cerró tres agujeros (bypass de `WP_DEBUG` que dejaba público el listado de errores de ARGOS, `n8n_test_token` que permitía disparar envío masivo de correos, API keys en texto plano en nodos de n8n) y rotó cinco secretos. Contiene además la regla obligatoria de redacción al buscar en el repo, cómo generar el token de Instagram para esta app (`graph.instagram.com`, no el flujo de Page Token), y el workaround del bloqueo de `settings` al escribir workflows por API.
+
+## Punteros de proyecto (estado vivo)
+
+- **Plan de trabajo con carta Gantt — Etapa 1 EN PROD (2026-09-30, ~00:00, rama `claude/plan-de-trabajo`; renderer `claude/plan-renderer`):** guía única `Docs/METODO_AT/PLAN-DE-TRABAJO.md`. Al firmar un contrato de servicios se crea un plan, la IA arma el borrador y Luis lo edita, pide cambios y aprueba desde la pestaña «🗓️ Plan de trabajo» de la ficha del CRM; nada le llega al cliente (eso es la Etapa 2). 🔴 Nunca ha corrido con un contrato real: revisar las ejecuciones de los tres flujos n8n en la primera prueba. Respaldo y rollback en la guía.

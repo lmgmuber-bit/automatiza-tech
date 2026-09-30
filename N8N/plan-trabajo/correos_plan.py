@@ -68,13 +68,19 @@ def correo_error_plan(flujo):
         raise ValueError(flujo)
     prep = """const m = $('Motivo del error').first().json;
 const me = $('Marcar error').first().json;
-const marcado = me.statusCode === 200;
+// POST /error contesta 200 aunque no cambie el estado (solo pasa a «error» un plan «generando» o «cambios»; en otro estado
+// deja la nota) y devuelve {ok, estado}: el correo solo afirma «error» si el estado que devolvió WordPress es «error».
+const estadoWp = me.body && typeof me.body.estado === 'string' ? me.body.estado : '';
+const marcado = me.statusCode === 200 && estadoWp === 'error';
+const soloNota = me.statusCode === 200 && estadoWp !== '' && estadoWp !== 'error';
 const panel = urlPanel(m.crm, m.id);"""
     no_marcado = caja('<strong>Tampoco se pudo marcar el plan como error</strong> '
                       '(${esc(me.statusCode ? "HTTP " + me.statusCode : "sin respuesta")}): puede haber quedado en «'
                       + trabado + '». Revísalo en el panel y usa «Destrabar».', 'error')
+    solo_nota = caja('<strong>El plan no pasó a error:</strong> sigue en «${esc(estadoWp)}» y n8n solo dejó el motivo como nota '
+                     '(el aviso es de una corrida vieja o repetida). Revísalo en el panel.', 'aviso')
     cuerpo = (caja('${br(m.reason)}', 'error')
-              + "${marcado ? `" + parrafo(siguiente) + "` : `" + no_marcado + "`}"
+              + "${marcado ? `" + parrafo(siguiente) + "` : (soloNota ? `" + solo_nota + "` : `" + no_marcado + "`)}"
               + '<div style="margin:6px 0 4px;">' + boton('${esc(panel)}', '✏️ Abrir el plan en el panel') + '</div>'
               + nota('Ejecución de n8n: ${esc(m.exec)}. Nada de esto le llegó al cliente.'))
     return js_correo_plan(prep, "'⚠️ ' + m.proyecto + ' · " + que + "'", titulo, etiqueta('Error', 'error'), cuerpo)

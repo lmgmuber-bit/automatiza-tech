@@ -531,7 +531,8 @@ def prueba_correos():
     motivo = {'id': 9, 'crm': 5, 'proyecto': '[PRUEBA] Sitio <b>de</b> la panadería', 'reason': 'La respuesta no es JSON\nsegunda línea', 'exec': '777'}
     for flujo, frase, siguiente in (('borrador', 'no se pudo generar el borrador del plan', 'Reintentar borrador'),
                                     ('cambios', 'no se pudieron aplicar los cambios al plan', 'Volver al borrador')):
-        r, err = correr(correo_error_plan(flujo), {'Motivo del error': motivo, 'Marcar error': {'statusCode': 200}})
+        # POST /error responde {ok, estado} y contesta 200 aunque no cambie el estado (D5): solo cuenta «estado: error».
+        r, err = correr(correo_error_plan(flujo), {'Motivo del error': motivo, 'Marcar error': {'statusCode': 200, 'body': {'ok': True, 'estado': 'error'}}})
         ok(r is not None, f'correo {flujo}: el código corre', err)
         if r is None:
             continue
@@ -551,6 +552,18 @@ def prueba_correos():
         ok('Tampoco se pudo marcar el plan como error' in h2 and 'sin respuesta' in h2 and f'«{trabado}»' in h2 and 'Destrabar' in h2,
            f'correo {flujo}: si tampoco se pudo marcar el error, lo dice y sugiere «Destrabar»')
         ok('automatiza-crm-clientes' in h2, f'correo {flujo}: sin ficha conocida, enlaza a la lista de clientes')
+        # T13 (revisión final): un 200 de /error no prueba que el plan quedó en error (con el plan en otro estado solo se
+        # anota la nota): el correo dice el estado real y no afirma «error».
+        for estado in ('borrador', 'listo', trabado):
+            r3, _ = correr(correo_error_plan(flujo), {'Motivo del error': motivo, 'Marcar error': {'statusCode': 200, 'body': {'ok': True, 'estado': estado}}})
+            h3 = (r3 or {}).get('html', '')
+            ok(f'sigue en «{estado}»' in h3 and 'solo dejó el motivo como nota' in h3 and 'quedó en <strong>error</strong>' not in h3
+               and siguiente not in h3 and 'Tampoco se pudo marcar' not in h3,
+               f'correo {flujo}: con el plan en «{estado}» (HTTP 200) no afirma que quedó en error: dice el estado real y que solo se anotó la nota', h3[-900:])
+        r4, _ = correr(correo_error_plan(flujo), {'Motivo del error': motivo, 'Marcar error': {'statusCode': 200, 'body': {'ok': True}}})
+        h4 = (r4 or {}).get('html', '')
+        ok('quedó en <strong>error</strong>' not in h4 and 'Tampoco se pudo marcar' in h4 and 'HTTP 200' in h4,
+           f'correo {flujo}: un 200 sin «estado» tampoco prueba el error: no lo afirma')
 
     try:
         correo_sin_vista('otro')
@@ -584,7 +597,8 @@ def prueba_borrador():
        '126 días hábiles más 4 del Arranque, 10 hitos, claves) y pide no mandar el «Arranque»', faltan)
     ok('130 días hábiles' not in PROMPT_PLAN, 'PROMPT_PLAN: no le dice al modelo 130 días (el tope que ve es 126: el Arranque suma 4)')
     GUARDADO_OK = {'statusCode': 200, 'body': {'ok': True, 'errores': [], 'avisos': []}}
-    MARCADO = {'statusCode': 200, 'body': {'ok': True}}
+    # POST /plan/{id}/error responde {ok, estado}: «error» cuando el plan de verdad pasó a error.
+    MARCADO = {'statusCode': 200, 'body': {'ok': True, 'estado': 'error'}}
     hook = {'id': 9, 'codigo': 'PRUEBAplan01'}
 
     # 1. Contrato con propuesta: el plan se guarda en WordPress sin Arranque, con origen «ia» y solo fotos nuevas.
@@ -751,7 +765,8 @@ def prueba_cambios():
     ok(not faltan, 'PROMPT_CAMBIOS: dice los mismos topes que valida WordPress y pide no mandar el «Arranque»', faltan)
     ok('130 días hábiles' not in PROMPT_CAMBIOS, 'PROMPT_CAMBIOS: no le dice al modelo 130 días (el tope que ve es 126: el Arranque suma 4)')
     GUARDADO_OK = {'statusCode': 200, 'body': {'ok': True, 'errores': [], 'avisos': []}}
-    MARCADO = {'statusCode': 200, 'body': {'ok': True}}
+    # POST /plan/{id}/error responde {ok, estado}: «error» cuando el plan de verdad pasó a error.
+    MARCADO = {'statusCode': 200, 'body': {'ok': True, 'estado': 'error'}}
     hook = {'id': 9, 'codigo': 'PRUEBAplan01'}
     ctx = contexto(estado='cambios', plan_actual=PLAN_GUARDADO, comentarios='Agrega la capacitación y cambia la foto del método.')
 
@@ -819,6 +834,12 @@ def prueba_cambios():
     ok(me and 'claves que no son del plan: nota' in me[0]['body']['nota'] and not llamadas(t, 'Guardar borrador'), 'C4: una nota no pasa como cambio', me)
     ok(t['correos'] and t['correos'][0]['asunto'].endswith('no se pudieron aplicar los cambios al plan') and 'Volver al borrador' in t['correos'][0]['html'],
        'C4: correo de cambios con el siguiente paso')
+    # T13: WordPress contesta 200 a /error aunque el plan siga en «borrador» (solo anota la nota): el correo no dice «error».
+    t = simular('plan-2-cambios.json', webhook=hook, http={'Leer contexto': [{'statusCode': 200, 'body': ctx}],
+                'Marcar error': [{'statusCode': 200, 'body': {'ok': True, 'estado': 'borrador'}}]},
+                openai={'Aplicar cambios': [{'content': '{"nota": "ya está listo"}'}]})
+    ok(t['correos'] and 'sigue en «borrador»' in t['correos'][0]['html'] and 'quedó en <strong>error</strong>' not in t['correos'][0]['html'],
+       'C4: si WordPress no dejó el plan en error (HTTP 200 con estado «borrador»), el correo dice el estado real')
     t = simular('plan-2-cambios.json', webhook=hook, http={'Leer contexto': [{'statusCode': 200, 'body': dict(ctx, plan_actual=None)}], 'Marcar error': [MARCADO]}, openai={})
     me = llamadas(t, 'Marcar error')
     ok(not t['openai'] and me and me[0]['body']['nota'].startswith('El plan no tiene un borrador guardado al que aplicarle cambios'),

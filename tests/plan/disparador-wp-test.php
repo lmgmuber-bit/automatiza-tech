@@ -21,6 +21,11 @@ ok($motivo === '', '2) n8n responde 2xx: sin motivo');
 ok($ll && $ll['url'] === AT_N8N_PLAN_RENDER && ($ll['args']['method'] ?? '') === 'POST' && (int) ($ll['args']['timeout'] ?? 0) === 15, '2) POST al flujo con 15 s de espera');
 ok($ll && ($ll['args']['headers']['X-AT-Secret'] ?? '') === AT_REST_SECRET && ($ll['args']['headers']['Content-Type'] ?? '') === 'application/json', '2) con la clave X-AT-Secret y cuerpo JSON');
 ok($ll && $ll['cuerpo'] === ['id' => 7, 'modo' => 'draft', 'aviso' => true], '2) el cuerpo llega tal cual');
+// M6 (revisión final): la llamada lleva la clave X-AT-Secret y no sigue redirecciones (un 30x reenviaría la clave a otro
+// destino): el 30x cae en «n8n respondió HTTP 30x».
+ok($ll && array_key_exists('redirection', $ll['args']) && (int) $ll['args']['redirection'] === 0, '2) sin seguir redirecciones (redirection = 0)');
+$GLOBALS['pt_http_respuesta'] = 302;
+ok(at_pt_llamar_n8n(AT_N8N_PLAN_RENDER, ['id' => 7]) === 'n8n respondió HTTP 302', '2) un 302 no es éxito: «n8n respondió HTTP 302»');
 $GLOBALS['pt_http_respuesta'] = 500;
 ok(at_pt_llamar_n8n(AT_N8N_PLAN_RENDER, ['id' => 7]) === 'n8n respondió HTTP 500', '2) HTTP 500: el motivo lo dice');
 $GLOBALS['pt_http_respuesta'] = $caido;

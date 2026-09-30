@@ -29,6 +29,8 @@ function at_pt_llamar_n8n(string $url, array $cuerpo, int $timeout = 15): string
 	}
 	$r = wp_remote_post($url, [
 		'timeout' => max(1, $timeout),
+		// Sin redirecciones: WordPress reenviaría X-AT-Secret al destino de un 30x. Un 30x cae en «n8n respondió HTTP 30x».
+		'redirection' => 0,
 		'headers' => ['Content-Type' => 'application/json', 'X-AT-Secret' => AT_REST_SECRET],
 		'body'    => wp_json_encode($cuerpo),
 	]);

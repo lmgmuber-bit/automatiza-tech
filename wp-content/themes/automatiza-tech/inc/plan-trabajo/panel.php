@@ -341,7 +341,7 @@ function at_pt_render_plan(object $fila, int $crm_id): void {
 		<?php if (empty($fila->propuesta_id)): ?><div class="notice notice-info inline"><p>Este contrato no tiene propuesta: la portada y el cierre llevarán fotos nuevas.</p></div><?php endif; ?>
 
 		<?php if ($ocupado): ?>
-			<div class="notice notice-info inline"><p>La IA está trabajando en este plan (<?php echo esc_html(mb_strtolower($etiquetas[$estado])); ?>). Te llegará un correo cuando termine. Si lleva más de 10 minutos, destrábalo.</p>
+			<div class="notice notice-info inline"><p>La IA está trabajando en este plan (<?php echo esc_html(mb_strtolower($etiquetas[$estado])); ?>). Te llegará un correo cuando termine. Si lleva más de 20 minutos, destrábalo.</p>
 			<form method="post" action="<?php echo esc_url($accion); ?>" onsubmit="return confirm(<?php echo esc_attr(wp_json_encode('¿Destrabar este plan? Queda en «error» para poder reintentar. No se llama a n8n.', JSON_UNESCAPED_UNICODE)); ?>);">
 				<?php echo $ocultos('at_pt_destrabar'); ?>
 				<p class="at-pt-botones"><button type="submit" class="button">🔓 Destrabar (pasar a error)</button></p>

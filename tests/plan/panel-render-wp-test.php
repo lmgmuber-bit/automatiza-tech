@@ -120,6 +120,9 @@ ok(strpos($h, 'no tiene propuesta') !== false, 'sin propuesta: lo avisa');
 ptc_estado((int) $f3->id, 'aprobando');
 $h = pestana($c3['crm']);
 ok(strpos($h, 'value="at_pt_destrabar"') !== false && strpos($h, 'value="at_pt_aprobar"') === false && strpos($h, '<fieldset disabled>') !== false, 'aprobando: ofrece Destrabar, no Aprobar, y la tabla queda de solo lectura');
+// M2 (revisión final): la versión final puede tardar unos 19 minutos (3 renders de 290 s y 2 consultas de 120 s): el aviso
+// no manda a destrabar antes de los 20.
+ok(strpos($h, 'Si lleva más de 20 minutos, destrábalo') !== false && strpos($h, 'más de 10 minutos') === false, 'aprobando: el aviso dice «más de 20 minutos» (la versión final puede durar ~19)');
 ptc_estado((int) $f3->id, 'error', 'n8n no respondió (prueba)');
 $h = pestana($c3['crm']);
 ok(strpos($h, 'Motivo: n8n no respondió (prueba)') !== false && strpos($h, 'Volver al borrador') !== false && strpos($h, 'value="at_pt_reintentar"') !== false, 'error con plan: muestra el motivo y «Volver al borrador»');

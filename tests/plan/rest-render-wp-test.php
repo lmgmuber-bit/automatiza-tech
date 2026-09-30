@@ -85,6 +85,22 @@ at_pt_guardar($pid, ['estado' => 'listo', 'nota' => '']);
 $r = pt_pedir('POST', "/plan/{$pid}/vista", ['modo' => 'final', 'ok' => true, 'view_url' => $base . '/index.html', 'pdf_url' => $base . '/presentation.pdf', 'faltan' => [], 'nota' => $revisadas]);
 ok(at_pt_plan($pid)->estado === 'listo' && at_pt_plan($pid)->nota === $revisadas, '4) versión final completa repetida con el plan ya «listo»: la nota también se guarda');
 at_pt_guardar($pid, ['estado' => 'listo', 'nota' => '']);
+// M3 (revisión final): una versión final vieja no pisa un plan que ya volvió a borrador (o que está en cambios, generando,
+// error o enviado): ni enlaces ni nota, y se responde {ok, estado} sin tocar nada (la misma idea de D10 para la vista
+// previa). Solo «aprobando» la espera y «listo» conserva su comportamiento (una final repetida guarda la nota, D18).
+foreach (['borrador', 'cambios', 'generando', 'error', 'enviado'] as $estado_viejo) {
+	at_pt_guardar($pid, ['estado' => $estado_viejo, 'nota' => 'nota previa', 'view_url' => $base . '/borrador.html', 'pdf_url' => $base . '/borrador.pdf']);
+	foreach ([['ok' => true, 'view_url' => $vieja, 'pdf_url' => $vieja, 'faltan' => [], 'nota' => $revisadas],
+		['ok' => true, 'view_url' => $vieja, 'pdf_url' => $vieja, 'faltan' => ['gantt'], 'nota' => ''],
+		['ok' => false, 'view_url' => '', 'pdf_url' => '', 'faltan' => [], 'nota' => 'renderer HTTP 502']] as $cuerpo_final) {
+		$r = pt_pedir('POST', "/plan/{$pid}/vista", ['modo' => 'final'] + $cuerpo_final);
+		$g = at_pt_plan($pid);
+		ok($r->get_status() === 200 && ($r->get_data()['ok'] ?? null) === true && ($r->get_data()['estado'] ?? '') === $estado_viejo
+			&& $g->estado === $estado_viejo && $g->view_url === $base . '/borrador.html' && $g->pdf_url === $base . '/borrador.pdf' && $g->nota === 'nota previa',
+			"4) versión final vieja con el plan «{$estado_viejo}» (" . ($cuerpo_final['ok'] ? ($cuerpo_final['faltan'] ? 'con faltantes' : 'completa') : 'fallida') . '): no guarda enlaces ni nota y no cambia el estado');
+	}
+}
+at_pt_guardar($pid, ['estado' => 'listo', 'nota' => '', 'view_url' => $base . '/index.html', 'pdf_url' => $base . '/presentation.pdf']);
 
 // 5) n8n avisa un error.
 at_pt_guardar($pid2, ['estado' => 'generando', 'nota' => '']);

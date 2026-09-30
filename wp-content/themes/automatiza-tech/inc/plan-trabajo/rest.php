@@ -205,6 +205,8 @@ function at_pt_rest_render(WP_REST_Request $r) {
  * o fallida → «error» con el motivo (si la transición vale; si no, solo la nota). Vista previa fallida:
  * solo la nota, el estado no cambia. Una vista previa que llega con el plan «aprobando», «listo» o «enviado» es
  * vieja (terminó después de pedir la final): no guarda enlaces ni nota, para no pisar la versión final (D10).
+ * Una versión final solo cuenta con el plan «aprobando» (o «listo», donde una final repetida guarda enlaces y nota como siempre): en otro
+ * estado es vieja y tampoco guarda nada.
  */
 function at_pt_rest_vista(WP_REST_Request $r) {
 	$f = at_pt_rest_fila($r);
@@ -229,6 +231,13 @@ function at_pt_rest_vista(WP_REST_Request $r) {
 	$nota = mb_substr(sanitize_textarea_field((string) ($p['nota'] ?? '')), 0, 500);
 	$id = (int) $f->id;
 	if ($modo === 'draft' && in_array((string) $f->estado, ['aprobando', 'listo', 'enviado'], true)) {
+		return new WP_REST_Response(['ok' => true, 'estado' => (string) $f->estado], 200);
+	}
+	// Misma idea para la versión final (M3): solo la espera un plan «aprobando». Con «listo» se conserva lo que ya hacía:
+	// una final repetida guarda su nota (D18) y sirve para volver a aprobar. En cualquier otro estado (borrador, cambios,
+	// generando, error o enviado) la final es vieja (el plan volvió atrás o Luis lo destrabó mientras se generaba): no
+	// guarda enlaces ni nota, para no pisar el borrador ni un plan enviado.
+	if ($modo === 'final' && !in_array((string) $f->estado, ['aprobando', 'listo'], true)) {
 		return new WP_REST_Response(['ok' => true, 'estado' => (string) $f->estado], 200);
 	}
 	if ($ok && $view !== '') {

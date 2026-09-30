@@ -10850,8 +10850,8 @@
     "semantic_hash": ""
   },
   "demos/gt-baseball/assets/app.js": {
-    "mtime": 1790687033.7783737,
-    "ast_hash": "bcc05b90bf076940f965512d1aa93863",
+    "mtime": 1790689607.2332673,
+    "ast_hash": "51396ffef463cf4be476e93a89e8d313",
     "semantic_hash": ""
   },
   "demos/gt-baseball/assets/planilla.js": {
@@ -10860,13 +10860,13 @@
     "semantic_hash": ""
   },
   "Docs/superpowers/specs/2026-09-27-gt-baseball-prototipo-design.md": {
-    "mtime": 1790649416.2648666,
-    "ast_hash": "ece7c445984009417c5cb01f3d1ca289",
+    "mtime": 1790691345.8695288,
+    "ast_hash": "5bac3d4a50ea8649fa0b3a0c4df0b452",
     "semantic_hash": ""
   },
   "N8N/gt-baseball/README.md": {
-    "mtime": 1790649416.223017,
-    "ast_hash": "1fa2127b4d1c9c6aa7e7ffa977f484be",
+    "mtime": 1790708760.1596844,
+    "ast_hash": "8dbaa49129dd1ea0c2417f1aa20313e4",
     "semantic_hash": ""
   },
   "demos/gt-baseball/cartel.html": {
@@ -10875,8 +10875,8 @@
     "semantic_hash": ""
   },
   "demos/gt-baseball/index.html": {
-    "mtime": 1790688243.1343136,
-    "ast_hash": "95cb5271da33880c52be9226cb86d067",
+    "mtime": 1790735391.5412326,
+    "ast_hash": "005dc8c8ecdefe298973a5d1ae00bb99",
     "semantic_hash": ""
   },
   "CumpleBooth/sitio/assets/img/og-cumpleclick.jpg": {
@@ -10932,6 +10932,71 @@
   "demos/gt-baseball/assets/estadio-noche.jpg": {
     "mtime": 1790688144.1574538,
     "ast_hash": "9e18aa393d419003ab0d1b715af0711e",
+    "semantic_hash": ""
+  },
+  "N8N/gt-baseball/build_buscador.py": {
+    "mtime": 1790735035.0420108,
+    "ast_hash": "dd4ac5855dabf6511611c32ac082802b",
+    "semantic_hash": ""
+  },
+  "demos/gt-baseball/assets/buscador.js": {
+    "mtime": 1790735070.842744,
+    "ast_hash": "c314a52e975d8ffccefd3cb3e62d0199",
+    "semantic_hash": ""
+  },
+  "demos/gt-baseball/buscador/index.html": {
+    "mtime": 1790735391.5412326,
+    "ast_hash": "beb5faf0df857f2180c26b36680def46",
+    "semantic_hash": ""
+  },
+  "demos/gt-baseball/assets/fondo-atardecer-vertical.jpg": {
+    "mtime": 1790689762.9533098,
+    "ast_hash": "41b2f4ea1c823c49c49c07094c9e86c1",
+    "semantic_hash": ""
+  },
+  "demos/gt-baseball/assets/fondo-atardecer.jpg": {
+    "mtime": 1790689761.116381,
+    "ast_hash": "f94e469d3416bf27cc7ec0d503e526e5",
+    "semantic_hash": ""
+  },
+  "demos/gt-baseball/assets/fondo-claro-diamante-vertical.jpg": {
+    "mtime": 1790735349.2296429,
+    "ast_hash": "421708b464a4e7ba2148e5d4f4d1bfd5",
+    "semantic_hash": ""
+  },
+  "demos/gt-baseball/assets/fondo-claro-diamante.jpg": {
+    "mtime": 1790735348.1733744,
+    "ast_hash": "ba5c5f0f588c16f4428ec56dea09f3a5",
+    "semantic_hash": ""
+  },
+  "demos/gt-baseball/assets/fondo-claro-estadio-vertical.jpg": {
+    "mtime": 1790735420.8631968,
+    "ast_hash": "5f4f65c1c6aa9a41a2223a825832edf2",
+    "semantic_hash": ""
+  },
+  "demos/gt-baseball/assets/fondo-claro-estadio.jpg": {
+    "mtime": 1790735419.793694,
+    "ast_hash": "40876d333e161176ac68306ad31cd12b",
+    "semantic_hash": ""
+  },
+  "demos/gt-baseball/assets/fondo-claro-pelota-vertical.jpg": {
+    "mtime": 1790735347.1907263,
+    "ast_hash": "f374afde6dd68f186553c4da5d5be776",
+    "semantic_hash": ""
+  },
+  "demos/gt-baseball/assets/fondo-claro-pelota.jpg": {
+    "mtime": 1790735346.161953,
+    "ast_hash": "957b211bb8de5c5d00fba0512891d5bb",
+    "semantic_hash": ""
+  },
+  "demos/gt-baseball/assets/fondo-pelota-vertical.jpg": {
+    "mtime": 1790689759.553398,
+    "ast_hash": "0c0a1b069785ed8e5dab8e347ff87339",
+    "semantic_hash": ""
+  },
+  "demos/gt-baseball/assets/fondo-pelota.jpg": {
+    "mtime": 1790689757.93504,
+    "ast_hash": "a4715ef5c3ec5ba2dd137abd6ec89bbf",
     "semantic_hash": ""
   }
 }

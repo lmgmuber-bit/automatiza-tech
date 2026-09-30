@@ -4670,8 +4670,8 @@
     "semantic_hash": ""
   },
   ".github/copilot-instructions.md": {
-    "mtime": 1788001626.3560565,
-    "ast_hash": "8f4b0e40ffa92e7d5ec829e312bf7a3d",
+    "mtime": 1790738952.1073084,
+    "ast_hash": "b105923708a8977e23ef0eeaf00ddaf4",
     "semantic_hash": ""
   },
   ".github/dependabot.yml": {
@@ -4705,8 +4705,8 @@
     "semantic_hash": ""
   },
   "AGENTS.md": {
-    "mtime": 1790215307.0203247,
-    "ast_hash": "233d467a804f12f1a22b1989f37c0a3e",
+    "mtime": 1790738990.2495565,
+    "ast_hash": "08111bdd5d61ce0c63b99ccce57e78ec",
     "semantic_hash": ""
   },
   "AUDITORIA_OPENAI_N8N.md": {
@@ -4715,8 +4715,8 @@
     "semantic_hash": ""
   },
   "CLAUDE.md": {
-    "mtime": 1790738656.5638497,
-    "ast_hash": "d66227e73c911833ec8333a4a0376333",
+    "mtime": 1790738990.2512996,
+    "ast_hash": "f5bf1414a1eda2d161d6cc5428da6165",
     "semantic_hash": ""
   },
   "CONTEXTO_COMPLETO.md": {
@@ -5510,8 +5510,8 @@
     "semantic_hash": ""
   },
   "Docs/AGENTS.md": {
-    "mtime": 1788001626.3802097,
-    "ast_hash": "49155cd1ffa9b63c89656e12bd236927",
+    "mtime": 1790738952.1073084,
+    "ast_hash": "7a565ab0c8f2bfa193d2c311f00146ab",
     "semantic_hash": ""
   },
   "Docs/ANALISIS_MODULOS_INC.md": {
@@ -5705,8 +5705,8 @@
     "semantic_hash": ""
   },
   "Docs/METODO_AT/README.md": {
-    "mtime": 1790390745.2895265,
-    "ast_hash": "2c9728551fcff5bfbe6c7445f3cb47a4",
+    "mtime": 1790738990.2553127,
+    "ast_hash": "8374f73c8ed71e9c4278b7b87aa0646a",
     "semantic_hash": ""
   },
   "Docs/METODO_AT/SERVICIOS_Y_CASOS_DE_USO.md": {
@@ -5870,8 +5870,8 @@
     "semantic_hash": ""
   },
   "N8N/PROD/WHATSAPP_BOT_README.md": {
-    "mtime": 1788001626.431588,
-    "ast_hash": "d728064d91739ed7aeab1b7fa7a96334",
+    "mtime": 1790738990.2573173,
+    "ast_hash": "8f542c3bc4fc69345c2da2a784832864",
     "semantic_hash": ""
   },
   "N8N/TEMPLATES/GUIA_TRACKING_CONSUMO_OPENAI.md": {
@@ -10360,18 +10360,18 @@
     "semantic_hash": ""
   },
   "N8N/propuestas-v3/1-borrador.json": {
-    "mtime": 1790390745.304516,
-    "ast_hash": "deaf10e60886063bef243b7c6cc85a05",
+    "mtime": 1790738990.3005507,
+    "ast_hash": "13448a6b11c92a7e8efbb5488c5cd1a3",
     "semantic_hash": ""
   },
   "N8N/propuestas-v3/2-cambios.json": {
-    "mtime": 1790390745.3065581,
-    "ast_hash": "986989ca7f8ffe20416fe6ff34cebe03",
+    "mtime": 1790738990.30256,
+    "ast_hash": "809b85bd7bc4601acd7bd4351a4dc07c",
     "semantic_hash": ""
   },
   "N8N/propuestas-v3/3-final.json": {
-    "mtime": 1790390745.3080332,
-    "ast_hash": "3dfcbcf8a03169f6667418000d9faa19",
+    "mtime": 1790738990.30256,
+    "ast_hash": "eec9db6ce7585e36bb9aec85f14d3635",
     "semantic_hash": ""
   },
   "N8N/propuestas-v3/build_0_errores.py": {
@@ -10380,23 +10380,23 @@
     "semantic_hash": ""
   },
   "N8N/propuestas-v3/build_1_borrador.py": {
-    "mtime": 1790390745.3100238,
-    "ast_hash": "27180e73d111c4aa85a81123f6d6300d",
+    "mtime": 1790738990.3045697,
+    "ast_hash": "b21044b4eb9c248d588dcb4f9b25f295",
     "semantic_hash": ""
   },
   "N8N/propuestas-v3/build_2_cambios.py": {
-    "mtime": 1790390745.3110185,
-    "ast_hash": "ff8794fedfb4a449bf35fe2214bab41d",
+    "mtime": 1790738990.3065808,
+    "ast_hash": "682689217a6ced4618678b170d94d4df",
     "semantic_hash": ""
   },
   "N8N/propuestas-v3/build_3_final.py": {
-    "mtime": 1790390745.3125043,
-    "ast_hash": "c8ff4b38d3bf6e7d1ef4555d6ecc5172",
+    "mtime": 1790738990.3065808,
+    "ast_hash": "f103b4193b6a14739a84c38a24ed2c81",
     "semantic_hash": ""
   },
   "N8N/propuestas-v3/correos.py": {
-    "mtime": 1790390745.3135629,
-    "ast_hash": "11701d0b9ef66601fc9ba57cf5ab5b9c",
+    "mtime": 1790738990.308591,
+    "ast_hash": "a540d4126c2e0ce9bd68022c30108505",
     "semantic_hash": ""
   },
   "N8N/propuestas-v3/deploy.py": {
@@ -10410,8 +10410,8 @@
     "semantic_hash": ""
   },
   "N8N/propuestas-v3/fotos_guard.py": {
-    "mtime": 1790390745.3152547,
-    "ast_hash": "79b08eb7cead3c54d950222e3c4b49d8",
+    "mtime": 1790738990.3103583,
+    "ast_hash": "9da40587e6c2362f299de4d0a5184410",
     "semantic_hash": ""
   },
   "N8N/propuestas-v3/probar_correos.py": {
@@ -10420,8 +10420,8 @@
     "semantic_hash": ""
   },
   "N8N/propuestas-v3/probar_fotos.py": {
-    "mtime": 1790390745.3174253,
-    "ast_hash": "96d28f90e565b5f5ca483396cb54e9a8",
+    "mtime": 1790738990.3130672,
+    "ast_hash": "7c4f19e3169b493d7e444da8ce668560",
     "semantic_hash": ""
   },
   "api-save-presentation.php": {
@@ -10435,8 +10435,8 @@
     "semantic_hash": ""
   },
   "renderer/src/escape.js": {
-    "mtime": 1790390745.411371,
-    "ast_hash": "9b45a44f72bcb82ff087ae1548e527dc",
+    "mtime": 1790738990.395248,
+    "ast_hash": "c533ce97d2ab41a3b706fd26ab18890b",
     "semantic_hash": ""
   },
   "renderer/src/higgsfield.js": {
@@ -10475,8 +10475,8 @@
     "semantic_hash": ""
   },
   "renderer/src/template.js": {
-    "mtime": 1790390745.4230993,
-    "ast_hash": "5c9ff24281e70777e35f49c3a8197f1d",
+    "mtime": 1790738990.3969512,
+    "ast_hash": "abffc264ed29a623a77cb66f50f24eee",
     "semantic_hash": ""
   },
   "renderer/test/escape.test.js": {
@@ -10530,8 +10530,8 @@
     "semantic_hash": ""
   },
   "renderer/test/template.test.js": {
-    "mtime": 1790390745.4424179,
-    "ast_hash": "161fa6517d4ac827d542a87e0ac499eb",
+    "mtime": 1790738990.3983765,
+    "ast_hash": "0740f2c1d0ce978a15e4d0ad9e6d071c",
     "semantic_hash": ""
   },
   "scratchpad/higgsfield-api/hf_api.py": {
@@ -10595,8 +10595,8 @@
     "semantic_hash": ""
   },
   "Docs/METODO_AT/PROPUESTAS-FLUJO-V3.md": {
-    "mtime": 1790390745.2885244,
-    "ast_hash": "cb84d089f03bf9f041060db229bcb43c",
+    "mtime": 1790738990.253307,
+    "ast_hash": "52bab130f6fb3d42a64862f47b899657",
     "semantic_hash": ""
   },
   "Docs/superpowers/plans/2026-09-23-flujo-propuestas-v3.md": {
@@ -10620,8 +10620,8 @@
     "semantic_hash": ""
   },
   "renderer/DEPLOY.md": {
-    "mtime": 1790390745.4083781,
-    "ast_hash": "d89ac2a0164fbc3facccc527f2c3ae7f",
+    "mtime": 1790738990.3932414,
+    "ast_hash": "a8533753966735d5de7625b461b1a937",
     "semantic_hash": ""
   },
   "scratchpad/higgsfield-api/PROMPT-AGENTE.md": {
@@ -10997,6 +10997,181 @@
   "demos/gt-baseball/assets/fondo-pelota.jpg": {
     "mtime": 1790689757.93504,
     "ast_hash": "a4715ef5c3ec5ba2dd137abd6ec89bbf",
+    "semantic_hash": ""
+  },
+  "N8N/PROD/wa-plantillas-2026-09-24/aplicar_recordatorios.py": {
+    "mtime": 1790738990.2573173,
+    "ast_hash": "83ae0eb230102118c91aec4dd815bddc",
+    "semantic_hash": ""
+  },
+  "N8N/PROD/wa-plantillas-2026-09-24/codigo-nodos/argos_generar.py": {
+    "mtime": 1790738990.2573173,
+    "ast_hash": "8529d82267804dc429ec6d0f6d727331",
+    "semantic_hash": ""
+  },
+  "N8N/PROD/wa-plantillas-2026-09-24/codigo-nodos/argos_preparar_datos.js": {
+    "mtime": 1790738990.2573173,
+    "ast_hash": "6eaf17a3e819b81d44bb787473056c15",
+    "semantic_hash": ""
+  },
+  "N8N/PROD/wa-plantillas-2026-09-24/codigo-nodos/argos_quitar_continueonfail.py": {
+    "mtime": 1790738990.2645338,
+    "ast_hash": "d2ec738faba90565a844f73632898cff",
+    "semantic_hash": ""
+  },
+  "N8N/PROD/wa-plantillas-2026-09-24/codigo-nodos/build_1h.js": {
+    "mtime": 1790738990.2645338,
+    "ast_hash": "4c5f81fd7b45fdd46704fd88c976dab3",
+    "semantic_hash": ""
+  },
+  "N8N/PROD/wa-plantillas-2026-09-24/codigo-nodos/build_24h.js": {
+    "mtime": 1790738990.2645338,
+    "ast_hash": "d2cd03a052cb55f1e9090ec74705ea23",
+    "semantic_hash": ""
+  },
+  "N8N/PROD/wa-plantillas-2026-09-24/codigo-nodos/build_72h.js": {
+    "mtime": 1790738990.2645338,
+    "ast_hash": "e4b3c6541b5d8cb9ba458d725b88d59a",
+    "semantic_hash": ""
+  },
+  "N8N/PROD/wa-plantillas-2026-09-24/codigo-nodos/preparar_datos_actual.js": {
+    "mtime": 1790738990.2645338,
+    "ast_hash": "a3cf24e1c582888da35c4c7070d6fc0d",
+    "semantic_hash": ""
+  },
+  "N8N/PROD/wa-plantillas-2026-09-24/codigo-nodos/prepare_8am.js": {
+    "mtime": 1790738990.2645338,
+    "ast_hash": "3808da06407ef6dc46f332e9169b0cec",
+    "semantic_hash": ""
+  },
+  "N8N/PROD/wa-plantillas-2026-09-24/codigo-nodos/prepare_8pm.js": {
+    "mtime": 1790738990.275808,
+    "ast_hash": "94442e22b2022224b2da88f5a724bdd8",
+    "semantic_hash": ""
+  },
+  "N8N/PROD/wa-plantillas-2026-09-24/codigo-nodos/prepare_followup.js": {
+    "mtime": 1790738990.275808,
+    "ast_hash": "36d0d1be093b275d646a14ef2e0690dd",
+    "semantic_hash": ""
+  },
+  "N8N/PROD/wa-plantillas-2026-09-24/diagnostico/estado_recordatorios.py": {
+    "mtime": 1790738990.275808,
+    "ast_hash": "b4ceed387ed67b3a0c8c00b1ca0720b9",
+    "semantic_hash": ""
+  },
+  "N8N/PROD/wa-plantillas-2026-09-24/diagnostico/historial_tipo.py": {
+    "mtime": 1790738990.275808,
+    "ast_hash": "c31d68ad9fb07d8ccd850780b778e5c9",
+    "semantic_hash": ""
+  },
+  "N8N/PROD/wa-plantillas-2026-09-24/diagnostico/wa_envios.py": {
+    "mtime": 1790738990.280724,
+    "ast_hash": "08a3dc0ee1062970c53b44e332e8cfc8",
+    "semantic_hash": ""
+  },
+  "N8N/PROD/wa-plantillas-2026-09-24/diagnostico/wa_rutas_botones.py": {
+    "mtime": 1790738990.2827332,
+    "ast_hash": "5a7e4969a6e5901d5104245b6ef50748",
+    "semantic_hash": ""
+  },
+  "N8N/PROD/wa-plantillas-2026-09-24/diagnostico/wa_status.py": {
+    "mtime": 1790738990.2827332,
+    "ast_hash": "453811712e2bbe252c4582c48dabbd9f",
+    "semantic_hash": ""
+  },
+  "N8N/PROD/wa-plantillas-2026-09-24/diagnostico/wa_verificar_envios.py": {
+    "mtime": 1790738990.2847433,
+    "ast_hash": "120d2b48eeab9e781019fab19e292fb8",
+    "semantic_hash": ""
+  },
+  "N8N/PROD/wa-plantillas-2026-09-24/plantillas-meta/plantillas_2.py": {
+    "mtime": 1790738990.2867541,
+    "ast_hash": "590b9fd5d5035118978c3730113ba53b",
+    "semantic_hash": ""
+  },
+  "N8N/PROD/wa-plantillas-2026-09-24/plantillas-meta/plantillas_3.py": {
+    "mtime": 1790738990.2867541,
+    "ast_hash": "5544bd409848233e081c5331f0d2de1c",
+    "semantic_hash": ""
+  },
+  "N8N/PROD/wa-plantillas-2026-09-24/plantillas-meta/wa_crear_plantilla_argos.py": {
+    "mtime": 1790738990.288762,
+    "ast_hash": "2b5d6f8badcc71181f459ad7c1d1d718",
+    "semantic_hash": ""
+  },
+  "N8N/PROD/wa-plantillas-2026-09-24/plantillas-meta/wa_crear_plantillas.py": {
+    "mtime": 1790738990.288762,
+    "ast_hash": "f87fcbbbf7069af1a535027a17327d1e",
+    "semantic_hash": ""
+  },
+  "N8N/PROD/wa-plantillas-2026-09-24/plantillas-meta/wa_crear_plantillas_2.py": {
+    "mtime": 1790738990.29077,
+    "ast_hash": "6229d47ea9741809a494fe07ade0317e",
+    "semantic_hash": ""
+  },
+  "N8N/PROD/wa-plantillas-2026-09-24/plantillas-meta/wa_estado_cuenta.py": {
+    "mtime": 1790738990.2927775,
+    "ast_hash": "b46c86855711120a718d30c8c74b26d2",
+    "semantic_hash": ""
+  },
+  "N8N/PROD/wa-plantillas-2026-09-24/plantillas-meta/wa_estado_plantillas.py": {
+    "mtime": 1790738990.2927775,
+    "ast_hash": "3b00aafa0420c954981027b45182e22e",
+    "semantic_hash": ""
+  },
+  "N8N/PROD/wa-plantillas-2026-09-24/pruebas/test_argos.js": {
+    "mtime": 1790738990.2947834,
+    "ast_hash": "a873004b9347ca1641f30d22cae26b09",
+    "semantic_hash": ""
+  },
+  "N8N/PROD/wa-plantillas-2026-09-24/pruebas/test_argos_freno.js": {
+    "mtime": 1790738990.2947834,
+    "ast_hash": "b64a5e50f8415437e9f897eab3a6f553",
+    "semantic_hash": ""
+  },
+  "N8N/PROD/wa-plantillas-2026-09-24/pruebas/test_bot_expresiones.js": {
+    "mtime": 1790738990.2965314,
+    "ast_hash": "ee06a80e54e4e095d13d2f42046f5e0b",
+    "semantic_hash": ""
+  },
+  "N8N/PROD/wa-plantillas-2026-09-24/pruebas/test_builds.js": {
+    "mtime": 1790738990.2985406,
+    "ast_hash": "59fbd6958fd4e6633d9268d33066c6df",
+    "semantic_hash": ""
+  },
+  "N8N/PROD/wa-plantillas-2026-09-24/pruebas/test_prepares.js": {
+    "mtime": 1790738990.2985406,
+    "ast_hash": "c43aacaba6a262ef5ddf5bc8fa988014",
+    "semantic_hash": ""
+  },
+  "N8N/propuestas-v3/json_guard.py": {
+    "mtime": 1790738990.3113663,
+    "ast_hash": "daf86d4884edf2c43fe2add83f00ed89",
+    "semantic_hash": ""
+  },
+  "N8N/propuestas-v3/probar_json.py": {
+    "mtime": 1790738990.3130672,
+    "ast_hash": "c5b83f2299d0c2438d0cc21f052d03bb",
+    "semantic_hash": ""
+  },
+  "N8N/propuestas-v3/probar_revision_fotos.py": {
+    "mtime": 1790738990.3151095,
+    "ast_hash": "7d9616350d8be5fa24e4b71b50e2d343",
+    "semantic_hash": ""
+  },
+  "Docs/METODO_AT/PROTOTIPOS-Y-DEMOS.md": {
+    "mtime": 1790738990.253307,
+    "ast_hash": "d649b6952c2e20560d0550d3db258900",
+    "semantic_hash": ""
+  },
+  "N8N/PROD/wa-plantillas-2026-09-24/README.md": {
+    "mtime": 1790738990.2573173,
+    "ast_hash": "1e65e3d11ce82a984d805e73902c86eb",
+    "semantic_hash": ""
+  },
+  "N8N/PROD/wa-plantillas-2026-09-24/codigo-nodos/argos_url_historial.txt": {
+    "mtime": 1790738990.2645338,
+    "ast_hash": "1b92d6e23d780ff1a3bc38b13c203038",
     "semantic_hash": ""
   }
 }

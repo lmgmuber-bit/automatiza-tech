@@ -50,6 +50,8 @@ Las credenciales viven **fuera del repo**, en `C:\Users\luis_\OneDrive\Documento
 ## Método AT y casos de uso
 
 Para planificar, cotizar, ejecutar, entregar o retomar trabajo con clientes, leer `Docs/METODO_AT/README.md`. Las fuentes canónicas son `Docs/METODO_AT/APLICACION_DEL_METODO_AT.md` y `Docs/METODO_AT/SERVICIOS_Y_CASOS_DE_USO.md`. Para marketing, nichos y contenido de Instagram/Reels, usar `Docs/MARKETING/2026-07-22-AT-ESTUDIO-NICHOS-Y-ESTRATEGIA-REELS-INSTAGRAM.md`. Distinguir siempre capacidades actuales comprobadas de trabajo en curso y roadmap.
+
+Demos de prototipos para prospectos (desde el 2026-09-28, `https://automatizatech.cl/demos/<rubro>/`): método en `Docs/METODO_AT/PROTOTIPOS-Y-DEMOS.md` (404 propio en `.htaccess`, React local con `window.__resources`, arreglo móvil obligatorio, advertencia sanitaria en rubros con alcohol, video de recorrido). Antes de tocar precios o reaprobar una propuesta v3, leer «Precios, reaprobación y enlaces» en `Docs/METODO_AT/PROPUESTAS-FLUJO-V3.md`. Lo propio de cada cliente vive en la bóveda (`10-Projects/<Cliente>/README.md`), nunca en este repo público.
 <!-- AT-METHOD:END -->
 
 <!-- AT-VIDEO-RULES:START -->
@@ -62,6 +64,7 @@ Estas reglas aplican a cualquier video, Reel Diario, Reel programado, comercial,
 3. Antes de generar o publicar, revisar prompts de video para confirmar que incluyan estas reglas. Si un prompt contradice estas reglas, corregirlo primero.
 4. Cierre estándar AT para Reels: desde 2026-07-14, agregar una sola vez al final del Reel principal el clip completo `N8N/reel-diario-media-worker/assets/outro-at-10s.mp4` (~10s, 720x1280, con audio y CTA `Agenda tu diagnóstico gratis en automatizatech.cl`). Estructura final: `parte_1 + parte_2 + outro-at-10s.mp4`. No insertar el cierre entre partes ni dentro del bonus/Story. No usar el recorte de 3.2s porque puede cortar el logo; el banner turquesa anterior queda prohibido salvo instruccion expresa de Luis.
 5. Log de publicaciones Reel Diario: n8n Plan B debe actualizar el CSV existente `IG-AT/Reel-Diario/Reel-Diario-Log-Publicaciones.csv` (`file_id=1NpJf8VVTiqcN5LdGFfLdi0T9qQ9iGCRw`) con update real del mismo archivo. No crear CSVs duplicados. Registrar intentos reales de publicación, fallos y rechazos QA; no registrar skips como `already_published`, `fresh_lock` o `folder_not_found`.
+6. Videos de recorrido para un prospecto (no son Reels, regla de Luis del 2026-09-29): logo AT visible arriba a la izquierda y **cierre propio** que dice «Agenda tu llamada de seguimiento para aclarar dudas», nunca el `outro-at-10s.mp4` (trae «diagnóstico» grabado). Método en `Docs/METODO_AT/PROTOTIPOS-Y-DEMOS.md`.
 
 Bloque recomendado para prompts:
 

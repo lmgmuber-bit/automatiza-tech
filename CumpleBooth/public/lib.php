@@ -1198,6 +1198,11 @@ function cb_theme_asomate($bloque, string $base, string $dir, array $personajesT
             $textos[$campo] = $valor;
         }
     }
+    // Dónde pisan los pies (fracción del alto): depende de dónde empieza el piso de la escena. Solo se publica si es creíble.
+    $suelo = (float) ($bloque['suelo'] ?? 0);
+    if ($suelo >= 0.6 && $suelo <= 0.95) {
+        $textos['suelo'] = round($suelo, 3);
+    }
     return ['fondo' => $base . $fondoRel . '?v=' . cb_sello_archivo($dir . $fondoRel),
             'personajes' => $personajes] + $textos;
 }

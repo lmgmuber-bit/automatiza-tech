@@ -4246,3 +4246,40 @@ antes; los videos `welcome` y `despedida` de cada temática responden 200.
 - Tablet física con un niño.
 - El caso real del 26-sep no se reprodujo: la causa exacta (modo "menos animaciones" de la tablet o video que no
   arrancó con el wifi del lugar) es la hipótesis más probable, no un hecho medido.
+
+## PENDIENTE 2026-09-30: Noche de Brujas y Navidad para niños, fondo propio por temática, Asómate (LOCAL, SIN DEPLOY)
+
+Rama `claude/tematicas-brujitas-navidad` (sin remoto; parte de `claude/feria-prod`). **No se sube todavía:** faltan las dos
+músicas (las genera Luis con `docs/MUSICA-TEMATICAS-INFANTILES-PROMPTS.md`) y su go. Todo lo de abajo es local.
+
+**Qué cambia para el niño en la feria:** cada temática tiene su fondo en el selector y en el kiosco (antes todas mostraban el
+de Fiestas Patrias); al elegir temática la pantalla baja sola hasta la autorización y el botón; los banderines de la franja
+toman los colores de la temática; dos temáticas nuevas con seis personajes propios cada una (bienvenida, saludos y despedida
+en video con la voz de Matilda en Eleven v3, marco grande, Asómate).
+
+**Lo que hay que subir el día del deploy, por grupos** (la lista exacta se saca ese día con el reconocimiento contra PROD,
+comparando sha256; los nombres de `dist/assets/` cambian en cada build):
+
+| Orden | Clase | Local | PROD |
+|---|---|---|---|
+| 1 | OBLIGATORIO | `public/themes/brujitas/**` y `public/themes/navidad/**` (incluye `asomate/`, videos y `fondo-evento.jpg`) | `app/themes/brujitas/`, `app/themes/navidad/` |
+| 2 | OBLIGATORIO | `public/themes/<tema>/fondo-evento.jpg` de los 15 temas que ya existen | `app/themes/<tema>/fondo-evento.jpg` |
+| 3 | OBLIGATORIO | `public/data/themes.json` | `app/data/themes.json` |
+| 4 | OBLIGATORIO | `public/lib.php`, `public/lib.ferias.php` (publican el fondo por temática y el piso de Asómate) | `app/lib.php`, `app/lib.ferias.php` |
+| 5 | OBLIGATORIO | `dist/assets/*` nuevos de este build | `app/assets/` |
+| 6 | OBLIGATORIO, al final | `dist/index.html`, `dist/feria.html` | `app/index.html`, `app/feria.html` |
+
+Sin migración. Va antes el 1 al 4 que el 6: `themes.json` apunta a archivos que tienen que existir. Respaldar `themes.json`,
+`lib.php`, `lib.ferias.php`, `index.html` y `feria.html` antes de pisarlos. **No subir** `tests/`, `docs/`, `design/`, `estado/`
+ni nada de `C:/Users/luis_/Documents/CumpleClick/` (registros de generación, `voces-antes-matilda-v3/`, cuadrículas).
+
+**Pruebas en local (30-sep):** 247 pruebas del frontend sin navegador pasan; 139 comprobaciones del backend de ferias;
+`asomate-infantiles.test.mjs` (nuevo) verificado en rojo con tres datos malos antes de dejarlo. Las cuatro suites con navegador pasan sobre el build de hoy
+(`feria-marcos`, `feria-integracion`, `feria-browser` con sus 6 pruebas y `fiestas-patrias`).
+
+### No probado
+
+- Tablet física con un niño (Asómate con la cámara real, marco grande, selector que baja solo).
+- Cómo suenan las voces en la tablet: se midió nivel (-15 LUFS los 16 videos) y transcripción (`scribe_v1`, 15 de 16 exactas;
+  "Momi" se transcribe "Mommy"), no el acento. El acento chileno de Matilda en v3 es un juicio de Luis, no una medida.
+- Asómate del diploma en Navidad: el piso del diploma usa `banda.suelo` 0,79, no el de la temática.

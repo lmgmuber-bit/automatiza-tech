@@ -346,6 +346,35 @@ foreach (($aso['personajes'] ?? []) as $p) {
 f_check($okGeo, 'cada recorte mide lo anotado y su hueco cae dentro de la figura');
 f_check(str_starts_with((string) ($aso['fondo'] ?? ''), 'themes/fiestas-patrias/asomate/fondo.jpg?v='), 'el fondo de Asómate va con sello de versión');
 
+// Noche de Brujas y Navidad (30-09): Asómate con seis cuerpos de pie, el nombre de cada uno sale de la propia temática (no de la clave) y
+// Navidad publica dónde pisan los pies, porque el piso de su escena empieza más abajo que el de siempre.
+[$datosInf] = cb_feria_validar(['nombre' => 'Feria del colegio', 'fecha' => $hoy, 'activa' => '1',
+    'mundos_infantil' => ['brujitas', 'navidad'], 'mundos_adulto' => ['fiestas-patrias'], 'max_fotos' => 100]);
+$feriaInf = cb_feria_guardar($datosInf, null, 'test');
+$esperados = [
+    'brujitas' => ['Brujita Luna', 'Pepa Calabaza', 'Fantasmín', 'Gato Medianoche', 'Murci', 'Momi'],
+    'navidad'  => ['Viejito Pascuero', 'Señora Pascuera', 'Reno Cascabel', 'Duende Ayudante', 'Copito', 'Pingüi'],
+];
+foreach ($esperados as $temaInf => $nombresInf) {
+    $r = pedir('GET', '/api.php?p=' . $feriaInf['slug'] . '&tema=' . $temaInf . '&modo=infantil');
+    $asoInf = $r['json']['theme']['asomate'] ?? null;
+    f_check(is_array($asoInf) && count($asoInf['personajes'] ?? []) === 6, "$temaInf trae Asómate con seis personajes");
+    f_check(array_column($asoInf['personajes'] ?? [], 'nombre') === $nombresInf, "$temaInf: los nombres de Asómate salen de la temática");
+    $okInf = true;
+    foreach (($asoInf['personajes'] ?? []) as $p) {
+        $info = @getimagesize($raiz . "/public/themes/$temaInf/asomate/" . $p['clave'] . '.png');
+        $okInf = $okInf && $info !== false && $info[0] === (int) $p['w'] && $info[1] === (int) $p['h']
+            && $p['cx'] - $p['rx'] > 0 && $p['cx'] + $p['rx'] < $p['w'] && $p['cy'] - $p['ry'] > 0;
+    }
+    f_check($okInf, "$temaInf: cada cuerpo mide lo anotado y su hueco cae dentro");
+    f_check(str_starts_with((string) ($asoInf['fondo'] ?? ''), "themes/$temaInf/fondo-escena.jpg?v="), "$temaInf: Asómate usa la escena despejada, con sello de versión");
+    f_check(($asoInf['boton'] ?? '') !== '' && ($asoInf['titulo'] ?? '') !== '', "$temaInf: el modo lleva su propio nombre");
+}
+$r = pedir('GET', '/api.php?p=' . $feriaInf['slug'] . '&tema=navidad&modo=infantil');
+f_check(($r['json']['theme']['asomate']['suelo'] ?? null) === 0.865, 'Navidad publica dónde pisan los pies del grupo');
+$r = pedir('GET', '/api.php?p=' . $feriaInf['slug'] . '&tema=brujitas&modo=infantil');
+f_check(!array_key_exists('suelo', $r['json']['theme']['asomate'] ?? []), 'Noche de Brujas no lo trae: usa el de siempre');
+
 // ── Retención: 7 días para la feria, nada para la fiesta normal ─────────────
 $pdo->prepare('UPDATE cc_ferias SET fecha = ? WHERE id = ?')->execute([gmdate('Y-m-d', time() - 8 * 86400), $feria['id']]);
 $archivos = $pdo->query('SELECT storage_key FROM cc_photos WHERE party_id = ' . $feria['party_id'])->fetchAll(PDO::FETCH_COLUMN);

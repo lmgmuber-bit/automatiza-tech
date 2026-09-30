@@ -168,9 +168,23 @@ Costo estimado con precios de lista de la API de Higgsfield (`references/api-res
 | Imágenes (banner, sala, escena, 6 personajes, 6 Asómate, ruleta) | 16 | USD 0,0162 (`marketing-studio/image/flare`, 9 imágenes costaron USD 0,1458 el 26-sep) | USD 0,26 |
 | Videos Kling 3.0 Pro de 5 s (intro, despedida, 6 saludos) | 8 | USD 0,42 (USD 0,084/s) | USD 3,36 |
 | Reintentos (la experiencia del 26-sep: 4 tomas para 2 intros) | ×2 en videos | | USD 3,36 |
-| Voz de Alice (ElevenLabs) | 8 líneas | plan vigente | USD 0 |
+| Voz de Matilda en Eleven v3 (ElevenLabs; era Alice hasta el 29-09) | 8 líneas | plan vigente | USD 0 |
 | Música | 2 pistas | Gemini (Lyria 3), la genera Luis | USD 0 |
 | **Total por temática** | | | **≈ USD 7 de lista; las dos ≈ USD 14** |
+
+#### Lo que se produjo hasta el 30-sep (registros de generación, precios de lista)
+
+| Pieza | Noche de Brujas | Navidad | Costo |
+|---|---|---|---|
+| Imágenes `flare` (banner, sala, escena, evento, 6 personajes, ruleta) | 12 | 12 | USD 0,389 |
+| Videos Kling 3.0 Pro de 5 s (6 saludos, 2 tomas de bienvenida, despedida) | 9 | 10 (uno repetido) | USD 7,98 |
+| Asómate: cuerpos de pie con Qwen Image 3 edit (USD 0,04 c/u) | 10 | 6 | USD 0,64 |
+| Voz: Matilda en Eleven v3, 8 líneas por temática | 437 caracteres | 438 caracteres | 875 caracteres más unos 200 de pruebas |
+| **Higgsfield, total de lista** | | | **USD 9,01** (aprobados: USD 14 más unos USD 1,20 cotizados para Asómate) |
+
+Faltan la música (dos pistas, Luis con `MUSICA-TEMATICAS-INFANTILES-PROMPTS.md`), el visto bueno de Luis a los nombres de los
+personajes y una corrida en la tablet. Los intentos que Higgsfield rechazó con "temporarily unavailable" (13 en Asómate) no se
+cobran según la referencia de la API; no se comprobó en la consola de facturación.
 
 Tiempo: `fiestas-patrias` con Asómate e intro se produjo en un día (26-sep). Cada temática nueva: 1 día de producción
 más medio día de verificación (voces con `ebur128` y `scribe_v1`, Tabla A en verde, tablet). **Nada se genera sin el OK

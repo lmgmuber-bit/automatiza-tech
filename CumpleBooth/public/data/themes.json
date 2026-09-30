@@ -2558,6 +2558,85 @@
       "videos": {
         "welcome": "welcome-brujitas.mp4",
         "despedida": "despedida-brujitas.mp4"
+      },
+      "asomate": {
+        "fondo": "fondo-escena.jpg",
+        "personajes": {
+          "brujita": {
+            "w": 530,
+            "h": 1300,
+            "arriba": 0,
+            "pies": 1299,
+            "izq": 0,
+            "der": 529,
+            "cx": 273.4,
+            "cy": 419.6,
+            "rx": 129.4,
+            "ry": 107.1
+          },
+          "calabaza": {
+            "w": 620,
+            "h": 1300,
+            "arriba": 0,
+            "pies": 1299,
+            "izq": 0,
+            "der": 619,
+            "cx": 311.1,
+            "cy": 447.4,
+            "rx": 213.2,
+            "ry": 195.8
+          },
+          "fantasmita": {
+            "w": 691,
+            "h": 1300,
+            "arriba": 0,
+            "pies": 1299,
+            "izq": 0,
+            "der": 690,
+            "cx": 344.0,
+            "cy": 342.6,
+            "rx": 188.9,
+            "ry": 152.3
+          },
+          "gato": {
+            "w": 532,
+            "h": 1300,
+            "arriba": 0,
+            "pies": 1299,
+            "izq": 0,
+            "der": 531,
+            "cx": 278.5,
+            "cy": 475.7,
+            "rx": 178.2,
+            "ry": 144.8
+          },
+          "murcielaguito": {
+            "w": 672,
+            "h": 1300,
+            "arriba": 0,
+            "pies": 1299,
+            "izq": 0,
+            "der": 671,
+            "cx": 338.1,
+            "cy": 440.1,
+            "rx": 193.9,
+            "ry": 153.1
+          },
+          "momia": {
+            "w": 528,
+            "h": 1300,
+            "arriba": 0,
+            "pies": 1299,
+            "izq": 0,
+            "der": 527,
+            "cx": 245.5,
+            "cy": 508.6,
+            "rx": 176.1,
+            "ry": 123.3
+          }
+        },
+        "boton": "🎃 Asómate y sé de la Noche de Brujas",
+        "titulo": "¿Con quién te quieres asomar?"
       }
     },
     "navidad": {
@@ -2754,6 +2833,86 @@
       "videos": {
         "welcome": "welcome-navidad.mp4",
         "despedida": "despedida-navidad.mp4"
+      },
+      "asomate": {
+        "fondo": "fondo-escena.jpg",
+        "personajes": {
+          "pascuero": {
+            "w": 754,
+            "h": 1300,
+            "arriba": 0,
+            "pies": 1299,
+            "izq": 0,
+            "der": 753,
+            "cx": 383.4,
+            "cy": 417.1,
+            "rx": 156.1,
+            "ry": 131.1
+          },
+          "pascuera": {
+            "w": 551,
+            "h": 1300,
+            "arriba": 0,
+            "pies": 1299,
+            "izq": 0,
+            "der": 550,
+            "cx": 274.1,
+            "cy": 301.7,
+            "rx": 124.5,
+            "ry": 102.9
+          },
+          "reno": {
+            "w": 595,
+            "h": 1300,
+            "arriba": 0,
+            "pies": 1299,
+            "izq": 0,
+            "der": 594,
+            "cx": 311.9,
+            "cy": 343.3,
+            "rx": 160.6,
+            "ry": 145.5
+          },
+          "duende": {
+            "w": 579,
+            "h": 1300,
+            "arriba": 0,
+            "pies": 1299,
+            "izq": 0,
+            "der": 578,
+            "cx": 278.2,
+            "cy": 513.2,
+            "rx": 142.5,
+            "ry": 123.2
+          },
+          "nieve": {
+            "w": 732,
+            "h": 1300,
+            "arriba": 0,
+            "pies": 1299,
+            "izq": 0,
+            "der": 731,
+            "cx": 360.5,
+            "cy": 443.2,
+            "rx": 165.5,
+            "ry": 118.2
+          },
+          "pinguino": {
+            "w": 675,
+            "h": 1300,
+            "arriba": 0,
+            "pies": 1299,
+            "izq": 0,
+            "der": 674,
+            "cx": 336.7,
+            "cy": 539.1,
+            "rx": 193.2,
+            "ry": 174.9
+          }
+        },
+        "boton": "🎄 Asómate y sé parte de la Navidad",
+        "titulo": "¿Con quién te quieres asomar?",
+        "suelo": 0.865
       }
     }
   }

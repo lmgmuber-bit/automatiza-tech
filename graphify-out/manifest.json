@@ -4715,8 +4715,8 @@
     "semantic_hash": ""
   },
   "CLAUDE.md": {
-    "mtime": 1790651473.2995906,
-    "ast_hash": "5596450e62e528a0d91e4bee1fd17784",
+    "mtime": 1790738656.5638497,
+    "ast_hash": "d66227e73c911833ec8333a4a0376333",
     "semantic_hash": ""
   },
   "CONTEXTO_COMPLETO.md": {
@@ -10860,13 +10860,13 @@
     "semantic_hash": ""
   },
   "Docs/superpowers/specs/2026-09-27-gt-baseball-prototipo-design.md": {
-    "mtime": 1790691345.8695288,
-    "ast_hash": "5bac3d4a50ea8649fa0b3a0c4df0b452",
+    "mtime": 1790738684.4057088,
+    "ast_hash": "41c2a8bb11d75963a9ec7f178f27e0b2",
     "semantic_hash": ""
   },
   "N8N/gt-baseball/README.md": {
-    "mtime": 1790708760.1596844,
-    "ast_hash": "8dbaa49129dd1ea0c2417f1aa20313e4",
+    "mtime": 1790737551.5416346,
+    "ast_hash": "60c84a7ddaf0efb47ec84ace306a3492",
     "semantic_hash": ""
   },
   "demos/gt-baseball/cartel.html": {
@@ -10940,13 +10940,13 @@
     "semantic_hash": ""
   },
   "demos/gt-baseball/assets/buscador.js": {
-    "mtime": 1790735070.842744,
-    "ast_hash": "c314a52e975d8ffccefd3cb3e62d0199",
+    "mtime": 1790737494.1009152,
+    "ast_hash": "b6dd460965cb67e23ca475f32730fa8d",
     "semantic_hash": ""
   },
   "demos/gt-baseball/buscador/index.html": {
-    "mtime": 1790735391.5412326,
-    "ast_hash": "beb5faf0df857f2180c26b36680def46",
+    "mtime": 1790737036.027105,
+    "ast_hash": "bdf102da82019e692029924887db2df0",
     "semantic_hash": ""
   },
   "demos/gt-baseball/assets/fondo-atardecer-vertical.jpg": {

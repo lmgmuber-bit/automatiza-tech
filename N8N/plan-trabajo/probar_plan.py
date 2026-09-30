@@ -585,6 +585,14 @@ def prueba_correos():
            f'correo sin vista {flujo}: dice por qué no llega el aviso «borrador listo» y cómo pedir la vista previa')
         ok('automatiza-crm-ficha&amp;id=5&amp;pt=9#tab-plan' in h and 'easypanel' not in h and '&lt;b&gt;de&lt;/b&gt;' in h and '777' in h,
            f'correo sin vista {flujo}: botón a la pestaña del plan, proyecto escapado y ejecución')
+        # M5: el aviso viene de WordPress y trae el error de red tal cual: «Could not resolve host: <servidor de easypanel>».
+        con_url = json.loads(json.dumps(guardado))
+        con_url['Guardar borrador']['body']['avisos'] = ['No se pudo pedir la vista previa: n8n no respondió: cURL error 6: Could not resolve host: '
+                                                         'n8n-n8n.kchiba.easypanel.host (' + 'https://n8n-n8n.kchiba.easypanel.host/webhook/plan-v1-render)']
+        r5, _ = correr(correo_sin_vista(flujo), con_url)
+        h5 = (r5 or {}).get('html', '')
+        ok(h5 and 'easypanel' not in h5 and 'Could not resolve host: (servidor interno)' in h5,
+           f'correo sin vista {flujo}: el error de red de WordPress no lleva la URL del servidor de easypanel (el SMTP la rechaza)', h5[-500:])
 
 
 @seccion('borrador')
@@ -696,6 +704,19 @@ def prueba_borrador():
     me = llamadas(t, 'Marcar error')
     ok(me and me[0]['body']['nota'].startswith('El modelo no respondió (ejecución SIM-1)') and len(t['correos']) == 1,
        'B7b: OpenAI falla sin detalle ({}, el error queda fuera de json) → «error» legible y correo', me)
+
+    # B7c (M5): el mensaje de red trae la URL del servidor: ni la nota que guarda WordPress ni el correo la llevan.
+    t = simular('plan-1-borrador.json', webhook=hook, http={'Leer contexto': [{'statusCode': 200, 'body': contexto()}], 'Marcar error': [MARCADO]},
+                openai={'Redactar plan': [{'error': {'message': 'connect ECONNREFUSED ' + URL_INTERNA}}]})
+    me = llamadas(t, 'Marcar error')
+    ok(me and 'easypanel' not in json.dumps(me) and '(servidor interno)' in me[0]['body']['nota'] and t['correos']
+       and 'easypanel' not in t['correos'][0]['html'] and '(servidor interno)' in t['correos'][0]['html'],
+       'B7c: un error de red con la URL de easypanel llega a la nota y al correo como «(servidor interno)»', me)
+    t = simular('plan-1-borrador.json', webhook=hook, http={'Leer contexto': [{'error': {'message': 'getaddrinfo ENOTFOUND ' + HOST_INTERNO}}],
+                'Marcar error': [MARCADO]}, openai={})
+    me = llamadas(t, 'Marcar error')
+    ok(me and 'easypanel' not in json.dumps(me) and t['correos'] and 'easypanel' not in t['correos'][0]['html'],
+       'B7c: lo mismo si falla la lectura del contexto (sin respuesta)', me)
 
     # 9. Llave de más al final y 10. respuesta envuelta: se aceptan.
     for caso, contenido in (('B9 llave de más', json.dumps(PLAN_IA) + '}'), ('B10 envuelta', json.dumps({'plan': PLAN_IA}))):
@@ -1318,6 +1339,68 @@ def prueba_render():
     ok(len(llamadas(t, 'Render')) == 3 and gv and gv[0]['body']['ok'] is False
        and gv[0]['body']['nota'].startswith('el renderer no devolvió la presentación (HTTP 502: Playwright timeout) tras 3 intentos'),
        'R15: tres 502 → 3 intentos y la nota con el código y el motivo', gv)
+
+    # R16 (M5). Los mensajes de red traen la URL del servidor (*.easypanel.host): ni la nota que guarda WordPress ni el
+    # correo a Luis la llevan (el SMTP de Hostinger rechaza el correo con 554).
+    t = sim({'id': 9, 'modo': 'final', 'aviso': False}, **{'Leer render': leido(render_final), 'Fotos de la propuesta': [MANIFEST_PROP],
+                                                          'Render': [renderer_ok(error='connect ECONNREFUSED ' + URL_INTERNA)]})
+    gv = llamadas(t, 'Guardar vista')
+    ok(gv and 'easypanel' not in json.dumps(gv) and '(servidor interno)' in gv[0]['body']['nota'] and 'ECONNREFUSED' in gv[0]['body']['nota'],
+       'R16: el render cae por la red: la nota no lleva la URL del servidor', gv)
+    ok(t['correos'] and 'easypanel' not in t['correos'][0]['html'] and '(servidor interno)' in t['correos'][0]['html'],
+       'R16: el correo de problemas tampoco', [c['asunto'] for c in t['correos']])
+    t = sim({'id': 9, 'modo': 'final', 'aviso': False}, **{'Leer render': leido(render_final), 'Fotos de la propuesta': [MANIFEST_PROP],
+                                                          'Render': [renderer_ok(8)],
+                                                          'Buscar texto en fotos': [{'error': {'message': 'connect ETIMEDOUT ' + URL_INTERNA}}]})
+    gv = llamadas(t, 'Guardar vista')
+    # (view_url y pdf_url del cuerpo sí llevan el enlace del renderer: WordPress los guarda; solo la nota y el correo no.)
+    ok(gv and gv[0]['body']['ok'] is True and 'easypanel' not in gv[0]['body']['nota'] and t['correos'] and 'easypanel' not in t['correos'][0]['html']
+       and 'No se pudo revisar si las fotos tienen texto' in gv[0]['body']['nota'],
+       'R16: la revisión de texto falla por la red: el aviso de la nota y del correo no lleva la URL del servidor', gv)
+    t = sim({'id': 9, 'modo': 'draft', 'aviso': False}, **{'Leer render': [{'error': {'message': 'ECONNRESET ' + URL_INTERNA}}]})
+    gv = llamadas(t, 'Guardar vista')
+    ok(gv and 'easypanel' not in json.dumps(gv) and t['correos'] and 'easypanel' not in t['correos'][0]['html'],
+       'R16: si falla la lectura del plan en WordPress (sin respuesta), tampoco', gv)
+
+
+# ---------------------------------------------------------------- M5 (revisión final): nada de *.easypanel.host en la nota ni el correo
+
+URL_INTERNA = 'https://n8n-n8n.kchiba.easypanel.host/webhook/plan-v1-render'
+HOST_INTERNO = 'n8n-propuesta-renderer.kchiba.easypanel.host'
+
+
+@seccion('url_interna')
+def prueba_url_interna():
+    """Un mensaje de red de n8n puede traer la URL del servidor (*.easypanel.host) y el SMTP de Hostinger rechaza un
+    correo que la lleve (554 5.7.1, 2026-09-24). sinUrlInterna() la cambia por «(servidor interno)» en un solo lugar."""
+    from plan_js import JS_RENDER, JS_REVISION
+    prog = lib() + JS_RENDER + JS_REVISION + r"""
+const R = {};
+R.casos = DATOS.textos.map((t) => sinUrlInterna(t));
+R.no_texto = [sinUrlInterna(null), sinUrlInterna(undefined), sinUrlInterna(42)];
+R.render_red = leerRespuestaRender({ error: { message: 'connect ECONNREFUSED ' + DATOS.url } }).fallo;
+R.render_red_texto = leerRespuestaRender({ error: 'getaddrinfo ENOTFOUND ' + DATOS.host }).fallo;
+R.render_detalle = leerRespuestaRender({ statusCode: 502, body: { error: 'fallo en ' + DATOS.url, details: ['no llegó a ' + DATOS.url] } }).detalles;
+R.revision = leerRevision({ error: { message: 'connect ETIMEDOUT ' + DATOS.url } }, ['gantt']).fallo;
+R.modelo = leerPlanModelo({ error: { message: 'request to ' + DATOS.url + ' failed' } }, { modo: 'borrador', hayPropuesta: true }).reason;
+console.log(JSON.stringify(R));
+"""
+    textos = ['connect ECONNREFUSED ' + URL_INTERNA, 'ENOTFOUND ' + HOST_INTERNO, 'falló (' + URL_INTERNA + ') otra vez',
+              'http://n8n.easypanel.host:5678/x y https://a.b.easypanel.host/p?q=1', 'sin nada raro: HTTP 502', '']
+    r, err = node_js(prog, {'textos': textos, 'url': URL_INTERNA, 'host': HOST_INTERNO})
+    ok(r is not None, 'url_interna: el JavaScript corre con node', err)
+    if r is None:
+        return
+    ok(all('easypanel' not in c.lower() for c in r['casos']), 'sinUrlInterna: ninguna URL ni host *.easypanel.host sobrevive', r['casos'])
+    ok(r['casos'][0] == 'connect ECONNREFUSED (servidor interno)' and r['casos'][4] == 'sin nada raro: HTTP 502' and r['casos'][5] == '',
+       'sinUrlInterna: cambia solo la URL por «(servidor interno)» y deja el resto del mensaje', r['casos'])
+    ok(r['no_texto'] == ['', '', '42'], 'sinUrlInterna: lo que no es texto no lanza', r['no_texto'])
+    ok('easypanel' not in r['render_red'] and 'ECONNREFUSED' in r['render_red'] and '(servidor interno)' in r['render_red'],
+       'leerRespuestaRender: el fallo de red no trae la URL del servidor', r['render_red'])
+    ok('easypanel' not in r['render_red_texto'] and '(servidor interno)' in r['render_red_texto'], 'leerRespuestaRender: tampoco cuando el error llega como texto', r['render_red_texto'])
+    ok(all('easypanel' not in d for d in r['render_detalle']), 'leerRespuestaRender: ni en los motivos («details») del renderer', r['render_detalle'])
+    ok('easypanel' not in r['revision'] and '(servidor interno)' in r['revision'], 'leerRevision: el fallo de la consulta no trae la URL del servidor', r['revision'])
+    ok('easypanel' not in r['modelo'] and '(servidor interno)' in r['modelo'], 'leerPlanModelo: el motivo del modelo no trae la URL del servidor', r['modelo'])
 
 
 # ==== Las tareas siguientes agregan sus secciones justo antes de esta línea ====

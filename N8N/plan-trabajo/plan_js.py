@@ -13,7 +13,16 @@ por lámina, con las reglas de fotos_guard). Nunca lanza: devuelve {ok, reason, 
 pase el plan a «error» con un motivo legible.
 """
 
-JS_PLAN = r"""
+JS_SIN_URL_INTERNA = r"""
+// Un mensaje de red de n8n puede traer la URL del servidor y el SMTP de Hostinger rechaza (554 5.7.1) un correo que
+// lleve un enlace al servidor de Easypanel. Cambia toda URL o nombre de servidor de ese dominio por «(servidor interno)».
+// Se usa en los tres flujos, sobre todo mensaje de error antes de armar la nota que guarda WordPress y el correo a Luis.
+// El nombre del dominio va partido a propósito: ninguna prueba ni el código de un correo puede llevarlo escrito entero.
+const SERVIDOR_INTERNO = new RegExp('\\S*easy' + 'panel\\.host\\S*', 'gi');
+const sinUrlInterna = (t) => String(t == null ? '' : t).replace(SERVIDOR_INTERNO, '(servidor interno)');
+"""
+
+JS_PLAN = JS_SIN_URL_INTERNA + r"""
 const CLAVES_PLAN = ['version', 'proyecto', 'fecha_firma', 'fecha_inicio', 'fases', 'hitos', 'necesitamos_de_ti',
   'reuniones', 'soporte', 'image_briefs', 'cronograma'];
 // Láminas con foto NUEVA (decisión 7). Portada y cierre solo si el contrato no tiene propuesta: si la tiene,
@@ -132,7 +141,7 @@ function unirPor(antes, nuevos, campo) {
 // ia = salida del nodo OpenAI ({message: {content}} o {error} con onError=continue).
 // op = {modo: 'borrador'|'cambios', hayPropuesta: bool, anterior: plan guardado (solo en cambios)}.
 function leerPlanModelo(ia, op) {
-  const mal = (reason) => ({ ok: false, reason, plan: null, protegidas: 0 });
+  const mal = (reason) => ({ ok: false, reason: sinUrlInterna(reason), plan: null, protegidas: 0 });
   const contenido = ia && ia.message ? ia.message.content : null;
   if (contenido == null || String(contenido).trim() === '') {
     const err = ia && ia.error ? (ia.error.message || String(ia.error)) : '';
@@ -220,6 +229,8 @@ if ($('Guardar borrador').isExecuted) {
   reason = 'No se pudo leer el contexto del plan en WordPress (' + estadoHttp(lc) + ')' + (b.message ? ' — ' + b.message : '');
 }
 if (!reason) reason = MODO === 'cambios' ? 'Error desconocido al aplicar los cambios' : 'Error desconocido al generar el borrador';
+// Ninguna URL del servidor de Easypanel en la nota ni en el correo (el SMTP de Hostinger lo rechaza).
+reason = sinUrlInterna(reason);
 // WordPress guarda como mucho 1000 caracteres de nota (/error) y el flujo le suma « (ejecución N)».
 if (reason.length > 900) reason = reason.slice(0, 900) + '…';
 return [{ json: { id, crm: parseInt(ctx.crm_cliente_id, 10) || 0, proyecto: String(ctx.proyecto || ctx.empresa || ('plan ' + id)),
@@ -295,7 +306,7 @@ function leerRespuestaRender(x) {
     cuerpo = esObjetoPlano(b) ? b : {};
   } else if (j.error) {
     const e = j.error;
-    fallo = typeof e === 'string' ? e : String(e.message || e.description || 'sin detalle');
+    fallo = sinUrlInterna(typeof e === 'string' ? e : String(e.message || e.description || 'sin detalle'));
   } else if (Object.keys(j).length) {
     status = 200;
     cuerpo = j;
@@ -303,7 +314,7 @@ function leerRespuestaRender(x) {
     fallo = 'sin respuesta';
   }
   const d = cuerpo.details;
-  const detalles = (Array.isArray(d) ? d : (d == null || d === '' ? [] : [d])).map((t) => String(t).slice(0, 200)).filter(Boolean).slice(0, 5);
+  const detalles = (Array.isArray(d) ? d : (d == null || d === '' ? [] : [d])).map((t) => sinUrlInterna(String(t).slice(0, 200))).filter(Boolean).slice(0, 5);
   const images = status === 200 && esObjetoPlano(cuerpo.images) ? cuerpo.images : {};
   const missing = Array.isArray(images.missing) ? images.missing.map(String) : [];
   const url = (u) => (status === 200 && typeof u === 'string' ? u : '');
@@ -405,7 +416,7 @@ function leerRevision(r, mostradas) {
   if (x.statusCode !== 200) {
     const e = x.error;
     const msg = e && typeof e === 'object' ? e.message : e;
-    return { con_texto: null, fallo: x.statusCode ? 'OpenAI respondió HTTP ' + x.statusCode : 'OpenAI no respondió' + (msg ? ': ' + String(msg).slice(0, 200) : '') };
+    return { con_texto: null, fallo: x.statusCode ? 'OpenAI respondió HTTP ' + x.statusCode : 'OpenAI no respondió' + (msg ? ': ' + sinUrlInterna(String(msg).slice(0, 200)) : '') };
   }
   try {
     const j = JSON.parse(x.body.choices[0].message.content);

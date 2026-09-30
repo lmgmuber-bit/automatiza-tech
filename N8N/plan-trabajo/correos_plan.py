@@ -12,6 +12,7 @@ import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'propuestas-v3'))
 from email_tpl import JS_ESC, boton, caja, etiqueta, marco, nota, parrafo  # noqa: E402
+from plan_js import JS_SIN_URL_INTERNA  # noqa: E402
 
 ROTULOS = [
     ('Propuestas · aviso interno', 'Plan de trabajo · aviso interno'),
@@ -48,7 +49,7 @@ def marco_plan(titulo, etiqueta_html, cuerpo):
 def js_correo_plan(preparacion, asunto, titulo, etiqueta_html, cuerpo, extra=''):
     """Como email_tpl.js_correo, con el rótulo del plan, urlPanel() y campos extra en la salida."""
     html = marco_plan(titulo, etiqueta_html, cuerpo)
-    return (JS_ESC + JS_PANEL + preparacion + '\nconst html = `' + html + '`;\n'
+    return (JS_ESC + JS_SIN_URL_INTERNA + JS_PANEL + preparacion + '\nconst html = `' + html + '`;\n'
             + 'return [{ json: { asunto: ' + asunto + ', html' + (', ' + extra if extra else '') + ' } }];')
 
 
@@ -102,7 +103,7 @@ def correo_sin_vista(flujo):
 const hook = $('Webhook').first().json.body || {};
 const id = parseInt(hook.id, 10) || 0;
 const g = $('Guardar borrador').first().json.body || {};
-const avisos = (Array.isArray(g.avisos) ? g.avisos : []).map(String).filter((a) => a.startsWith(""" + repr(AVISO_SIN_VISTA) + """));
+const avisos = (Array.isArray(g.avisos) ? g.avisos : []).map(String).map(sinUrlInterna).filter((a) => a.startsWith(""" + repr(AVISO_SIN_VISTA) + """));
 const proyecto = String(ctx.proyecto || ctx.empresa || ('plan ' + id));
 const panel = urlPanel(ctx.crm_cliente_id, id);
 const exec = String($execution.id);"""

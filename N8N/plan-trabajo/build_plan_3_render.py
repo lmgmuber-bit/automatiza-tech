@@ -157,7 +157,7 @@ if (!$('Preparar render').isExecuted) {
   const b = esObjetoPlano(lr.body) ? lr.body : {};
   const motivo = 'No se pudo leer el plan en WordPress (' + (lr.statusCode ? 'HTTP ' + lr.statusCode
     : 'sin respuesta' + (lr.error && lr.error.message ? ': ' + lr.error.message : '')) + ')' + (b.message ? ' — ' + b.message : '');
-  return [{ json: Object.assign(vacio, { problemas: [motivo], nota: motivo + ' (ejecución ' + exec + ')' }) }];
+  return [{ json: Object.assign(vacio, { problemas: [sinUrlInterna(motivo)], nota: sinUrlInterna(motivo) + ' (ejecución ' + exec + ')' }) }];
 }
 // La última pasada del bucle de renders (llega aquí también desde la revisión de texto).
 const v = $('¿Reintentar render?').first().json || {};
@@ -213,9 +213,12 @@ if (ok && modo === 'final') {
 const extra = avisos.length ? ' · ' + avisos.join(' · ') : '';
 const nota = ok ? (modo === 'final' ? 'Versión final verificada: ' : 'Vista previa lista: ') + resumen.join(' · ') + extra
   : problemas.join(' · ') + extra + ' (ejecución ' + exec + ')';
+// Ninguna URL del servidor de Easypanel en la nota ni en el correo (el SMTP de Hostinger los rechaza): se limpia todo lo
+// que se cuenta, venga de la red, del renderer o de la revisión. Los enlaces view_url y pdf_url no se cuentan: los guarda WordPress.
+const limpio = (l) => l.map(sinUrlInterna);
 return [{ json: Object.assign(vacio, { ok, view_url: lr.view_url, pdf_url: lr.pdf_url,
-  faltan: modo === 'final' ? missing : [], problemas, avisos, resumen, nota, crm: v.crm || 0, proyecto: v.proyecto || vacio.proyecto,
-  renders: intento }) }];"""
+  faltan: modo === 'final' ? missing : [], problemas: limpio(problemas), avisos: limpio(avisos), resumen: limpio(resumen),
+  nota: sinUrlInterna(nota), crm: v.crm || 0, proyecto: v.proyecto || vacio.proyecto, renders: intento }) }];"""
 
 
 def node(id_, name, type_, version, pos, params, **extra):

@@ -29,7 +29,10 @@ WP = 'https://automatizatech.cl/?rest_route=/automatiza-tech/v1'
 CRED_WP_ID = '1NI0sJKc0kC430pb'
 # Topes que valida WordPress (grupo-A.md, Task 2, «Para la Task 13»; decisión D12): los dos prompts los dicen tal cual.
 TOPES_PROMPT = ['13 bloques', '10 actividades por bloque', '58 actividades en total', 'de 1 a 60 días hábiles por actividad',
-                '130 días hábiles', '5 días hábiles de revisión por cada bloque con entrega', '10 hitos',
+                # M1 (revisión final): WordPress cuenta 130 días con el «Arranque» (4 días) incluido; el modelo no lo manda, así
+                # que su tope es 126 y el prompt avisa que el sistema suma esos 4.
+                '126 días hábiles', 'el sistema suma 4 días del Arranque',
+                '5 días hábiles de revisión por cada bloque con entrega', '10 hitos',
                 '"diseno_desarrollo", "implementacion" y "soporte"', '"at", "cliente" o "ambos"',
                 'NO incluyas el bloque «Arranque»']
 
@@ -578,7 +581,8 @@ def prueba_borrador():
     ok('easypanel' not in json.dumps(cargar('plan-1-borrador.json')), '1 Borrador: no toca el renderer ni enlaza a *.easypanel.host')
     faltan = [x for x in TOPES_PROMPT if x not in PROMPT_PLAN]
     ok(not faltan, 'PROMPT_PLAN: dice los topes que valida WordPress (13 bloques, 10 por bloque, 58 actividades, 1 a 60 días, '
-       '130 días hábiles, 10 hitos, claves) y pide no mandar el «Arranque»', faltan)
+       '126 días hábiles más 4 del Arranque, 10 hitos, claves) y pide no mandar el «Arranque»', faltan)
+    ok('130 días hábiles' not in PROMPT_PLAN, 'PROMPT_PLAN: no le dice al modelo 130 días (el tope que ve es 126: el Arranque suma 4)')
     GUARDADO_OK = {'statusCode': 200, 'body': {'ok': True, 'errores': [], 'avisos': []}}
     MARCADO = {'statusCode': 200, 'body': {'ok': True}}
     hook = {'id': 9, 'codigo': 'PRUEBAplan01'}
@@ -745,6 +749,7 @@ def prueba_cambios():
     ok('easypanel' not in json.dumps(cargar('plan-2-cambios.json')), '2 Cambios: no toca el renderer ni enlaza a *.easypanel.host')
     faltan = [x for x in TOPES_PROMPT if x not in PROMPT_CAMBIOS]
     ok(not faltan, 'PROMPT_CAMBIOS: dice los mismos topes que valida WordPress y pide no mandar el «Arranque»', faltan)
+    ok('130 días hábiles' not in PROMPT_CAMBIOS, 'PROMPT_CAMBIOS: no le dice al modelo 130 días (el tope que ve es 126: el Arranque suma 4)')
     GUARDADO_OK = {'statusCode': 200, 'body': {'ok': True, 'errores': [], 'avisos': []}}
     MARCADO = {'statusCode': 200, 'body': {'ok': True}}
     hook = {'id': 9, 'codigo': 'PRUEBAplan01'}

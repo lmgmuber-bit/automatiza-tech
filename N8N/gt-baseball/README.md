@@ -111,6 +111,10 @@ Página /buscador/ → POST /webhook/gt-baseball-buscador { clave }
 - Todo se dibuja con `textContent` (nada de `innerHTML` con datos) y solo se arman enlaces con ids que tienen forma de
   id de Drive. El `?endpoint=` de prueba solo funciona en `localhost` y `127.0.0.1`.
 - `buscador/.htaccess` agrega `X-Robots-Tag: noindex, nofollow` y `Cache-Control: no-store`; la CSP viene de la raíz.
+- **Fotos (30-sep):** con `{clave, accion: 'fotos', ids}` el flujo devuelve miniaturas de 200 px como data URL
+  (nodos «Leer foto», «Bajar miniatura», «Armar fotos»). Solo acepta ids que estén en la columna de fotos (U) del Sheet,
+  hasta 24 por pedido: así la credencial de Drive no sirve para leer otros archivos de `contacto@`. La página las pide
+  solo para la página visible y las guarda en memoria, nunca en el teléfono.
 - No guarda ejecuciones exitosas, con error ni manuales (traen nombres y cédulas de menores).
 - `buscador/.htaccess` trae una CSP propia más estricta que la de la portada (sin Turnstile ni cdnjs; solo el script
   de tema en línea, por su hash). Si se cambia ese `<script>` de `buscador/index.html`, hay que recalcular el hash.

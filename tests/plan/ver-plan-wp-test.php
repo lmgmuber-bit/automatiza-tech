@@ -43,5 +43,6 @@ ok(strpos($hn, 'no está disponible') !== false && strpos($hn, '<iframe') === fa
 // ver-plan.php solo carga WordPress y llama a la vista
 $archivo = (string) file_get_contents(dirname(__DIR__, 2) . '/ver-plan.php');
 ok(strpos($archivo, "require_once __DIR__ . '/wp-load.php'") !== false && strpos($archivo, 'at_pt_html_ver_plan(') !== false && strpos($archivo, 'nocache_headers()') !== false && strpos($archivo, 'X-Robots-Tag') !== false, 'ver-plan.php: carga WordPress, sin caché, noindex, y dibuja la vista');
+ok(strpos($archivo, "is_string(\$_GET['id'])") !== false, 'ver-plan.php: ignora un id que no es texto (?id[]=x no lanza «Array to string conversion»)');
 
 fin();

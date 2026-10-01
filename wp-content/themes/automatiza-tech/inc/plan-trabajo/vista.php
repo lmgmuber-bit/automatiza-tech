@@ -68,8 +68,8 @@ function at_pt_html_ver_plan(?object $fila, bool $abrir_agenda): string {
 			. '<div class="at-pt-dlg-botones"><button type="button" class="at-pt-btn at-pt-btn--sec" id="at-pt-cerrar">Cerrar</button>'
 			. '<button type="submit" class="at-pt-btn at-pt-btn--si">Agendar</button></div>'
 			. '</form></dialog>'
-			. '<script>window.AT_AGENDA = ' . wp_json_encode(['configUrl' => esc_url_raw(rest_url('automatiza-tech/v1/appointments-config'))]) . ';'
-			. 'window.AT_PT_VER = ' . wp_json_encode(['url' => esc_url_raw(rest_url('automatiza-tech/v1/plan-seguimiento')), 'codigo' => $codigo, 'token' => at_pt_token_agenda_hoy($codigo), 'abrir' => $abrir_agenda], JSON_UNESCAPED_SLASHES) . ';</script>'
+			. '<script>window.AT_AGENDA = ' . wp_json_encode(['configUrl' => esc_url_raw(rest_url('automatiza-tech/v1/appointments-config'))], JSON_HEX_TAG) . ';'
+			. 'window.AT_PT_VER = ' . wp_json_encode(['url' => esc_url_raw(rest_url('automatiza-tech/v1/plan-seguimiento')), 'codigo' => $codigo, 'token' => at_pt_token_agenda_hoy($codigo), 'abrir' => $abrir_agenda], JSON_UNESCAPED_SLASHES | JSON_HEX_TAG) . ';</script>'
 			. '<script src="' . esc_url($tema . '/assets/home-premium/at-agenda.js?v=' . $ver('/assets/home-premium/at-agenda.js')) . '"></script>'
 			. '<script src="' . esc_url($tema . '/assets/js/plan-ver.js?v=' . $ver('/assets/js/plan-ver.js')) . '"></script>';
 	}

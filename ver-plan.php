@@ -3,7 +3,7 @@
 // wp-content/themes/automatiza-tech/inc/plan-trabajo/vista.php.
 require_once __DIR__ . '/wp-load.php';
 
-$codigo = isset($_GET['id']) ? preg_replace('/[^A-Za-z0-9]/', '', (string) wp_unslash($_GET['id'])) : '';
+$codigo = isset($_GET['id']) && is_string($_GET['id']) ? preg_replace('/[^A-Za-z0-9]/', '', (string) wp_unslash($_GET['id'])) : '';
 // La página lleva el token del día: nunca se guarda en caché.
 if (!defined('DONOTCACHEPAGE')) {
 	define('DONOTCACHEPAGE', true);

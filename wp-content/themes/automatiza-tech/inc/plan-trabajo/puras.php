@@ -1100,7 +1100,7 @@ function at_pt_texto_whatsapp_agenda(string $codigo): string {
  *  (draft true, sin fotos: image_briefs vacío); $final true = image_briefs del plan. 'images' sale como objeto JSON
  *  vacío ({}) para que n8n le agregue las fotos reutilizadas por lámina (un [] de PHP llegaría como arreglo y
  *  JSON.stringify perdería esas claves). portal_url solo si es http(s); sin correo no hay portal y la lámina «Sigue tu
- *  proyecto» va sin enlace (Review Focus 4). agenda.web_url queda '' en la Etapa 1. */
+ *  proyecto» va sin enlace (Review Focus 4). agenda.web_url apunta a ver-plan.php?id=…&agendar=1 cuando $datos['sitio'] viene (Etapa 2); sin sitio queda ''. */
 function at_pt_armar_render(array $plan, array $datos, bool $final): array {
 	$codigo = trim((string) ($datos['codigo'] ?? ''));
 	$empresa = trim((string) ($datos['company_name'] ?? ''));
@@ -1151,9 +1151,176 @@ function at_pt_armar_render(array $plan, array $datos, bool $final): array {
 		'portal_url'        => $portal,
 		'agenda'            => [
 			'whatsapp_url' => $telefono === '' ? '' : 'https://wa.me/' . $telefono . '?text=' . rawurlencode(at_pt_texto_whatsapp_agenda($codigo)),
-			'web_url'      => '',
+			'web_url'      => at_pt_url_ver_plan((string) ($datos['sitio'] ?? ''), $codigo, true),
 		],
 		'image_briefs'      => $final ? array_values($plan['image_briefs'] ?? []) : [],
 		'images'            => new stdClass(),
 	];
+}
+
+/* ---------- Etapa 2: envío al cliente, vista pública y agenda web ---------- */
+
+/** Enlace público del plan en el sitio de AT; con $agendar abre el selector de horarios. '' sin sitio o con un código que
+ *  no es alfanumérico de 6 a 32 caracteres. */
+function at_pt_url_ver_plan(string $base, string $codigo, bool $agendar = false): string {
+	$base = rtrim(trim($base), '/');
+	if ($base === '' || !preg_match('/^[A-Za-z0-9]{6,32}$/', $codigo)) {
+		return '';
+	}
+	return $base . '/ver-plan.php?id=' . $codigo . ($agendar ? '&agendar=1' : '');
+}
+
+/** wa.me de Tech con el mensaje para agendar y el código del plan; '' sin número de AT. */
+function at_pt_url_whatsapp_agenda(string $telefono_at, string $codigo): string {
+	$n = at_pt_telefono_wa($telefono_at);
+	return $n === '' ? '' : 'https://wa.me/' . $n . '?text=' . rawurlencode(at_pt_texto_whatsapp_agenda($codigo));
+}
+
+/** Teléfono para wa.me: solo dígitos; un celular chileno de 9 dígitos que parte en 9 lleva 56 delante. '' con menos de
+ *  9 dígitos o más de 15. */
+function at_pt_telefono_wa(string $telefono): string {
+	$n = (string) preg_replace('/\D/', '', $telefono);
+	if (strlen($n) === 9 && $n[0] === '9') {
+		$n = '56' . $n;
+	}
+	return (strlen($n) < 10 || strlen($n) > 15) ? '' : $n;
+}
+
+/** Mensaje que Luis manda desde su WhatsApp con el enlace del plan. */
+function at_pt_texto_whatsapp_envio(string $nombre, string $proyecto, string $url_ver): string {
+	$saludo = trim($nombre) !== '' ? 'Hola ' . trim($nombre) : 'Hola';
+	$de = trim($proyecto) !== '' ? ' de ' . trim($proyecto) : '';
+	return $saludo . ', te escribe Luis de AutomatizaTech. Te comparto el plan de trabajo' . $de
+		. ', con las fases, las fechas estimadas y lo que necesitamos de ti: ' . $url_ver
+		. "\nAhí mismo puedes agendar la llamada de seguimiento para revisarlo juntos.";
+}
+
+/** «Entrega estimada» del cronograma (D4); sin ese hito, el fin del cronograma; '' sin cronograma. */
+function at_pt_entrega_estimada(array $plan): string {
+	$crono = is_array($plan['cronograma'] ?? null) ? $plan['cronograma'] : [];
+	foreach ((array) ($crono['hitos'] ?? []) as $h) {
+		if (is_array($h) && ($h['nombre'] ?? '') === 'Entrega estimada') {
+			return at_pt_ymd((string) ($h['fecha'] ?? ''));
+		}
+	}
+	return at_pt_ymd((string) ($crono['fin'] ?? ''));
+}
+
+/**
+ * Correo «Tu plan de trabajo». $v: nombre, proyecto, logo, url_ver, url_agendar, url_whatsapp, inicio y entrega (Y-m-d),
+ * con_pdf (bool). Hostinger rechaza (554) los correos que enlazan a *.easypanel.host: un enlace del renderer no se dibuja.
+ */
+function at_pt_correo_plan_html(array $v): string {
+	$h = function ($s) { return htmlspecialchars((string) $s, ENT_QUOTES, 'UTF-8'); };
+	$url = function ($u): string {
+		$u = trim((string) $u);
+		return (preg_match('#^https?://\S+$#i', $u) && stripos($u, 'easypanel') === false) ? $u : '';
+	};
+	$nombre = trim((string) ($v['nombre'] ?? ''));
+	$proyecto = trim((string) ($v['proyecto'] ?? ''));
+	$logo = $url($v['logo'] ?? '');
+	$ver = $url($v['url_ver'] ?? '');
+	$agendar = $url($v['url_agendar'] ?? '');
+	$wa = $url($v['url_whatsapp'] ?? '');
+	$inicio = at_pt_fecha_larga((string) ($v['inicio'] ?? ''));
+	$entrega = at_pt_fecha_larga((string) ($v['entrega'] ?? ''));
+	$boton = function (string $href, string $texto, string $fondo) use ($h): string {
+		return '<a href="' . $h($href) . '" style="display:inline-block;background:' . $fondo . ';color:#ffffff;text-decoration:none;font-weight:bold;padding:12px 26px;border-radius:24px;margin:6px">' . $h($texto) . '</a>';
+	};
+	$fechas = ($inicio !== '' && $entrega !== '')
+		? '<p>Partimos el <strong>' . $h($inicio) . '</strong> y la entrega estimada es el <strong>' . $h($entrega) . '</strong>. Son fechas estimadas: corren desde que recibimos el anticipo y tus insumos.</p>'
+		: '';
+	return '<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body style="font-family:Arial,sans-serif;background:#f4f6fb;margin:0;padding:0;color:#222">'
+		. '<div style="max-width:600px;margin:24px auto;background:#ffffff;border-radius:10px;overflow:hidden">'
+		. '<div style="background:#1e40af;color:#ffffff;text-align:center;padding:26px 20px">'
+		. ($logo !== '' ? '<img src="' . $h($logo) . '" alt="AutomatizaTech" style="max-height:64px"><br>' : '')
+		. '<h1 style="margin:12px 0 0;font-size:22px">Tu plan de trabajo</h1></div>'
+		. '<div style="padding:26px;line-height:1.6">'
+		. '<p>Hola <strong>' . $h($nombre !== '' ? $nombre : 'cliente') . '</strong>,</p>'
+		. '<p>Te enviamos el plan de trabajo' . ($proyecto !== '' ? ' de <strong>' . $h($proyecto) . '</strong>' : '')
+		. ': qué hacemos, en qué orden, cuánto demora cada parte, qué necesitamos de ti y cuándo revisas y apruebas.</p>'
+		. $fechas
+		. (!empty($v['con_pdf']) ? '<p>Va adjunto en PDF; también puedes verlo en línea.</p>' : '')
+		. ($ver !== '' ? '<p style="text-align:center;margin:22px 0">' . $boton($ver, 'Ver mi plan de trabajo', '#1e40af') . '</p>' : '')
+		. '<p>Queremos revisarlo contigo y aclarar tus dudas en una llamada de seguimiento. Agéndala cuando te acomode:</p>'
+		. '<p style="text-align:center;margin:18px 0">'
+		. ($agendar !== '' ? $boton($agendar, 'Agendar mi llamada de seguimiento', '#059669') : '')
+		. ($wa !== '' ? $boton($wa, 'Agendar por WhatsApp con Tech', '#17b7b1') : '')
+		. '</p>'
+		. '<p>Cualquier duda, responde este correo.</p><p>Un abrazo,<br><strong>El equipo de AutomatizaTech</strong></p></div>'
+		. '<div style="background:#f1f1f1;color:#777;text-align:center;font-size:12px;padding:14px">© ' . date('Y') . ' AutomatizaTech · automatizatech.cl</div>'
+		. '</div></body></html>';
+}
+
+/**
+ * '' si la hora sirve para la llamada; si no, la clave del motivo (at_pt_mensajes_agenda()). $fecha 'Y-m-d', $hora
+ * 'HH:00' o 'HH:00:00', $ahora 'Y-m-d H:i' en hora de Chile (current_time). $disp es lo que devuelve
+ * automatiza_tech_check_availability(): ['isFullDay' => bool, 'busySlots' => ['HH:MM', …], 'workingHours' =>
+ * ['start' => 'HH:MM', 'end' => 'HH:MM']]; vacío o sin horario = día no disponible. Misma regla que la portada:
+ * horas en punto desde el inicio hasta antes del fin, desde la hora siguiente a la actual y hasta 90 días.
+ */
+function at_pt_motivo_hora_agenda(string $fecha, string $hora, string $ahora, array $disp): string {
+	if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $fecha) || at_pt_ymd($fecha) === '') {
+		return 'fecha_invalida';
+	}
+	if (!preg_match('/^([01]\d|2[0-3]):00(:00)?$/', $hora, $m)) {
+		return 'hora_invalida';
+	}
+	$h = (int) $m[1];
+	$hoy = substr($ahora, 0, 10);
+	if ($fecha < $hoy || ($fecha === $hoy && $h <= (int) substr($ahora, 11, 2))) {
+		return 'pasada';
+	}
+	$tope = (new DateTimeImmutable($hoy . ' 00:00:00', new DateTimeZone('UTC')))->modify('+90 days')->format('Y-m-d');
+	if ($fecha > $tope) {
+		return 'muy_lejos';
+	}
+	if (!empty($disp['isFullDay']) || !is_array($disp['workingHours'] ?? null)) {
+		return 'dia_no_disponible';
+	}
+	$inicio = (int) explode(':', (string) ($disp['workingHours']['start'] ?? '00:00'))[0];
+	$fin = (int) explode(':', (string) ($disp['workingHours']['end'] ?? '00:00'))[0];
+	if ($h < $inicio || $h >= $fin) {
+		return 'fuera_de_horario';
+	}
+	$texto = sprintf('%02d:00', $h);
+	foreach ((array) ($disp['busySlots'] ?? []) as $ocupada) {
+		if (substr((string) $ocupada, 0, 5) === $texto) {
+			return 'hora_ocupada';
+		}
+	}
+	return '';
+}
+
+/** Lo que ve el cliente en la agenda web por cada motivo. */
+function at_pt_mensajes_agenda(): array {
+	return [
+		'fecha_invalida'     => 'Elige una fecha válida.',
+		'hora_invalida'      => 'Elige una de las horas disponibles.',
+		'pasada'             => 'Esa hora ya pasó. Elige otra.',
+		'muy_lejos'          => 'Solo agendamos hasta 90 días hacia adelante.',
+		'dia_no_disponible'  => 'Ese día no atendemos. Elige otra fecha.',
+		'fuera_de_horario'   => 'Esa hora está fuera de nuestro horario. Elige otra.',
+		'hora_ocupada'       => 'Esa hora se acaba de ocupar. Elige otra.',
+		'plan_no_disponible' => 'Este plan de trabajo no está disponible.',
+		'sesion_vencida'     => 'La página quedó abierta mucho rato. Recárgala e inténtalo de nuevo.',
+		'muchos_intentos'    => 'Hiciste muchos intentos seguidos. Espera un rato o escríbenos por WhatsApp.',
+		'sin_correo'         => 'No tenemos tu correo para enviarte la invitación. Escríbenos por WhatsApp y la agendamos.',
+		'ya_agendada'        => 'Ya tienes una llamada de seguimiento agendada.',
+		'no_guardo'          => 'No pudimos agendar la llamada. Inténtalo de nuevo o escríbenos por WhatsApp.',
+	];
+}
+
+/** Token de la agenda web de un plan para el día $dia (días desde 1970, intdiv(time(), 86400)): reemplaza al nonce de
+ *  WordPress, que depende de la sesión (el cliente no tiene; Luis sí, y su nonce no valdría en la ruta pública). */
+function at_pt_token_agenda(string $codigo, int $dia, string $sal): string {
+	return substr(hash_hmac('sha256', 'at-pt-agenda|' . $codigo . '|' . $dia, $sal), 0, 24);
+}
+
+/** El token vale el día en que se creó y el siguiente. */
+function at_pt_token_agenda_valido(string $token, string $codigo, int $hoy, string $sal): bool {
+	if (!preg_match('/^[a-f0-9]{24}$/', $token)) {
+		return false;
+	}
+	return hash_equals(at_pt_token_agenda($codigo, $hoy, $sal), $token) || hash_equals(at_pt_token_agenda($codigo, $hoy - 1, $sal), $token);
 }

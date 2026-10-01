@@ -393,7 +393,8 @@ function at_pt_db_partes(object $fila): array {
 
 /**
  * Datos del cliente para at_pt_armar_render(): código, empresa, cliente, portal ('' sin correo), WhatsApp de AT,
- * fecha de firma y meses de garantía del contrato (el contrato manda sobre lo que diga el plan: D8).
+ * fecha de firma, meses de garantía del contrato (el contrato manda sobre lo que diga el plan: D8) y sitio (home_url,
+ * para el enlace de la agenda web).
  */
 function at_pt_datos_render(object $fila): array {
 	$x = at_pt_db_partes($fila);
@@ -407,6 +408,7 @@ function at_pt_datos_render(object $fila): array {
 		'whatsapp'       => $whatsapp !== '' ? $whatsapp : '56927002984',
 		'fecha_firma'    => $x['fecha_firma'],
 		'garantia_meses' => $x['garantia_meses'],
+		'sitio'          => home_url(),
 	];
 }
 

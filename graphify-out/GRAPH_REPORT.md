@@ -1,22 +1,22 @@
-# Graph Report - propuestas-clave  (2026-09-25)
+# Graph Report - plan-trabajo  (2026-10-01)
 
 ## Corpus Check
-- 1297 files · ~11,666,055 words
+- 1418 files · ~12,103,580 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 13156 nodes · 20936 edges · 1284 communities (1160 shown, 124 thin omitted)
-- Extraction: 92% EXTRACTED · 8% INFERRED · 0% AMBIGUOUS · INFERRED: 1746 edges (avg confidence: 0.76)
+- 14030 nodes · 22578 edges · 1371 communities (1237 shown, 134 thin omitted)
+- Extraction: 90% EXTRACTED · 10% INFERRED · 0% AMBIGUOUS · INFERRED: 2195 edges (avg confidence: 0.77)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `eaa93e4a`
+- Built from commit: `a5fa2b2b`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
 ## Community Hubs (Navigation)
-- .dot
 - .copy
+- jo
 - three.core.min.js
 - .push
 - backups.min.js
@@ -38,7 +38,7 @@
 - ti
 - cb_pdo
 - $
-- s
+- oi
 - three.module.min.js
 - correos.py
 - Akismet_Admin
@@ -47,18 +47,18 @@
 - wrapper.php
 - index-BhihAq8q.js
 - ie
-- .setValues
+- _i
 - AlbumPage.jsx
-- Ji
+- .dispatchEvent
 - ri
-- .toJSON
+- .dispose
 - AutomatizaTechContactForm
 - lib.acceptance.php
 - FPDF
 - mn
-- cb_party_db_id
+- cc_mail_h
 - CcDocumento
-- gd
+- push
 - 🎯 ESTRATEGIA DE VENTAS - Bot de Agendamiento WhatsApp
 - cb_carrera_entrar
 - 📊 Plantilla Google Sheets para WhatsApp Bot Demo v4
@@ -67,9 +67,9 @@
 - Integración N8N ↔ Portal OmniCliente — Documentación Completa
 - Ai1wm_Backups
 - ContractService
-- setup
+- at_cc_propuesta_por_id
 - Cambios Aplicados al Workflow Principal
-- i
+- _r
 - AutomatizaTechContactForm
 - area6-uploads.spec.js
 - OpenCode Go — Tema 02: Familia Canina Azul/Naranja
@@ -104,21 +104,21 @@
 - Álbum Recuerdo — propuesta técnica (pendiente de aprobación)
 - server.js
 - 💳 Sistema de Validación de Pago - Kells Capilar
-- ze
+- whatsapp.php
 - 🚀 AutomatizaTech — Punto de Entrada Principal
 - lib.event-profiles.php
 - Guía de Hardening en Producción — D1 a D7
 - 🤖 WhatsApp Bot Demo Template
-- react-vendor-BWAn5Moh.js
+- plan-trabajo/panel.php
 - admin-followup-meetings.php
 - AutomatizaTech_Client_Details
 - InboxView.jsx
-- Je
+- Wr
 - CONTRATO DE PRESTACIÓN DE SERVICIOS, CESIÓN DE PROPIEDAD INTELECTUAL Y SOPORTE TÉCNICO POST-PROYECTO
-- AgentsView-Di75dSYi.js
+- cierre-cliente/puras.php
 - client-portal-omnichannel/package.json
 - od
-- 10 — Seguridad y Hardening
+- 🛡️ Helpers `at-*.php` (9 archivos en raíz)
 - 📢 MATERIAL DE PUBLICIDAD - Sistema de Agendamiento WhatsApp
 - mundo.mjs
 - 🚀 Portal Omnicanal - AutomatizaTech
@@ -131,7 +131,7 @@
 - Exception
 - 📱 WhatsApp Tech Bot - Guía de Implementación
 - admin-followup-meetings2.php
-- xb
+- Mapa de archivos
 - eo
 - asomateGuia.test.mjs
 - 99 — Audit Report: Documentación previa vs Estado real
@@ -142,11 +142,11 @@
 - 📌 Estados (status enums)
 - INSTRUCCIONES DE SISTEMA PARA "GEM DE AUTOMATIZA TECH"
 - Instrucciones: Procesamiento de Fechas en Texto Natural
-- 12 — Flujos de Negocio (Diagramas Mermaid)
+- 00_INDEX.md
 - Material explicativo CumpleClick
 - Handoff a Claude — CumpleClick: invitaciones inmersivas y campaña promocional
+- cb_manual_datos
 - cb_public_base_url
-- cb_puntaje_anotar
 - record-frozen-gameplay.mjs
 - fc
 - Tl
@@ -198,7 +198,7 @@
 - 🐾 Instrucciones para Crear Bot(s) de PetsGo — Cliente: Alexiandra Andrade
 - AutomatizaTech_Currency_Updater
 - QuotationPDFFPDF
-- at_secmon_log_event
+- api-omnichannel.php
 - CumpleClick — Estrategia de video marketing con Higgsfield
 - Handoff Codex → Claude — invitación Reino de Hielo
 - HANDOFF OPENCODE — Video exclusivo temática Reino de Hielo (Frozen), foco en los juegos
@@ -208,13 +208,13 @@
 - lib.marketing.php
 - _acceso.php
 - 1. Ticket AT-CUMPLECLICK-017 — Estrategia de 30 días + módulo "Contenido" del admin
-- lf
+- Rd
 - 5.2 Tablas (15)
 - 🔧 Diagrama Visual - Administrador Backend (Mermaid)
 - 🔵 Dominio Omnichannel (15 tablas)
 - 🙋 Guía de Intervención Humana - WhatsApp Bot
 - WhatsApp Bot v8 — Portal OmniCliente + Google Sheets Fallback
-- ce
+- ne
 - AutomatizaTech_Appointments_API
 - .Header
 - admin-leads-manager.php
@@ -294,8 +294,8 @@
 - album/main.jsx
 - mix-audio-explicativo.mjs
 - build.mjs
-- .constructor
-- push
+- plan-trabajo/puras.php
+- concat
 - 2.1 Completar PWA — Requisitos Mínimos
 - Incidente 2026-08-25/26 — Errores de n8n, token de Instagram y tres agujeros de seguridad
 - 3. Configuración de Servicios
@@ -303,7 +303,7 @@
 - CONTEXTO DEL TABLERO ÁGIL — AutomatizaTech v8
 - AT-ORCH-001 — Gobierno multi-agente
 - fix-api-field-names.js
-- AutomatizaTech_Clientes_List_Table
+- .sanitize_key
 - at-agenda.js
 - AutomatizaTech_Client_Report_PDF
 - ReceiptPDFFPDF
@@ -327,7 +327,7 @@
 - Personajes (6) — esqueleto estándar con escena tropical, protagonista:
 - posiciones.js
 - Conexiones y credenciales — regla general para todos los agentes
-- 🛡️ Helpers `at-*.php` (9 archivos en raíz)
+- probar_plan.py
 - predictions.js
 - 🌐 Diagrama Visual - Usuario Frontend (Mermaid)
 - 🔧 Diagrama de Flujo - Administrador del Sistema (Back-end)
@@ -372,7 +372,7 @@
 - 4. BASE DE DATOS (~24 tablas custom)
 - 10. Consideraciones Especiales
 - 6. Guía Paso a Paso — Capacitor
-- 00_INDEX.md
+- 01 — Arquitectura General del Ecosistema AutomatizaTech
 - Aplicación del Método AutomatizaTech
 - at-gamma-proposal (GitHub Copilot)
 - 11.1 Para Agentes
@@ -384,8 +384,8 @@
 - Mpdf
 - PDF
 - automatiza-tech/services-frontend.php
-- api-omnichannel.php
-- automatiza_download_invoice
+- .handle_file_upload
+- at_cc_render_panel_respuesta
 - QA-00 — Índice General y Entornos de Prueba
 - QA-01 — Login y Autenticación
 - QA-02 — Bandeja de Entrada y Conversaciones
@@ -413,7 +413,7 @@
 - 5. INTEGRACIONES EXTERNAS
 - Prompt operativo - Claude Orquestador principal
 - Orquestacion multiagente de AutomatizaTech
-- Automatizatech — Pipeline de Propuestas (Skills disponibles)
+- GitHub Copilot Instructions
 - at-proposal-refiner (GitHub Copilot)
 - 3. Frontend — Estructura Detallada
 - 8.2 Logs y Depuración
@@ -490,7 +490,7 @@
 - Los seis pasos
 - 15. Sistema de Configuración de Prompts (PromptsView)
 - Manual del Programador — Portal OmniCliente AutomatizaTech
-- OmniCliente/QA-00-Indice-Entornos.md
+- QA-04 — Configuración de Bots y Prompts
 - QA-05 — Gestión de Agentes
 - QA-10 — Asistente AI
 - debug-check-found.js
@@ -507,7 +507,7 @@
 - verify-keep-appointment.js
 - verify-reschedule-flow-v2.js
 - akismet.js
-- ContractMailer
+- Orden de ejecución
 - Aurora de Cristal — integración en el menú de la fiesta
 - admin-reminders.php
 - PDF
@@ -537,7 +537,6 @@
 - PROMPTS-TEMATICAS.md
 - build-explicativo.mjs
 - capture-chars.mjs
-- ye
 - 15. `receipts-module.php` — 827 líneas
 - 9. `admin-leads-manager.php` — 1,374 líneas
 - 11. Scripts de Utilidad
@@ -595,7 +594,7 @@
 - webhook-omnichannel.php
 - MarketingAssetRaceStatement
 - Ai1wm_Log
-- rest-proposals.php
+- datos.php
 - PDF
 - OmniCliente/QA/QA-00-Indice-Entornos.md
 - 3. USUARIOS DE PRUEBA
@@ -643,7 +642,7 @@
 - build-album-promo.mjs
 - 6. Validaciones Implementadas
 - 📱 CONTENIDO ESPECÍFICO POR CANAL
-- QA-08 — Auditoría
+- OmniCliente/QA-00-Indice-Entornos.md
 - qa-report-generator.php
 - add-cancel-email.js
 - add-cancel-error-handling.js
@@ -811,7 +810,7 @@
 - record-album-promo.mjs
 - render.test.js
 - record-marketing-clips.mjs
-- 6. API — Estructura de Rutas
+- fd
 - cartel-qr/main.jsx
 - 12. Sistema de Prompts (PromptsView)
 - sala.php
@@ -822,7 +821,7 @@
 - init
 - xe
 - Ai1wm_Notification
-- g
+- at_pt_plan
 - server.test.js
 - `propuesta-renderer`: qué es, cómo se despliega y cómo se verifica
 - cb_config
@@ -833,37 +832,71 @@
 - 7. Frontend
 - Propuestas AT — flujo automático v3
 - 6.6 Ajustes Específicos para OmniCliente
-- .execute
+- CONTRATO DE PRESTACIÓN DE SERVICIOS DE DESARROLLO E IMPLEMENTACIÓN
 - paginador.js
 - lib.planes.php
 - 12. Despliegue
 - 4. Modelo de datos
-- rb
-- 5. Gestionar Contactos
+- .execute
+- datos-prueba.php
 - Posfiesta CumpleClick: la línea de trabajo (para cualquier agente)
 - supportsFlip
 - DocumentoFalso
 - 1. Visión del producto
 - 5. Motor de precios y geometría (dominio)
 - deploy.py
-- 10. Build y Deploy
-- 12. Guía Rápida para Modificaciones
+- build_plan_1_borrador.py
+- Notas de revisión y coherencia (Etapa 1 del plan de trabajo)
 - 10. Entorno
-- fn
+- Plan de trabajo del proyecto (cronograma con carta Gantt) — diseño
 - 11. Dependencias
+- correo_sin_vista
 - Higgsfield por API REST (opcion cuando el MCP no tiene saldo)
 - Ai1wm_Export_Clean
-- 3. Sistema de Autenticación (3 Modos)
+- at_pt_agendar_seguimiento
 - PROMPT-AGENTE.md
-- 5. Base de Datos
-- main
+- Plan de trabajo — Etapa 1 · ESQUELETO Y CONTRATO DE INTERFACES (fuente única para quien redacta tareas)
+- di
 - backend/agenda.php
 - _backoffice-ui-checks.cjs
-- 11. Emails del Sistema
-- 1. Descripción General del Proyecto
-- 8. Sistema de Soporte (Tickets)
+- Cierre de cliente: respuesta a la propuesta, ficha única, contrato de servicio y bienvenida
+- Plan de trabajo con carta Gantt — Etapa 1
+- build_3_final.py
 - en
 - 2026-09-10 cierre 9 — Frozen: el pase de artista con voces
+- archivo-wp-test.php
+- panel-acciones-wp-test.php
+- at_pt_ymd
+- at_pt_rest_borrador
+- v
+- probar_revision_fotos.py
+- xc
+- Review Focus
+- probar_revision_plan.py
+- Ai1wm_Compatibility
+- vd
+- ql
+- .load
+- sitio/js/chat.js
+- ju
+- plan-trabajo/ajustes.php
+- at_pt_enviar_plan
+- na
+- rb
+- build_2_cambios.py
+- plan-trabajo.js
+- .move_to_clients
+- _a
+- la
+- uh
+- probar_json.py
+- og_cumpleclick.py
+- Od
+- Hechos verificados del código (29-sep-2026) para redactar el plan de trabajo
+- chat.php
+- DESPLEGADO 2026-09-12 — foto grupal, pantalla completa, Anna de gala
+- Revision completa antes del domingo 13 (2026-09-07)
+- etapa2-e2e.js
 
 ## God Nodes (most connected - your core abstractions)
 1. `Akismet` - 130 edges
@@ -871,23 +904,23 @@
 3. `$` - 114 edges
 4. `cb_pdo()` - 103 edges
 5. `FPDF` - 102 edges
-6. `ai()` - 84 edges
-7. `qi` - 84 edges
-8. `Manifiesto FTP CumpleClick — no desplegado` - 83 edges
+6. `Manifiesto FTP CumpleClick — no desplegado` - 88 edges
+7. `ai()` - 84 edges
+8. `qi` - 84 edges
 9. `ti` - 76 edges
 10. `request()` - 76 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `Bd()` --indirect_call--> `xf()`  [INFERRED]
-  omnicliente/assets/react-vendor-BWAn5Moh.js → CumpleBooth/sitio/vendor/ScrollTrigger.min.js
 - `ScrollTrigger()` --indirect_call--> `Fe()`  [INFERRED]
   CumpleBooth/sitio/vendor/ScrollTrigger.min.js → wp-content/plugins/all-in-one-wp-migration/lib/view/assets/javascript/backups.min.js
 - `Hd()` --indirect_call--> `Id()`  [INFERRED]
   wp-content/plugins/all-in-one-wp-migration/lib/view/assets/javascript/backups.min.js → CumpleBooth/sitio/vendor/gsap.min.js
 - `ia()` --indirect_call--> `Os()`  [INFERRED]
   wp-content/plugins/all-in-one-wp-migration/lib/view/assets/javascript/backups.min.js → omnicliente/assets/index-BhihAq8q.js
-- `buildGlobo()` --indirect_call--> `m()`  [INFERRED]
-  CumpleBooth/sitio/js/globo3d.js → omnicliente/assets/UsageView-CeekO1OK.js
+- `ar_crear()` --calls--> `at_cc_propuesta_por_id()`  [INFERRED]
+  tests/cierre/archivo-wp-test.php → wp-content/themes/automatiza-tech/inc/cierre-cliente/respuesta.php
+- `ar_guardar_post()` --calls--> `at_pa_guardar()`  [INFERRED]
+  tests/cierre/archivo-wp-test.php → wp-content/themes/automatiza-tech/inc/propuestas-admin/acciones.php
 
 ## Import Cycles
 - None detected.
@@ -896,35 +929,31 @@
 - **AutomatizaTech Admin Management System** — wp_content_themes_automatiza_tech_detalles_y_busqueda_manual_md_visualizacion, wp_content_themes_automatiza_tech_editar_clientes_manual_md_edicion, wp_content_themes_automatiza_tech_editar_contactos_manual_md_admin_edicion [EXTRACTED 0.90]
 - **Home Premium UI Components** — wp_content_themes_automatiza_tech_assets_home_premium_body_html_root, wp_content_themes_automatiza_tech_assets_home_premium_preview_html_root, wp_content_themes_automatiza_tech_assets_home_premium_img_at_logo_png, wp_content_themes_automatiza_tech_assets_home_premium_img_tech_avatar_png [EXTRACTED 0.95]
 
-## Communities (1284 total, 124 thin omitted)
+## Communities (1371 total, 134 thin omitted)
 
-### Community 0 - ".dot"
+### Community 0 - ".copy"
 Cohesion: 0.03
-Nodes (14): Ad(), ad, Cd, ea, kd, lo, qn, qo() (+6 more)
-
-### Community 1 - ".copy"
-Cohesion: 0.03
-Nodes (21): Gc(), Hc(), Na(), Sa(), _c, ca(), eh, go (+13 more)
+Nodes (21): Sa(), aa, ad, Cd, cu, ea, go, jh (+13 more)
 
 ### Community 2 - "three.core.min.js"
 Cohesion: 0.01
-Nodes (98): aa, ah, ba, bc, br, cl(), cn, co (+90 more)
+Nodes (102): _a, ah, ba, bc, bind(), br, ca(), cc() (+94 more)
 
 ### Community 3 - ".push"
 Cohesion: 0.03
-Nodes (23): Ba(), bl(), ep, fh, fl(), gh, Gs(), _h (+15 more)
+Nodes (19): ac, bl(), ep, fh, fl(), gh, Gs(), hh (+11 more)
 
 ### Community 4 - "backups.min.js"
-Cohesion: 0.02
-Nodes (69): Ut(), As(), beforeMount(), beforeUnmount(), bf(), Co(), Ds(), ea() (+61 more)
+Cohesion: 0.03
+Nodes (80): Ut(), $a(), beforeMount(), beforeUnmount(), bf(), bo(), cl(), Co() (+72 more)
 
 ### Community 5 - "parse"
 Cohesion: 0.07
 Nodes (54): Ap(), cleanup(), enterRCDATA(), fastForwardTo(), handleAttrNameEnd(), handleAttrStart(), handleInAttrValue(), handleTagName() (+46 more)
 
 ### Community 6 - "qi"
-Cohesion: 0.02
-Nodes (6): hd, hi(), ii(), qi, zi, fi()
+Cohesion: 0.03
+Nodes (4): bd, ki, qi, xi()
 
 ### Community 7 - "Ai1wm_Main_Controller"
 Cohesion: 0.04
@@ -936,7 +965,7 @@ Nodes (29): ROLES, guardar(), aplicarAvatar(), aros, camPos, configurar(), estad
 
 ### Community 9 - "index-wBfVKgBB.js"
 Cohesion: 0.02
-Nodes (74): ab, ah, Am, bh, Bi, bn, bo, ch (+66 more)
+Nodes (159): ab, ah, Am, bg(), bh, Bi, bm(), bn (+151 more)
 
 ### Community 10 - "api.js"
 Cohesion: 0.05
@@ -944,59 +973,55 @@ Nodes (68): addTicketMessage(), adminResetAgentPassword(), aiAssistantChat(), au
 
 ### Community 11 - "qr"
 Cohesion: 0.03
-Nodes (11): dn, en, on, op, pn(), qr, rn, sd (+3 more)
+Nodes (8): dn, en, nh, pn(), qr, sd, sp, un
 
 ### Community 12 - "all-in-one-wp-migration/functions.php"
 Cohesion: 0.04
-Nodes (58): ai1wm_activate_plugins(), ai1wm_activate_stylesheet(), ai1wm_activate_template(), ai1wm_active_plugins(), ai1wm_active_servmask_plugins(), ai1wm_active_stylesheet(), ai1wm_active_template(), ai1wm_archive_name() (+50 more)
+Nodes (58): ai1wm_activate_plugins(), ai1wm_activate_stylesheet(), ai1wm_activate_template(), ai1wm_active_plugins(), ai1wm_active_servmask_plugins(), ai1wm_active_stylesheet(), ai1wm_active_template(), ai1wm_archive_file() (+50 more)
 
 ### Community 13 - "ScrollTrigger.min.js"
-Cohesion: 0.06
-Nodes (34): C(), Db(), Dc(), Eb(), Ia(), ic(), Ja(), Ka() (+26 more)
+Cohesion: 0.05
+Nodes (51): A(), B(), C(), Db(), Dc(), Eb(), F(), G() (+43 more)
 
 ### Community 15 - "zh"
-Cohesion: 0.07
-Nodes (3): lp, yh, zh
+Cohesion: 0.06
+Nodes (4): lp, wh, yh, zh
 
 ### Community 16 - "lib.php"
 Cohesion: 0.05
-Nodes (64): usuarios_fiesta_etiqueta(), cb_album_api_theme(), cb_build_theme_payload(), cb_compile_invitation_prompt(), cb_data_dir(), cb_game_kinds(), cb_generate_public_slug(), cb_inspect_video() (+56 more)
+Nodes (67): cb_album_api_theme(), cb_build_theme_payload(), cb_compile_invitation_prompt(), cb_data_dir(), cb_game_kinds(), cb_generate_public_slug(), cb_inspect_video(), cb_invitation_dir() (+59 more)
 
 ### Community 17 - "o"
-Cohesion: 0.09
-Nodes (58): ao, mi(), Ng(), is, ar(), bn(), br(), bt() (+50 more)
+Cohesion: 0.07
+Nodes (62): an, ao, mi(), As(), bn(), br(), bt(), d() (+54 more)
 
 ### Community 18 - "ai"
 Cohesion: 0.03
-Nodes (12): ai(), ga, hr, or, su, _u, ya, yo (+4 more)
+Nodes (17): ai(), ga, hr, li(), ni(), or, tu, ui (+9 more)
 
 ### Community 19 - "ar"
 Cohesion: 0.03
-Nodes (5): ar, Cr, jc, pu, xc
-
-### Community 20 - "ti"
-Cohesion: 0.02
-Nodes (8): Md(), bd, _i, jh, md, ti, wh, xi()
+Nodes (12): Ed(), Gc(), Hc(), Na(), ar, _c, ed, na (+4 more)
 
 ### Community 21 - "cb_pdo"
 Cohesion: 0.06
-Nodes (68): cb_album_feature_ready(), cb_find_photo_by_token(), cb_list_party_photos(), cb_load_json_file(), cb_mutate_json_state(), cb_pdo(), cb_photo_usage(), cb_photos_admin() (+60 more)
+Nodes (79): cb_agenda_checklist(), cb_album_feature_ready(), cb_find_photo_by_token(), cb_list_party_photos(), cb_mutate_json_state(), cb_party_db_id(), cb_pdo(), cb_photo_borrar() (+71 more)
 
 ### Community 22 - "$"
 Cohesion: 0.05
-Nodes (78): z(), F(), H, $, _1, _2, a0, a1 (+70 more)
+Nodes (64): xf(), $, _1, _2, a0, a1, b1, c1 (+56 more)
 
-### Community 23 - "s"
-Cohesion: 0.06
-Nodes (12): bu, cc(), e, fu, hh, kc, mu, ni() (+4 more)
+### Community 23 - "oi"
+Cohesion: 0.07
+Nodes (8): bu, ch, e, fu, kc, mu, oi(), rc
 
 ### Community 24 - "three.module.min.js"
-Cohesion: 0.03
-Nodes (86): le(), me(), ne(), oe(), n(), o(), J(), M() (+78 more)
+Cohesion: 0.02
+Nodes (95): i(), n(), o(), scroll(), J(), M(), O(), P() (+87 more)
 
 ### Community 25 - "correos.py"
-Cohesion: 0.10
-Nodes (31): Construye el workflow n8n «Propuestas v3 · 0 Avisar error» y lo guarda en…, Construye el workflow n8n «Propuestas v3 · 1 Borrador» y lo guarda en…, email(), iff(), node(), Construye el workflow n8n «Propuestas v3 · 2 Cambios» y lo guarda en…, wp_http(), http() (+23 more)
+Cohesion: 0.24
+Nodes (19): correo_error_plan(), Correo de «1 Borrador» o «2 Cambios» cuando algo falló: el plan quedó (o debió…, Construye el workflow n8n «Propuestas v3 · 0 Avisar error» y lo guarda en…, correo_borrador(), correo_cambios_error(), correo_cambios_ok(), correo_error_flujo(), correo_final() (+11 more)
 
 ### Community 26 - "Akismet_Admin"
 Cohesion: 0.03
@@ -1011,48 +1036,48 @@ Cohesion: 0.03
 Nodes (39): akismet_add_comment_author_url(), akismet_add_comment_nonce(), akismet_admin_menu(), akismet_auto_check_comment(), akismet_auto_check_update_meta(), akismet_check_db_comment(), akismet_check_key_status(), akismet_check_server_connectivity() (+31 more)
 
 ### Community 30 - "index-BhihAq8q.js"
-Cohesion: 0.07
-Nodes (86): Om(), pg(), Ge(), Ee(), Be(), c(), N(), J() (+78 more)
+Cohesion: 0.04
+Nodes (171): he(), le(), Om(), pg(), Ge(), z(), F(), K() (+163 more)
 
 ### Community 31 - "ie"
 Cohesion: 0.09
-Nodes (21): ae(), beforeUpdate(), created(), _e, ec(), Ee(), findIndex(), Gl() (+13 more)
+Nodes (20): ae(), beforeUpdate(), created(), _e, ec(), Ee(), Gl(), ie() (+12 more)
 
-### Community 32 - ".setValues"
-Cohesion: 0.06
-Nodes (7): kl, _l, ma, nc, sc, zn, Sl
+### Community 32 - "_i"
+Cohesion: 0.03
+Nodes (5): hi(), _i, ii(), zi, fi()
 
 ### Community 33 - "AlbumPage.jsx"
 Cohesion: 0.13
 Nodes (10): AlbumPage(), ClosingPage(), CoverPage(), formatDate(), elEvento(), esBabyShower(), esteEvento(), fraseA() (+2 more)
 
-### Community 34 - "Ji"
-Cohesion: 0.04
-Nodes (8): Ed(), constructor(), ed, fi(), Ji, jn, rd, vd
+### Community 34 - ".dispatchEvent"
+Cohesion: 0.03
+Nodes (8): constructor(), Cr, fi(), jc, Ji, jn, rd, zn
 
 ### Community 35 - "ri"
-Cohesion: 0.19
-Nodes (5): ci(), li(), oi(), ri, si()
+Cohesion: 0.15
+Nodes (7): main(), sleep(), ci(), li(), oi(), ri, si()
 
-### Community 36 - ".toJSON"
-Cohesion: 0.02
-Nodes (17): _a, ch, cp, cu, dd, du, hu, ih (+9 more)
+### Community 36 - ".dispose"
+Cohesion: 0.04
+Nodes (11): cp, dd, hu, ih, ip, iu, op, pd (+3 more)
 
 ### Community 38 - "lib.acceptance.php"
 Cohesion: 0.09
 Nodes (47): cb_accept_plan(), cb_acceptance_decode_row(), cb_acceptance_decode_signature(), cb_acceptance_dir(), cb_acceptance_evidence_html(), cb_acceptance_file_path(), cb_acceptance_firmada_de_fiesta(), cb_acceptance_is_expired() (+39 more)
 
 ### Community 40 - "mn"
-Cohesion: 0.06
-Nodes (8): bn, fn(), gn(), Mi(), mn, po, wi(), xn
+Cohesion: 0.04
+Nodes (9): bn, fn(), gn(), hn, Mi(), mn, ri(), wi() (+1 more)
 
-### Community 41 - "cb_party_db_id"
-Cohesion: 0.09
-Nodes (45): cb_agenda_checklist(), cb_juegos3d_activos(), cb_load_party_raw(), cb_party_db_id(), cb_photo_borrar(), cb_valid_public_slug(), cb_contact_relationships(), cb_format_clp() (+37 more)
+### Community 41 - "cc_mail_h"
+Cohesion: 0.17
+Nodes (25): cb_admin_correo_bienvenida(), cb_format_clp(), cb_comprobante_correo(), cb_comprobante_datos(), cb_comprobante_emisor(), cb_comprobante_fecha_larga(), cb_comprobante_firma(), cb_comprobante_folio() (+17 more)
 
-### Community 43 - "gd"
+### Community 43 - "push"
 Cohesion: 0.09
-Nodes (39): Lc(), au(), bd(), cd(), cu(), dd(), Dp(), du() (+31 more)
+Nodes (44): au(), bd(), cd(), cu(), dd(), Dp(), du(), ed() (+36 more)
 
 ### Community 44 - "🎯 ESTRATEGIA DE VENTAS - Bot de Agendamiento WhatsApp"
 Cohesion: 0.04
@@ -1083,20 +1108,20 @@ Cohesion: 0.07
 Nodes (18): ai1wm_backup_bytes(), ai1wm_backup_path(), ai1wm_can_decrypt(), ai1wm_get_filters(), ai1wm_is_filedata_supported(), ai1wm_is_filename_supported(), ai1wm_is_filesize_supported(), ai1wm_json_response() (+10 more)
 
 ### Community 51 - "ContractService"
-Cohesion: 0.07
-Nodes (3): AT_Contracts_Admin, at_download_contract_ajax_handler(), ContractService
+Cohesion: 0.03
+Nodes (12): AT_Contracts_Admin, ContractMailer, at_download_contract_ajax_handler(), ContractService, borrar_firmado_r1(), firmar_de_punta_a_punta(), pdf_de(), rotulos_pdf_r2() (+4 more)
 
-### Community 52 - "setup"
-Cohesion: 0.07
-Nodes (40): $a(), bo(), cl(), concat(), da(), de(), Dr(), es() (+32 more)
+### Community 52 - "at_cc_propuesta_por_id"
+Cohesion: 0.04
+Nodes (22): crear_propuesta_bd(), crear_propuesta(), cc_test_crear_propuesta(), crear_propuesta_ddoc(), dialogo_datos_ddoc(), crear_propuesta_ficha_cb(), render_ficha_cb(), crear_propuesta_resp() (+14 more)
 
 ### Community 53 - "Cambios Aplicados al Workflow Principal"
 Cohesion: 0.05
 Nodes (41): 1. **Validación de Horarios desde WordPress**, 2. **Lista Interactiva con Opción "Otra Fecha"**, 3. **Manejo de "Otra Fecha"**, 4. **Parseo de Fechas en Texto Natural**, 5. **Horarios Dinámicos desde WordPress**, 📦 Archivos Afectados, Cambios Aplicados al Workflow Principal, ✅ Cambios Implementados (+33 more)
 
-### Community 54 - "i"
-Cohesion: 0.06
-Nodes (11): Ao(), i(), scroll(), ub(), fr, ku, lr, pc (+3 more)
+### Community 54 - "_r"
+Cohesion: 0.08
+Nodes (6): fr, ku, lr, _r, yr, zr
 
 ### Community 56 - "area6-uploads.spec.js"
 Cohesion: 0.14
@@ -1111,12 +1136,12 @@ Cohesion: 0.06
 Nodes (44): buildGlobo(), makeGradientTexture(), mountHeroGlobo(), hero3dEligible(), init(), initAnalyticsHooks(), initCarruselAuto(), initContactForm() (+36 more)
 
 ### Community 59 - "pr"
-Cohesion: 0.08
-Nodes (8): bi(), Ei(), gr, pr, rr, vi(), Br(), hr()
+Cohesion: 0.06
+Nodes (7): bi(), Ei(), pi, pr, rr, vi(), Br()
 
 ### Community 60 - "Manual de Contexto para IA — Portal OmniCliente AutomatizaTech"
-Cohesion: 0.20
-Nodes (9): 13. Constantes Importantes (wp-config.php), 14. Convenciones de Código, 17. KellsCapilar — Datos del Cliente Activo, 2. Estructura de Archivos, 4. Navegación por Roles (Sidebar.jsx), 9. Uploads de Archivos, Manual de Contexto para IA — Portal OmniCliente AutomatizaTech, Patrón de Upload (+1 more)
+Cohesion: 0.05
+Nodes (40): 10. Build y Deploy, 11. Emails del Sistema, 12. Guía Rápida para Modificaciones, 13. Constantes Importantes (wp-config.php), 14. Convenciones de Código, 17. KellsCapilar — Datos del Cliente Activo, 1. Descripción General del Proyecto, 2. Estructura de Archivos (+32 more)
 
 ### Community 61 - "4. REGISTRO DE EJECUCIÓN DETALLADA"
 Cohesion: 0.05
@@ -1135,8 +1160,8 @@ Cohesion: 0.05
 Nodes (36): A. Crear directorio, A. HTML/CSS del Modal, Archivos clave que DEBES leer antes de empezar:, B. Generar 6 personajes (BudgetPixel + remover fondo), B. JavaScript del Modal, C. Remover fondos (cut PNGs), CLAUDE COMPLETÓ (NO TOCAR, YA ESTÁ EN PRODUCCIÓN LOCAL):, Comandos esenciales: (+28 more)
 
 ### Community 65 - "Ai1wm_Status"
-Cohesion: 0.04
-Nodes (26): ai1wm_archive_bytes(), ai1wm_archive_mtime(), ai1wm_archive_path(), ai1wm_content_filters(), ai1wm_content_list_path(), ai1wm_get_plugins_dir(), ai1wm_getcsv(), ai1wm_media_filters() (+18 more)
+Cohesion: 0.06
+Nodes (17): ai1wm_archive_bytes(), ai1wm_archive_mtime(), ai1wm_archive_path(), ai1wm_content_list_path(), ai1wm_getcsv(), ai1wm_themes_list_path(), ai1wm_validate_file(), Ai1wm_Status (+9 more)
 
 ### Community 67 - "AT-CUMPLECLICK-006 — Invitaciones dinámicas por temática"
 Cohesion: 0.06
@@ -1151,8 +1176,8 @@ Cohesion: 0.05
 Nodes (38): dependencies, @fontsource/baloo-2, @fontsource/caveat, gsap, lenis, @mediapipe/tasks-vision, qrcode, react (+30 more)
 
 ### Community 71 - "yp"
-Cohesion: 0.09
-Nodes (43): Nc(), ap(), bp(), getNamespace(), getPos(), go(), includes(), indexOf() (+35 more)
+Cohesion: 0.08
+Nodes (46): ap(), ar(), bp(), ep(), findIndex(), getNamespace(), getPos(), includes() (+38 more)
 
 ### Community 72 - ".execute"
 Cohesion: 0.08
@@ -1172,15 +1197,15 @@ Nodes (27): clearAuth(), getOpenTicketCount(), isAuthenticated(), setApiKey(), s
 
 ### Community 77 - "Manifiesto FTP CumpleClick — no desplegado"
 Cohesion: 0.03
-Nodes (62): 2026-09-10 cierre 7 — Frozen: los huecos de Elsa y Olaf se salían del personaje, 2026-09-15 — respaldo completo de PROD y alineación con los repositorios (después de las fiestas), AT-CUMPLECLICK-007 — Familia Canina (agregar al Orden 2), CIERRE 2026-09-25 — Codex (018, 017 backend, correcciones) revisado, desplegado y mergeado, Clases del admin sin CSS detrás (2026-09-07), Delta AT-CUMPLECLICK-012 — misión WOW 3D Full (2026-07-29), Delta local — Aceptación de Términos y firma (rama `feat/cumpleclick-aceptacion-terminos`, no desplegado), Delta local — actualizado 2026-07-27 (+54 more)
+Nodes (63): 2026-09-10 cierre 7 — Frozen: los huecos de Elsa y Olaf se salían del personaje, 2026-09-15 — respaldo completo de PROD y alineación con los repositorios (después de las fiestas), AT-CUMPLECLICK-007 — Familia Canina (agregar al Orden 2), CIERRE 2026-09-25 — Codex (018, 017 backend, correcciones) revisado, desplegado y mergeado, Clases del admin sin CSS detrás (2026-09-07), Delta AT-CUMPLECLICK-012 — misión WOW 3D Full (2026-07-29), Delta local — Aceptación de Términos y firma (rama `feat/cumpleclick-aceptacion-terminos`, no desplegado), Delta local — actualizado 2026-07-27 (+55 more)
 
 ### Community 78 - "gsap.min.js"
 Cohesion: 0.07
-Nodes (25): Aa(), Animation(), Ca(), Context(), Da(), Db(), fb(), Gw() (+17 more)
+Nodes (16): Ad(), Ba(), Context(), Db(), fb(), Gw(), ia(), Id() (+8 more)
 
 ### Community 79 - "consultas.php"
-Cohesion: 0.09
-Nodes (23): automatiza_tech_proposals_page(), at_pa_contar_grupos(), at_pa_correo_es_respaldo(), at_pa_correo_textos(), at_pa_enumerar(), at_pa_estado_etiqueta(), at_pa_fecha_corta(), at_pa_fecha_valida() (+15 more)
+Cohesion: 0.07
+Nodes (27): pa_guardar_post(), at_cc_aviso_panel(), at_pa_guardar(), at_pa_contar_grupos(), at_pa_correo_es_respaldo(), at_pa_correo_textos(), at_pa_enumerar(), at_pa_estado_etiqueta() (+19 more)
 
 ### Community 80 - "3. Módulos Detallados"
 Cohesion: 0.06
@@ -1192,11 +1217,15 @@ Nodes (28): Capture(), construirChartRitmo(), JuegoCopos(), JuegoEscudo(), Juego
 
 ### Community 82 - "lib.agenda.php"
 Cohesion: 0.07
-Nodes (58): admin_cargar_usuario_de_sesion(), admin_csrf_field(), admin_csrf_token(), agenda_horas(), agenda_tarjeta(), agenda_theme(), h(), cb_admin_asignar_fiestas() (+50 more)
+Nodes (59): admin_cargar_usuario_de_sesion(), admin_csrf_field(), admin_csrf_token(), agenda_horas(), agenda_tarjeta(), agenda_theme(), h(), cb_admin_asignar_fiestas() (+51 more)
 
 ### Community 84 - "Campaña de lanzamiento — invitaciones inmersivas CumpleClick"
 Cohesion: 0.06
 Nodes (31): Audiencia inicial, Bloque obligatorio de logo, Campaña de lanzamiento — invitaciones inmersivas CumpleClick, Copies iniciales para Meta/Instagram, Decisión comercial canónica, Diferenciadores del Plan Full que sí existen, Dos reels para explicar cada plan, Embudo recomendado (+23 more)
+
+### Community 85 - "AutomatizaTech_CRM_AI"
+Cohesion: 0.06
+Nodes (17): at_crm_url_portal(), AutomatizaTech_Clientes_List_Table, AutomatizaTech_CRM_AI, at_cc_accion_crear_ficha_operativa(), at_cc_asegurar_cliente(), at_cc_crm_de_email(), at_cc_migrar_esquema(), at_cc_render_contratos_otras_fichas() (+9 more)
 
 ### Community 86 - "Álbum Recuerdo — propuesta técnica (pendiente de aprobación)"
 Cohesion: 0.06
@@ -1210,9 +1239,9 @@ Nodes (30): generateProposalImages(), persistImages(), crypto, fs, manifestPath(
 Cohesion: 0.06
 Nodes (30): 10. **Send Payment Invalid** (HTTP Request), 11. **Send Payment Expired** (HTTP Request), 1. **Validate Payment Image** (Code), 2. **Payment Status Check** (Switch), 3. **Download Payment Image** (HTTP Request), 4. **GPT4 Vision Validate** (HTTP Request), 5. **Process Validation Result** (Code), 6. **Validation Result** (Switch) (+22 more)
 
-### Community 89 - "ze"
-Cohesion: 0.06
-Nodes (36): bm(), cp(), Dg(), dp(), ep(), Fg(), fp(), gg() (+28 more)
+### Community 89 - "whatsapp.php"
+Cohesion: 0.10
+Nodes (43): aceptar_a_mano_ddoc(), aceptar_para_prueba(), crear_propuesta_datos(), at_cc_cabecera_copia(), at_cc_correo_avisos(), at_cc_correo_copia(), at_cc_datos_banco(), at_cc_opciones_cierre() (+35 more)
 
 ### Community 90 - "🚀 AutomatizaTech — Punto de Entrada Principal"
 Cohesion: 0.07
@@ -1230,41 +1259,37 @@ Nodes (29): Carpetas a revisar en `public_html/`, Checklist de resultados espera
 Cohesion: 0.07
 Nodes (29): 1. Cuenta de n8n, 2.1 WhatsApp API (HTTP Header Auth), 2.2 Google Sheets, 2.3 OpenAI, 2. WhatsApp Business API, 3. Google Account, 4. OpenAI, Agregar más horarios (+21 more)
 
-### Community 94 - "react-vendor-BWAn5Moh.js"
-Cohesion: 0.26
-Nodes (11): Bd(), Dd(), Hd(), li(), Md(), Nd(), pd(), Qd (+3 more)
+### Community 94 - "plan-trabajo/panel.php"
+Cohesion: 0.12
+Nodes (40): at_pt_cambiar_estado(), at_pt_payload(), at_pt_al_firmar(), at_pt_iniciar_borrador(), at_pt_llamar_n8n(), at_pt_pedir_render(), at_pt_url_whatsapp_cliente(), at_pt_accion_aprobar() (+32 more)
 
 ### Community 95 - "admin-followup-meetings.php"
-Cohesion: 0.11
-Nodes (16): automatiza_tech_call_followup_reschedule_workflow(), automatiza_tech_check_slot_availability(), automatiza_tech_create_calendar_event_ajax(), automatiza_tech_create_followup_calendar_event(), automatiza_tech_create_followup_meeting_api(), automatiza_tech_followup_check_availability_ajax(), automatiza_tech_followup_page(), automatiza_tech_followup_reschedule_api() (+8 more)
-
-### Community 96 - "AutomatizaTech_Client_Details"
-Cohesion: 0.09
-Nodes (4): automatiza_migrate_prospect_to_client(), automatiza_render_client_details(), automatiza_render_prospect_details(), AutomatizaTech_Client_Details
+Cohesion: 0.10
+Nodes (20): automatiza_tech_call_followup_reschedule_workflow(), automatiza_tech_check_slot_availability(), automatiza_tech_create_calendar_event_ajax(), automatiza_tech_create_followup_calendar_event(), automatiza_tech_create_followup_meeting_api(), automatiza_tech_followup_check_availability_ajax(), automatiza_tech_followup_email_cancel(), automatiza_tech_followup_email_confirm() (+12 more)
 
 ### Community 97 - "InboxView.jsx"
 Cohesion: 0.15
 Nodes (24): formatChileTime(), getAgentData(), getAgentRole(), getAgentsPaginated(), getChannels(), getConversations(), getIsAdmin(), getIsAgent() (+16 more)
 
-### Community 98 - "Je"
-Cohesion: 0.09
-Nodes (17): Eb(), we, at(), ct, Et(), ge(), has(), He() (+9 more)
+### Community 98 - "Wr"
+Cohesion: 0.06
+Nodes (32): Eb(), Ng(), is, we, at(), ct, dn(), Dr() (+24 more)
 
 ### Community 99 - "CONTRATO DE PRESTACIÓN DE SERVICIOS, CESIÓN DE PROPIEDAD INTELECTUAL Y SOPORTE TÉCNICO POST-PROYECTO"
 Cohesion: 0.07
-Nodes (27): ACEPTACIÓN, ANEXO A — Acta de entrega del Proyecto, ANEXO B — Plan de Soporte "{{nombre_plan_soporte}}", ANEXO C — Hash de integridad y registro de firma (autogenerado), CLÁUSULA CUARTA — Vigencia y renovación, CLÁUSULA DUODÉCIMA — Propiedad intelectual y cesión de derechos 🛡️, CLÁUSULA DÉCIMA — Confidencialidad, CLÁUSULA DÉCIMOCTAVA — Domicilio, ley aplicable y jurisdicción (+19 more)
+Nodes (28): ACEPTACIÓN, ANEXO A — Acta de entrega del Proyecto, ANEXO B — Plan de Soporte "{{nombre_plan_soporte}}", ANEXO C — Hash de integridad y registro de firma (autogenerado), CLÁUSULA CUARTA — Vigencia y renovación, CLÁUSULA DUODÉCIMA — Propiedad intelectual y cesión de derechos 🛡️, CLÁUSULA DÉCIMA — Confidencialidad, CLÁUSULA DÉCIMOCTAVA — Domicilio, ley aplicable y jurisdicción (+20 more)
 
-### Community 100 - "AgentsView-Di75dSYi.js"
-Cohesion: 0.08
-Nodes (55): K(), Q(), re(), W, X(), Z, z(), Ye() (+47 more)
+### Community 100 - "cierre-cliente/puras.php"
+Cohesion: 0.11
+Nodes (33): at_cc_enviar_bienvenida(), at_cc_historial_crm(), at_cc_crear_contrato_servicios(), at_cc_datos_contrato(), at_cc_anticipo(), at_cc_banco_completo(), at_cc_bienvenida_html(), at_cc_bloque_aceptar_html() (+25 more)
 
 ### Community 101 - "client-portal-omnichannel/package.json"
 Cohesion: 0.07
 Nodes (26): autoprefixer, dependencies, lucide-react, react, react-dom, devDependencies, autoprefixer, postcss (+18 more)
 
-### Community 103 - "10 — Seguridad y Hardening"
-Cohesion: 0.12
-Nodes (16): 10 — Seguridad y Hardening, `at-login-hardening.php`, `at-security-headers.php`, `at-security-monitor.php`, ✅ Checklist de seguridad (estado actual), 🔁 CI/CD — `.github/workflows/security-scan.yml`, 🔐 Credentials Vault, 🔒 `.htaccess` — Hardening Phase 1 (ACTIVO) (+8 more)
+### Community 103 - "🛡️ Helpers `at-*.php` (9 archivos en raíz)"
+Cohesion: 0.07
+Nodes (26): 10 — Seguridad y Hardening, `at-ajax-guard.php`, `at-cors.php`, `at-escape.php`, `at-login-hardening.php`, `at-maintenance-guard.php`, `at-ownership.php`, `at-path-safe.php` (+18 more)
 
 ### Community 104 - "📢 MATERIAL DE PUBLICIDAD - Sistema de Agendamiento WhatsApp"
 Cohesion: 0.07
@@ -1306,13 +1331,13 @@ Nodes (24): 1. **Buffer de Mensajes (5 segundos)**, 1. Meta Business / WhatsApp 
 Cohesion: 0.13
 Nodes (13): automatiza_tech_call_followup_reschedule_workflow(), automatiza_tech_check_slot_availability(), automatiza_tech_create_calendar_event_ajax(), automatiza_tech_create_followup_calendar_event(), automatiza_tech_create_followup_meeting_api(), automatiza_tech_followup_check_availability_ajax(), automatiza_tech_followup_page(), automatiza_tech_followup_reschedule_api() (+5 more)
 
-### Community 116 - "xb"
-Cohesion: 0.15
-Nodes (27): ca(), cb(), d(), Di(), Eg(), Em(), _h, Hm() (+19 more)
+### Community 116 - "Mapa de archivos"
+Cohesion: 0.05
+Nodes (36): 1. Limpieza del texto de la revisión (defecto: «50%de» salía «50 anticipo», «<24 horas» salía con entidades), 2. Tipo de cliente y párrafo del cliente según el tipo, 3. No se firma con datos en blanco, 4. Cláusula 14.1 (texto aprobado por Luis), 5. Nota para el abogado (no sale en el PDF), 6. Datos que da el cliente después de aceptar (lo usa la Task 7), 7. Línea en la bienvenida, 8. Enlaces a PDF del portal del cliente (del cotejo de PROD del 25-sep) (+28 more)
 
 ### Community 117 - "eo"
-Cohesion: 0.09
-Nodes (3): dp, eo, fo()
+Cohesion: 0.05
+Nodes (18): Ja(), Wa(), Do, eo, fo(), io, ja, ka (+10 more)
 
 ### Community 118 - "asomateGuia.test.mjs"
 Cohesion: 0.13
@@ -1350,9 +1375,9 @@ Nodes (22): 1. Captación y Propuesta (Lead), 1. Filtro Comercial (Rentabilidad)
 Cohesion: 0.09
 Nodes (22): 1. **Parse Date from Text** (Code Node), 2. **Is Date Valid?** (IF Node), 3. **Ask Email for Custom Date** (HTTP Request), 4. **Send Date Error** (HTTP Request), 5. **Get Config For Date Parsing** (HTTP Request), ⚠️ Configuración Necesaria, Consideraciones Importantes, Ejemplo de Lógica de Webhook (Python): (+14 more)
 
-### Community 127 - "12 — Flujos de Negocio (Diagramas Mermaid)"
-Cohesion: 0.18
-Nodes (11): 10. 🚨 Reporte de errores N8N → AT, 12 — Flujos de Negocio (Diagramas Mermaid), 1. 🎯 Captura de lead web, 2. 📅 Agendamiento de cita (vía bot WhatsApp), 3. 🔁 Conversación omnicanal con takeover de agente, 4. 💼 Pipeline comercial: lead → propuesta → contrato, 5. ⏰ Recordatorios automáticos de cita, 6. 🔐 Bot WhatsApp v8 — flujo interno detallado (+3 more)
+### Community 127 - "00_INDEX.md"
+Cohesion: 0.09
+Nodes (17): 📚 AutomatizaTech — Documentación Maestra (MASTER), 🚦 Cómo usar esta documentación (para IAs), 📌 Hechos rápidos del ecosistema, 🔄 Mantenimiento de esta documentación, 🎯 Propósito, 🗂️ Índice de documentos, 10. 🚨 Reporte de errores N8N → AT, 12 — Flujos de Negocio (Diagramas Mermaid) (+9 more)
 
 ### Community 128 - "Material explicativo CumpleClick"
 Cohesion: 0.09
@@ -1362,24 +1387,28 @@ Nodes (21): 1. El cuadro verde donde va la foto del niño, 2. Los subtítulos de
 Cohesion: 0.09
 Nodes (21): 10. Próximo flujo recomendado para Claude, 11. Estado Git y precauciones, 12. Entrega FTP futura, 13. Criterio de cierre, 1. Objetivo al retomar, 2. Restricciones y autorizaciones, 3. Decisiones de producto y marketing ya aprobadas, 4.1 Intro temático genérico (+13 more)
 
-### Community 130 - "cb_public_base_url"
-Cohesion: 0.10
-Nodes (35): admin_csrf_field(), admin_csrf_token(), h(), usuarios_enviar_correo(), cb_admin_correo_bienvenida(), cb_album_intake_url(), cb_album_sign_url(), cb_album_view_url() (+27 more)
+### Community 130 - "cb_manual_datos"
+Cohesion: 0.13
+Nodes (25): cb_ajuste_bcc(), cb_ajuste_recuperacion(), cb_ajustes(), cb_ajustes_numericos(), cb_ajustes_ruta(), cb_guardar_ajustes(), cb_manual_banner(), cb_manual_cabecera_compuesta() (+17 more)
 
-### Community 131 - "cb_puntaje_anotar"
-Cohesion: 0.62
-Nodes (6): cb_juegos(), cb_juegos_de_tema(), cb_posiciones(), cb_puntaje_anotar(), cb_puntaje_nombre(), cb_puntajes_disponible()
+### Community 131 - "cb_public_base_url"
+Cohesion: 0.08
+Nodes (29): admin_csrf_field(), admin_csrf_token(), h(), usuarios_enviar_correo(), usuarios_fiesta_etiqueta(), cb_album_intake_url(), cb_album_sign_url(), cb_album_view_url() (+21 more)
 
 ### Community 132 - "record-frozen-gameplay.mjs"
 Cohesion: 0.30
 Nodes (21): aceptarOferta(), aplicarViewport(), clickPorTexto(), esperarPantalla(), getCharacter(), getScreen(), goToParty(), grabarEntrada() (+13 more)
 
 ### Community 133 - "fc"
-Cohesion: 0.04
-Nodes (10): ac, di, ec, fc, hc(), lc(), mc, oc() (+2 more)
+Cohesion: 0.14
+Nodes (3): fc, mc, oc()
+
+### Community 134 - "Tl"
+Cohesion: 0.16
+Nodes (3): Kt(), reduce(), Tl
 
 ### Community 135 - "AutomatizaTechServicesManager"
-Cohesion: 0.12
+Cohesion: 0.14
 Nodes (3): AutomatizaTechServicesManager, get_active_automatiza_services(), get_automatiza_services()
 
 ### Community 137 - "OpenCode + DeepSeek — Gate B/C de Aventura Perruna"
@@ -1458,28 +1487,24 @@ Nodes (18): 10. Primera respuesta de OpenCode, 1. Estado recibido, 2. Objetivo i
 Cohesion: 0.11
 Nodes (18): allowSilent, args, audio, duration, errors, ffmpegArgs, input, normalized (+10 more)
 
-### Community 156 - "gu"
-Cohesion: 0.12
-Nodes (4): bind(), getValue(), gu, setValue()
-
 ### Community 158 - "🖋️ Módulo de Contratos con DOBLE FIRMA — AutomatizaTech"
 Cohesion: 0.11
 Nodes (18): 📂 Almacenamiento, 📁 Archivos del módulo, 🐛 Bugs conocidos / corregidos, ❌ Caracteres especiales (`?`) en títulos PDF (corregido commits `3581f33`–`78edd15`), 🛡️ Cláusulas blindaje (en la plantilla legal), 📞 Cómo crear un contrato, Desde código PHP (ej: cuando se confirma el pago final), Desde HTTP (N8N / Postman, login WP requerido vía cookie/auth) (+10 more)
 
 ### Community 160 - "Tween"
-Cohesion: 0.10
-Nodes (32): _a(), _assertThisInitialized(), cb(), cc(), ga(), gb(), ha(), hb() (+24 more)
+Cohesion: 0.25
+Nodes (11): _assertThisInitialized(), ic(), t(), ta(), Timeline(), Tween(), w(), x() (+3 more)
 
 ### Community 161 - "Ai1wm_Updater"
-Cohesion: 0.07
-Nodes (8): WP_CLI_Command, Akismet_CLI, Ai1wm_Updater_Controller, Ai1wm_Compatibility, Ai1wm_Extensions, Ai1wm_Updater, Ai1wm_Export_Compatibility, Ai1wm_Import_Compatibility
+Cohesion: 0.10
+Nodes (5): WP_CLI_Command, Akismet_CLI, Ai1wm_Updater_Controller, Ai1wm_Extensions, Ai1wm_Updater
 
 ### Community 162 - "automatiza-tech/functions.php"
 Cohesion: 0.14
 Nodes (6): automatiza_tech_format_invitees_for_humans(), automatiza_tech_get_request_ip(), automatiza_tech_parse_optional_copy_emails(), automatiza_tech_send_demo_copy_added_notification(), automatiza_tech_send_demo_participant_invitations(), handle_contact_form()
 
 ### Community 164 - "AutomatizaTechServicesManager"
-Cohesion: 0.13
+Cohesion: 0.15
 Nodes (3): AutomatizaTechServicesManager, get_active_automatiza_services(), get_automatiza_services()
 
 ### Community 166 - "buildRuntime"
@@ -1542,9 +1567,9 @@ Nodes (16): Arquitectura, Body Parameters (JSON), Campos críticos explicados, C
 Cohesion: 0.15
 Nodes (4): automatiza_tech_get_exchange_rate(), AutomatizaTech_Currency_Admin, automatiza_tech_init_currency_updater(), AutomatizaTech_Currency_Updater
 
-### Community 185 - "at_secmon_log_event"
-Cohesion: 0.21
-Nodes (8): at_rate_limit_check(), at_rate_limit_client_ip(), at_rate_limit_reject(), at_secmon_log_event(), at_secmon_render_log_page(), at_require_admin(), at_require_admin_ajax(), at_require_own_invoice()
+### Community 185 - "api-omnichannel.php"
+Cohesion: 0.09
+Nodes (18): at_omni_subscription_contract_html(), at_omni_subscription_status(), authenticate_admin(), authenticate_client(), send_json(), validate_admin_token(), at_path_inside(), at_safe_basename() (+10 more)
 
 ### Community 186 - "CumpleClick — Estrategia de video marketing con Higgsfield"
 Cohesion: 0.12
@@ -1582,9 +1607,9 @@ Nodes (13): admin_acceso_h(), admin_denegar(), admin_es_super(), admin_exigir(),
 Cohesion: 0.11
 Nodes (17): 0. Cómo trabajar sin pisar a nadie, 1.1 Objetivo, 1.2 Contexto que ya existe (usarlo, no rehacerlo), 1.3 Entregable 1 — la estrategia (documento), 1.4 Entregable 2 — los assets, 1.5 Entregable 3 — módulo "Contenido" del admin (superusuario), 1.6 Aceptación del ticket 017, 1. Ticket AT-CUMPLECLICK-017 — Estrategia de 30 días + módulo "Contenido" del admin (+9 more)
 
-### Community 195 - "lf"
-Cohesion: 0.17
-Nodes (16): Rd(), Vd(), Wd(), yd(), ye(), jf(), lf(), mf() (+8 more)
+### Community 195 - "Rd"
+Cohesion: 0.33
+Nodes (6): Rd(), Vd(), Wd(), yd(), ye(), Le
 
 ### Community 196 - "5.2 Tablas (15)"
 Cohesion: 0.12
@@ -1606,13 +1631,13 @@ Nodes (15): 📱 Comandos Disponibles, 📊 Duración de la Memoria, Ejemplo:, �
 Cohesion: 0.12
 Nodes (15): Cómo importar en N8N, Diferencias respecto a v7, Flujo de mensajes (92 nodos), Historial de versiones, Nodo `Fetch Portal Config` (Code node), Notas sobre el fallback a Google Sheets, Nuevas funcionalidades v8, Paso 1: Preparar configuración (+7 more)
 
-### Community 201 - "ce"
-Cohesion: 0.19
-Nodes (15): Ae(), ce(), $d(), ee(), he(), ka(), ma(), Nd() (+7 more)
+### Community 201 - "ne"
+Cohesion: 0.27
+Nodes (12): ce(), $d(), ee(), ha(), ka(), me(), ne(), oe() (+4 more)
 
 ### Community 203 - ".Header"
-Cohesion: 0.17
-Nodes (13): automatiza_tech_cancel_followup_meeting(), automatiza_tech_followup_email_cancel(), automatiza_tech_followup_email_confirm(), automatiza_tech_followup_email_reschedule(), automatiza_tech_render_followup_action_page(), automatiza_tech_cancel_followup_meeting(), automatiza_tech_followup_email_cancel(), automatiza_tech_followup_email_confirm() (+5 more)
+Cohesion: 0.15
+Nodes (9): automatiza_tech_cancel_followup_meeting(), automatiza_tech_followup_email_cancel(), automatiza_tech_followup_email_confirm(), automatiza_tech_followup_email_reschedule(), automatiza_tech_render_followup_action_page(), automatiza_tech_cancel_followup_meeting(), automatiza_tech_delete_google_calendar_event(), automatiza_tech_get_leads_for_reminders_wa() (+1 more)
 
 ### Community 204 - "admin-leads-manager.php"
 Cohesion: 0.26
@@ -1647,8 +1672,8 @@ Cohesion: 0.13
 Nodes (14): 10. Cookies y analítica, 11. Cambios a esta Política, 1. Responsable del tratamiento, 2. Marco legal, 3.1. Del Cliente (persona adulta que contrata), 3.2. De niños, niñas y adolescentes participantes, 3. Qué datos tratamos y de quién, 4. Finalidades y base de licitud (+6 more)
 
 ### Community 213 - "lib.gifts.php"
-Cohesion: 0.28
-Nodes (13): cb_gift_add(), cb_gift_board_url(), cb_gift_claim(), cb_gift_clean_text(), cb_gift_list_for_parents(), cb_gift_list_public(), cb_gift_move(), cb_gift_release() (+5 more)
+Cohesion: 0.31
+Nodes (12): cb_gift_add(), cb_gift_claim(), cb_gift_clean_text(), cb_gift_list_for_parents(), cb_gift_list_public(), cb_gift_move(), cb_gift_release(), cb_gift_require_db() (+4 more)
 
 ### Community 214 - "Hallazgos"
 Cohesion: 0.13
@@ -1775,8 +1800,8 @@ Cohesion: 0.15
 Nodes (12): 2. Qué Esperar Después, General, 📖 Manual de Usuario - AutomatizaTech, Para Administradores (Back-end), Para Usuarios del Sitio Web (Front-end), PARTE 1: USUARIOS DEL SITIO WEB (FRONT-END), ❓ Preguntas Frecuentes (Clientes), Proceso Automático (+4 more)
 
 ### Community 253 - "PARTE 2: ADMINISTRADORES (BACK-END)"
-Cohesion: 0.22
-Nodes (9): 4. Acceso al Panel de Administración, Consultas Útiles para Reportes, Dashboard Principal, Iniciar Sesión, 📊 Panel de Estadísticas, Para Administradores, Para Clientes, PARTE 2: ADMINISTRADORES (BACK-END) (+1 more)
+Cohesion: 0.15
+Nodes (13): 4. Acceso al Panel de Administración, 5. Gestionar Contactos, Acciones Disponibles, Consultas Útiles para Reportes, Dashboard Principal, Detalles de un Contacto, Iniciar Sesión, 📊 Panel de Estadísticas (+5 more)
 
 ### Community 254 - "07 — N8N Workflows"
 Cohesion: 0.15
@@ -1882,13 +1907,13 @@ Nodes (10): dur(), filtro, inicios, inputs, MAPA, mezclaInputs, narrLabels, segF
 Cohesion: 0.20
 Nodes (9): main(), pieces, render(), a, b, body, leftover, src (+1 more)
 
-### Community 282 - ".constructor"
-Cohesion: 0.07
-Nodes (20): A(), B(), F(), G(), L(), r(), mr, ma (+12 more)
+### Community 282 - "plan-trabajo/puras.php"
+Cohesion: 0.13
+Nodes (33): at_pt_aplicar_tabla(), at_pt_armar_render(), at_pt_arranque(), at_pt_booleano(), at_pt_clave_de(), at_pt_clave_nombre(), at_pt_correo_plan_html(), at_pt_costo_fotos() (+25 more)
 
-### Community 283 - "push"
-Cohesion: 0.09
-Nodes (27): an, Ai(), bi(), ci(), Cs(), ei(), fa(), Gp() (+19 more)
+### Community 283 - "concat"
+Cohesion: 0.10
+Nodes (27): Ai(), bi(), ci(), concat(), Cs(), ei(), fa(), Hi() (+19 more)
 
 ### Community 284 - "2.1 Completar PWA — Requisitos Mínimos"
 Cohesion: 0.18
@@ -1918,13 +1943,17 @@ Nodes (10): Archivos, AT-ORCH-001 — Gobierno multi-agente, Estado actual (inic
 Cohesion: 0.18
 Nodes (10): content, filePath, fs, parseCancelEvent, parseEventToDelete, path, processCancelResults, processSearchResults (+2 more)
 
+### Community 291 - ".sanitize_key"
+Cohesion: 0.14
+Nodes (27): at_cc_contrato_de_propuesta(), at_cc_aplicar_datos_contrato(), at_cc_avisar_datos_contrato(), at_cc_cargar_contract_service(), at_cc_contrato_admite_datos_cliente(), at_cc_contrato_sin_direccion(), at_cc_contrato_sin_documento(), at_cc_datos_contrato_de_post() (+19 more)
+
 ### Community 292 - "at-agenda.js"
 Cohesion: 0.37
 Nodes (15): applyBounds(), clearChoice(), dropStale(), el(), franjaFor(), init(), load(), maxStr() (+7 more)
 
 ### Community 295 - "Agent Instructions"
-Cohesion: 0.12
-Nodes (16): Agent Instructions, API del pipeline, Automatizatech — Pipeline de Propuestas, AutomatizaTech — Reglas obligatorias para videos/Reels, Conexiones y credenciales, Contexto compartido, Entrega obligatoria para FTP, Estándar profesional transversal (+8 more)
+Cohesion: 0.11
+Nodes (17): Agent Instructions, API del pipeline, Automatizatech — Pipeline de Propuestas, AutomatizaTech — Reglas obligatorias para videos/Reels, Conexiones y credenciales, Contexto compartido, Entrega obligatoria para FTP, Estándar profesional transversal (+9 more)
 
 ### Community 297 - "public/manifest.json"
 Cohesion: 0.20
@@ -2002,9 +2031,9 @@ Nodes (7): boot(), anotarResultado(), cualJuego(), fiesta(), parametro(), puntaj
 Cohesion: 0.14
 Nodes (13): 1. Regla de oro: verificar antes de asumir, 2. Dónde están las credenciales, 3.1 Credenciales dentro de n8n (actualizado 2026-08-26), 3.2 Escribir workflows por API: el bloqueo de `settings`, 3.3 Hostinger PROD por SSH/SFTP (actualizado 2026-09-06), 3. Estado real de las conexiones, 4. Cómo verificar y conectar, por agente, 5. Hooks del repositorio: apuntar siempre a un shim (+5 more)
 
-### Community 316 - "🛡️ Helpers `at-*.php` (9 archivos en raíz)"
-Cohesion: 0.20
-Nodes (10): `at-ajax-guard.php`, `at-cors.php`, `at-escape.php`, `at-maintenance-guard.php`, `at-ownership.php`, `at-path-safe.php`, `at-rate-limit.php`, `at-uploads-validate.php` (+2 more)
+### Community 316 - "probar_plan.py"
+Cohesion: 0.17
+Nodes (32): act(), actividad(), actividades(), brief(), cargar(), contexto(), cuerpo_render(), leido() (+24 more)
 
 ### Community 317 - "predictions.js"
 Cohesion: 0.36
@@ -2071,7 +2100,7 @@ Cohesion: 0.18
 Nodes (10): CONTACTO PARA DUDAS, ESPUMA DE AJUSTE (para que calce cualquier tablet), KIOSCO CUMPLECLICK — PLANO PARA CARPINTERO, LISTA DE COMPRAS, OPCIONAL (si es fácil, si no, no), PIEZA 1 — MARCO (la caja que va arriba), PIEZA 2 — TAPA TRASERA, PIEZA 3 — BASE (piso) (+2 more)
 
 ### Community 333 - "service-categories-manager.php"
-Cohesion: 0.40
+Cohesion: 0.35
 Nodes (8): get_automatiza_service_categories(), get_default_service_categories(), get_frontend_service_categories(), get_quotation_service_categories(), get_service_categories_js_options(), get_service_category_by_slug(), get_service_category_name(), render_service_categories_select()
 
 ### Community 335 - "services-admin.php"
@@ -2178,9 +2207,9 @@ Nodes (9): 10.1 Modo "Servidor Remoto" vs "Archivos Locales", 10.2 Seguridad en 
 Cohesion: 0.22
 Nodes (9): 6.1 Instalar Capacitor, 6.2 Agregar Plataformas, 6.3 Plugins Útiles (Opcionales), 6.4 Configurar Iconos y Splash Screen, 6.5 Workflow de Desarrollo, 6.7 Build de Producción, 6. Guía Paso a Paso — Capacitor, Android (APK / AAB) (+1 more)
 
-### Community 361 - "00_INDEX.md"
-Cohesion: 0.11
-Nodes (14): 📚 AutomatizaTech — Documentación Maestra (MASTER), 🚦 Cómo usar esta documentación (para IAs), 📌 Hechos rápidos del ecosistema, 🔄 Mantenimiento de esta documentación, 🎯 Propósito, 🗂️ Índice de documentos, 01 — Arquitectura General del Ecosistema AutomatizaTech, 🌍 Ambientes (+6 more)
+### Community 361 - "01 — Arquitectura General del Ecosistema AutomatizaTech"
+Cohesion: 0.22
+Nodes (8): 01 — Arquitectura General del Ecosistema AutomatizaTech, 🌍 Ambientes, 📁 Estructura de carpetas (resumen), 🔁 Flujos críticos del negocio, 🔐 Modelo de seguridad (resumen), 🏗️ Stack tecnológico, 🌐 Topología (alto nivel), 🎯 Visión
 
 ### Community 362 - "Aplicación del Método AutomatizaTech"
 Cohesion: 0.22
@@ -2218,13 +2247,13 @@ Nodes (8): checkNodes, clearPDIdx, content, customDateNodes, fs, j, j2, sendErro
 Cohesion: 0.31
 Nodes (6): get_default_features_content(), get_default_special_services_content(), pricing_services_shortcode(), render_features_section(), render_pricing_section(), render_special_services_section()
 
-### Community 375 - "api-omnichannel.php"
-Cohesion: 0.19
-Nodes (10): at_omni_process_image_uploads(), at_omni_subscription_contract_html(), at_omni_subscription_status(), authenticate_admin(), authenticate_client(), send_json(), validate_admin_token(), at_mime_canonical_ext() (+2 more)
+### Community 375 - ".handle_file_upload"
+Cohesion: 0.47
+Nodes (4): at_omni_process_image_uploads(), at_mime_canonical_ext(), at_mime_to_ext(), at_verify_upload_mime()
 
-### Community 376 - "automatiza_download_invoice"
-Cohesion: 0.32
-Nodes (4): at_path_inside(), at_safe_basename(), at_serve_protected_pdf(), automatiza_download_invoice()
+### Community 376 - "at_cc_render_panel_respuesta"
+Cohesion: 0.12
+Nodes (31): at_cc_accion_archivar(), at_cc_accion_archivo(), at_cc_accion_desarchivar(), at_cc_archivar_propuesta(), at_cc_desarchivar_propuesta(), at_cc_estado_antes_de_archivar(), at_cc_estado_en_palabras(), at_cc_se_puede_aceptar_a_mano() (+23 more)
 
 ### Community 377 - "QA-00 — Índice General y Entornos de Prueba"
 Cohesion: 0.25
@@ -2288,7 +2317,7 @@ Nodes (4): admin_csrf_field(), admin_csrf_token(), admin_media_action(), h()
 
 ### Community 392 - "admin/leads.php"
 Cohesion: 0.32
-Nodes (5): admin_csrf_field(), admin_csrf_token(), cc_lead_fecha(), cc_lead_solo_fecha(), h()
+Nodes (3): admin_csrf_field(), admin_csrf_token(), h()
 
 ### Community 393 - "Consentimiento para la captura y uso de imagen de niños, niñas y adolescentes"
 Cohesion: 0.25
@@ -2334,9 +2363,9 @@ Nodes (7): Confirmacion al asumir, Contexto y vision, Continuidad entre agentes,
 Cohesion: 0.25
 Nodes (7): Archivos canonicos, Fuentes de verdad del sistema, Modo transitorio, Orquestacion multiagente de AutomatizaTech, Precisiones de Luis (2026-07-10, v1.1), Principios, Registro de eventos
 
-### Community 404 - "Automatizatech — Pipeline de Propuestas (Skills disponibles)"
-Cohesion: 0.25
-Nodes (7): API del pipeline, at-gamma-proposal → `.github/skills/at-gamma-proposal/SKILL.md`, at-proposal-refiner → `.github/skills/at-proposal-refiner/SKILL.md`, Automatizatech — Pipeline de Propuestas (Skills disponibles), GitHub Copilot Instructions, GitHub Copilot Instructions, graphify
+### Community 404 - "GitHub Copilot Instructions"
+Cohesion: 0.22
+Nodes (8): API del pipeline, at-gamma-proposal → `.github/skills/at-gamma-proposal/SKILL.md`, at-proposal-refiner → `.github/skills/at-proposal-refiner/SKILL.md`, Automatizatech — Pipeline de Propuestas (Skills disponibles), Automatizatech — Plan de trabajo con carta Gantt (Etapas 1 y 2 EN PROD), GitHub Copilot Instructions, GitHub Copilot Instructions, graphify
 
 ### Community 405 - "at-proposal-refiner (GitHub Copilot)"
 Cohesion: 0.25
@@ -2611,7 +2640,7 @@ Cohesion: 0.29
 Nodes (7): 8. `client-operations-module.php` — 1,514 líneas, AJAX Hooks (5), Clase: `AutomatizaTech_Client_Operations` (singleton, L18), Funcionalidad Clave, Hooks, Métodos Públicos (10), Tablas DB
 
 ### Community 481 - "🔄 Flujo Cliente End-to-End — AutomatizaTech"
-Cohesion: 0.15
+Cohesion: 0.14
 Nodes (13): 0. Diagrama macro (ASCII), 2. Mapa de automatizaciones (resumen ejecutivo), 3. Esquema de BD propuesto (deltas), 4. Endpoints nuevos (mínimos), 5. Workflows N8N a crear, 6. Recomendaciones (opinión), 7. Documentos y plantillas relacionados, Decisiones técnicas que recomiendo (+5 more)
 
 ### Community 482 - "8. Gestionar Servicios y Planes"
@@ -2630,8 +2659,8 @@ Nodes (7): 15. Sistema de Configuración de Prompts (PromptsView), 7 Secciones (
 Cohesion: 0.29
 Nodes (6): 11. Convenciones de Código, 1. Arquitectura General, 5.1 Tablas Principales, 5.2 Scripts de Migración, 5. Base de Datos, Manual del Programador — Portal OmniCliente AutomatizaTech
 
-### Community 486 - "OmniCliente/QA-00-Indice-Entornos.md"
-Cohesion: 0.29
+### Community 486 - "QA-04 — Configuración de Bots y Prompts"
+Cohesion: 0.40
 Nodes (4): 1. Tab "Configuración del Bot" (BotsView), 2. Tab "Prompts" (PromptsView), 3. Tab "Vista Previa Prompt" (PromptPreviewPanel), QA-04 — Configuración de Bots y Prompts
 
 ### Community 487 - "QA-05 — Gestión de Agentes"
@@ -2697,6 +2726,10 @@ Nodes (6): bookingFlow, content, flow, fs, j, newNodes
 ### Community 502 - "akismet.js"
 Cohesion: 0.43
 Nodes (4): akismet_mshot_url(), akismet_preload_mshot(), preloadMshotsInViewport(), retryMshotUntilLoaded()
+
+### Community 503 - "Orden de ejecución"
+Cohesion: 0.07
+Nodes (27): Ciclo A — fechas y ayudas, Ciclo B — carta Gantt, Ciclo C — Método AT y láminas de fase, Ciclo D — qué necesitamos, reuniones y soporte, portal y cierre, Ciclo E — documento completo, Global Constraints, Orden de ejecución, Plan de trabajo con carta Gantt — Etapa 1: Plan de implementación (+19 more)
 
 ### Community 504 - "Aurora de Cristal — integración en el menú de la fiesta"
 Cohesion: 0.20
@@ -2801,10 +2834,6 @@ Nodes (5): construir(), esImagen(), FORMATOS, GUION, sh()
 ### Community 533 - "capture-chars.mjs"
 Cohesion: 0.73
 Nodes (5): captureTheme(), main(), sleep(), snap(), trySpin()
-
-### Community 534 - "ye"
-Cohesion: 0.50
-Nodes (4): jp(), Nm(), vp(), ye()
 
 ### Community 535 - "15. `receipts-module.php` — 827 líneas"
 Cohesion: 0.33
@@ -3030,9 +3059,9 @@ Nodes (5): normalize_instagram(), normalize_message(), normalize_messenger(), no
 Cohesion: 0.29
 Nodes (5): Closure, MarketingAssetRaceStatement, mk_check(), mk_reject(), PDOStatement
 
-### Community 592 - "rest-proposals.php"
-Cohesion: 0.23
-Nodes (12): at_propuesta_conservar_precios(), at_propuesta_errores_payload(), at_propuesta_estado_permitido_por_api(), at_propuesta_transicion_valida(), automatiza_proposals_rest_auth(), automatiza_proposals_rest_create(), automatiza_proposals_rest_get(), automatiza_proposals_rest_state_get() (+4 more)
+### Community 592 - "datos.php"
+Cohesion: 0.16
+Nodes (22): ptc_cliente_fila(), pestana(), at_pt_contexto(), at_pt_contratos_sin_plan(), at_pt_crear_plan(), at_pt_datos_render(), at_pt_db_contrato(), at_pt_db_fecha_valida() (+14 more)
 
 ### Community 594 - "OmniCliente/QA/QA-00-Indice-Entornos.md"
 Cohesion: 0.29
@@ -3210,8 +3239,8 @@ Nodes (5): 6.1 Validación de Nombre, 6.2 Validación de Email, 6.3 Deduplicaci�
 Cohesion: 0.40
 Nodes (5): 📱 CONTENIDO ESPECÍFICO POR CANAL, PROMPT 8.1: Instagram Posts (3 variaciones), PROMPT 8.2: TikTok/Reels (2 scripts), PROMPT 8.3: LinkedIn para B2B, PROMPT 8.4: Email Secuencia Completa
 
-### Community 642 - "QA-08 — Auditoría"
-Cohesion: 0.40
+### Community 642 - "OmniCliente/QA-00-Indice-Entornos.md"
+Cohesion: 0.29
 Nodes (4): 1. Vista de Auditoría, 2. Detalle Expandible, 3. Filtros y Paginación, QA-08 — Auditoría
 
 ### Community 643 - "qa-report-generator.php"
@@ -3607,8 +3636,8 @@ Cohesion: 0.15
 Nodes (12): express, playwright, dependencies, express, playwright, main, name, private (+4 more)
 
 ### Community 1175 - "automatiza_tech_proposals_page_clasico"
-Cohesion: 0.13
-Nodes (15): at_v3_llamar_n8n(), at_propuesta_agregar_comentario(), at_propuesta_aplicar_precios(), at_propuesta_costo_fotos(), at_propuesta_filas_con_precio_vacio(), at_propuesta_precios_pendientes(), at_propuesta_puede_enviarse(), at_pa_accion_v3() (+7 more)
+Cohesion: 0.08
+Nodes (28): ep_clasica(), ep_nueva(), ep_post(), at_v3_llamar_n8n(), automatiza_tech_proposals_page(), at_propuesta_agregar_comentario(), at_propuesta_aplicar_precios(), at_propuesta_conservar_precios() (+20 more)
 
 ### Community 1176 - "Usuarios del backoffice: superadministrador y operadores (2026-09-13)"
 Cohesion: 0.33
@@ -3650,9 +3679,9 @@ Nodes (9): { chromium }, fs, path, assert, fs, os, path, { renderToFiles } (+1 m
 Cohesion: 0.38
 Nodes (9): capturarUno(), elegirInvitado(), esperar(), estadoDebug(), grabarRuleta(), main(), OBJETIVOS, saltarBienvenidaYGirar() (+1 more)
 
-### Community 1191 - "6. API — Estructura de Rutas"
-Cohesion: 0.33
-Nodes (6): 6. API — Estructura de Rutas, Archivo: `api-omnichannel.php`, Rutas Admin (`/admin/...`), Rutas Agent (`/agent/...`), Rutas Cliente (API Key, sin prefijo), Rutas Públicas (sin auth)
+### Community 1191 - "fd"
+Cohesion: 0.10
+Nodes (7): Hd(), fd(), gd(), hd, ic, yd, zd
 
 ### Community 1192 - "cartel-qr/main.jsx"
 Cohesion: 0.27
@@ -3678,9 +3707,9 @@ Nodes (7): barajarPiezas(), JuegoFichas(), celdaBajoPunto(), esArrastre(), inter
 Cohesion: 0.22
 Nodes (8): Correo al cliente precargado, PDF adjunto y borrado visible — plan de implementación, Global Constraints, Task 1: Funciones puras del correo y del PDF (consultas.php), Task 2: Ficha y envío — textos precargados que se guardan, y PDF adjunto, Task 3: Borrar a la vista y espacio para la burbuja ARIA, Task 4: n8n — la IA redacta el correo al cliente, Task 5 (controlador): prueba local de punta a punta, Task 6 (controlador, con autorización de Luis): despliegue
 
-### Community 1220 - "g"
-Cohesion: 0.22
-Nodes (9): bg(), fb(), g(), jg(), jh, oo(), vg(), yg() (+1 more)
+### Community 1220 - "at_pt_plan"
+Cohesion: 0.19
+Nodes (17): plan_enviado(), plan_listo(), ptc_cliente(), ptc_contrato(), ptc_estado(), ptc_limpiar(), ptc_plan(), ptc_plan_base() (+9 more)
 
 ### Community 1221 - "server.test.js"
 Cohesion: 0.12
@@ -3691,8 +3720,8 @@ Cohesion: 0.25
 Nodes (7): 1. Qué es y quién lo llama, 2. Dónde vive el código, 3. Imágenes: Higgsfield por API REST, no por MCP, 4. Cómo se despliega (Easypanel), 5. Cómo se verifica, 6. Historial, `propuesta-renderer`: qué es, cómo se despliega y cómo se verifica
 
 ### Community 1223 - "cb_config"
-Cohesion: 0.12
-Nodes (29): cb_acceptance_form_nonce(), cb_acceptance_form_nonce_valid(), cb_send_mail(), cb_ajuste_bcc(), cb_ajuste_recuperacion(), cb_ajustes(), cb_ajustes_numericos(), cb_ajustes_ruta() (+21 more)
+Cohesion: 0.15
+Nodes (22): cb_acceptance_form_nonce(), cb_acceptance_form_nonce_valid(), cb_send_mail(), cb_admin_sesion_activa(), cb_config(), cb_hmac(), cb_invitation_share_token(), cb_create_lead() (+14 more)
 
 ### Community 1224 - "albumPages.test.mjs"
 Cohesion: 0.38
@@ -3707,16 +3736,16 @@ Cohesion: 0.29
 Nodes (7): 7. Frontend, El configurador, paso a paso, Escena 3D: reglas de implementación, Estado, Jerarquía de componentes (configurador), Layout y responsive, Rutas públicas
 
 ### Community 1229 - "Propuestas AT — flujo automático v3"
-Cohesion: 0.29
-Nodes (6): Correos, Cómo se publica y cómo se revierte, Fotos por rubro (regla de Luis, 2026-09-24), Panel de propuestas (wp-admin › Propuestas, EN PROD desde el 2026-09-24 15:48), Propuestas AT — flujo automático v3, Recorrido
+Cohesion: 0.25
+Nodes (7): Cierre de cliente (EN PROD desde el 2026-09-26 13:36), Correos, Cómo se publica y cómo se revierte, Fotos por rubro (regla de Luis, 2026-09-24), Panel de propuestas (wp-admin › Propuestas, EN PROD desde el 2026-09-24 15:48), Propuestas AT — flujo automático v3, Recorrido
 
 ### Community 1230 - "6.6 Ajustes Específicos para OmniCliente"
 Cohesion: 0.40
 Nodes (5): 6.6 Ajustes Específicos para OmniCliente, A. Manejo de URLs (api.js), B. StatusBar y SafeArea (para notch/island), C. Deep Links, D. Navegación (back button Android)
 
-### Community 1231 - ".execute"
-Cohesion: 0.29
-Nodes (4): ai1wm_archive_file(), ai1wm_generate_random_string(), ai1wm_storage_folder(), Ai1wm_Export_Init
+### Community 1231 - "CONTRATO DE PRESTACIÓN DE SERVICIOS DE DESARROLLO E IMPLEMENTACIÓN"
+Cohesion: 0.10
+Nodes (20): ACEPTACIÓN, CLÁUSULA CUARTA — Plazo, CLÁUSULA DECIMOCUARTA — Término anticipado, CLÁUSULA DECIMOQUINTA — Fases siguientes, CLÁUSULA DECIMOSEXTA — Firma electrónica, CLÁUSULA DECIMOSÉPTIMA — Domicilio y jurisdicción, CLÁUSULA DECIMOTERCERA — Garantía, CLÁUSULA DUODÉCIMA — Uso de inteligencia artificial (+12 more)
 
 ### Community 1233 - "lib.planes.php"
 Cohesion: 0.60
@@ -3730,13 +3759,13 @@ Nodes (6): 12. Despliegue, CI/CD, Dockerfile (resumen), Dominio y correo, Respal
 Cohesion: 0.33
 Nodes (6): 4. Modelo de datos, Esquema Prisma, Reglas de precio (`ReglasPrecio.reglas`, JSON versionado), Relaciones, Tipos del dominio (`src/domain/tipos.ts`), Unidades y convenciones
 
-### Community 1236 - "rb"
-Cohesion: 0.33
-Nodes (6): bp(), Dt(), gt(), _m, mn(), rb()
+### Community 1236 - ".execute"
+Cohesion: 0.10
+Nodes (13): ai1wm_content_filters(), ai1wm_get_plugins_dir(), ai1wm_get_themes_dirs(), ai1wm_media_filters(), ai1wm_media_list_path(), ai1wm_plugin_filters(), ai1wm_plugins_list_path(), ai1wm_putcsv() (+5 more)
 
-### Community 1237 - "5. Gestionar Contactos"
-Cohesion: 0.50
-Nodes (4): 5. Gestionar Contactos, Acciones Disponibles, Detalles de un Contacto, Ver Contactos Recibidos
+### Community 1237 - "datos-prueba.php"
+Cohesion: 0.11
+Nodes (10): WP_REST_Response, pt_actividad(), pt_actividades(), pt_archivo(), pt_cliente(), pt_ficha(), pt_limpiar(), pt_pedir() (+2 more)
 
 ### Community 1238 - "Posfiesta CumpleClick: la línea de trabajo (para cualquier agente)"
 Cohesion: 0.40
@@ -3758,65 +3787,161 @@ Nodes (5): 5.1 De parámetros a paneles (`domain/geometria/paneles.ts`), 5.2 Cá
 Cohesion: 0.60
 Nodes (4): api(), call(), main(), Publica (crea o actualiza por nombre) y activa un workflow de N8N/propuestas-v3…
 
-### Community 1244 - "10. Build y Deploy"
-Cohesion: 0.50
-Nodes (4): 10. Build y Deploy, Desarrollo, Producción, URLs
+### Community 1244 - "build_plan_1_borrador.py"
+Cohesion: 0.15
+Nodes (12): http_wp(), iff(), node(), Construye el workflow n8n «Plan de trabajo · 1 Borrador» y lo guarda en…, http_wp(), iff(), node(), Construye el workflow n8n «Plan de trabajo · 2 Cambios» y lo guarda en… (+4 more)
 
-### Community 1245 - "12. Guía Rápida para Modificaciones"
-Cohesion: 0.50
-Nodes (4): 12. Guía Rápida para Modificaciones, Agregar un nuevo tipo de email:, Agregar una nueva tabla:, Agregar una nueva vista:
+### Community 1245 - "Notas de revisión y coherencia (Etapa 1 del plan de trabajo)"
+Cohesion: 0.11
+Nodes (17): Enmienda D18 (29-sep): revisión de texto de las fotos con GPT-4o en el flujo 3, grupo-A.md, grupo-B.md, grupo-C.md, grupo-D.md, grupo-E.md, Notas de coherencia (grupo A, 29-sep), Notas de coherencia (grupo B, 29-sep) (+9 more)
 
 ### Community 1247 - "10. Entorno"
 Cohesion: 0.50
 Nodes (4): 10. Entorno, Levantar en local, Prerrequisitos, Variables de entorno
 
-### Community 1248 - "fn"
-Cohesion: 0.50
-Nodes (4): db(), ef(), fn(), Ri()
+### Community 1248 - "Plan de trabajo del proyecto (cronograma con carta Gantt) — diseño"
+Cohesion: 0.11
+Nodes (17): 1. Disparador, 2. Datos, 3. Tabla de tiempos de referencia, 4. Borrador con IA (n8n «Plan 1 Borrador»), 5. Documento (renderer), 6. Panel (WordPress), 7. Envío y vista del cliente (Etapa 2), Componentes (+9 more)
 
 ### Community 1250 - "11. Dependencias"
 Cohesion: 0.67
 Nodes (3): 11. Dependencias, Desarrollo, Producción
 
-### Community 1254 - "3. Sistema de Autenticación (3 Modos)"
+### Community 1251 - "correo_sin_vista"
+Cohesion: 0.16
+Nodes (15): http(), iff(), node(), Construye el workflow n8n «Plan de trabajo · 3 Render» y lo guarda en…, correo_render(), correo_sin_vista(), js_correo_plan(), marco_plan() (+7 more)
+
+### Community 1254 - "at_pt_agendar_seguimiento"
+Cohesion: 0.15
+Nodes (15): pedir(), at_cc_whatsapp_at(), at_pt_agendar_seguimiento(), at_pt_respuesta_agenda(), at_pt_rest_agendar(), at_pt_seguimiento_pendiente(), at_pt_token_agenda_hoy(), WP_REST_Request (+7 more)
+
+### Community 1261 - "Plan de trabajo — Etapa 1 · ESQUELETO Y CONTRATO DE INTERFACES (fuente única para quien redacta tareas)"
+Cohesion: 0.12
+Nodes (16): Cuerpo que WordPress manda al renderer (lo arma `at_pt_armar_render(array $plan, array $datos, bool $final): array`), DECISIONES DE COHERENCIA DEL ORQUESTADOR (29-sep 16:10) — mandan sobre lo anterior de este archivo, Estados y transiciones (función pura `at_pt_transiciones(): array`), Funciones PHP (contrato; firmas exactas), Herramientas locales (Windows, Git Bash), JSON del plan (`payload`), forma normalizada que produce `at_pt_validar_plan()`, Lista de tareas (quién redacta qué), Modelo de datos (+8 more)
+
+### Community 1265 - "Cierre de cliente: respuesta a la propuesta, ficha única, contrato de servicio y bienvenida"
+Cohesion: 0.13
+Nodes (14): 1. Problema, 2. Decisiones de Luis, 3. Recorrido, 4. Etapas de construcción, 5. Seguridad, 6. Pruebas, 7. Fuera de esta etapa, 8. Despliegue (+6 more)
+
+### Community 1266 - "Plan de trabajo con carta Gantt — Etapa 1"
+Cohesion: 0.15
+Nodes (13): Ajustes del plan: tabla de tiempos, Despliegue, respaldos y rollback, Días hábiles y feriados, Estados y transiciones, Etapa 2: el cliente recibe (EN PROD desde 2026-10-01 ~09:15 Chile, `666eea3`), Etapas siguientes, Flujos n8n, Lo que falta (+5 more)
+
+### Community 1267 - "build_3_final.py"
+Cohesion: 0.18
+Nodes (7): Construye el workflow n8n «Propuestas v3 · 1 Borrador» y lo guarda en…, http(), iff(), node(), Construye el workflow n8n «Propuestas v3 · 3 Final» y lo guarda en…, Filtro de descripciones de fotos que comparten los flujos v3 (Borrador y…, Prueba local del filtro de fotos (fotos_guard.JS_LIMPIAR_FOTOS) con casos de…
+
+### Community 1284 - "archivo-wp-test.php"
+Cohesion: 0.18
+Nodes (4): ar_capturar(), ar_clasico_guardar(), ar_crear(), ar_guardar_post()
+
+### Community 1285 - "panel-acciones-wp-test.php"
+Cohesion: 0.20
+Nodes (9): pt_correr_accion(), pt_query(), ptc_plan_json(), accion_plan(), con_campo(), con_dias(), msg(), post_guardar() (+1 more)
+
+### Community 1286 - "at_pt_ymd"
+Cohesion: 0.35
+Nodes (12): at_pt_feriados(), at_pt_fecha_inicio_elegida(), at_pt_calcular_fechas(), at_pt_dia(), at_pt_es_habil(), at_pt_feriados_de_texto(), at_pt_inicio_por_defecto(), at_pt_semanas() (+4 more)
+
+### Community 1287 - "at_pt_rest_borrador"
+Cohesion: 0.39
+Nodes (10): at_pt_rest_borrador(), at_pt_rest_contexto(), at_pt_rest_cuerpo(), at_pt_rest_error(), at_pt_rest_fila(), at_pt_rest_rechazar(), at_pt_rest_render(), at_pt_rest_vista() (+2 more)
+
+### Community 1288 - "v"
+Cohesion: 0.27
+Nodes (11): Ao(), cb(), cc(), ga(), gb(), hb(), r(), s() (+3 more)
+
+### Community 1289 - "probar_revision_fotos.py"
+Cohesion: 0.22
+Nodes (7): constantes(), ok(), Prueba local de la revisión de texto en las fotos de «3 Final» (render → GPT-4o…, RETOMA, MAX_RENDERS, MAX_RENDERS_RETOMA y JS_SHA256 de build_3_final.py sin…, sin_error(), slides_de(), urls()
+
+### Community 1292 - "Review Focus"
+Cohesion: 0.20
+Nodes (9): Global Constraints, Plan de trabajo — Etapa 2 (el cliente recibe) Implementation Plan, Review Focus, Task 1: Funciones puras de la Etapa 2, Task 2: Envío por correo y por el WhatsApp de Luis, Task 3: Botones «Enviar al cliente» y «Enviar por mi WhatsApp» en el panel, Task 4: Ruta pública de la agenda web (`POST automatiza-tech/v1/plan-seguimiento`), Task 5: Página pública `ver-plan.php` (+1 more)
+
+### Community 1293 - "probar_revision_plan.py"
+Cohesion: 0.27
+Nodes (7): leido(), ok(), Prueba local de la revisión de texto en las fotos de «Plan de trabajo · 3…, simular(), sin_error(), slides_de(), urls()
+
+### Community 1294 - "Ai1wm_Compatibility"
+Cohesion: 0.20
+Nodes (3): Ai1wm_Compatibility, Ai1wm_Export_Compatibility, Ai1wm_Import_Compatibility
+
+### Community 1299 - "sitio/js/chat.js"
+Cohesion: 0.43
+Nodes (5): crear(), el(), guardar(), iniciar(), pintarTexto()
+
+### Community 1302 - "plan-trabajo/ajustes.php"
+Cohesion: 0.39
+Nodes (6): at_pt_accion_guardar_duraciones(), at_pt_clave_de_nombre(), at_pt_columnas_duracion(), at_pt_duraciones_de_filas(), at_pt_render_ajustes(), at_pt_etapas()
+
+### Community 1303 - "at_pt_enviar_plan"
 Cohesion: 0.50
-Nodes (4): 3.1 Cliente (API Key), 3.2 Administrador WP, 3.3 Agente, 3. Sistema de Autenticación (3 Modos)
+Nodes (7): at_pt_descargar_pdf(), at_pt_enviar_plan(), at_pt_historial(), at_pt_marcar_enviado(), at_pt_marcar_enviado_whatsapp(), at_pt_se_puede_enviar(), at_pt_entrega_estimada()
 
-### Community 1261 - "5. Base de Datos"
+### Community 1304 - "na"
+Cohesion: 0.29
+Nodes (7): Aa(), Ca(), na(), Vb(), wb(), Xb(), Gm()
+
+### Community 1305 - "rb"
+Cohesion: 0.29
+Nodes (7): kb(), ob(), ra(), rb(), Za(), Bt, Nt
+
+### Community 1306 - "build_2_cambios.py"
+Cohesion: 0.43
+Nodes (5): email(), iff(), node(), Construye el workflow n8n «Propuestas v3 · 2 Cambios» y lo guarda en…, wp_http()
+
+### Community 1309 - "plan-trabajo.js"
+Cohesion: 0.48
+Nodes (5): clonar(), iniciarFormulario(), marcado(), serializar(), valor()
+
+### Community 1310 - ".move_to_clients"
+Cohesion: 0.29
+Nodes (3): automatiza_migrate_prospect_to_client(), automatiza_render_client_details(), automatiza_render_prospect_details()
+
+### Community 1311 - "_a"
+Cohesion: 0.40
+Nodes (6): _a(), Ae(), ib(), jb(), xd(), ze()
+
+### Community 1312 - "la"
+Cohesion: 0.47
+Nodes (6): Animation(), Da(), la(), ma(), Ua(), Va()
+
+### Community 1314 - "probar_json.py"
+Cohesion: 0.33
+Nodes (3): node_js(), Prueba local de la lectura del JSON del modelo (json_guard.JS_LEER_JSON) y de…, Corre un trozo de JavaScript con node; devuelve (salida_json | None, error |…
+
+### Community 1316 - "og_cumpleclick.py"
+Cohesion: 0.60
+Nodes (4): b64(), heroe(), main(), Recorta el fondo crema alrededor de la escena y la entrega como PNG en base64.
+
+### Community 1317 - "Od"
+Cohesion: 0.40
+Nodes (5): Md(), Nd(), Od(), Pd(), md
+
+### Community 1319 - "Hechos verificados del código (29-sep-2026) para redactar el plan de trabajo"
 Cohesion: 0.50
-Nodes (4): 5. Base de Datos, Formato de Ticket: `TK-YYYYMMDD-XXXX`, Prefijo: `wp_omnichannel_`, Tablas Principales
-
-### Community 1265 - "11. Emails del Sistema"
-Cohesion: 0.67
-Nodes (3): 11. Emails del Sistema, Emails enviados:, Template de email de soporte:
-
-### Community 1266 - "1. Descripción General del Proyecto"
-Cohesion: 0.67
-Nodes (3): 1. Descripción General del Proyecto, No se usa React Router, Stack Tecnológico
-
-### Community 1267 - "8. Sistema de Soporte (Tickets)"
-Cohesion: 0.67
-Nodes (3): 8. Sistema de Soporte (Tickets), Backend, Frontend
+Nodes (3): Hechos verificados del código (29-sep-2026) para redactar el plan de trabajo, n8n (lo que corre en PROD = `origin/claude/propuestas-json-robusto:N8N/propuestas-v3/`), WordPress
 
 ## Knowledge Gaps
-- **4441 isolated node(s):** `params`, `saved`, `audio`, `input`, `state` (+4436 more)
+- **4596 isolated node(s):** `params`, `saved`, `audio`, `input`, `state` (+4591 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **124 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **134 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `v()` connect `Tween` to `three.module.min.js`, `.constructor`, `detectarCara`, `gsap.min.js`?**
-  _High betweenness centrality (0.009) - this node is a cross-community bridge._
-- **Why does `detectarCara()` connect `detectarCara` to `Tween`, `nombreEvento`, `CumpleBooth/src/App.jsx`?**
-  _High betweenness centrality (0.009) - this node is a cross-community bridge._
-- **Why does `i()` connect `i` to `Tween`, `.copy`, `three.core.min.js`, `.push`, `ri`, `qr`, `.constructor`, `setup`, `ti`, `s`, `three.module.min.js`, `lenis.min.js`, `pr`?**
+- **Why does `v()` connect `v` to `Tween`, `detectarCara`, `gsap.min.js`, `three.module.min.js`, `_a`?**
+  _High betweenness centrality (0.014) - this node is a cross-community bridge._
+- **Why does `detectarCara()` connect `detectarCara` to `v`, `nombreEvento`, `CumpleBooth/src/App.jsx`?**
+  _High betweenness centrality (0.014) - this node is a cross-community bridge._
+- **Why does `Akismet` connect `Akismet` to `Ai1wm_Updater`, `Akismet_Admin`, `Akismet_REST_API`, `wrapper.php`?**
   _High betweenness centrality (0.008) - this node is a cross-community bridge._
 - **Are the 60 inferred relationships involving `Akismet` (e.g. with `.admin_help()` and `.check_for_spam_button()`) actually correct?**
   _`Akismet` has 60 INFERRED edges - model-reasoned connections that need verification._
 - **Are the 89 inferred relationships involving `cb_pdo()` (e.g. with `admin_nav()` and `cb_accept_plan()`) actually correct?**
   _`cb_pdo()` has 89 INFERRED edges - model-reasoned connections that need verification._
 - **What connects `params`, `saved`, `audio` to the rest of the system?**
-  _4441 weakly-connected nodes found - possible documentation gaps or missing edges._
-- **Should `.dot` be split into smaller, more focused modules?**
-  _Cohesion score 0.03429413002314328 - nodes in this community are weakly interconnected._
+  _4596 weakly-connected nodes found - possible documentation gaps or missing edges._
+- **Should `.copy` be split into smaller, more focused modules?**
+  _Cohesion score 0.025379848909260674 - nodes in this community are weakly interconnected._

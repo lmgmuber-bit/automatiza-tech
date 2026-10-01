@@ -612,6 +612,13 @@ function automatiza_tech_followup_page() {
         $edit_id = intval($_GET['edit_id']);
         $edit_meeting = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table_name WHERE id = %d", $edit_id));
     }
+
+    // --- PRECARGA DESDE EL PLAN DE TRABAJO (?pt_plan=<id>, inc/plan-trabajo/panel.php) ---
+    // Solo al abrir el formulario (GET) y sin edit_id: rellena una reunión NUEVA con los datos del cliente del plan.
+    // No crea nada ni pasa a modo edición; tras un POST no se repite (evita agendar dos veces).
+    $pt_plan_pedido = isset($_GET['pt_plan']) ? absint($_GET['pt_plan']) : 0;
+    $pt_precargar = !$edit_meeting && $pt_plan_pedido > 0 && ($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST';
+    $pt_precarga = ($pt_precargar && function_exists('at_pt_datos_agenda')) ? at_pt_datos_agenda($pt_plan_pedido) : array();
     
     // --- FILTROS ---
     $filter_status = isset($_GET['filter_status']) ? sanitize_text_field($_GET['filter_status']) : '';
@@ -640,6 +647,12 @@ function automatiza_tech_followup_page() {
         <p>Programa reuniones de seguimiento con clientes que ya tuvieron una demo. El correo de invitación incluye los colores corporativos.</p>
         
         <?php echo $message; ?>
+        <?php if ($pt_precarga): ?>
+            <div class="notice notice-info inline"><p>📋 Datos precargados desde el plan de trabajo. Elige fecha y hora; el evento en Google Calendar, el correo y el WhatsApp salen solo con sus casillas marcadas.</p>
+            <?php if ($pt_precarga['client_email'] === ''): ?><p><strong>Este cliente no tiene correo en su ficha:</strong> escríbelo antes de programar la reunión.</p><?php endif; ?></div>
+        <?php elseif ($pt_precargar): ?>
+            <div class="notice notice-warning inline"><p>No se encontró ese plan de trabajo: el formulario queda vacío.</p></div>
+        <?php endif; ?>
         
         <!-- ESTADÍSTICAS -->
         <div style="display:flex; gap:15px; margin-bottom:20px;">
@@ -740,7 +753,7 @@ function automatiza_tech_followup_page() {
                                     <th><label for="client_name">👤 Nombre Cliente *</label></th>
                                     <td>
                                         <input type="text" name="client_name" id="client_name" class="regular-text" required
-                                            value="<?php echo esc_attr($edit_meeting->client_name ?? ''); ?>"
+                                            value="<?php echo esc_attr($edit_meeting->client_name ?? ($pt_precarga['client_name'] ?? '')); ?>"
                                             placeholder="Juan Pérez">
                                     </td>
                                 </tr>
@@ -748,7 +761,7 @@ function automatiza_tech_followup_page() {
                                     <th><label for="client_email">📧 Email *</label></th>
                                     <td>
                                         <input type="email" name="client_email" id="client_email" class="regular-text" required
-                                            value="<?php echo esc_attr($edit_meeting->client_email ?? ''); ?>"
+                                            value="<?php echo esc_attr($edit_meeting->client_email ?? ($pt_precarga['client_email'] ?? '')); ?>"
                                             placeholder="cliente@empresa.com">
                                     </td>
                                 </tr>
@@ -770,7 +783,7 @@ function automatiza_tech_followup_page() {
                                     <th><label for="company_name">🏢 Empresa</label></th>
                                     <td>
                                         <input type="text" name="company_name" id="company_name" class="regular-text"
-                                            value="<?php echo esc_attr($edit_meeting->company_name ?? ''); ?>"
+                                            value="<?php echo esc_attr($edit_meeting->company_name ?? ($pt_precarga['company_name'] ?? '')); ?>"
                                             placeholder="Empresa S.A.">
                                     </td>
                                 </tr>
@@ -778,7 +791,7 @@ function automatiza_tech_followup_page() {
                                     <th><label for="phone">📱 Teléfono</label></th>
                                     <td>
                                         <input type="text" name="phone" id="phone" class="regular-text"
-                                            value="<?php echo esc_attr($edit_meeting->phone ?? ''); ?>"
+                                            value="<?php echo esc_attr($edit_meeting->phone ?? ($pt_precarga['phone'] ?? '')); ?>"
                                             placeholder="+56 9 1234 5678">
                                     </td>
                                 </tr>
@@ -832,7 +845,7 @@ function automatiza_tech_followup_page() {
                                     <th><label for="meeting_subject">📌 Asunto</label></th>
                                     <td>
                                         <input type="text" name="meeting_subject" id="meeting_subject" class="large-text"
-                                            value="<?php echo esc_attr($edit_meeting->meeting_subject ?? 'Reunión de Seguimiento - AutomatizaTech'); ?>"
+                                            value="<?php echo esc_attr($edit_meeting->meeting_subject ?? ($pt_precarga['meeting_subject'] ?? 'Reunión de Seguimiento - AutomatizaTech')); ?>"
                                             placeholder="Reunión de Seguimiento - Proyecto X">
                                     </td>
                                 </tr>
@@ -840,7 +853,7 @@ function automatiza_tech_followup_page() {
                                     <th><label for="notes">📝 Notas Internas</label></th>
                                     <td>
                                         <textarea name="notes" id="notes" class="large-text" rows="3"
-                                            placeholder="Notas sobre el cliente o la reunión (solo visible internamente)..."><?php echo esc_textarea($edit_meeting->notes ?? ''); ?></textarea>
+                                            placeholder="Notas sobre el cliente o la reunión (solo visible internamente)..."><?php echo esc_textarea($edit_meeting->notes ?? ($pt_precarga['notes'] ?? '')); ?></textarea>
                                     </td>
                                 </tr>
                             </table>

@@ -20,15 +20,23 @@ Nunca prohíbe personas: lo que hizo buenas las fotos de Jeffer fueron los jugad
 """
 
 JS_LIMPIAR_FOTOS = r"""
-const PROHIBIDO = /\b(websites?|web ?pages?|web ?design|interfaces?|dashboards?|apps?|charts?|graphs?|flow ?charts?|diagrams?|infographics?|whiteboards?|spreadsheets?|clipboards?|checklists?|documents?|paperwork|printed|forms?|signs?|signage|posters?|banners?|billboards?|scoreboards?|menus?|newspapers?|magazines?|catalogu?e?s?|brochures?|flyers?|receipts?|invoices?|price tags?|calendars?|notebooks?|notepads?|project plans?|business plans?|plans? on|text|letters?|lettering|words?|numbers?|meetings?|office)\b/i;
-const CON_ETIQUETA = /\b(screens?|monitors?|displays?|laptops?|computers?|tablets?|phones?|smartphones?|cell ?phones?|bottles?|cans?|box(?:es)?|packag\w*|books?|labels?|shelves|shelf|jerseys?|t-?shirts?)\b/i;
+const PROHIBIDO = /\b(websites?|web ?pages?|web ?design|interfaces?|dashboards?|apps?|charts?|graphs?|flow ?charts?|diagrams?|infographics?|whiteboards?|spreadsheets?|clipboards?|checklists?|documents?|paperwork|printed|forms?|signs?|signage|posters?|banners?|billboards?|scoreboards?|menus?|newspapers?|magazines?|catalogu?e?s?|brochures?|flyers?|receipts?|invoices?|price tags?|calendars?|notebooks?|notepads?|project plans?|business plans?|plans? on|sketch(?:es)?|blueprints?|(?:technical|architectural|pencil) drawings?|drawings? on (?:paper|a sheet)|drawings|(?:assembly|written|printed|step-by-step) instructions|instruction (?:sheets?|manuals?|booklets?|leaflets?|cards?)|reading (?:the )?instructions|(?:user|owner'?s|assembly|training) manuals?|manuals|papers|sheets? of paper|paper sheets?|pieces? of paper|sticky notes?|post-?its?|text|letters?|lettering|words?|numbers?|meetings?|office)\b/i;
+// Dibujos, instrucciones y manuales cuentan solo como PAPEL (2026-09-27): el singular calza con verbos y adjetivos
+// de escenas del rubro sin papel ("nurse drawing blood", "manual therapy", "coach giving instructions to kids").
+// El plural «drawings» y «manuals» queda prohibido porque casi siempre es el sustantivo (hojas con garabatos).
+const CON_ETIQUETA =/\b(screens?|monitors?|displays?|laptops?|computers?|tablets?|phones?|smartphones?|cell ?phones?|bottles?|cans?|box(?:es)?|packag\w*|books?|labels?|shelves|shelf|jerseys?|t-?shirts?)\b/i;
 // Solo cuenta lo que neutraliza al PRODUCTO. "blurred background" desenfoca el fondo, no la etiqueta
 // (botillería de prueba 49, 2026-09-24: "wine bottle ... blurred background" habría salido con etiqueta nítida).
 const NEUTRALIZADO = /(facing away|closed|turned off|switched off|dark screen|screen off|unlabell?ed|without (a |any )?labels?|plain|blank|from behind|seen from the back)/i;
 const FONDO_PORTADA = /\b(stadiums?|facades?|storefronts?|shop ?fronts?|exteriors?|buildings?|streets?|walls?|billboards?|bleachers?|grandstands?)\b/i;
-const PRIMER_PLANO = /(close-?up|macro|shallow depth of field|bokeh|blurred background|background (completely )?blurred)/i;
-const CIERRE = 'no signs, no labels, no text, no lettering, no logos, no watermarks';
-const NEGATIVAS = /[,.;]?\s*\b(?:no|without)\b(?:\s+any)?[^,.;]*?\b(?:people facing camera|screens?|signs?|signage|labels?|text|lettering|logos?|words?|watermarks?|writing)\b[^,.;]*/gi;
+// Tiendas (2026-09-26): el fondo con góndolas y letreros trae texto (beneficios de la 53, en un supermercado). Se
+// conserva la escena del rubro, en primer plano con el fondo desenfocado, igual que la portada.
+const TIENDA = /\b(stores?|shops?|supermarkets?|markets?|malls?|aisles?|showrooms?|boutiques?|warehouses?|retail)\b/i;
+const PRIMER_PLANO =/(close-?up|macro|shallow depth of field|bokeh|blurred background|background (completely )?blurred)/i;
+// «no subtitles, no captions» (2026-09-26): en la propuesta 53 salieron leyendas blancas inventadas al centro abajo,
+// como subtítulos de película.
+const CIERRE = 'no signs, no labels, no text, no lettering, no logos, no watermarks, no subtitles, no captions';
+const NEGATIVAS = /[,.;]?\s*\b(?:no|without)\b(?:\s+any)?[^,.;]*?\b(?:people facing camera|screens?|signs?|signage|labels?|text|lettering|logos?|words?|watermarks?|writing|subtitles?|captions?)\b[^,.;]*/gi;
 const SEGURAS = {
   cover: 'close-up of warm morning light falling across a textured wooden surface with a small green plant, background completely blurred into soft golden bokeh, shallow depth of field',
   challenge: 'quiet empty room at night lit by a single warm lamp, rain drops on a large window, calm pensive mood',
@@ -73,7 +81,7 @@ function limpiarFotos(briefs) {
     } else if (tema !== original) {
       neutralizadas++;
     }
-    if (b.slide === 'cover' && !PRIMER_PLANO.test(tema)) {
+    if ((b.slide === 'cover' || TIENDA.test(tema)) && !PRIMER_PLANO.test(tema)) {
       tema += ', close-up, shallow depth of field, background completely blurred';
     }
     return { slide: b.slide, prompt: `${tema}, ${CIERRE}` };

@@ -89,6 +89,7 @@ if (is_admin()) {
 }
 
 require_once __DIR__ . '/cierre-cliente/cargar.php';
+require_once __DIR__ . '/plan-trabajo/cargar.php';
 
 /**
  * Página Propuestas. &clasico=1 abre el módulo clásico (red de seguridad). &edit_id=... abre la ficha nueva de 6 pestañas.

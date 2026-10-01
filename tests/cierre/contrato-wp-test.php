@@ -14,11 +14,15 @@ ok(strpos(ContractService::titulo_por_tipo('servicios'), 'DESARROLLO') !== false
 
 // Texto del PDF: descomprime los flujos de FPDF y junta las cadenas que dibuja (Tj), en UTF-8
 // y con los espacios colapsados. Los saltos de línea del PDF quedan como un espacio.
+// Cada flujo se lee por su largo declarado (/Length), no buscando «endstream»: un flujo comprimido
+// puede terminar por azar en el byte \r (~1 de cada 256), y el patrón «\r?\nendstream» se lo comía,
+// el flujo no se descomprimía y la prueba fallaba de vez en cuando sin que el PDF tuviera nada malo.
 function texto_pdf(string $archivo): string {
 	$bin = (string) @file_get_contents($archivo);
 	$flujos = [];
-	if (preg_match_all('/stream\r?\n(.*?)\r?\nendstream/s', $bin, $m)) {
-		foreach ($m[1] as $s) {
+	if (preg_match_all('/<<[^>]*\/Length (\d+)[^>]*>>\s*stream\r?\n/s', $bin, $m, PREG_OFFSET_CAPTURE)) {
+		foreach ($m[0] as $k => $hit) {
+			$s = substr($bin, $hit[1] + strlen($hit[0]), (int) $m[1][$k][0]);
 			$d = @gzuncompress($s);
 			$flujos[] = $d !== false ? $d : $s;
 		}
@@ -119,6 +123,9 @@ ok(strpos($txt3, 'Ana Prueba') !== false && strpos($txt3, 'con domicilio en Call
 ok(strpos($txt3, 'Respuesta en <24 horas, "comillas" y \'simples\'; 50%de anticipo') !== false, 'el PDF muestra el plazo tal cual');
 $firma2 = ContractService::sign_as_at($c->id, $datos_firma);
 ok(!is_wp_error($firma2) && $firma2->status === 'at_signed', 'con revisión y datos completos se firma');
+// La firma de AT regenera el PDF: la huella guardada es la del PDF con la firma, que es el que ve y firma el cliente
+// (antes quedaba la del borrador sin firma y no calzaba con ningún archivo).
+ok(!is_wp_error($firma2) && $firma2->document_hash === hash_file('sha256', pdf_de($firma2)), 'tras la firma de AT, document_hash es la huella del PDF firmado por AT');
 // T5 ronda 1: sign_as_at() rota at_review_token (E4). at-sign-contract.php debe
 // redirigir (PRG) al token nuevo tras firmar, porque el viejo queda muerto:
 // si no redirige, el siguiente POST "Enviar al cliente" a la URL vieja (que

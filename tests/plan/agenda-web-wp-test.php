@@ -42,6 +42,11 @@ function pedir(object $plan, string $fecha, string $hora, string $ip, array $cam
 	return $r;
 }
 $ip = function (string $s) { return '203.0.113.' . (abs(crc32($s . $GLOBALS['m'])) % 250 + 1); };
+// Los contadores por IP duran una hora: los de corridas anteriores pueden chocar con las IP de esta. Se limpian al
+// empezar y al terminar para que la prueba sea determinista.
+$limpiar_contadores = function () { for ($i = 1; $i <= 250; $i++) { delete_transient('at_pt_agenda_' . md5('203.0.113.' . $i)); } };
+$limpiar_contadores();
+register_shutdown_function($limpiar_contadores);
 
 $p = plan_enviado($m . 'a');
 $leads_antes = (int) $wpdb->get_var("SELECT COUNT(*) FROM $leads");

@@ -18,7 +18,7 @@ $f = at_pt_plan((int) $pid);
 
 // 1) Datos para el renderer, con propuesta y cliente con correo.
 $d = at_pt_datos_render($f);
-ok(array_keys($d) === ['codigo', 'company_name', 'client_name', 'portal_url', 'whatsapp', 'fecha_firma', 'garantia_meses'], '1) las siete claves que espera at_pt_armar_render() (con la garantía del contrato)');
+ok(array_keys($d) === ['codigo', 'company_name', 'client_name', 'portal_url', 'whatsapp', 'fecha_firma', 'garantia_meses', 'sitio'], '1) las ocho claves que espera at_pt_armar_render() (con la garantía del contrato y el sitio)');
 ok($d['codigo'] === $f->codigo && $d['fecha_firma'] === '2026-10-09', '1) código del plan y fecha de firma del contrato');
 ok($d['company_name'] === '[PRUEBA] Empresa ' . $m && $d['client_name'] === 'Cliente Prueba', '1) con propuesta: su nombre comercial (company_name) y el cliente que firma en el contrato');
 ok(strpos($d['portal_url'], 'crm_view=timeline&cid=' . $cli['crm'] . '&token=') !== false, '1) enlace al portal del cliente (at_crm_url_portal)');

@@ -14,11 +14,15 @@ ok(strpos(ContractService::titulo_por_tipo('servicios'), 'DESARROLLO') !== false
 
 // Texto del PDF: descomprime los flujos de FPDF y junta las cadenas que dibuja (Tj), en UTF-8
 // y con los espacios colapsados. Los saltos de línea del PDF quedan como un espacio.
+// Cada flujo se lee por su largo declarado (/Length), no buscando «endstream»: un flujo comprimido
+// puede terminar por azar en el byte \r (~1 de cada 256), y el patrón «\r?\nendstream» se lo comía,
+// el flujo no se descomprimía y la prueba fallaba de vez en cuando sin que el PDF tuviera nada malo.
 function texto_pdf(string $archivo): string {
 	$bin = (string) @file_get_contents($archivo);
 	$flujos = [];
-	if (preg_match_all('/stream\r?\n(.*?)\r?\nendstream/s', $bin, $m)) {
-		foreach ($m[1] as $s) {
+	if (preg_match_all('/<<[^>]*\/Length (\d+)[^>]*>>\s*stream\r?\n/s', $bin, $m, PREG_OFFSET_CAPTURE)) {
+		foreach ($m[0] as $k => $hit) {
+			$s = substr($bin, $hit[1] + strlen($hit[0]), (int) $m[1][$k][0]);
 			$d = @gzuncompress($s);
 			$flujos[] = $d !== false ? $d : $s;
 		}

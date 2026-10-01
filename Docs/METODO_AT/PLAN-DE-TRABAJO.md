@@ -248,9 +248,29 @@ un script PHP (ver la guía de propuestas).
   final y pisar `/p/<codigo>/` (`/vista` la descarta; basta aprobar de nuevo); algunas notas se reemplazan entre sí sin perder
   los errores.
 
+## Etapa 2: el cliente recibe (rama `claude/plan-de-trabajo`)
+
+- **Enviar al cliente** (ficha › «🗓️ Plan de trabajo», solo con el plan «listo» o «enviado»): correo «Tu plan de trabajo —
+  {proyecto}» con el PDF adjunto (hasta 15 MB; si no se puede, va solo con el enlace y el panel lo dice), enlace a
+  `automatizatech.cl/ver-plan.php?id=<código>` y dos botones para agendar. Nunca enlaza al renderer (Hostinger rechaza
+  los correos con `*.easypanel.host`). Reply-To y copia oculta: los de «Ajustes del cierre». El plan queda «enviado».
+- **Enviar por mi WhatsApp:** abre el WhatsApp de Luis con el mensaje y el enlace del plan, y lo deja «enviado».
+- **`ver-plan.php`:** el plan en un iframe, barra con «Agendar mi llamada de seguimiento» (web) y «Agendar por WhatsApp
+  con Tech». `&agendar=1` abre el selector de horarios solo. Un plan «listo» se ve, pero la agenda espera al envío.
+- **Agenda web:** `POST /wp-json/automatiza-tech/v1/plan-seguimiento` crea una **reunión de seguimiento** (nunca una
+  demo ni un lead) con el evento en Google Calendar con Meet, el correo de siempre al cliente y un aviso a Luis. Token
+  del plan (válido hoy y ayer), plan «enviado», 5 intentos por IP y por hora, una sola llamada futura por plan.
+- Código: `inc/plan-trabajo/envio.php`, `agenda.php`, `vista.php`, `ver-plan.php`, `assets/css/plan-ver.css`,
+  `assets/js/plan-ver.js`. Pruebas: `tests/plan/envio-test.php`, `envio-wp-test.php`, `panel-envio-wp-test.php`,
+  `agenda-web-wp-test.php`, `ver-plan-wp-test.php`, `etapa2-e2e.js`.
+- **Para PROD** (con autorización de Luis), en este orden: `inc/plan-trabajo/puras.php`, `datos.php`, `envio.php`,
+  `agenda.php`, `vista.php`, `panel.php`, `assets/css/plan-ver.css`, `assets/js/plan-ver.js`, `cargar.php` (al final de
+  los del módulo: carga los nuevos), y `ver-plan.php` en la raíz. Sin migración. Los planes aprobados antes de subir no
+  traen «En el sitio web» en el documento: hay que volver a aprobarlos para que lo traigan.
+
 ## Etapas siguientes
 
-- **Etapa 2 — el cliente recibe:** envío por correo (PDF y enlace), «Enviar por mi WhatsApp», página pública `ver-plan.php` y
+- **Etapa 2 — el cliente recibe (hecha en la rama, sin desplegar; ver la sección de arriba):** envío por correo (PDF y enlace), «Enviar por mi WhatsApp», página pública `ver-plan.php` y
   agenda web de la llamada de seguimiento (`POST /wp-json/automatiza-tech/v1/plan-seguimiento`, siempre como reunión de
   seguimiento, sin tocar demos ni leads). Aquí el plan pasa a `enviado`.
 - **Etapa 3 — requiere a Meta y el ok de Luis para tocar el bot:** plantilla de WhatsApp de Utilidad `plan_trabajo_listo`, enviada

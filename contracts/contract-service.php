@@ -527,8 +527,12 @@ class ContractService {
             'at_review_token'        => bin2hex( random_bytes(32) ),
         ), array('id' => $c->id));
 
-        // Re-render PDF con firma AT (cliente pendiente)
-        self::render_pdf($c->id);
+        // Re-render PDF con firma AT (cliente pendiente). La huella pasa a ser la de este PDF, que es el que el
+        // cliente ve y firma; antes quedaba la del borrador sin firma y no calzaba con ningún archivo.
+        $pdf = self::render_pdf($c->id);
+        if ($pdf && file_exists($pdf)) {
+            $wpdb->update(self::table(), array('pdf_url' => self::path_to_url($pdf), 'document_hash' => hash_file('sha256', $pdf)), array('id' => $c->id));
+        }
         return self::get_by_id($c->id);
     }
 

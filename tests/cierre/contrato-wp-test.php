@@ -119,6 +119,9 @@ ok(strpos($txt3, 'Ana Prueba') !== false && strpos($txt3, 'con domicilio en Call
 ok(strpos($txt3, 'Respuesta en <24 horas, "comillas" y \'simples\'; 50%de anticipo') !== false, 'el PDF muestra el plazo tal cual');
 $firma2 = ContractService::sign_as_at($c->id, $datos_firma);
 ok(!is_wp_error($firma2) && $firma2->status === 'at_signed', 'con revisión y datos completos se firma');
+// La firma de AT regenera el PDF: la huella guardada es la del PDF con la firma, que es el que ve y firma el cliente
+// (antes quedaba la del borrador sin firma y no calzaba con ningún archivo).
+ok(!is_wp_error($firma2) && $firma2->document_hash === hash_file('sha256', pdf_de($firma2)), 'tras la firma de AT, document_hash es la huella del PDF firmado por AT');
 // T5 ronda 1: sign_as_at() rota at_review_token (E4). at-sign-contract.php debe
 // redirigir (PRG) al token nuevo tras firmar, porque el viejo queda muerto:
 // si no redirige, el siguiente POST "Enviar al cliente" a la URL vieja (que

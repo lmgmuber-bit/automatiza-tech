@@ -64,6 +64,12 @@ function at_pt_mensajes_panel(): array {
 		'reintentando'       => ['ok', 'Se le pidió de nuevo el borrador a la IA.'],
 		'vuelto_borrador'    => ['ok', 'El plan volvió a borrador: puedes editarlo, pedir cambios o aprobarlo.'],
 		'n8n_fallo'          => ['error', 'No se pudo avisar a n8n: el plan quedó en «error» con el motivo. Puedes reintentar desde aquí.'],
+		'enviado'            => ['ok', 'Plan enviado por correo al cliente, con el PDF adjunto.'],
+		'enviado_sin_pdf'    => ['aviso', 'Plan enviado por correo, pero sin el PDF adjunto: el correo lleva el enlace para verlo.'],
+		'no_listo'           => ['error', 'Solo se envía un plan con la versión final lista.'],
+		'sin_correo'         => ['error', 'El cliente no tiene correo en su ficha ni en el contrato: agrégalo en la ficha y vuelve a enviar.'],
+		'correo_fallo'       => ['error', 'El correo no salió. El plan sigue «listo»: inténtalo de nuevo en un rato.'],
+		'sin_telefono'       => ['error', 'El cliente no tiene teléfono en su ficha ni en el contrato.'],
 		'transicion'         => ['error', 'Esa acción no corresponde al estado actual del plan.'],
 		'sin_plan'           => ['error', 'Ese plan de trabajo no existe.'],
 	];
@@ -356,8 +362,29 @@ function at_pt_render_plan(object $fila, int $crm_id): void {
 			</form></div>
 		<?php endif; ?>
 
-		<?php if ($estado === 'listo'): ?>
-			<div class="notice notice-success inline"><p>Versión final lista. Si cambias algo y guardas, el plan vuelve a borrador y hay que aprobarlo de nuevo. El envío al cliente llega en la etapa 2.</p></div>
+		<?php if (in_array($estado, ['listo', 'enviado'], true)):
+			$env = at_pt_datos_agenda($id);
+			$correo_cliente = (string) ($env['client_email'] ?? '');
+			$wa_cliente = at_pt_url_whatsapp_cliente($fila);
+			$listo_para_enviar = at_pt_se_puede_enviar($fila);
+		?>
+			<div class="notice notice-success inline at-pt-envio">
+				<?php if ($estado === 'listo'): ?>
+					<p><strong>Versión final lista.</strong> Revísala y envíasela al cliente. Si cambias algo y guardas, el plan vuelve a borrador y hay que aprobarlo de nuevo.</p>
+				<?php else: ?>
+					<p><strong>Enviado al cliente</strong> el <?php echo esc_html((string) ($fila->enviado_at ?? '')); ?>. Puedes reenviarlo; el cliente ya puede agendar su llamada de seguimiento desde el plan.</p>
+				<?php endif; ?>
+				<p><?php echo $correo_cliente !== '' ? 'Correo del cliente: <strong>' . esc_html($correo_cliente) . '</strong>.' : 'El cliente no tiene correo en su ficha ni en el contrato: agrégalo en la pestaña General para poder enviarlo.'; ?></p>
+				<form method="post" action="<?php echo esc_url($accion); ?>" style="display:inline" onsubmit="return confirm(<?php echo esc_attr(wp_json_encode('¿Enviar el plan de trabajo a ' . ($correo_cliente !== '' ? $correo_cliente : 'el cliente') . '? Le llega el correo con el PDF y el enlace para agendar la llamada de seguimiento.', JSON_UNESCAPED_UNICODE)); ?>);">
+					<?php echo $ocultos('at_pt_enviar'); ?>
+					<button type="submit" class="button button-primary"<?php echo ($correo_cliente === '' || !$listo_para_enviar) ? ' disabled' : ''; ?>>📧 <?php echo esc_html($estado === 'enviado' ? 'Reenviar al cliente' : 'Enviar al cliente'); ?></button>
+				</form>
+				<form method="post" action="<?php echo esc_url($accion); ?>" target="_blank" style="display:inline" onsubmit="return confirm(<?php echo esc_attr(wp_json_encode('Se abrirá tu WhatsApp con el mensaje y el enlace del plan, y el plan quedará como enviado. ¿Seguir?', JSON_UNESCAPED_UNICODE)); ?>);">
+					<?php echo $ocultos('at_pt_enviar_whatsapp'); ?>
+					<button type="submit" class="button"<?php echo ($wa_cliente === '' || !$listo_para_enviar) ? ' disabled' : ''; ?>>💬 Enviar por mi WhatsApp</button>
+				</form>
+				<?php if ($wa_cliente === ''): ?><p class="description">El cliente no tiene teléfono: el WhatsApp no se puede abrir.</p><?php endif; ?>
+			</div>
 		<?php endif; ?>
 
 		<?php if ($tiene_plan): ?>
@@ -445,6 +472,8 @@ add_action('admin_post_at_pt_cambios', 'at_pt_accion_cambios');
 add_action('admin_post_at_pt_aprobar', 'at_pt_accion_aprobar');
 add_action('admin_post_at_pt_destrabar', 'at_pt_accion_destrabar');
 add_action('admin_post_at_pt_reintentar', 'at_pt_accion_reintentar');
+add_action('admin_post_at_pt_enviar', 'at_pt_accion_enviar');
+add_action('admin_post_at_pt_enviar_whatsapp', 'at_pt_accion_enviar_whatsapp');
 
 /** Vuelve a la pestaña del plan con un aviso; siempre termina la petición. */
 function at_pt_volver(int $crm_id, int $plan_id, string $msg): void {
@@ -751,6 +780,33 @@ function at_pt_accion_reintentar(): void {
 	}
 	$motivo = at_pt_iniciar_borrador($id);
 	at_pt_volver($crm, $id, $motivo === '' ? 'reintentando' : 'n8n_fallo');
+}
+
+/** «Enviar al cliente» (decisión 5: solo con el clic de Luis): correo con el PDF y el enlace; el plan queda enviado. */
+function at_pt_accion_enviar(): void {
+	[$fila, $crm] = at_pt_accion_plan();
+	$id = (int) $fila->id;
+	$r = at_pt_enviar_plan($id);
+	if (!$r['ok']) {
+		at_pt_volver($crm, $id, $r['motivo']);
+	}
+	if ($r['sin_pdf'] !== '') {
+		at_pt_guardar_detalles($id, ['Motivo: ' . $r['sin_pdf'] . '.']);
+		at_pt_volver($crm, $id, 'enviado_sin_pdf');
+	}
+	at_pt_volver($crm, $id, 'enviado');
+}
+
+/** «Enviar por mi WhatsApp»: deja el plan enviado y abre el wa.me del cliente (el formulario va en otra pestaña). */
+function at_pt_accion_enviar_whatsapp(): void {
+	[$fila, $crm] = at_pt_accion_plan();
+	$id = (int) $fila->id;
+	$r = at_pt_marcar_enviado_whatsapp($id);
+	if (!$r['ok']) {
+		at_pt_volver($crm, $id, $r['motivo']);
+	}
+	wp_redirect($r['url']); // wa.me no es del sitio: wp_safe_redirect lo cambiaría por el escritorio
+	exit;
 }
 
 // ---------------------------------------------------------------------------------------------------------------

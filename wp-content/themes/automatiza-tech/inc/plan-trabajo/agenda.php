@@ -12,6 +12,8 @@ if (!defined('ABSPATH')) {
 }
 
 const AT_PT_AGENDA_INTENTOS_HORA = 5;
+const AT_PT_AGENDA_ESPERA_LOCK = 5; // segundos que espera el candado global de la agenda
+const AT_PT_AGENDA_LOCK = 'at_pt_agenda_seguimiento';
 
 add_action('rest_api_init', function () {
 	register_rest_route('automatiza-tech/v1', '/plan-seguimiento', [
@@ -86,41 +88,51 @@ function at_pt_agendar_seguimiento(array $entrada, string $ip): array {
 	if (($d['client_email'] ?? '') === '') {
 		return at_pt_respuesta_agenda(false, 'sin_correo', 409);
 	}
-	$ya = at_pt_seguimiento_pendiente($codigo);
-	if ($ya) {
-		return at_pt_respuesta_agenda(false, 'ya_agendada', 409, 0, 'Ya tienes una llamada de seguimiento agendada para el '
-			. at_pt_fecha_larga((string) $ya->meeting_date) . ' a las ' . substr((string) $ya->meeting_time, 0, 5) . '. Si necesitas cambiarla, escríbenos por WhatsApp.');
-	}
-	$fecha = $texto('fecha');
-	$hora = substr($texto('hora'), 0, 5);
-	$disp = [];
-	if (function_exists('automatiza_tech_check_availability') && at_pt_ymd($fecha) !== '') {
-		$pedido = new WP_REST_Request('POST', '/automatiza-tech/v1/check-availability');
-		$pedido->set_param('date', $fecha);
-		$res = automatiza_tech_check_availability($pedido);
-		$disp = is_array($res) ? $res : [];
-	}
-	$motivo = at_pt_motivo_hora_agenda($fecha, $texto('hora'), current_time('Y-m-d H:i'), $disp);
-	if ($motivo !== '') {
-		return at_pt_respuesta_agenda(false, $motivo, in_array($motivo, ['hora_ocupada'], true) ? 409 : 400);
-	}
-	if (function_exists('automatiza_tech_check_slot_availability') && empty(automatiza_tech_check_slot_availability($fecha, $hora . ':00')['available'])) {
-		return at_pt_respuesta_agenda(false, 'hora_ocupada', 409);
-	}
+	// Candado global (un solo nombre: también impide que dos planes tomen la misma hora). Cubre solo desde «¿ya tiene
+	// llamada?» hasta el INSERT; se suelta antes de llamar a Calendar/n8n y de mandar correos.
 	global $wpdb;
-	$t = $wpdb->prefix . 'automatiza_followup_meetings';
-	$ok = $wpdb->insert($t, [
-		'client_name'     => (string) $d['client_name'],
-		'client_email'    => (string) $d['client_email'],
-		'company_name'    => (string) $d['company_name'],
-		'phone'           => (string) $d['phone'],
-		'meeting_date'    => $fecha,
-		'meeting_time'    => $hora . ':00',
-		'meeting_subject' => (string) $d['meeting_subject'],
-		'notes'           => (string) $d['notes'] . ' Agendada por el cliente desde el plan.',
-		'status'          => 'scheduled',
-	]);
-	$reunion = $ok ? (int) $wpdb->insert_id : 0;
+	if ((string) $wpdb->get_var($wpdb->prepare('SELECT GET_LOCK(%s, %d)', AT_PT_AGENDA_LOCK, AT_PT_AGENDA_ESPERA_LOCK)) !== '1') {
+		return at_pt_respuesta_agenda(false, 'no_guardo', 503);
+	}
+	$reunion = 0;
+	try {
+		$ya = at_pt_seguimiento_pendiente($codigo);
+		if ($ya) {
+			return at_pt_respuesta_agenda(false, 'ya_agendada', 409, 0, 'Ya tienes una llamada de seguimiento agendada para el '
+				. at_pt_fecha_larga((string) $ya->meeting_date) . ' a las ' . substr((string) $ya->meeting_time, 0, 5) . '. Si necesitas cambiarla, escríbenos por WhatsApp.');
+		}
+		$fecha = $texto('fecha');
+		$hora = substr($texto('hora'), 0, 5);
+		$disp = [];
+		if (function_exists('automatiza_tech_check_availability') && at_pt_ymd($fecha) !== '') {
+			$pedido = new WP_REST_Request('POST', '/automatiza-tech/v1/check-availability');
+			$pedido->set_param('date', $fecha);
+			$res = automatiza_tech_check_availability($pedido);
+			$disp = is_array($res) ? $res : [];
+		}
+		$motivo = at_pt_motivo_hora_agenda($fecha, $texto('hora'), current_time('Y-m-d H:i'), $disp);
+		if ($motivo !== '') {
+			return at_pt_respuesta_agenda(false, $motivo, in_array($motivo, ['hora_ocupada'], true) ? 409 : 400);
+		}
+		if (function_exists('automatiza_tech_check_slot_availability') && empty(automatiza_tech_check_slot_availability($fecha, $hora . ':00')['available'])) {
+			return at_pt_respuesta_agenda(false, 'hora_ocupada', 409);
+		}
+		$t = $wpdb->prefix . 'automatiza_followup_meetings';
+		$ok = $wpdb->insert($t, [
+			'client_name'     => (string) $d['client_name'],
+			'client_email'    => (string) $d['client_email'],
+			'company_name'    => (string) $d['company_name'],
+			'phone'           => (string) $d['phone'],
+			'meeting_date'    => $fecha,
+			'meeting_time'    => $hora . ':00',
+			'meeting_subject' => (string) $d['meeting_subject'],
+			'notes'           => (string) $d['notes'] . ' Agendada por el cliente desde el plan.',
+			'status'          => 'scheduled',
+		]);
+		$reunion = $ok ? (int) $wpdb->insert_id : 0;
+	} finally {
+		$wpdb->get_var($wpdb->prepare('SELECT RELEASE_LOCK(%s)', AT_PT_AGENDA_LOCK));
+	}
 	if ($reunion <= 0) {
 		return at_pt_respuesta_agenda(false, 'no_guardo', 500);
 	}

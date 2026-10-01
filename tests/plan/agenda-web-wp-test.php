@@ -95,6 +95,25 @@ for ($i = 0; $i < AT_PT_AGENDA_INTENTOS_HORA + 1; $i++) { $claves[] = pedir($l, 
 ok(end($claves) === 'muchos_intentos' && count(array_filter($claves, function ($c) { return $c === 'fuera_de_horario'; })) === AT_PT_AGENDA_INTENTOS_HORA, 'el sexto intento de la misma IP en una hora se rechaza (429)');
 ok(pedir($l, $fecha, '13:00', $ip('otra'))['ok'] === true, 'otra IP sí puede');
 
+// Candado: si otra conexión tiene el candado de la agenda, no se agenda nada y se responde 503; al soltarlo, sí.
+$otra = new mysqli(DB_HOST, DB_USER, DB_PASSWORD, DB_NAME);
+$fila_lock = $otra->query("SELECT GET_LOCK('" . AT_PT_AGENDA_LOCK . "', 0)")->fetch_row();
+ok($fila_lock[0] === '1', 'preparación: la segunda conexión toma el candado de la agenda');
+$k = plan_enviado($m . 'g');
+$t0 = microtime(true);
+$rk = pedir($k, $fecha, '14:00', $ip('g'));
+$espera = microtime(true) - $t0;
+ok($rk['ok'] === false && $rk['clave'] === 'no_guardo' && $rk['estado_http'] === 503, 'candado tomado por otro: 503 no_guardo');
+ok($espera >= AT_PT_AGENDA_ESPERA_LOCK - 0.5, 'esperó el candado antes de rendirse');
+$cuenta_k = function () use ($wpdb, $reuniones, $k) { return (int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM $reuniones WHERE notes LIKE %s", 'Plan de trabajo ' . $wpdb->esc_like((string) $k->codigo) . '%')); };
+ok($cuenta_k() === 0, 'con el candado tomado no se insertó ninguna reunión');
+$otra->query("SELECT RELEASE_LOCK('" . AT_PT_AGENDA_LOCK . "')");
+$rk2 = pedir($k, $fecha, '14:00', $ip('g2'));
+ok($rk2['ok'] === true && $rk2['clave'] === 'agendada' && $cuenta_k() === 1, 'soltado el candado, la misma petición agenda');
+$libre = $wpdb->get_var("SELECT IS_FREE_LOCK('" . AT_PT_AGENDA_LOCK . "')");
+ok((string) $libre === '1', 'el candado queda libre después de agendar');
+$otra->close();
+
 // La ruta REST existe, es pública y devuelve el estado HTTP
 $req = new WP_REST_Request('POST', '/automatiza-tech/v1/plan-seguimiento');
 $req->set_header('Content-Type', 'application/json');

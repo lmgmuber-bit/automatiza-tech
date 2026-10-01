@@ -14,5 +14,6 @@ require_once __DIR__ . '/disparador.php';
 require_once __DIR__ . '/rest.php';
 require_once __DIR__ . '/envio.php';
 require_once __DIR__ . '/agenda.php';
+require_once __DIR__ . '/vista.php';
 require_once __DIR__ . '/ajustes.php';
 require_once __DIR__ . '/panel.php';

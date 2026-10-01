@@ -39,7 +39,7 @@ trabajo» muestra el botón **«Crear plan de trabajo»** de cada contrato de se
 | `cambios` | La IA está aplicando un pedido de cambios de Luis. |
 | `aprobando` | Se están generando las fotos y la versión final. |
 | `listo` | Versión final con fotos, presentación y PDF. |
-| `enviado` | Reservado para la Etapa 2: en la Etapa 1 no se llega a este estado. |
+| `enviado` | Luis lo envió al cliente (correo o su WhatsApp, Etapa 2). No se edita; se puede reenviar. |
 | `error` | Algo falló; la nota dice qué. |
 
 Transiciones válidas (`at_pt_transiciones()`):
@@ -94,7 +94,7 @@ Usa el flujo normal: evento en Google Calendar con Meet, y aviso al cliente por 
 marcadas las casillas de siempre**. Nunca crea una demo ni un lead: lo que se agenda desde el plan es siempre una reunión
 de seguimiento.
 
-No existen todavía «Enviar al cliente» ni «Enviar por mi WhatsApp»: son de la Etapa 2.
+Con el plan «listo» o «enviado» aparecen «📧 Enviar al cliente» y «💬 Enviar por mi WhatsApp» (Etapa 2, más abajo).
 
 ## Ajustes del plan: tabla de tiempos
 
@@ -248,7 +248,9 @@ un script PHP (ver la guía de propuestas).
   final y pisar `/p/<codigo>/` (`/vista` la descarta; basta aprobar de nuevo); algunas notas se reemplazan entre sí sin perder
   los errores.
 
-## Etapa 2: el cliente recibe (rama `claude/plan-de-trabajo`)
+## Etapa 2: el cliente recibe (EN PROD desde 2026-10-01 ~09:15 Chile, `666eea3`)
+
+Desplegada por SSH con autorización de Luis: 10 archivos (los 4 modificados cotejados por md5 contra la base), respaldo `~/respaldos/plan-etapa2-antes-20261001-091514.tar.gz`. Rollback: restaurar ese tar y borrar `envio.php`, `agenda.php`, `vista.php`, `plan-ver.css`, `plan-ver.js` y `ver-plan.php`. Verificado desde afuera: `ver-plan.php` da 404 «no disponible» con un código inventado o un `id` que no es texto, sin caché y con `noindex`; la ruta de agenda da 404 con un código inventado; la pestaña del plan carga sin errores. **No probado todavía en PROD:** el webhook n8n `followup-meeting` desde la agenda web y que `REMOTE_ADDR` sea la IP del visitante (límite por IP).
 
 - **Enviar al cliente** (ficha › «🗓️ Plan de trabajo», solo con el plan «listo» o «enviado»): correo «Tu plan de trabajo —
   {proyecto}» con el PDF adjunto (hasta 15 MB; si no se puede, va solo con el enlace y el panel lo dice), enlace a
@@ -270,7 +272,7 @@ un script PHP (ver la guía de propuestas).
 
 ## Etapas siguientes
 
-- **Etapa 2 — el cliente recibe (hecha en la rama, sin desplegar; ver la sección de arriba):** envío por correo (PDF y enlace), «Enviar por mi WhatsApp», página pública `ver-plan.php` y
+- **Etapa 2 — el cliente recibe (EN PROD desde 2026-10-01; ver la sección de arriba):** envío por correo (PDF y enlace), «Enviar por mi WhatsApp», página pública `ver-plan.php` y
   agenda web de la llamada de seguimiento (`POST /wp-json/automatiza-tech/v1/plan-seguimiento`, siempre como reunión de
   seguimiento, sin tocar demos ni leads). Aquí el plan pasa a `enviado`.
 - **Etapa 3 — requiere a Meta y el ok de Luis para tocar el bot:** plantilla de WhatsApp de Utilidad `plan_trabajo_listo`, enviada

@@ -1,0 +1,681 @@
+<!doctype html>
+<html lang="es" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Inscripciones · GT Baseball Academy</title>
+<meta name="description" content="Inscribe a tu hijo o hija desde el celular en GT Baseball Academy (García Training), academia de béisbol en Maracaibo, estado Zulia.">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#0e1216">
+<script>
+  // Tema antes de pintar: oscuro por defecto (la marca); el apoderado puede pasar a claro con el botón.
+  (function () {
+    try { if (localStorage.getItem('gt-tema') === 'light') document.documentElement.setAttribute('data-theme', 'light'); } catch (e) {}
+    // Primera foto del fondo: se pide ya, la que corresponde al tema y a la orientación.
+    try {
+      var claro = document.documentElement.getAttribute('data-theme') === 'light';
+      var vertical = window.matchMedia('(orientation: portrait)').matches;
+      var l = document.createElement('link');
+      l.rel = 'preload'; l.as = 'image';
+      l.href = 'assets/fondo-' + (claro ? 'claro-' : '') + 'pelota' + (vertical ? '-vertical' : '') + '.jpg';
+      document.head.appendChild(l);
+    } catch (e) {}
+  })();
+</script>
+<link rel="icon" type="image/png" href="assets/favicon.png">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/styles.css?v=15">
+</head>
+<body>
+<!-- Fondo del sitio: tres fotos que se turnan (pelota, atardecer y estadio de noche). Ver styles.css. -->
+<div class="fondo-sitio" aria-hidden="true"><span class="fondo-sitio__foto fondo-sitio__foto--pelota"></span><span class="fondo-sitio__foto fondo-sitio__foto--atardecer"></span><span class="fondo-sitio__foto fondo-sitio__foto--noche"></span></div>
+<!-- Íconos: Tabler Icons 3.48.0 (MIT) y WhatsApp de Simple Icons 16.33.0 (CC0). -->
+<svg xmlns="http://www.w3.org/2000/svg" class="sprite" aria-hidden="true" focusable="false">
+<symbol id="i-camera" viewBox="0 0 24 24"><path d="M5 7h1a2 2 0 0 0 2 -2a1 1 0 0 1 1 -1h6a1 1 0 0 1 1 1a2 2 0 0 0 2 2h1a2 2 0 0 1 2 2v9a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-9a2 2 0 0 1 2 -2"/><path d="M9 13a3 3 0 1 0 6 0a3 3 0 0 0 -6 0"/></symbol>
+<symbol id="i-photo" viewBox="0 0 24 24"><path d="M15 8h.01"/><path d="M3 6a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v12a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3v-12"/><path d="M3 16l5 -5c.928 -.893 2.072 -.893 3 0l5 5"/><path d="M14 14l1 -1c.928 -.893 2.072 -.893 3 0l3 3"/></symbol>
+<symbol id="i-arrow-left" viewBox="0 0 24 24"><path d="M5 12l14 0"/><path d="M5 12l6 6"/><path d="M5 12l6 -6"/></symbol>
+<symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12l5 5l10 -10"/></symbol>
+<symbol id="i-circle-check" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 18 0a9 9 0 1 0 -18 0"/><path d="M9 12l2 2l4 -4"/></symbol>
+<symbol id="i-sun" viewBox="0 0 24 24"><path d="M8 12a4 4 0 1 0 8 0a4 4 0 1 0 -8 0"/><path d="M3 12h1m8 -9v1m8 8h1m-9 8v1m-6.4 -15.4l.7 .7m12.1 -.7l-.7 .7m0 11.4l.7 .7m-12.1 -.7l-.7 .7"/></symbol>
+<symbol id="i-moon" viewBox="0 0 24 24"><path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454l0 .008"/></symbol>
+<symbol id="i-download" viewBox="0 0 24 24"><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2 -2v-2"/><path d="M7 11l5 5l5 -5"/><path d="M12 4l0 12"/></symbol>
+<symbol id="i-share" viewBox="0 0 24 24"><path d="M3 12a3 3 0 1 0 6 0a3 3 0 1 0 -6 0"/><path d="M15 6a3 3 0 1 0 6 0a3 3 0 1 0 -6 0"/><path d="M15 18a3 3 0 1 0 6 0a3 3 0 1 0 -6 0"/><path d="M8.7 10.7l6.6 -3.4"/><path d="M8.7 13.3l6.6 3.4"/></symbol>
+<symbol id="i-alert-circle" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0"/><path d="M12 8v4"/><path d="M12 16h.01"/></symbol>
+<symbol id="i-wifi-off" viewBox="0 0 24 24"><path d="M12 18l.01 0"/><path d="M9.172 15.172a4 4 0 0 1 5.656 0"/><path d="M6.343 12.343a7.963 7.963 0 0 1 3.864 -2.14m4.163 .155a7.965 7.965 0 0 1 3.287 2"/><path d="M3.515 9.515a12 12 0 0 1 3.544 -2.455m3.101 -.92a12 12 0 0 1 10.325 3.374"/><path d="M3 3l18 18"/></symbol>
+<symbol id="i-id" viewBox="0 0 24 24"><path d="M3 7a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v10a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3l0 -10"/><path d="M7 10a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"/><path d="M15 8l2 0"/><path d="M15 12l2 0"/><path d="M7 16l10 0"/></symbol>
+<symbol id="i-calendar" viewBox="0 0 24 24"><path d="M4 7a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2v-12"/><path d="M16 3v4"/><path d="M8 3v4"/><path d="M4 11h16"/><path d="M11 15h1"/><path d="M12 15v3"/></symbol>
+<symbol id="i-phone" viewBox="0 0 24 24"><path d="M5 4h4l2 5l-2.5 1.5a11 11 0 0 0 5 5l1.5 -2.5l5 2v4a2 2 0 0 1 -2 2a16 16 0 0 1 -15 -15a2 2 0 0 1 2 -2"/></symbol>
+<symbol id="i-user" viewBox="0 0 24 24"><path d="M8 7a4 4 0 1 0 8 0a4 4 0 0 0 -8 0"/><path d="M6 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2"/></symbol>
+<symbol id="i-clipboard-text" viewBox="0 0 24 24"><path d="M9 5h-2a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-12a2 2 0 0 0 -2 -2h-2"/><path d="M9 5a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2a2 2 0 0 1 -2 2h-2a2 2 0 0 1 -2 -2"/><path d="M9 12h6"/><path d="M9 16h6"/></symbol>
+<symbol id="i-send" viewBox="0 0 24 24"><path d="M10 14l11 -11"/><path d="M21 3l-6.5 18a.55 .55 0 0 1 -1 0l-3.5 -7l-7 -3.5a.55 .55 0 0 1 0 -1l18 -6.5"/></symbol>
+<symbol id="i-pencil" viewBox="0 0 24 24"><path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4"/><path d="M13.5 6.5l4 4"/></symbol>
+<symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 11a8.1 8.1 0 0 0 -15.5 -2m-.5 -4v4h4"/><path d="M4 13a8.1 8.1 0 0 0 15.5 2m.5 4v-4h-4"/></symbol>
+<symbol id="i-mail" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2 -2h14a2 2 0 0 1 2 2v10a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-10"/><path d="M3 7l9 6l9 -6"/></symbol>
+<symbol id="i-lock" viewBox="0 0 24 24"><path d="M5 13a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v6a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2v-6"/><path d="M11 16a1 1 0 1 0 2 0a1 1 0 0 0 -2 0"/><path d="M8 11v-4a4 4 0 1 1 8 0v4"/></symbol>
+<symbol id="i-clock" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0"/><path d="M12 7v5l3 3"/></symbol>
+<symbol id="i-ball-baseball" viewBox="0 0 24 24"><path d="M5.636 18.364a9 9 0 1 0 12.728 -12.728a9 9 0 0 0 -12.728 12.728"/><path d="M12.495 3.02a9 9 0 0 1 -9.475 9.475"/><path d="M20.98 11.505a9 9 0 0 0 -9.475 9.475"/><path d="M9 9l2 2"/><path d="M13 13l2 2"/><path d="M11 7l2 1"/><path d="M7 11l1 2"/><path d="M16 11l1 2"/><path d="M11 16l2 1"/></symbol>
+<symbol id="i-device-mobile" viewBox="0 0 24 24"><path d="M6 5a2 2 0 0 1 2 -2h8a2 2 0 0 1 2 2v14a2 2 0 0 1 -2 2h-8a2 2 0 0 1 -2 -2v-14"/><path d="M11 4h2"/><path d="M12 17v.01"/></symbol>
+<symbol id="i-currency-dollar" viewBox="0 0 24 24"><path d="M16.7 8a3 3 0 0 0 -2.7 -2h-4a3 3 0 0 0 0 6h4a3 3 0 0 1 0 6h-4a3 3 0 0 1 -2.7 -2"/><path d="M12 3v3m0 12v3"/></symbol>
+<symbol id="i-cash-banknote" viewBox="0 0 24 24"><path d="M9 12a3 3 0 1 0 6 0a3 3 0 0 0 -6 0"/><path d="M3 8a2 2 0 0 1 2 -2h14a2 2 0 0 1 2 2v8a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2l0 -8"/><path d="M18 12h.01"/><path d="M6 12h.01"/></symbol>
+<symbol id="i-receipt" viewBox="0 0 24 24"><path d="M5 21v-16a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v16l-3 -2l-2 2l-2 -2l-2 2l-2 -2l-3 2m4 -14h6m-6 4h6m-2 4h2"/></symbol>
+<symbol id="i-copy" viewBox="0 0 24 24"><path d="M7 9.667a2.667 2.667 0 0 1 2.667 -2.667h8.666a2.667 2.667 0 0 1 2.667 2.667v8.666a2.667 2.667 0 0 1 -2.667 2.667h-8.666a2.667 2.667 0 0 1 -2.667 -2.667l0 -8.666"/><path d="M4.012 16.737a2.005 2.005 0 0 1 -1.012 -1.737v-10c0 -1.1 .9 -2 2 -2h10c.75 0 1.158 .385 1.5 1"/></symbol>
+<symbol id="i-paperclip" viewBox="0 0 24 24"><path d="M15 7l-6.5 6.5a1.5 1.5 0 0 0 3 3l6.5 -6.5a3 3 0 0 0 -6 -6l-6.5 6.5a4.5 4.5 0 0 0 9 9l6.5 -6.5"/></symbol>
+<symbol id="i-file-type-pdf" viewBox="0 0 24 24"><path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M5 12v-7a2 2 0 0 1 2 -2h7l5 5v4"/><path d="M5 18h1.5a1.5 1.5 0 0 0 0 -3h-1.5v6"/><path d="M17 18h2"/><path d="M20 15h-3v6"/><path d="M11 15v6h1a2 2 0 0 0 2 -2v-2a2 2 0 0 0 -2 -2h-1"/></symbol>
+<symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6l-12 12"/><path d="M6 6l12 12"/></symbol>
+<symbol id="i-users-group" viewBox="0 0 24 24"><path d="M10 13a2 2 0 1 0 4 0a2 2 0 0 0 -4 0"/><path d="M8 21v-1a2 2 0 0 1 2 -2h4a2 2 0 0 1 2 2v1"/><path d="M15 5a2 2 0 1 0 4 0a2 2 0 0 0 -4 0"/><path d="M17 10h2a2 2 0 0 1 2 2v1"/><path d="M5 5a2 2 0 1 0 4 0a2 2 0 0 0 -4 0"/><path d="M3 13v-1a2 2 0 0 1 2 -2h2"/></symbol>
+<symbol id="i-barbell" viewBox="0 0 24 24"><path d="M2 12h1"/><path d="M6 8h-2a1 1 0 0 0 -1 1v6a1 1 0 0 0 1 1h2"/><path d="M6 7v10a1 1 0 0 0 1 1h1a1 1 0 0 0 1 -1v-10a1 1 0 0 0 -1 -1h-1a1 1 0 0 0 -1 1"/><path d="M9 12h6"/><path d="M15 7v10a1 1 0 0 0 1 1h1a1 1 0 0 0 1 -1v-10a1 1 0 0 0 -1 -1h-1a1 1 0 0 0 -1 1"/><path d="M18 8h2a1 1 0 0 1 1 1v6a1 1 0 0 1 -1 1h-2"/><path d="M22 12h-1"/></symbol>
+<symbol id="i-brain" viewBox="0 0 24 24"><path d="M15.5 13a3.5 3.5 0 0 0 -3.5 3.5v1a3.5 3.5 0 0 0 7 0v-1.8"/><path d="M8.5 13a3.5 3.5 0 0 1 3.5 3.5v1a3.5 3.5 0 0 1 -7 0v-1.8"/><path d="M17.5 16a3.5 3.5 0 0 0 0 -7h-.5"/><path d="M19 9.3v-2.8a3.5 3.5 0 0 0 -7 0"/><path d="M6.5 16a3.5 3.5 0 0 1 0 -7h.5"/><path d="M5 9.3v-2.8a3.5 3.5 0 0 1 7 0v10"/></symbol>
+<symbol id="i-cake" viewBox="0 0 24 24"><path d="M3 20h18v-8a3 3 0 0 0 -3 -3h-12a3 3 0 0 0 -3 3v8"/><path d="M3 14.803c.312 .135 .654 .204 1 .197a2.4 2.4 0 0 0 2 -1a2.4 2.4 0 0 1 2 -1a2.4 2.4 0 0 1 2 1a2.4 2.4 0 0 0 2 1a2.4 2.4 0 0 0 2 -1a2.4 2.4 0 0 1 2 -1a2.4 2.4 0 0 1 2 1a2.4 2.4 0 0 0 2 1c.35 .007 .692 -.062 1 -.197"/><path d="M12 4l1.465 1.638a2 2 0 1 1 -3.015 .099l1.55 -1.737"/></symbol>
+<symbol id="i-fence" viewBox="0 0 24 24"><path d="M4 12v4h16v-4l-16 0"/><path d="M6 16v4h4v-4m0 -4v-6l-2 -2l-2 2v6"/><path d="M14 16v4h4v-4m0 -4v-6l-2 -2l-2 2v6"/></symbol>
+<symbol id="i-arrow-up" viewBox="0 0 24 24"><path d="M12 5l0 14"/><path d="M18 11l-6 -6"/><path d="M6 11l6 -6"/></symbol>
+<symbol id="i-player-play" viewBox="0 0 24 24"><path d="M7 4v16l13 -8l-13 -8"/></symbol>
+<symbol id="i-target-arrow" viewBox="0 0 24 24"><path d="M11 12a1 1 0 1 0 2 0a1 1 0 1 0 -2 0"/><path d="M12 7a5 5 0 1 0 5 5"/><path d="M13 3.055a9 9 0 1 0 7.941 7.945"/><path d="M15 6v3h3l3 -3h-3v-3l-3 3"/><path d="M15 9l-3 3"/></symbol>
+<symbol id="i-eye" viewBox="0 0 24 24"><path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0"/><path d="M21 12c-2.4 4 -5.4 6 -9 6c-3.6 0 -6.6 -2 -9 -6c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6"/></symbol>
+<symbol id="i-map-pin" viewBox="0 0 24 24"><path d="M9 11a3 3 0 1 0 6 0a3 3 0 0 0 -6 0"/><path d="M17.657 16.657l-4.243 4.243a2 2 0 0 1 -2.827 0l-4.244 -4.243a8 8 0 1 1 11.314 0"/></symbol>
+<symbol id="i-door-exit" viewBox="0 0 24 24"><path d="M13 12v.01"/><path d="M3 21h18"/><path d="M5 21v-16a2 2 0 0 1 2 -2h7.5m2.5 10.5v7.5"/><path d="M14 7h7m-3 -3l3 3l-3 3"/></symbol>
+<symbol id="i-whatsapp" viewBox="0 0 24 24"><path fill="currentColor" stroke="none" d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></symbol>
+</svg>
+<a class="saltar" href="#contenido">Saltar al contenido</a>
+
+<div class="app" id="app" data-endpoint="https://n8n-n8n.kchiba.easypanel.host/webhook/gt-baseball-inscripcion-v2" data-whatsapp="" data-turnstile="">
+
+  <header class="cabecera">
+    <div class="marca">
+      <img src="assets/logo-gt-256.jpg" width="48" height="48" alt="" class="marca__logo">
+      <div>
+        <p class="marca__nombre">GT Baseball Academy</p>
+        <p class="marca__sub">García Training</p>
+      </div>
+    </div>
+    <button type="button" class="tema" id="btn-tema" aria-pressed="false" aria-label="Activar modo claro" title="Activar modo claro">
+      <svg class="ico" aria-hidden="true"><use href="#i-sun"></use></svg>
+    </button>
+  </header>
+
+  <main id="contenido" tabindex="-1">
+
+    <!-- Portada -->
+    <section class="vista vista--portada" id="vista-portada" aria-labelledby="titulo-portada">
+      <div class="hero">
+        <div class="hero__texto">
+          <p class="etiqueta-prueba" id="etiqueta-prueba" hidden>Modo prueba</p>
+          <h1 id="titulo-portada" class="hero__titulo">Inscripciones abiertas</h1>
+          <p class="hero__sub">Inscribe a tu hijo o hija desde el celular en unos minutos y descarga la planilla lista para imprimir.</p>
+          <div class="hero__acciones">
+            <button type="button" class="boton boton--principal" data-accion="empezar">Inscribir a un atleta</button>
+            <a class="boton boton--whatsapp" data-whatsapp-link hidden target="_blank" rel="noopener">
+              <svg class="ico" aria-hidden="true"><use href="#i-whatsapp"></use></svg>
+              <span>Escríbenos por WhatsApp</span>
+            </a>
+          </div>
+          <button type="button" class="guia-enlace" data-accion="video">
+            <svg class="ico" aria-hidden="true"><use href="#i-player-play"></use></svg><span>Mira el video guía (1:34)</span>
+          </button>
+          <div class="borrador" id="borrador" hidden role="region" aria-label="Inscripción sin terminar">
+            <svg class="ico borrador__ico" aria-hidden="true"><use href="#i-clock"></use></svg>
+            <div class="borrador__texto">
+              <p class="borrador__titulo" id="borrador-titulo">Tienes una inscripción sin terminar.</p>
+              <div class="borrador__acciones">
+                <button type="button" class="boton boton--chico boton--principal" id="btn-continuar">Continuar</button>
+                <button type="button" class="boton boton--chico boton--fantasma" id="btn-descartar">Empezar de nuevo</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="hero__visual" id="logo-wow" aria-hidden="true">
+          <svg class="hero__diamante" viewBox="0 0 100 100" focusable="false">
+            <rect x="17" y="17" width="66" height="66" rx="5" transform="rotate(45 50 50)" pathLength="100"></rect>
+          </svg>
+          <div class="logo3d">
+            <div class="logo3d__halo"></div>
+            <div class="logo3d__giro">
+              <div class="logo3d__cara">
+                <img src="assets/logo-gt-512.jpg" width="512" height="512" alt="" class="hero__logo" draggable="false">
+                <span class="logo3d__brillo"></span>
+                <span class="logo3d__reflejo"></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Planes y precios: todos los datos salen del póster que mandó la academia el 29-sep; no se agrega nada que el
+           póster no diga. La franja va de borde a borde y sigue el botón de tema (oscura como el póster o clara). El fondo
+           es la foto del estadio de noche (assets/estadio-noche*.jpg) con las franjas doradas en CSS. -->
+      <section class="planes" id="planes" aria-labelledby="t-planes">
+        <div class="planes__fondo" aria-hidden="true"></div>
+        <div class="planes__marco">
+          <header class="planes__cabeza">
+            <img src="assets/logo-gt-256.jpg" width="256" height="256" alt="" class="planes__logo" loading="lazy">
+            <p class="planes__antetitulo">Entrenamiento de béisbol</p>
+            <h2 class="planes__titulo" id="t-planes">Planes y precios</h2>
+            <p class="planes__duracion">
+              <svg class="ico" aria-hidden="true"><use href="#i-clock"></use></svg>
+              <span>Todas las prácticas duran <strong>1 hora 30 min</strong></span>
+              <span class="planes__intensivo">¡Intensivo!</span>
+            </p>
+          </header>
+
+          <ul class="planes__lista">
+            <li class="plan plan--plata">
+              <h3 class="plan__nombre">Plan Plata</h3>
+              <p class="plan__precio"><span class="plan__monto">$10</span><span class="plan__periodo">diarios</span></p>
+              <p class="plan__detalle">Precio por día.</p>
+            </li>
+            <li class="plan plan--gold">
+              <h3 class="plan__nombre">Plan Gold</h3>
+              <p class="plan__precio"><span class="plan__monto">$25</span><span class="plan__periodo">semanal</span></p>
+              <p class="plan__alterno">o <strong>$85</strong> mensual</p>
+              <div class="plan__dias">
+                <span class="dias" aria-hidden="true"><b class="dia--si">Lu</b><b>Ma</b><b class="dia--si">Mi</b><b>Ju</b><b class="dia--si">Vi</b></span>
+                <p class="plan__detalle">Lunes, miércoles y viernes</p>
+              </div>
+            </li>
+            <li class="plan plan--platinum">
+              <h3 class="plan__nombre">Plan Platinum</h3>
+              <p class="plan__precio"><span class="plan__monto">$30</span><span class="plan__periodo">semanal</span></p>
+              <p class="plan__alterno">o <strong>$100</strong> mensual</p>
+              <div class="plan__dias">
+                <span class="dias" aria-hidden="true"><b class="dia--si">Lu</b><b class="dia--si">Ma</b><b class="dia--si">Mi</b><b class="dia--si">Ju</b><b class="dia--si">Vi</b></span>
+                <p class="plan__detalle">5 días a la semana, de lunes a viernes</p>
+              </div>
+            </li>
+          </ul>
+
+          <div class="incluye">
+            <h3 class="incluye__titulo">¿Qué incluye?</h3>
+            <ul class="incluye__lista">
+              <li><svg class="ico" aria-hidden="true"><use href="#i-ball-baseball"></use></svg><span>Entrenamiento técnico</span></li>
+              <li><svg class="ico" aria-hidden="true"><use href="#i-barbell"></use></svg><span>Preparación física</span></li>
+              <li><svg class="ico" aria-hidden="true"><use href="#i-brain"></use></svg><span>Desarrollo mental</span></li>
+              <li><svg class="ico" aria-hidden="true"><use href="#i-users-group"></use></svg><span>Trabajo en equipo</span></li>
+            </ul>
+            <p class="incluye__lema"><svg class="ico" aria-hidden="true"><use href="#i-circle-check"></use></svg><span>Mejora tu técnica, tu disciplina y lleva tu juego al siguiente nivel.</span></p>
+          </div>
+
+          <div class="extras">
+            <article class="extra">
+              <svg class="ico extra__ico" aria-hidden="true"><use href="#i-cake"></use></svg>
+              <div class="extra__texto">
+                <h3>Promociones para cumpleaños</h3>
+                <p>Para niños y adolescentes, jugadores.</p>
+                <a class="boton boton--whatsapp boton--chico" data-whatsapp-link data-whatsapp-texto="Hola, quiero información sobre las promociones para cumpleaños de GT Baseball Academy." hidden target="_blank" rel="noopener">
+                  <svg class="ico" aria-hidden="true"><use href="#i-whatsapp"></use></svg><span>Pregunta por WhatsApp</span>
+                </a>
+              </div>
+            </article>
+            <article class="extra">
+              <svg class="ico extra__ico" aria-hidden="true"><use href="#i-fence"></use></svg>
+              <div class="extra__texto">
+                <h3>Alquiler de cage de bateo</h3>
+                <p>Para equipos. Máximo 12 jugadores.</p>
+                <a class="boton boton--whatsapp boton--chico" data-whatsapp-link data-whatsapp-texto="Hola, quiero información sobre el alquiler del cage de bateo de GT Baseball Academy." hidden target="_blank" rel="noopener">
+                  <svg class="ico" aria-hidden="true"><use href="#i-whatsapp"></use></svg><span>Pregunta por WhatsApp</span>
+                </a>
+              </div>
+            </article>
+          </div>
+
+          <div class="planes__cierre">
+            <p class="planes__lema">Tu futuro en el béisbol <span>empieza aquí</span></p>
+            <button type="button" class="boton boton--principal" data-accion="empezar">Inscribir a un atleta</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Los mismos 5 pasos, con los mismos nombres, que muestra la barra del formulario. -->
+      <section class="bloque" aria-labelledby="t-como">
+        <div class="bloque__cabeza">
+          <h2 class="bloque__titulo" id="t-como">¿Cómo funciona?</h2>
+          <p class="bloque__intro">Son 5 pasos, los mismos que verás en el formulario.</p>
+          <!-- Video guía para representantes (1:34). No está en el repo: assets/guia/ lo pone el despliegue desde gt-config. -->
+          <button type="button" class="video-tarjeta" data-accion="video" aria-label="Ver el video guía, 1 minuto 34 segundos, con subtítulos">
+            <span class="video-tarjeta__imagen"><img src="assets/guia/poster.jpg" width="720" height="1280" alt="" loading="lazy"><span class="video-tarjeta__play"><svg class="ico" aria-hidden="true"><use href="#i-player-play"></use></svg></span></span>
+            <span class="video-tarjeta__texto"><strong>Mira el video guía</strong><span>1:34 · con subtítulos</span></span>
+          </button>
+        </div>
+        <ol class="linea">
+          <li class="linea__paso">
+            <span class="linea__marca"><svg class="ico" aria-hidden="true"><use href="#i-camera"></use></svg></span>
+            <div><p class="linea__num">Paso 1</p><h3>Atleta</h3><p>Agregas una foto del atleta, su nombre y su fecha de nacimiento.</p></div>
+          </li>
+          <li class="linea__paso">
+            <span class="linea__marca"><svg class="ico" aria-hidden="true"><use href="#i-user"></use></svg></span>
+            <div><p class="linea__num">Paso 2</p><h3>Contacto</h3><p>Escribes tu dirección, tu teléfono y tu correo, donde te llega la confirmación.</p></div>
+          </li>
+          <li class="linea__paso">
+            <span class="linea__marca"><svg class="ico" aria-hidden="true"><use href="#i-ball-baseball"></use></svg></span>
+            <div><p class="linea__num">Paso 3</p><h3>Béisbol</h3><p>Indicas su liga, su posición y con qué mano batea y lanza.</p></div>
+          </li>
+          <li class="linea__paso">
+            <span class="linea__marca"><svg class="ico" aria-hidden="true"><use href="#i-receipt"></use></svg></span>
+            <div><p class="linea__num">Paso 4</p><h3>Pago</h3><p><span id="portada-monto"></span>Pagas con pago móvil (en bolívares a tasa oficial) o Zelle y adjuntas el comprobante<span id="portada-despues">, o lo envías después</span>. También puedes pagar en efectivo en la oficina.</p></div>
+          </li>
+          <li class="linea__paso">
+            <span class="linea__marca"><svg class="ico" aria-hidden="true"><use href="#i-send"></use></svg></span>
+            <div><p class="linea__num">Paso 5</p><h3>Enviar</h3><p>Revisas el resumen y envías. Te llega la planilla por correo y, cuando la academia verifique el pago, te agrega al grupo de WhatsApp.</p></div>
+          </li>
+        </ol>
+      </section>
+
+      <section class="bloque bloque--necesitas" aria-labelledby="t-nec">
+        <div class="bloque__cabeza">
+          <h2 class="bloque__titulo" id="t-nec">¿Qué necesitas a mano?</h2>
+        </div>
+        <ul class="necesitas">
+          <li><svg class="ico" aria-hidden="true"><use href="#i-photo"></use></svg><span>Una foto del atleta</span></li>
+          <li><svg class="ico" aria-hidden="true"><use href="#i-calendar"></use></svg><span>Su fecha de nacimiento</span></li>
+          <li><svg class="ico" aria-hidden="true"><use href="#i-id"></use></svg><span>Cédula o pasaporte, si tiene</span></li>
+          <li><svg class="ico" aria-hidden="true"><use href="#i-mail"></use></svg><span>Tu teléfono y tu correo</span></li>
+          <li><svg class="ico" aria-hidden="true"><use href="#i-receipt"></use></svg><span>La captura del pago, si pagas por pago móvil o Zelle</span></li>
+        </ul>
+        <button type="button" class="boton boton--principal boton--ancho-auto" data-accion="empezar">Inscribir a un atleta</button>
+      </section>
+
+      <!-- Quiénes somos, misión y visión: la academia no los tenía y los redactó AutomatizaTech (28-sep) con lo que Jeffer
+           contó de la academia; la academia puede ajustarlos. La dirección la mandó la academia el 28-sep. -->
+      <section class="bloque" aria-labelledby="t-quienes">
+        <div class="bloque__cabeza">
+          <h2 class="bloque__titulo" id="t-quienes">¿Quiénes somos?</h2>
+        </div>
+        <div class="nosotros">
+          <p class="nosotros__texto">GT Baseball Academy (García Training) es una academia de béisbol familiar en Maracaibo, estado Zulia. Entrenamos a niños y jóvenes que quieren aprender, mejorar y llegar lejos en el béisbol, con un plan de trabajo claro, seguimiento de cada atleta y comunicación directa con sus representantes.</p>
+          <div class="nosotros__tarjetas">
+            <article class="tarjeta-valor">
+              <svg class="ico" aria-hidden="true"><use href="#i-target-arrow"></use></svg>
+              <h3>Misión</h3>
+              <p>Formar atletas de béisbol completos, con buena técnica en el bateo, el pitcheo y la defensa, preparación física y valores como la disciplina, el respeto y el trabajo en equipo, acompañando a cada familia en el proceso.</p>
+            </article>
+            <article class="tarjeta-valor">
+              <svg class="ico" aria-hidden="true"><use href="#i-eye"></use></svg>
+              <h3>Visión</h3>
+              <p>Ser una academia de referencia en el Zulia y en Venezuela, reconocida por la calidad de su formación y por preparar a los atletas con proyección para las oportunidades del béisbol profesional.</p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="bloque" aria-labelledby="t-donde">
+        <div class="bloque__cabeza">
+          <h2 class="bloque__titulo" id="t-donde">¿Dónde estamos?</h2>
+        </div>
+        <div class="donde">
+          <p class="donde__direccion"><svg class="ico" aria-hidden="true"><use href="#i-map-pin"></use></svg><span>Av. 19, calle 8, Sierra Maestra, Maracaibo, estado Zulia.<br>Detrás del Centro Clínico Sergio Pérez.</span></p>
+          <p class="donde__nota">En la oficina de la academia también recibimos el pago de la inscripción en efectivo.</p>
+          <a class="boton boton--whatsapp" data-whatsapp-link hidden target="_blank" rel="noopener">
+            <svg class="ico" aria-hidden="true"><use href="#i-whatsapp"></use></svg><span>Pregúntanos por WhatsApp</span>
+          </a>
+        </div>
+      </section>
+    </section>
+
+    <!-- Formulario -->
+    <section class="vista vista--formulario" id="vista-formulario" hidden aria-label="Formulario de inscripción">
+      <div class="form-layout">
+        <nav class="progreso" aria-label="Progreso de la inscripción">
+          <div class="progreso__cabeza">
+            <button type="button" class="progreso__volver" id="btn-atras" aria-label="Volver">
+              <svg class="ico" aria-hidden="true"><use href="#i-arrow-left"></use></svg>
+            </button>
+            <p class="progreso__texto" id="texto-paso">Paso 1 de 5</p>
+            <button type="button" class="salir salir--barra" data-accion="salir" aria-label="Salir al inicio">
+              <svg class="ico" aria-hidden="true"><use href="#i-door-exit"></use></svg><span class="salir__texto">Salir</span>
+            </button>
+          </div>
+          <ol class="progreso__lista">
+            <li data-paso="1"><span class="progreso__num">1</span><span class="progreso__nombre">Atleta</span></li>
+            <li data-paso="2"><span class="progreso__num">2</span><span class="progreso__nombre">Contacto</span></li>
+            <li data-paso="3"><span class="progreso__num">3</span><span class="progreso__nombre">Béisbol</span></li>
+            <li data-paso="4"><span class="progreso__num">4</span><span class="progreso__nombre">Pago</span></li>
+            <li data-paso="5"><span class="progreso__num">5</span><span class="progreso__nombre">Enviar</span></li>
+          </ol>
+          <button type="button" class="salir salir--lista" data-accion="salir">
+            <svg class="ico" aria-hidden="true"><use href="#i-door-exit"></use></svg><span>Salir al inicio</span>
+          </button>
+        </nav>
+
+        <form id="formulario" class="formulario" novalidate autocomplete="on">
+          <input type="text" name="gt_hp_x9" id="hp" tabindex="-1" autocomplete="new-password" class="trampa" aria-hidden="true">
+          <div class="aviso-error" id="aviso-error" role="alert" hidden></div>
+
+          <!-- Paso 1 -->
+          <fieldset class="paso" data-paso="1">
+            <legend class="paso__titulo">Datos del atleta</legend>
+
+            <div class="campo campo--foto" data-campo="foto">
+              <span class="campo__label" id="lbl-foto">Foto del atleta <span class="req" aria-hidden="true">*</span></span>
+              <div class="foto">
+                <div class="foto__marco" id="foto-marco">
+                  <img id="foto-preview" alt="Foto del atleta" hidden>
+                  <svg class="ico foto__vacio" id="foto-vacio" aria-hidden="true"><use href="#i-user"></use></svg>
+                </div>
+                <div class="foto__opciones">
+                  <label class="boton boton--secundario boton--chico" for="foto-camara">
+                    <svg class="ico" aria-hidden="true"><use href="#i-camera"></use></svg><span>Tomar foto</span>
+                  </label>
+                  <label class="boton boton--secundario boton--chico" for="foto-galeria">
+                    <svg class="ico" aria-hidden="true"><use href="#i-photo"></use></svg><span>Elegir de la galería</span>
+                  </label>
+                  <p class="campo__ayuda" id="foto-ayuda">De frente y con buena luz, como para un carnet.</p>
+                </div>
+              </div>
+              <input type="file" id="foto-camara" accept="image/*" capture="environment" class="foto__input" aria-labelledby="lbl-foto">
+              <input type="file" id="foto-galeria" accept="image/*" class="foto__input" aria-labelledby="lbl-foto">
+              <p class="campo__error" id="err-foto" data-error-para="foto"></p>
+            </div>
+
+            <div class="campo" data-campo="nombre">
+              <label for="nombre">Nombre completo <span class="req" aria-hidden="true">*</span></label>
+              <input id="nombre" name="nombre" type="text" maxlength="120" autocomplete="off" autocapitalize="words" required aria-describedby="ayuda-nombre err-nombre">
+              <p class="campo__ayuda" id="ayuda-nombre">Nombre y apellido, como en su cédula o partida de nacimiento.</p>
+              <p class="campo__error" id="err-nombre" data-error-para="nombre"></p>
+            </div>
+
+            <fieldset class="campo campo--fecha" data-campo="fecha_nac" aria-describedby="err-fecha_nac">
+              <legend class="campo__label">Fecha de nacimiento <span class="req" aria-hidden="true">*</span></legend>
+              <div class="fecha">
+                <label class="fecha__parte"><span class="sr-only">Día</span>
+                  <select id="fn-dia" data-fecha="dia"><option value="">Día</option></select>
+                </label>
+                <label class="fecha__parte fecha__parte--mes"><span class="sr-only">Mes</span>
+                  <select id="fn-mes" data-fecha="mes"><option value="">Mes</option></select>
+                </label>
+                <label class="fecha__parte"><span class="sr-only">Año</span>
+                  <select id="fn-anio" data-fecha="anio"><option value="">Año</option></select>
+                </label>
+              </div>
+              <p class="edad" id="edad" aria-live="polite"></p>
+              <p class="campo__error" id="err-fecha_nac" data-error-para="fecha_nac"></p>
+            </fieldset>
+
+            <div class="fila">
+              <div class="campo" data-campo="documento">
+                <label for="documento">Cédula o pasaporte</label>
+                <input id="documento" name="documento" type="text" maxlength="20" autocomplete="off" autocapitalize="characters" aria-describedby="ayuda-documento err-documento">
+                <p class="campo__ayuda" id="ayuda-documento">Ej: V-30123456. Si todavía no tiene, déjalo en blanco.</p>
+                <p class="campo__error" id="err-documento" data-error-para="documento"></p>
+              </div>
+              <div class="campo" data-campo="nacionalidad">
+                <label for="nacionalidad">Nacionalidad <span class="req" aria-hidden="true">*</span></label>
+                <input id="nacionalidad" name="nacionalidad" type="text" maxlength="60" list="lista-nacionalidades" value="Venezolana" autocapitalize="words" required aria-describedby="err-nacionalidad">
+                <datalist id="lista-nacionalidades">
+                  <option value="Venezolana"><option value="Colombiana"><option value="Dominicana"><option value="Cubana">
+                  <option value="Panameña"><option value="Peruana"><option value="Ecuatoriana"><option value="Otra">
+                </datalist>
+                <p class="campo__error" id="err-nacionalidad" data-error-para="nacionalidad"></p>
+              </div>
+            </div>
+          </fieldset>
+
+          <!-- Paso 2 -->
+          <fieldset class="paso" data-paso="2" hidden>
+            <legend class="paso__titulo">Contacto y representante</legend>
+
+            <div class="campo" data-campo="direccion">
+              <label for="direccion">Dirección <span class="req" aria-hidden="true">*</span></label>
+              <textarea id="direccion" name="direccion" rows="2" maxlength="250" autocomplete="street-address" required aria-describedby="err-direccion"></textarea>
+              <p class="campo__error" id="err-direccion" data-error-para="direccion"></p>
+            </div>
+
+            <div class="campo" data-campo="telefono">
+              <label for="telefono">Teléfono del atleta</label>
+              <input id="telefono" name="telefono" type="tel" maxlength="20" inputmode="tel" autocomplete="off" placeholder="Ej: 0412-1234567" aria-describedby="err-telefono">
+              <p class="campo__error" id="err-telefono" data-error-para="telefono"></p>
+            </div>
+
+            <h2 class="subtitulo">Representante</h2>
+
+            <div class="campo" data-campo="rep_nombre">
+              <label for="rep_nombre">Nombre y apellido <span class="req" aria-hidden="true">*</span></label>
+              <input id="rep_nombre" name="rep_nombre" type="text" maxlength="120" autocomplete="name" autocapitalize="words" required aria-describedby="err-rep_nombre">
+              <p class="campo__error" id="err-rep_nombre" data-error-para="rep_nombre"></p>
+            </div>
+
+            <div class="fila">
+              <div class="campo" data-campo="rep_telefono">
+                <label for="rep_telefono">Teléfono <span class="req" aria-hidden="true">*</span></label>
+                <input id="rep_telefono" name="rep_telefono" type="tel" maxlength="20" inputmode="tel" autocomplete="tel" placeholder="Ej: 0414-1234567" required aria-describedby="ayuda-rep_telefono err-rep_telefono">
+                <p class="campo__ayuda" id="ayuda-rep_telefono">Tu celular con WhatsApp: ahí te agrega la academia al grupo.</p>
+                <p class="campo__error" id="err-rep_telefono" data-error-para="rep_telefono"></p>
+              </div>
+              <div class="campo" data-campo="correo">
+                <label for="correo">Correo <span class="req" aria-hidden="true">*</span></label>
+                <input id="correo" name="correo" type="email" maxlength="120" inputmode="email" autocomplete="email" autocapitalize="off" spellcheck="false" required aria-describedby="ayuda-correo err-correo">
+                <p class="campo__ayuda" id="ayuda-correo">Aquí te enviamos la confirmación con la planilla.</p>
+                <p class="campo__error" id="err-correo" data-error-para="correo"></p>
+              </div>
+            </div>
+          </fieldset>
+
+          <!-- Paso 3 -->
+          <fieldset class="paso" data-paso="3" hidden>
+            <legend class="paso__titulo">Datos de béisbol</legend>
+
+            <div class="campo" data-campo="liga">
+              <label for="liga">Liga o programa donde juega</label>
+              <input id="liga" name="liga" type="text" maxlength="120" autocapitalize="words" aria-describedby="ayuda-liga err-liga">
+              <p class="campo__ayuda" id="ayuda-liga">Si no juega en ninguna, déjalo en blanco.</p>
+              <p class="campo__error" id="err-liga" data-error-para="liga"></p>
+            </div>
+
+            <div class="campo" data-campo="posicion">
+              <label for="posicion">Posición <span class="req" aria-hidden="true">*</span></label>
+              <select id="posicion" name="posicion" required aria-describedby="err-posicion">
+                <option value="">Elige una posición</option>
+                <option>Lanzador</option><option>Receptor</option><option>Primera base</option><option>Segunda base</option>
+                <option>Tercera base</option><option>Campocorto</option><option>Jardinero izquierdo</option>
+                <option>Jardinero central</option><option>Jardinero derecho</option><option>Utility</option>
+                <option>Aún no definida</option>
+              </select>
+              <p class="campo__error" id="err-posicion" data-error-para="posicion"></p>
+            </div>
+
+            <div class="fila">
+              <fieldset class="campo" data-campo="batea" aria-describedby="err-batea">
+                <legend class="campo__label">Batea <span class="req" aria-hidden="true">*</span></legend>
+                <div class="opciones">
+                  <label class="opcion"><input type="radio" name="batea" value="Derecha"><span>Derecha</span></label>
+                  <label class="opcion"><input type="radio" name="batea" value="Izquierda"><span>Izquierda</span></label>
+                  <label class="opcion"><input type="radio" name="batea" value="Ambas"><span>Ambas</span></label>
+                </div>
+                <p class="campo__error" id="err-batea" data-error-para="batea"></p>
+              </fieldset>
+              <fieldset class="campo" data-campo="lanza" aria-describedby="err-lanza">
+                <legend class="campo__label">Lanza <span class="req" aria-hidden="true">*</span></legend>
+                <div class="opciones">
+                  <label class="opcion"><input type="radio" name="lanza" value="Derecha"><span>Derecha</span></label>
+                  <label class="opcion"><input type="radio" name="lanza" value="Izquierda"><span>Izquierda</span></label>
+                </div>
+                <p class="campo__error" id="err-lanza" data-error-para="lanza"></p>
+              </fieldset>
+            </div>
+
+            <div class="fila fila--cuatro">
+              <div class="campo" data-campo="estatura">
+                <label for="estatura">Estatura</label>
+                <input id="estatura" name="estatura" type="text" maxlength="12" placeholder="Ej: 1,65 m" aria-describedby="err-estatura">
+                <p class="campo__error" id="err-estatura" data-error-para="estatura"></p>
+              </div>
+              <div class="campo" data-campo="peso">
+                <label for="peso">Peso</label>
+                <input id="peso" name="peso" type="text" maxlength="12" placeholder="Ej: 55 kg" aria-describedby="err-peso">
+                <p class="campo__error" id="err-peso" data-error-para="peso"></p>
+              </div>
+              <div class="campo" data-campo="millas">
+                <label for="millas">Referencia millas</label>
+                <input id="millas" name="millas" type="text" maxlength="5" inputmode="decimal" placeholder="Ej: 72" aria-describedby="err-millas">
+                <p class="campo__error" id="err-millas" data-error-para="millas"></p>
+              </div>
+              <div class="campo" data-campo="anio_firma">
+                <label for="anio_firma">Año de firma</label>
+                <input id="anio_firma" name="anio_firma" type="text" maxlength="4" inputmode="numeric" placeholder="Ej: 2028" aria-describedby="err-anio_firma">
+                <p class="campo__error" id="err-anio_firma" data-error-para="anio_firma"></p>
+              </div>
+            </div>
+          </fieldset>
+
+          <!-- Paso 4: las formas de pago vienen de #datos-pago (las pone el despliegue, fuera del repo) -->
+          <fieldset class="paso" data-paso="4" hidden>
+            <legend class="paso__titulo">Pago de la inscripción</legend>
+            <p class="paso__intro" id="pago-intro">Paga la inscripción y adjunta el comprobante. Cuando la academia verifique el pago, te agregará al grupo de WhatsApp.</p>
+            <p class="pago-monto" id="pago-monto" hidden></p>
+
+            <fieldset class="campo" data-campo="pago_metodo" aria-describedby="err-pago_metodo">
+              <legend class="campo__label">¿Cómo vas a pagar? <span class="req" aria-hidden="true">*</span></legend>
+              <div class="metodos" id="pago-metodos"></div>
+              <p class="campo__error" id="err-pago_metodo" data-error-para="pago_metodo"></p>
+            </fieldset>
+
+            <section class="pago-caja" id="pago-caja" hidden aria-labelledby="pago-caja-titulo">
+              <h2 class="pago-caja__titulo" id="pago-caja-titulo"></h2>
+              <div id="pago-datos"></div>
+            </section>
+
+            <div class="campo campo--comprobante" data-campo="comprobante" id="bloque-comprobante" hidden>
+              <span class="campo__label" id="lbl-comprobante">Comprobante del pago</span>
+              <div class="adjunto" id="comp-adjunto" hidden>
+                <div class="adjunto__vista" id="comp-vista"></div>
+                <div class="adjunto__info">
+                  <p class="adjunto__nombre" id="comp-nombre"></p>
+                  <p class="adjunto__peso" id="comp-peso"></p>
+                </div>
+                <button type="button" class="adjunto__quitar" id="comp-quitar" aria-label="Quitar el comprobante">
+                  <svg class="ico" aria-hidden="true"><use href="#i-x"></use></svg>
+                </button>
+              </div>
+              <input type="file" id="comp-archivo" accept="image/*,application/pdf" class="foto__input" aria-labelledby="lbl-comprobante" aria-describedby="ayuda-comprobante err-comprobante">
+              <label class="boton boton--secundario boton--chico" for="comp-archivo" id="comp-boton">
+                <svg class="ico" aria-hidden="true"><use href="#i-paperclip"></use></svg><span id="comp-boton-texto">Adjuntar captura o PDF</span>
+              </label>
+              <p class="campo__ayuda" id="ayuda-comprobante">La captura de pantalla del pago o el PDF que te da el banco.</p>
+              <p class="campo__error" id="err-comprobante" data-error-para="comprobante"></p>
+              <label class="acepto acepto--despues" id="comp-despues">
+                <input type="checkbox" id="pago_despues" name="pago_despues">
+                <span>Todavía no he pagado: envío el comprobante después, respondiendo el correo de confirmación o por WhatsApp.</span>
+              </label>
+            </div>
+          </fieldset>
+
+          <!-- Paso 5 -->
+          <fieldset class="paso" data-paso="5" hidden>
+            <legend class="paso__titulo">Revisa y envía</legend>
+            <div class="resumen" id="resumen"></div>
+            <div class="campo" data-campo="acepta">
+              <label class="acepto">
+                <input type="checkbox" id="acepta" name="acepta" aria-describedby="err-acepta">
+                <span>Autorizo a la academia a usar estos datos de forma interna y exclusiva, para fines de inscripción y evaluación.</span>
+              </label>
+              <p class="campo__error" id="err-acepta" data-error-para="acepta"></p>
+            </div>
+            <div class="campo" data-campo="turnstile" id="campo-turnstile" hidden>
+              <div id="turnstile-box" class="turnstile"></div>
+              <p class="campo__error" id="err-turnstile"></p>
+            </div>
+          </fieldset>
+
+          <div class="acciones">
+            <button type="button" class="boton boton--principal" id="btn-siguiente">Siguiente</button>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <!-- Resultado -->
+    <section class="vista vista--listo" id="vista-listo" hidden aria-labelledby="listo-titulo">
+      <div class="listo">
+        <div class="listo__icono" id="listo-icono" aria-hidden="true"></div>
+        <h2 class="listo__titulo" id="listo-titulo" tabindex="-1">¡Inscripción enviada!</h2>
+        <p class="listo__texto" id="listo-texto"></p>
+        <p class="listo__correo" id="listo-correo" hidden></p>
+        <section class="listo__pago" id="listo-pago" hidden aria-labelledby="listo-pago-titulo">
+          <h3 class="listo__pago-titulo"><svg class="ico" aria-hidden="true"><use href="#i-users-group"></use></svg><span id="listo-pago-titulo"></span></h3>
+          <p class="listo__pago-texto" id="listo-pago-texto"></p>
+          <div id="listo-pago-datos"></div>
+          <a class="boton boton--whatsapp" id="listo-pago-wa" hidden target="_blank" rel="noopener">
+            <svg class="ico" aria-hidden="true"><use href="#i-whatsapp"></use></svg><span>Enviar comprobante por WhatsApp</span>
+          </a>
+        </section>
+        <div class="listo__acciones">
+          <button type="button" class="boton boton--principal" id="btn-reintentar" hidden>
+            <svg class="ico" aria-hidden="true"><use href="#i-refresh"></use></svg><span>Intentar de nuevo</span>
+          </button>
+          <button type="button" class="boton boton--principal" id="btn-compartir" hidden>
+            <svg class="ico" aria-hidden="true"><use href="#i-share"></use></svg><span>Compartir planilla</span>
+          </button>
+          <button type="button" class="boton boton--secundario" id="btn-pdf">
+            <svg class="ico" aria-hidden="true"><use href="#i-download"></use></svg><span>Descargar planilla</span>
+          </button>
+        </div>
+        <button type="button" class="boton boton--texto" id="btn-otro">Inscribir a otro atleta</button>
+        <a class="boton boton--texto" data-whatsapp-link hidden target="_blank" rel="noopener">
+          <svg class="ico" aria-hidden="true"><use href="#i-whatsapp"></use></svg><span>Escríbenos por WhatsApp</span>
+        </a>
+        <p class="nota" id="listo-id"></p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="pie">
+    <p><svg class="ico ico--chico" aria-hidden="true"><use href="#i-lock"></use></svg> Los datos son para uso interno y exclusivo de la academia.</p>
+    <p>Formulario digital hecho por <a href="https://automatizatech.cl" target="_blank" rel="noopener">AutomatizaTech</a></p>
+  </footer>
+
+  <!-- Volver arriba: aparece al llegar a la última sección de la portada («¿Dónde estamos?») o al pie. -->
+  <button type="button" class="arriba" id="btn-arriba" aria-label="Volver al inicio" title="Volver al inicio" tabindex="-1">
+    <svg class="ico" aria-hidden="true"><use href="#i-arrow-up"></use></svg>
+  </button>
+</div>
+
+<div class="enviando" id="enviando" hidden>
+  <div class="enviando__caja" role="status" aria-live="polite">
+    <div class="cargador" id="cargador">
+      <svg class="cargador__anillo" viewBox="0 0 120 120" aria-hidden="true">
+        <circle class="cargador__pista" cx="60" cy="60" r="54"></circle>
+        <circle class="cargador__avance" id="cargador-avance" cx="60" cy="60" r="54" pathLength="100"></circle>
+      </svg>
+      <div class="cargador__pelota" aria-hidden="true"><svg class="ico"><use href="#i-ball-baseball"></use></svg></div>
+    </div>
+    <p class="enviando__titulo" id="enviando-titulo">Enviando la inscripción</p>
+    <p class="enviando__detalle" id="enviando-detalle">Preparando la planilla</p>
+  </div>
+</div>
+
+<!-- Video guía: no se descarga hasta que se abre (preload="none"). Subtítulos en español en el botón del reproductor,
+     apagados al empezar: encendidos se montan sobre los textos que el video trae impresos. -->
+<dialog class="dialogo dialogo--video" id="dialogo-video" aria-labelledby="dialogo-video-titulo">
+  <div class="dialogo-video__cabeza">
+    <h2 class="dialogo__titulo" id="dialogo-video-titulo">Video guía</h2>
+    <button type="button" class="dialogo-video__cerrar" id="btn-cerrar-video" aria-label="Cerrar el video">
+      <svg class="ico" aria-hidden="true"><use href="#i-x"></use></svg>
+    </button>
+  </div>
+  <video id="video-guia" controls playsinline preload="none" poster="assets/guia/poster.jpg?v=2" width="720" height="1280">
+    <source src="assets/guia/video-guia.mp4?v=2" type="video/mp4">
+    <track kind="captions" src="assets/guia/video-guia.vtt?v=2" srclang="es" label="Español">
+  </video>
+</dialog>
+
+<!-- Salir de la inscripción: pregunta antes; lo escrito queda en el borrador del teléfono. -->
+<dialog class="dialogo" id="dialogo-salir" aria-labelledby="dialogo-salir-titulo" aria-describedby="dialogo-salir-texto">
+  <h2 class="dialogo__titulo" id="dialogo-salir-titulo">¿Deseas salir de la inscripción?</h2>
+  <p class="dialogo__texto" id="dialogo-salir-texto">Lo que llevas queda guardado en este teléfono: desde el inicio puedes continuar o empezar de nuevo.</p>
+  <div class="dialogo__acciones">
+    <button type="button" class="boton boton--secundario" id="btn-quedarse" autofocus>Seguir inscribiendo</button>
+    <button type="button" class="boton boton--principal" id="btn-salir-si">Sí, salir</button>
+  </div>
+</dialog>
+
+<p class="sr-only" id="anuncio" aria-live="polite"></p>
+
+<!-- Formas de pago de la academia: el despliegue reemplaza {} con el bloque "pago" de gt-config.json. -->
+<script type="application/json" id="datos-pago">{}</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/4.2.1/jspdf.umd.min.js" integrity="sha512-plOdviVmws4Y3JAvbnpfKb2hVxKM1lCwsi3vmElYRj+tiDLffZ4FVUj5a8vyKJ9pIgl8JCAHEJ4D1iUKBecswg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<!-- Turnstile (anti-bot). Solo se activa si el despliegue puso la sitekey en data-turnstile del #app. -->
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer></script>
+<script src="assets/planilla.js?v=4"></script>
+<script src="assets/app.js?v=12"></script>
+</body>
+</html>

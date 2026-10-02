@@ -4,9 +4,27 @@
     {
       "name": "promo-preview",
       "runtimeExecutable": "npx",
-      "runtimeArgs": ["http-server", "promo-assets", "--cors"],
+      "runtimeArgs": [
+        "http-server",
+        "promo-assets",
+        "--cors"
+      ],
       "port": 8099,
       "autoPort": true
+    },
+    {
+      "name": "gt-baseball",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8771",
+        "--bind",
+        "127.0.0.1",
+        "--directory",
+        "demos/gt-baseball"
+      ],
+      "port": 8771
     }
   ]
 }

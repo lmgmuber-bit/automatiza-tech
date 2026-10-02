@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cartel QR · GT Baseball Academy</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" type="image/png" href="assets/favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;600;700&family=Barlow+Condensed:wght@600;700&display=swap" rel="stylesheet">
+<style>
+  @page { size: A4; margin: 0; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: #d9dde2; font-family: 'Barlow', Arial, sans-serif; color: #111418; }
+  .hoja { width: 210mm; height: 297mm; margin: 12px auto; background: #fff; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 6px 30px rgba(0,0,0,.18); -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .cabeza { background: #0e1216; color: #fff; padding: 12mm 16mm 9mm; display: flex; align-items: center; gap: 9mm; }
+  .cabeza img { width: 42mm; height: 42mm; border-radius: 6mm; box-shadow: 0 0 0 1.2mm rgba(244,169,28,.55); }
+  .cabeza h1 { margin: 0; font: 700 18mm/0.95 'Barlow Condensed', 'Arial Narrow', sans-serif; text-transform: uppercase; }
+  .cabeza p { margin: 3mm 0 0; color: #f4a91c; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; font-size: 5mm; }
+  .franja { height: 3mm; background: linear-gradient(90deg, #f4a91c, #ffc54d); }
+  .cuerpo { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 4mm 16mm 8mm; text-align: center; }
+  .cuerpo h2 { margin: 0 0 2mm; font: 700 11mm/1 'Barlow Condensed', sans-serif; text-transform: uppercase; }
+  .cuerpo .sub { margin: 0 0 4mm; font-size: 6mm; color: #3a414a; }
+  .qr { width: 118mm; height: 118mm; padding: 5mm; border: 1.4mm solid #f4a91c; border-radius: 6mm; }
+  .qr img { width: 100%; height: 100%; display: block; image-rendering: pixelated; }
+  .url { margin: 6mm 0 0; font-size: 4.6mm; color: #5a626c; }
+  .pasos { display: flex; gap: 4mm; margin: 7mm 0 0; }
+  .pasos div { flex: 1; font-size: 3.9mm; line-height: 1.3; color: #3a414a; }
+  .pasos strong { display: block; margin: 0 0 1mm; font: 700 5mm/1 'Barlow Condensed', sans-serif; text-transform: uppercase; color: #111418; }
+  .pasos b { display: grid; place-items: center; width: 10mm; height: 10mm; margin: 0 auto 2.5mm; border-radius: 50%; background: #f4a91c; color: #1a1204; font: 700 5.5mm 'Barlow Condensed', sans-serif; }
+  .pie { padding: 5mm 16mm 7mm; text-align: center; font-size: 3.4mm; color: #8a929c; }
+  .imprimir { position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%); min-height: 44px; padding: 12px 24px; border: 0; border-radius: 12px; background: #f4a91c; color: #1a1204; font: 700 16px 'Barlow', sans-serif; cursor: pointer; box-shadow: 0 8px 20px rgba(0,0,0,.2); }
+  .imprimir:focus-visible { outline: 3px solid #0e1216; outline-offset: 3px; }
+  @media print { html, body { background: #fff; } .hoja { margin: 0; box-shadow: none; } .imprimir { display: none; } }
+  @media screen { .hoja { zoom: var(--escala, 1); } }
+</style>
+</head>
+<body>
+<main class="hoja">
+  <header class="cabeza">
+    <img src="assets/logo-gt-512.jpg" alt="GT Baseball Academy">
+    <div>
+      <h1>Inscripciones<br>abiertas</h1>
+      <p>GT Baseball Academy · García Training</p>
+    </div>
+  </header>
+  <div class="franja"></div>
+  <section class="cuerpo">
+    <h2>Escanea e inscribe a tu hijo</h2>
+    <p class="sub">Abre la cámara de tu celular y apunta al código</p>
+    <div class="qr"><img src="assets/qr-inscripcion.svg" alt="Código QR del formulario de inscripción"></div>
+    <p class="url">gtbaseball.com</p>
+    <!-- Los mismos 5 pasos, con los mismos nombres, que la barra del formulario. -->
+    <div class="pasos">
+      <div><b>1</b><strong>Atleta</strong>Foto y datos del atleta</div>
+      <div><b>2</b><strong>Contacto</strong>Tus datos y tu correo</div>
+      <div><b>3</b><strong>Béisbol</strong>Liga, posición, batea y lanza</div>
+      <div><b>4</b><strong>Pago</strong>Paga y adjunta el comprobante</div>
+      <div><b>5</b><strong>Enviar</strong>Recibe tu planilla por correo</div>
+    </div>
+  </section>
+  <footer class="pie">Los datos son para uso interno y exclusivo de la academia · Formulario digital de AutomatizaTech</footer>
+</main>
+<button class="imprimir" type="button" onclick="window.print()">Imprimir cartel</button>
+<script>
+(function () {
+  var MM_A_PX = 96 / 25.4;
+  var anchoHojaPx = 210 * MM_A_PX; // ancho de la hoja A4 (210mm) en px a 96dpi
+  function recalcularEscala() {
+    var disponible = window.innerWidth - 24;
+    var escala = Math.min(1, disponible / anchoHojaPx);
+    document.documentElement.style.setProperty('--escala', escala);
+  }
+  recalcularEscala();
+  window.addEventListener('load', recalcularEscala);
+  window.addEventListener('resize', recalcularEscala);
+})();
+</script>
+</body>
+</html>

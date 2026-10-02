@@ -82,7 +82,9 @@ ok(count(json_decode(at_propuesta_agregar_comentario('no-json', 'x', 'f'), true)
 
 // Costo de fotos
 $c = at_propuesta_costo_fotos(['image_briefs' => [['slide' => 'cover', 'prompt' => 'a'], ['slide' => 'x'], ['slide' => 'pricing', 'prompt' => 'b']]]);
-ok($c === ['fotos' => 2, 'usd_lista' => 0.0064], 'costo = fotos válidas x 0,0032');
+ok($c === ['fotos' => 2, 'usd_lista' => 0.0324, 'usd_revision' => 0.026, 'usd_max' => 0.0648], 'costo = fotos válidas x 0,0032 + revisión de texto (27-sep); máximo con retoma de todas');
+$c0 = at_propuesta_costo_fotos(['image_briefs' => []]);
+ok($c0['usd_lista'] === 0.0 && $c0['usd_revision'] === 0.0, 'sin fotos no hay revisión de texto ni costo');
 
 // Validación del payload (mismos campos obligatorios que renderer/src/schema.js)
 $valido = ['unique_id' => 'a', 'client_name' => 'b', 'company_name' => 'c', 'challenge_title' => 'd', 'challenge_text' => 'e',

@@ -532,6 +532,12 @@ class AutomatizaTech_CRM_AI {
             ['id' => $id]
         );
         if ($res !== false) {
+            if (function_exists('at_cc_asegurar_cliente')) {
+                $conv = $wpdb->get_row($wpdb->prepare("SELECT nombre, email, empresa, telefono FROM {$this->tabla_clientes} WHERE id = %d", $id));
+                if ($conv && is_email((string) $conv->email)) {
+                    at_cc_asegurar_cliente(['crm_id' => $id, 'nombre' => $conv->nombre, 'email' => $conv->email, 'empresa' => $conv->empresa, 'telefono' => $conv->telefono, 'origen' => 'crm_manual']);
+                }
+            }
             if (isset($_POST['enviar_bienvenida']) && $_POST['enviar_bienvenida'] === 'true') {
                 $this->_enviar_correo_bienvenida($id);
             }
@@ -583,6 +589,10 @@ class AutomatizaTech_CRM_AI {
             $cliente_id = $wpdb->insert_id;
         }
         
+        if (function_exists('at_cc_asegurar_cliente')) {
+            at_cc_asegurar_cliente(['crm_id' => (int) $cliente_id, 'nombre' => $propuesta->client_name, 'email' => $propuesta->client_email, 'empresa' => $propuesta->company_name, 'telefono' => $propuesta->phone, 'origen' => 'propuesta_web']);
+        }
+
         // Registrar evento en historial
         $wpdb->insert($this->tabla_historial, [
             'cliente_id' => $cliente_id,
@@ -1348,6 +1358,23 @@ class AutomatizaTech_CRM_AI {
         $this->render_styles();
     }
     
+    /**
+     * Task 16: ids de las fichas operativas (wp_automatiza_tech_clients) enlazadas a un cliente del
+     * CRM (wp_crm_clientes.id). render_public_timeline() y render_ficha_cliente() filtraban
+     * wp_automatiza_clients_details por ese mismo id del CRM, pero quien escribe esa tabla siempre
+     * guarda el id de la ficha operativa: las filas de un cliente nunca le aparecían en su propio
+     * portal, y si el id del CRM de un cliente coincidía con el id de ficha operativa de otro, un
+     * cliente vería las filas de otro. Falla cerrada: sin el módulo de cierre cargado o sin fichas
+     * enlazadas, no se devuelve ningún id (nunca se vuelve a filtrar por el id del CRM).
+     */
+    private function _ids_ficha_operativa(int $cliente_id): array {
+        if ($cliente_id <= 0 || !function_exists('at_cc_techs_de_crm')) {
+            return [];
+        }
+        $ids = array_map(function ($t) { return (int) $t->id; }, at_cc_techs_de_crm($cliente_id));
+        return array_values(array_filter($ids, function ($id) { return $id > 0; }));
+    }
+
     // ========== FICHA CLIENTE ==========
     public function render_ficha_cliente() {
         echo '<h1>Ficha de Cliente: Gestión del Servicio y Métricas</h1>';
@@ -1722,9 +1749,12 @@ class AutomatizaTech_CRM_AI {
         $unified_timeline = [];
 
         // 1. Detalles de CLIENTE (wp_automatiza_clients_details)
+        // Task 16: por la ficha operativa enlazada (_ids_ficha_operativa()), nunca por el id del CRM.
         $table_client_details = $wpdb->prefix . 'automatiza_clients_details';
-        if ($wpdb->get_var("SHOW TABLES LIKE '$table_client_details'") == $table_client_details) {
-            $client_details = $wpdb->get_results($wpdb->prepare("SELECT * FROM $table_client_details WHERE client_id = %d", $cliente_id), ARRAY_A);
+        $ids_ficha_operativa = $this->_ids_ficha_operativa($cliente_id);
+        if ($ids_ficha_operativa && $wpdb->get_var("SHOW TABLES LIKE '$table_client_details'") == $table_client_details) {
+            $marcadores = implode(',', array_fill(0, count($ids_ficha_operativa), '%d'));
+            $client_details = $wpdb->get_results($wpdb->prepare("SELECT * FROM $table_client_details WHERE client_id IN ($marcadores)", $ids_ficha_operativa), ARRAY_A);
             foreach ($client_details as $d) {
                 $d['source'] = 'client';
                 // Prioridad de fecha: completed_date > scheduled_date > created_at
@@ -1751,6 +1781,14 @@ class AutomatizaTech_CRM_AI {
             if ($propuesta_id && $wpdb->get_var("SHOW TABLES LIKE '$table_propuestas_details'") == $table_propuestas_details) {
                 $prospect_details = $wpdb->get_results($wpdb->prepare("SELECT * FROM $table_propuestas_details WHERE propuesta_id = %d", $propuesta_id), ARRAY_A);
                 foreach ($prospect_details as $d) {
+                    // T16 ronda 1 (revisión), hallazgo 1: esta fila ya se copió a clients_details (arriba)
+                    // cuando se aceptó la propuesta; automatiza_migrate_prospect_to_client() marca
+                    // metadata.migrated_to_client en la propia fila del prospecto al migrarla. Sin este
+                    // salto, la fila migrada y su original se ven dos veces en la línea de tiempo.
+                    $meta_prospecto = !empty($d['metadata']) ? json_decode($d['metadata'], true) : null;
+                    if (!empty($meta_prospecto['migrated_to_client'])) {
+                        continue;
+                    }
                     $d['source'] = 'prospect';
                     // Prioridad de fecha: completed_date > scheduled_date > created_at
                     if (!empty($d['completed_date'])) {
@@ -1943,6 +1981,10 @@ class AutomatizaTech_CRM_AI {
                         <?php if (!$is_designer_only): ?>
                         <button class="ficha-tab" data-target="tab-general">📋 General</button>
                         <button class="ficha-tab" data-target="tab-proyectos">🚀 Proyectos <span class="ficha-tab-badge"><?php echo count($proyectos); ?></span></button>
+                        <button class="ficha-tab" data-target="tab-operacion">📜 Contratos y operación</button>
+                        <?php if (is_array($cliente) && function_exists('at_pt_render_pestana') && current_user_can('manage_options')): ?>
+                        <button class="ficha-tab" data-target="tab-plan">🗓️ Plan de trabajo</button>
+                        <?php endif; ?>
                         <?php endif; ?>
                     </div>
                     
@@ -2169,6 +2211,44 @@ class AutomatizaTech_CRM_AI {
                         <p><button class="button" id="btnAbrirModalProyecto">+ Agregar Proyecto</button></p>
                     </div>
                     </div><!-- /tab-proyectos -->
+                    <!-- Tab: Contratos y operación (ficha única, cierre de cliente) -->
+                    <div class="ficha-tab-content" id="tab-operacion">
+                    <div class="ficha-card">
+                        <h3>📜 Contratos y operación</h3>
+                        <?php
+                        $at_cc_tech = function_exists('at_cc_tech_de_crm') ? at_cc_tech_de_crm((int) ($cliente['id'] ?? 0)) : null;
+                        if ($at_cc_tech):
+                            // La ficha operativa completa se abre por AJAX y exige manage_options (igual que la lista de clientes).
+                            if (function_exists('automatiza_client_full_modal_button') && current_user_can('manage_options')):
+                                echo '<p>' . automatiza_client_full_modal_button((int) $at_cc_tech->id, '📋 Ver ficha operativa (facturación, accesos, técnico y redes)') . '</p>';
+                            endif;
+                            if (function_exists('at_render_client_contracts_widget')):
+                                at_render_client_contracts_widget($at_cc_tech);
+                            endif;
+                            if (function_exists('at_cc_render_contratos_otras_fichas')):
+                                at_cc_render_contratos_otras_fichas((int) ($cliente['id'] ?? 0), (int) $at_cc_tech->id);
+                            endif;
+                        elseif (($cliente['tipo'] ?? '') === 'cliente' && function_exists('at_cc_asegurar_cliente')): ?>
+                            <p>Este cliente todavía no tiene ficha operativa (contratos, facturación y accesos).</p>
+                            <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+                                <input type="hidden" name="action" value="at_cc_crear_ficha_operativa">
+                                <input type="hidden" name="crm_id" value="<?php echo (int) $cliente['id']; ?>">
+                                <?php wp_nonce_field('at_cc_crear_ficha_operativa_' . (int) $cliente['id']); ?>
+                                <button type="submit" class="button button-primary">Crear ficha operativa</button>
+                            </form>
+                        <?php else: ?>
+                            <p>La ficha operativa se crea cuando el prospecto pasa a cliente.</p>
+                        <?php endif; ?>
+                    </div>
+                    </div><!-- /tab-operacion -->
+                    <?php if (is_array($cliente) && function_exists('at_pt_render_pestana') && current_user_can('manage_options')): ?>
+                    <!-- Tab: Plan de trabajo (inc/plan-trabajo/panel.php) -->
+                    <div class="ficha-tab-content" id="tab-plan">
+                    <div class="ficha-card">
+                        <?php at_pt_render_pestana($cliente); ?>
+                    </div>
+                    </div><!-- /tab-plan -->
+                    <?php endif; ?>
                     <?php endif; ?>
                 </div>
                 
@@ -2821,7 +2901,12 @@ class AutomatizaTech_CRM_AI {
                                             echo '<span title="Cliente notificado via email ' . $notif_date . '" style="font-size: 11px; background: #dcfce7; color: #166534; padding: 2px 6px; border-radius: 8px; display: inline-flex; align-items: center; gap: 3px;">📧 Notificado</span>';
                                         }
                                     }
-                                    if (!$is_notified && !empty($h['id']) && (strpos($h['title'] ?? $h['titulo'], 'ctualiz') !== false)) {
+                                    // T16 ronda 1 (revisión), hallazgo 2: el botón manda data-id = el id de esta
+                                    // fila, y el manejador (crm_enviar_notificacion_historial) siempre busca ese id
+                                    // en $this->tabla_historial (wp_crm_historial). Con las filas de clients_details
+                                    // ahora visibles aquí (bloque 1, arriba), data-id apuntaría a una tabla distinta:
+                                    // solo las filas 'system' (el historial legacy) viven ahí.
+                                    if (!$is_notified && !empty($h['id']) && ($h['source'] ?? '') === 'system' && (strpos($h['title'] ?? $h['titulo'], 'ctualiz') !== false)) {
                                         echo '<button type="button" class="button button-small btn-notificar-historial" data-id="' . $h['id'] . '" data-client="' . $cliente_id . '" style="margin-left:5px; font-size:10px; background:#f0fdf4; border:1px solid #16a34a; color:#166534;">📧 Enviar ahora</button>';
                                     }
                                     ?>
@@ -4284,6 +4369,17 @@ class AutomatizaTech_CRM_AI {
         return md5($cliente_id . 'AUTOMATIZA_CRM_V2' . $email);
     }
     
+    /** URL pública de la línea de tiempo del cliente; '' si no existe o no tiene correo. */
+    public function url_portal($cliente_id) {
+        global $wpdb;
+        $cliente_id = (int) $cliente_id;
+        $email = $wpdb->get_var($wpdb->prepare("SELECT email FROM {$this->tabla_clientes} WHERE id = %d", $cliente_id));
+        if (!$email) {
+            return '';
+        }
+        return home_url('/?crm_view=timeline&cid=' . $cliente_id . '&token=' . $this->_generar_token($cliente_id, $email));
+    }
+
     public function render_public_timeline() {
         if (is_admin()) return;
         
@@ -4310,10 +4406,25 @@ class AutomatizaTech_CRM_AI {
             $unified_timeline = [];
             
             // 1. Detalles de CLIENTE (wp_automatiza_clients_details)
+            // Task 16: por la ficha operativa enlazada (_ids_ficha_operativa()), nunca por el id del
+            // CRM: quien escribe esta tabla guarda el id de la ficha operativa, no el del CRM. Sin
+            // fichas enlazadas (o sin el módulo de cierre cargado), no se consulta ni se muestra
+            // ninguna fila de clientes (falla cerrada).
             $table_client_details = $wpdb->prefix . 'automatiza_clients_details';
-            if ($wpdb->get_var("SHOW TABLES LIKE '$table_client_details'") == $table_client_details) {
-                $client_details = $wpdb->get_results($wpdb->prepare("SELECT * FROM $table_client_details WHERE client_id = %d", $cliente_id), ARRAY_A);
+            $ids_ficha_operativa = $this->_ids_ficha_operativa($cliente_id);
+            if ($ids_ficha_operativa && $wpdb->get_var("SHOW TABLES LIKE '$table_client_details'") == $table_client_details) {
+                $marcadores = implode(',', array_fill(0, count($ids_ficha_operativa), '%d'));
+                $client_details = $wpdb->get_results($wpdb->prepare("SELECT * FROM $table_client_details WHERE client_id IN ($marcadores)", $ids_ficha_operativa), ARRAY_A);
                 foreach ($client_details as $d) {
+                    // T10b ronda 1 (revisión), hallazgo 1: un Seguimiento migrado desde el prospecto
+                    // puede traer un tipo interno (p. ej. 'mensaje_whatsapp'), que nunca debe llegar a
+                    // esta línea de tiempo pública del cliente. Misma lista que ya filtra
+                    // $prospect_details más abajo, vía at_cc_tipos_internos() si el módulo de cierre
+                    // está cargado (siempre, salvo en pruebas puras del mu-plugin).
+                    $at_cc_tipos_internos_cliente = function_exists('at_cc_tipos_internos') ? at_cc_tipos_internos() : ['cierre_incompleto', 'aviso_operativo', 'pedido_respuesta', 'mensaje_whatsapp'];
+                    if (in_array($d['detail_type'] ?? '', $at_cc_tipos_internos_cliente, true)) {
+                        continue;
+                    }
                     $d['source'] = 'client';
                     // Prioridad de fecha: completed_date > scheduled_date > created_at
                     if (!empty($d['completed_date'])) {
@@ -4340,6 +4451,24 @@ class AutomatizaTech_CRM_AI {
                 if ($propuesta_id && $wpdb->get_var("SHOW TABLES LIKE '$table_propuestas_details'") == $table_propuestas_details) {
                     $prospect_details = $wpdb->get_results($wpdb->prepare("SELECT * FROM $table_propuestas_details WHERE propuesta_id = %d", $propuesta_id), ARRAY_A);
                     foreach ($prospect_details as $d) {
+                        // T6 ronda 1 (revisión), hallazgo 5: aviso interno de un cierre a medias (correo inválido,
+                        // contrato que no se creó, etc.); nunca a la línea de tiempo pública del cliente.
+                        // T6 ronda 2, hallazgo 2: 'aviso_operativo' (p. ej. datos bancarios pendientes) tampoco
+                        // es para el cliente: es un recordatorio de configuración solo para Luis.
+                        // T8: misma lista que usa render_public_prospect_timeline(), desde at_cc_tipos_internos()
+                        // si el módulo de cierre está cargado (siempre, salvo en pruebas puras del mu-plugin).
+                        $at_cc_tipos_internos = function_exists('at_cc_tipos_internos') ? at_cc_tipos_internos() : ['cierre_incompleto', 'aviso_operativo'];
+                        if (in_array($d['detail_type'] ?? '', $at_cc_tipos_internos, true)) {
+                            continue;
+                        }
+                        // T16 ronda 1 (revisión), hallazgo 1: esta fila ya se copió a clients_details (arriba)
+                        // cuando se aceptó la propuesta; automatiza_migrate_prospect_to_client() marca
+                        // metadata.migrated_to_client en la propia fila del prospecto al migrarla. Sin este
+                        // salto, la fila migrada y su original se ven dos veces en la línea de tiempo pública.
+                        $meta_prospecto = !empty($d['metadata']) ? json_decode($d['metadata'], true) : null;
+                        if (!empty($meta_prospecto['migrated_to_client'])) {
+                            continue;
+                        }
                         $d['source'] = 'prospect';
                         // Prioridad de fecha: completed_date > scheduled_date > created_at
                         if (!empty($d['completed_date'])) {
@@ -4691,7 +4820,7 @@ class AutomatizaTech_CRM_AI {
                         if (!$at_client_id) { $at_client_id = $cliente_id; }
                         $all_contracts = $wpdb->get_results($wpdb->prepare(
                             "SELECT id, contract_number, type, status, signed_at, sent_at, created_at,
-                                    signed_pdf_url, pdf_url, sign_token, monthly_amount, currency
+                                    signed_pdf_url, pdf_url, sign_token, at_review_token, monthly_amount, currency
                              FROM {$contracts_table}
                              WHERE client_id = %d
                              ORDER BY created_at DESC",
@@ -4711,6 +4840,14 @@ class AutomatizaTech_CRM_AI {
                                 'nda'       => 'Acuerdo de Confidencialidad (NDA)',
                                 'handover'  => 'Acta de Entrega y Cierre',
                             ];
+                            // Task 5b: los PDF solo se entregan por la descarga con permiso
+                            // (admin-ajax.php?action=at_download_contract + token del contrato);
+                            // el archivo en uploads/automatiza-tech-contracts está bloqueado (403).
+                            // Si el módulo de contratos no está, no hay enlace (nunca el directo).
+                            if (!class_exists('ContractService') && file_exists(ABSPATH . 'contracts/contract-service.php')) {
+                                require_once ABSPATH . 'contracts/contract-service.php';
+                            }
+                            $pdf_seguro = class_exists('ContractService');
                             foreach ($all_contracts as $c):
                                 $label      = $type_labels[$c['type']] ?? ucfirst($c['type']);
                                 $status     = $c['status'];
@@ -4755,8 +4892,8 @@ class AutomatizaTech_CRM_AI {
                                         <?php endif; ?>
                                     </div>
                                 </div>
-                                <?php if ($is_signed && !empty($c['signed_pdf_url'])): ?>
-                                    <a href="<?php echo esc_url($c['signed_pdf_url']); ?>"
+                                <?php if ($is_signed && !empty($c['signed_pdf_url']) && $pdf_seguro && !empty($c['at_review_token'])): ?>
+                                    <a href="<?php echo esc_url(ContractService::secure_pdf_url((object) $c, true, $c['at_review_token'])); ?>"
                                        download target="_blank"
                                        style="display:inline-flex;align-items:center;gap:6px;background:linear-gradient(135deg,#16a34a,#22c55e);color:#fff;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:600;font-size:13px;box-shadow:0 2px 8px rgba(34,197,94,.3);white-space:nowrap;"
                                        onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
@@ -4772,8 +4909,8 @@ class AutomatizaTech_CRM_AI {
                                         ✍️ Firmar ahora
                                     </a>
                                 <?php elseif ($in_prep): ?>
-                                    <?php if ($status === 'at_signed' && !empty($c['pdf_url'])): ?>
-                                        <a href="<?php echo esc_url($c['pdf_url']); ?>"
+                                    <?php if ($status === 'at_signed' && !empty($c['pdf_url']) && $pdf_seguro && !empty($c['at_review_token'])): ?>
+                                        <a href="<?php echo esc_url(ContractService::secure_pdf_url((object) $c, false, $c['at_review_token'])); ?>"
                                            target="_blank"
                                            style="display:inline-flex;align-items:center;gap:6px;background:linear-gradient(135deg,#1d4ed8,#3b82f6);color:#fff;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:600;font-size:13px;box-shadow:0 2px 8px rgba(59,130,246,.3);white-space:nowrap;"
                                            onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
@@ -6048,7 +6185,13 @@ class AutomatizaTech_CRM_AI {
         $timeline_items = [];
         if ($wpdb->get_var("SHOW TABLES LIKE '$table_details'") == $table_details) {
             $details = $wpdb->get_results($wpdb->prepare("SELECT * FROM $table_details WHERE propuesta_id = %d", $propuesta_id), ARRAY_A);
+            // T8: notas internas de Luis (cierre a medias, recordatorio operativo) nunca a esta línea de
+            // tiempo pública del prospecto; misma lista que usa render_public_timeline() más arriba.
+            $at_cc_tipos_internos = function_exists('at_cc_tipos_internos') ? at_cc_tipos_internos() : ['cierre_incompleto', 'aviso_operativo'];
             foreach ($details as $d) {
+                if (in_array($d['detail_type'] ?? '', $at_cc_tipos_internos, true)) {
+                    continue;
+                }
                 if (!empty($d['completed_date'])) {
                     $ts = strtotime($d['completed_date']);
                 } elseif (!empty($d['scheduled_date'])) {
@@ -7612,6 +7755,18 @@ class AutomatizaTech_CRM_AI {
     
     private function _enviar_correo_bienvenida($cliente_id) {
         global $wpdb;
+        // Cierre de cliente: bienvenida con la lista de arranque (inc/cierre-cliente/bienvenida.php).
+        // T6 ronda 1 (revisión), hallazgo 3: se decide por el tipo del registro en el CRM, nunca por lo que
+        // devuelva at_cc_enviar_bienvenida() — wp_mail() puede volver false porque PHPMailer rechazó
+        // un Bcc aunque el correo principal sí haya llegado, y eso no debe mandar además la
+        // bienvenida antigua (el cliente recibiría dos). Un prospecto sigue con la de siempre.
+        if ($cliente_id && function_exists('at_cc_enviar_bienvenida')) {
+            $tipo_cliente = $wpdb->get_var($wpdb->prepare("SELECT tipo FROM {$this->tabla_clientes} WHERE id = %d", (int) $cliente_id));
+            if ((string) $tipo_cliente === 'cliente') {
+                at_cc_enviar_bienvenida((int) $cliente_id);
+                return;
+            }
+        }
 
         if (!$cliente_id) {
             return;
@@ -8273,16 +8428,27 @@ class AutomatizaTech_CRM_AI {
 
     public function crm_enviar_notificacion_historial() {
         check_admin_referer('crm_nonce', 'nonce');
-        
+        // T16 ronda 1 (revisión), hallazgo 2: esta acción manda un correo a nombre de AutomatizaTech y
+        // marca el historial como notificado; solo Luis (u otro admin) puede dispararla.
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error('No tienes permisos.');
+        }
+
         $historial_id = intval($_POST['historial_id']);
         $cliente_id = intval($_POST['cliente_id']);
-        
+
         global $wpdb;
 
         // Obtener datos del historial item
         $historial = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$this->tabla_historial} WHERE id = %d", $historial_id));
         if (!$historial) {
             wp_send_json_error('No se encontró el item del historial.');
+        }
+        // T16 ronda 1, hallazgo 2: el id del historial no está ligado al cliente en la consulta de arriba;
+        // sin este chequeo, un historial_id de otro cliente notificaría (y marcaría como notificado) la
+        // fila equivocada.
+        if ((int) $historial->cliente_id !== $cliente_id) {
+            wp_send_json_error('El historial no pertenece a este cliente.');
         }
 
         // Obtener cliente para el email
@@ -8401,4 +8567,9 @@ class AutomatizaTech_CRM_AI {
 }
 
 // Inicializar
-new AutomatizaTech_CRM_AI();
+$GLOBALS['at_crm_ai'] = new AutomatizaTech_CRM_AI();
+
+/** Enlace público a la línea de tiempo de un cliente del CRM, con la firma de enlaces del CRM; '' si no hay. */
+function at_crm_url_portal(int $cliente_id): string {
+    return isset($GLOBALS['at_crm_ai']) ? (string) $GLOBALS['at_crm_ai']->url_portal($cliente_id) : '';
+}

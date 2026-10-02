@@ -1,0 +1,72 @@
+<?php
+/** Correo de bienvenida con la lista de arranque (reemplaza al del CRM, también al convertir a mano). */
+if (!defined('ABSPATH')) {
+	exit;
+}
+
+define('AT_CC_LOGO', 'https://automatizatech.cl/wp-content/themes/automatiza-tech/assets/images/logo-automatiza-tech.png');
+
+/** Deja un evento en el historial del CRM. */
+function at_cc_historial_crm(int $crm_id, string $tipo, string $titulo, string $descripcion): void {
+	global $wpdb;
+	$wpdb->insert($wpdb->prefix . 'crm_historial', [
+		'cliente_id'  => $crm_id,
+		'tipo_evento' => $tipo,
+		'titulo'      => $titulo,
+		'descripcion' => $descripcion,
+		'usuario_id'  => get_current_user_id(),
+		'created_at'  => current_time('mysql'),
+	]);
+}
+
+function at_cc_enviar_bienvenida(int $crm_id, ?object $p = null, array $filas = []): bool {
+	global $wpdb;
+	$c = $wpdb->get_row($wpdb->prepare("SELECT id, nombre, email, empresa, tipo FROM {$wpdb->prefix}crm_clientes WHERE id = %d", $crm_id));
+	if (!$c || (string) $c->tipo !== 'cliente') {
+		return false;
+	}
+	// T6 ronda 2, hallazgo 1: antes, un correo con formato inválido (no vacío) hacía que esta guarda
+	// devolviera false antes de wp_mail()/at_cc_historial_crm(); como el controlador
+	// (_enviar_correo_bienvenida) ya no cae al correo antiguo para un 'cliente' (hallazgo 3 de la
+	// ronda 1), el evento desaparecía sin ningún rastro. Ahora queda en el historial del cliente.
+	if (!is_email((string) $c->email)) {
+		at_cc_historial_crm($crm_id, 'email_bienvenida', 'Correo de bienvenida enviado', 'Falló el envío de la bienvenida: el correo del cliente no tiene un formato válido.');
+		return false;
+	}
+	if ($p === null) {
+		$p = $wpdb->get_row($wpdb->prepare(
+			"SELECT * FROM {$wpdb->prefix}automatiza_propuestas WHERE LOWER(TRIM(client_email)) = %s AND status = 'aceptada' ORDER BY id DESC LIMIT 1",
+			at_cc_email_normalizado((string) $c->email)
+		)) ?: null;
+		if ($p) {
+			// T6 ronda 1 (revisión), hallazgo 1: la última con salida 'acepta', ignorando notas simples con el
+			// mismo detail_type (widget de Seguimiento, at_cc_anotar_simple() de las Tasks 10/10b).
+			$u = at_cc_ultima_respuesta((int) $p->id, 'acepta');
+			$filas = $u ? (array) ($u['filas'] ?? []) : [];
+		}
+	}
+	$html = at_cc_bienvenida_html([
+		'nombre'        => (string) $c->nombre,
+		'empresa'       => $p ? (string) $p->company_name : (string) $c->empresa,
+		'anticipo'      => $filas ? at_cc_anticipo($filas) : null,
+		'banco'         => at_cc_datos_banco(),
+		'correo_pago'   => (string) get_option('at_cc_correo_pago', ''),
+		'whatsapp'      => at_cc_whatsapp_at(),
+		'url_portal'    => function_exists('at_crm_url_portal') ? at_crm_url_portal($crm_id) : '',
+		'logo'          => AT_CC_LOGO,
+		'con_propuesta' => (bool) $p,
+		// 27-sep: si el contrato de la propuesta todavía admite los datos del cliente y le falta la dirección
+		// (aceptó a mano o por WhatsApp), la bienvenida trae el botón a «Datos para tu contrato».
+		'url_datos'     => $p && function_exists('at_cc_url_datos_contrato') ? at_cc_url_datos_contrato($p) : '',
+	]);
+	$from = defined('SMTP_USER') ? SMTP_USER : 'contacto@automatizatech.cl';
+	$headers = array_merge([
+		'Content-Type: text/html; charset=UTF-8',
+		'From: Automatiza Tech <' . $from . '>',
+		'Reply-To: ' . at_cc_correo_avisos(),
+		'Bcc: lgonzalez@automatizatech.cl, adriana.perez@automatizatech.cl',
+	], at_cc_cabecera_copia((string) $c->email));
+	$enviado = wp_mail((string) $c->email, '¡Te damos la bienvenida a AutomatizaTech! Tus primeros pasos', $html, $headers);
+	at_cc_historial_crm($crm_id, 'email_bienvenida', 'Correo de bienvenida enviado', $enviado ? 'Se envió la bienvenida con los primeros pasos.' : 'Falló el envío de la bienvenida.');
+	return (bool) $enviado;
+}

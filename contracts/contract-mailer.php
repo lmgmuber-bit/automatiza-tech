@@ -80,9 +80,11 @@ class ContractMailer {
                 array('label'=>'Firmado por cliente','value'=> esc_html($contract->signer_name) . ' — ' . esc_html($contract->signed_at)),
                 array('label'=>'Hash documento',     'value'=> '<code>' . esc_html(substr($contract->signed_document_hash, 0, 32)) . '...</code>'),
             ),
-            'cta_label' => '📄 Acceder al portal y ver el contrato',
-            'cta_url'   => home_url('/portal-omnichannel/?contract=' . $contract->id),
-            'footnote'  => 'El PDF firmado va adjunto a este correo y queda disponible permanentemente en la ficha de tu cuenta dentro del Portal AutomatizaTech.',
+            // 27-sep: el botón llevaba a /portal-omnichannel/?contract=…, que en PROD es un 404. Ahora descarga el PDF
+            // firmado con el token vigente del contrato (el mismo acceso que la página de firma después de firmar).
+            'cta_label' => '📄 Descargar el contrato firmado',
+            'cta_url'   => ContractService::secure_pdf_url($contract, true, (string) $contract->sign_token),
+            'footnote'  => 'El PDF firmado va adjunto a este correo; también puedes descargarlo cuando quieras con el botón.',
         ));
         $att = file_exists($pdf_path) ? array($pdf_path) : array();
         return wp_mail($contract->signer_email, $subject, $body, self::from_headers(), $att);

@@ -209,6 +209,25 @@ function at_pa_guardar(): string {
             $send_email = false;
             $bloqueo_envio = true;
         }
+        // Ronda 1, hallazgo 2: una propuesta con respuesta del cliente (aceptada, evaluando o
+        // rechazada) no pierde ese estado en un guardado normal, y una ya aceptada no se reabre para
+        // reenviar el correo (que la volvería a 'sent' y dejaría una segunda aceptación disparar de
+        // nuevo el cierre completo: segundo cliente/contrato/bienvenida). El checkbox de envío viene
+        // marcado por defecto en propuestas viejas (ficha.php), así que esto ocurría con un simple
+        // «Guardar».
+        $estados_con_respuesta = ['aceptada', 'evaluando', 'rechazada'];
+        // Task 14: una archivada también es protegida: Guardar no la reabre (a 'sent' o 'pending') ni
+        // la reenvía; se desarchiva desde «Respuesta del cliente» (cierre-cliente/archivo.php).
+        $estado_protegido = $actual && in_array((string) $actual->status, array_merge($estados_con_respuesta, ['archivada']), true);
+        // Ronda 2, hallazgo 2: la guarda cubre los TRES estados con respuesta del cliente, no solo
+        // "aceptada". Antes, "evaluando"/"rechazada" + Guardar con el checkbox de envío marcado (su
+        // valor por defecto en propuestas viejas, ficha.php) seguían reenviando el correo completo
+        // -con el botón "Aceptar la propuesta"- y volviendo el estado a 'sent', borrando en silencio
+        // la respuesta que el cliente ya había dado.
+        if ($send_email && $estado_protegido) {
+            $send_email = false;
+            $bloqueo_envio_aceptada = true;
+        }
         $update_data = [
             'client_name' => $client_name,
             'company_name' => $company_name,
@@ -218,9 +237,10 @@ function at_pa_guardar(): string {
             'n8n_chat_url' => $n8n_url,
         ];
         // v3: el guardado normal no debe reescribir el estado del flujo; solo lo toca al enviar.
+        // Ronda 1, hallazgo 2: tampoco lo hace si la propuesta ya tiene respuesta del cliente.
         if ($send_email) {
             $update_data['status'] = 'sent';
-        } elseif (!$es_v3) {
+        } elseif (!$es_v3 && !$estado_protegido) {
             $update_data['status'] = 'pending';
         }
         // Solo actualizar prompts si se enviaron (no vacíos). En v3 el payload lo maneja
@@ -259,8 +279,22 @@ function at_pa_guardar(): string {
 
         $wpdb->update($table_name, $update_data, ['id' => $id]);
 
-        if (!empty($bloqueo_envio)) {
+        // T14 ronda 1 (2ª revisión), hallazgo 2: el aviso de archivada va primero, en cualquier flujo. En
+        // una v3 archivada la guarda de v3 corta antes ($bloqueo_envio) y su aviso («solo se envía cuando
+        // está lista») no explicaba por qué no salió.
+        if ((!empty($bloqueo_envio) || !empty($bloqueo_envio_aceptada)) && $actual && (string) $actual->status === 'archivada') {
+            $message = '<div class="notice notice-warning"><p>Propuesta guardada, pero <strong>no se envió</strong>: esta propuesta está archivada. Desarchívala en «Respuesta del cliente» para volver a enviarla.</p></div>';
+        } elseif (!empty($bloqueo_envio)) {
             $message = '<div class="notice notice-warning"><p>Propuesta guardada, pero <strong>no se envió</strong>: una propuesta v3 solo se envía cuando está <strong>lista</strong> (versión final verificada).</p></div>';
+        } elseif (!empty($bloqueo_envio_aceptada)) {
+            // Ronda 2, hallazgo 2: el aviso ya no asume "ya aceptó"; describe el estado real
+            // ('aceptada', 'evaluando' o 'rechazada') para que Luis entienda por qué no se envió.
+            $descripcion_respuesta = [
+                'aceptada'  => 'el cliente ya aceptó esta propuesta',
+                'evaluando' => 'el cliente la sigue evaluando',
+                'rechazada' => 'el cliente ya rechazó esta propuesta',
+            ][$actual ? (string) $actual->status : ''] ?? 'el cliente ya respondió esta propuesta';
+            $message = '<div class="notice notice-warning"><p>Propuesta guardada, pero <strong>no se envió</strong>: ' . esc_html($descripcion_respuesta) . '. Para pedirle otra respuesta, usa el panel de «Respuesta del cliente».</p></div>';
         }
 
         // Obtener datos actualizados para el email
@@ -268,7 +302,7 @@ function at_pa_guardar(): string {
 
         // --- ENVIAR EMAIL (solo si el checkbox está marcado) ---
         if (!$send_email) {
-            if (empty($bloqueo_envio)) {
+            if (empty($bloqueo_envio) && empty($bloqueo_envio_aceptada)) {
                 $message = '<div class="notice notice-success is-dismissible"><p>✅ Propuesta guardada correctamente. <strong>No se envió correo</strong> (checkbox desmarcado).</p></div>';
             }
         } else {
@@ -407,7 +441,8 @@ function at_pa_guardar(): string {
                             <br>
                             <a href="' . esc_url($link_demo) . '" class="btn btn-secondary">🤖 Probar Demo Chatbot</a>
                         </div>
-                        
+                        ' . (function_exists('at_cc_bloque_aceptar_html') ? at_cc_bloque_aceptar_html(at_cc_url_respuesta(get_site_url(), (string) $proposal->unique_link_id, 'aceptar'), at_cc_url_respuesta(get_site_url(), (string) $proposal->unique_link_id, 'evaluar')) : '') . '
+
                         ' . (!empty($attachments)
                             ? '<p style="font-size: 14px; color: #666; text-align: center;">Adjunto encontrará también una copia en PDF de la presentación para su archivo.</p>'
                             : '<p style="font-size: 14px; color: #666; text-align: center;">Puede descargar la presentación en PDF desde el botón del final de la presentación.</p>') . '
@@ -429,10 +464,15 @@ function at_pa_guardar(): string {
             $sender_email = defined('SMTP_USER') ? SMTP_USER : 'contacto@automatizatech.cl';
             $headers[] = 'From: Automatiza Tech <' . $sender_email . '>';
             // Agregar Reply-To para que el cliente responda al admin real
-            $admin_email = get_option('admin_email');
+            // (26-sep) Igual que los correos del cierre: el correo principal de «Ajustes del cierre».
+            $admin_email = function_exists('at_cc_correo_avisos') ? at_cc_correo_avisos() : get_option('admin_email');
             $headers[] = 'Reply-To: ' . $admin_email;
             // Copia oculta para registro interno
             $headers[] = 'Bcc: automatizacionesbotcore@gmail.com';
+            // Y la copia oculta de «Ajustes del cierre», si hay una y no es el mismo cliente.
+            if (function_exists('at_cc_cabecera_copia')) {
+                $headers = array_merge($headers, at_cc_cabecera_copia((string) $to));
+            }
 
             // Capturar errores de envío
             global $phpmailer;
@@ -455,6 +495,9 @@ function at_pa_guardar(): string {
                     $attachment_msg = ' (sin PDF adjunto)';
                 }
                 $message = '<div class="notice notice-success is-dismissible"><p>Propuesta actualizada y correo enviado a ' . esc_html($to) . esc_html($attachment_msg) . '</p></div>';
+                if (function_exists('at_cc_tras_envio')) {
+                    $message .= at_cc_tras_envio($proposal, !empty($_POST['at_cc_whatsapp']));
+                }
             } else {
                 // Intentar obtener detalles del error (si están disponibles en global $phpmailer)
                 $error_details = '';

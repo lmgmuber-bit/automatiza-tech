@@ -8,7 +8,10 @@ Plan de implementación: `Docs/superpowers/plans/2026-09-23-flujo-propuestas-v3.
 
 1. **Llamada con el cliente** → Google Meet deja la transcripción en Drive › Transcripciones
    (`14Qy7majCZlelxzkyUcjyJZjZ0mgMoGWW`) → workflow «Google Meet → Propuesta» (`FrWZcgbizlipK5pb`) la lee y la
-   manda a `POST /webhook/propuesta-v3-borrador` con `{transcript, client_email, drive_file_id}`.
+   manda a `POST /webhook/propuesta-v3-borrador` con `{transcript, client_email, drive_file_id}`. Revisa la carpeta
+   **cada 5 minutos** desde el 27-sep (antes cada minuto; pedido de Luis tras un corte momentáneo de Google a las
+   11:06, sin transcripciones perdidas). Para ese cambio, la carpeta se vació antes (lo procesado va a
+   «Transcripciones procesadas»); respaldo del flujo en `C:/Users/luis_/respaldos/n8n/2026-09-27-meet-cada-5/`.
    Si no encuentra el correo del cliente, avisa a Luis y no crea nada.
 2. **«Propuestas v3 · 1 Borrador»** (`7hglMG2j17HdOh6U`): GPT-4o redacta con la plantilla, precios «Por confirmar»,
    fotos descritas por rubro (ver abajo), asistente de demo; crea la fila en WordPress (`borrador`, `flujo='v3'`),
@@ -101,8 +104,191 @@ Diseño: `Docs/superpowers/specs/2026-09-24-modulo-propuestas-admin-design.md`; 
   repo; respaldo previo en `C:/Users/luis_/respaldos/n8n/2026-09-24-correo-precargado/` (rollback: volver a
   publicar esos JSON).
 
-## Precios, reaprobación y enlaces (lecciones del 2026-09-28)
+## Cierre de cliente (EN PROD desde el 2026-09-26 13:36)
 
+Diseño: `Docs/superpowers/specs/2026-09-25-cierre-de-cliente-design.md`; plan:
+`Docs/superpowers/plans/2026-09-25-cierre-de-cliente.md`; rama `claude/cierre-cliente`. Código en PROD: commit `7e7c3bf`
+(27-sep 22:14; el detalle de cada subida está al final de esta sección).
+
+- **Responder la propuesta.** `ver-presentacion.php` lleva abajo una barra con «Acepto la propuesta», «La sigo
+  evaluando» y «No, gracias» mientras la propuesta está `sent` o `evaluando`. Si está `rechazada`, solo ofrece
+  «Acepto la propuesta»; si está `aceptada`, muestra la confirmación y, mientras el contrato admita datos, «Datos para
+  tu contrato». En los demás estados (incluida `archivada`) no hay barra. Al aceptar, el cliente escribe su nombre,
+  elige su documento (RUT, que se valida con dígito verificador, DNI o pasaporte), marca lo que acepta y, desde la
+  Task 18, deja obligatoriamente los datos del contrato: a nombre de quién va (persona natural o empresa, sin opción
+  marcada por defecto), la dirección y, si es empresa, su razón social y RUT. Si algo falta o no es válido, la página
+  vuelve con el diálogo abierto y el aviso adentro. El correo de
+  la propuesta trae el mismo botón «Aceptar la propuesta». La página no se guarda en caché (formularios con nonce).
+- **Al aceptar, todo es automático:** nota en Seguimiento («Aceptó la propuesta», tipo `respuesta_cliente`) con lo
+  que el cliente aceptó y la huella SHA-256 del contenido completo de la propuesta; propuesta `aceptada`; prospecto →
+  cliente en la ficha única (`wp_automatiza_tech_clients.crm_cliente_id` enlaza con `wp_crm_clientes`); correo de
+  bienvenida; contrato de servicios en borrador (`servicios_v1`) con los datos del contrato ya puestos, y correo
+  «Revisar y firmar» a Luis. Después de aceptar, el cliente sigue viendo «Datos para tu contrato» (mismas reglas),
+  que sirve para las aceptaciones a mano o por WhatsApp y para corregir; se abre solo únicamente si al contrato le falta
+  la dirección, y a nombre de quién va tampoco viene marcado. «La sigo evaluando» y «No, gracias» cambian
+  el estado y avisan a Luis.
+- **Task 18: datos del contrato obligatorios al aceptar en la página (EN PROD desde el 26-sep 23:59; revisión completa
+  EN PROD el 27-sep 01:25).** En el primer contrato real el cliente aceptó sin llenar el formulario opcional y hubo que pedirle la
+  dirección y el tipo de cliente por privado para poder firmar como AT. Ahora el diálogo «Aceptar la propuesta» los
+  pide (campos `tipo`, `direccion`, `razon_social`, `rut_empresa`, los mismos del formulario de datos) y los valida con
+  una sola función, `at_cc_datos_contrato_de_post()` (`pagina.php`); un formulario abierto desde antes del cambio vuelve
+  con «datos». El cierre los aplica al contrato recién creado con `at_cc_aplicar_datos_contrato()`, la misma que usa
+  «Datos para tu contrato» (también completa en la ficha operativa solo lo vacío: dirección de facturación, documento y
+  empresa); si fallan, el cierre sigue y queda el aviso «Los datos del contrato que dejó el cliente no se aplicaron».
+  Completar un cierre a medias los vuelve a aplicar si el contrato todavía no tiene dirección. Los datos van en la
+  metadata de la nota de aceptación (`datos_contrato`) y en el correo a Luis, nunca en la descripción, que el cliente
+  puede ver en su portal. El diálogo se desplaza en el celular (`max-height` con `dvh`). La aceptación a mano y la de
+  WhatsApp no cambian. La revisión completa (27-sep) agregó: si la aceptación rebota por un dato, lo que el cliente
+  escribió y los servicios que marcó vuelven solos (se guardan en su pestaña con `sessionStorage` y se borran al
+  leerlos; antes «¿Qué aceptas?» volvía con solo la primera fila y podía aceptar menos sin notarlo; probado en Chrome);
+  si el contrato quedó creado a medias igual recibe los datos (o el aviso dice dónde quedaron); un formulario viejo
+  enviado a una propuesta ya aceptada o archivada ya no se queda en «datos»; y las opciones de tipo van en un
+  `fieldset`. Sin migración. Pruebas: `tests/cierre/pagina-wp-test.php`, `pagina-datos-wp-test.php`,
+  `puras-test.php` y `archivo-wp-test.php`. Pendiente: probarlo en un celular real.
+- **Correo de envío de la propuesta (EN PROD desde el 26-sep 23:59, commit `35bfc24`):** `acciones.php` y
+  `clasico.php` responden al correo principal del cierre y llevan la copia oculta de «Ajustes del cierre», además de
+  la copia de registro de siempre, igual que los correos del cierre. Prueba `tests/cierre/correo-envio-propuesta-wp-test.php`.
+- **Visor de la página de firma del cliente (commit `0765a01`, EN PROD desde el 26-sep 23:31, verificado con el
+  contrato real que falló: antes «Acceso denegado», después el PDF completo):**
+  `contracts/sign-contract.php` pegaba `?v=` a la URL del PDF, que ya traía `?action=…&token=…`; el token llegaba roto y
+  el visor decía «Acceso denegado», así que el cliente no podía leer el contrato antes de firmarlo. Ahora usa
+  `add_query_arg()`, como la página de revisión de AT. Prueba `tests/cierre/firma-cliente-visor-wp-test.php`.
+- **Panel** (ficha › pestaña Envío › «Respuesta del cliente»): estado y última respuesta; «📧 Pedir respuesta por
+  correo» (candado de 60 s contra el doble clic) y «Enviar por mi WhatsApp» (`wa.me` con el mensaje y el enlace
+  ya escritos); «Registrar aceptación a mano» para cuando el cliente dijo que sí por otro lado, con documento
+  opcional y evidencia privada (hasta 3 imágenes JPG, PNG o WebP de 5 MB cada una, que solo se abren con sesión de
+  administrador); «🗄️ Archivar» / «Desarchivar». Registrar a mano no manda correo a Luis: el resultado sale en el
+  aviso del panel.
+- **Archivada:** el cliente ya no puede responderla (ni por la página ni por WhatsApp) y queda como historial. Luis
+  puede desarchivarla (vuelve al estado que tenía) o, si al archivarla estaba `sent`, `evaluando`, `rechazada`,
+  `pending` o `lista`, registrar la aceptación a mano desde ahí; una archivada desde borrador, `draft` o `error` hay
+  que desarchivarla primero. Una reevaluación se hace con una propuesta nueva. Vista «Archivadas» en la lista.
+  Archivadas al desplegar (decisión de Luis): 11, 12, 14, 16, 21, 22 y 26; la 42 y la 43 siguen `sent`.
+- **Contrato de servicio:** plantilla `CONTRATO_SERVICIO_DESARROLLO.md`, que en PROD vive en
+  `domains/automatizatech.cl/Docs/` (fuera de `public_html`; `ContractService::load_template()` la busca ahí). La de
+  soporte (`CONTRATO_SOPORTE_POSTPROYECTO.md`) PROD la lee de `public_html/Docs/` y difiere del repositorio en 4.1 y 19.4:
+  al cambiarla, partir de la copia de PROD. La
+  comparecencia sale según el tipo de cliente y el documento. Luis la ajusta en la revisión de AT
+  (`contracts/at-sign-contract.php`) y no se puede firmar con datos esenciales en blanco. Los PDF se bajan por
+  `admin-ajax.php?action=at_download_contract` con token o sesión. Las carpetas privadas de contratos y evidencias
+  bloquean el acceso directo (403, verificado al desplegar); por eso el detalle de un contrato en el admin incrusta
+  las imágenes de firma leídas en el servidor (`data:` URI, solo archivos de `signatures/` PNG o JPEG; commit `290a4cb`,
+  EN PROD desde el 26-sep 23:59; prueba `tests/cierre/firmas-detalle-admin-wp-test.php`). 🔴 La plantilla sigue marcada «borrador para revisión de un
+  abogado»: que un abogado la revise antes del primer contrato de servicios real, y la versión corregida se sube
+  también a `domains/automatizatech.cl/Docs/`.
+- **Ajustes del cierre** (Propuestas › Ajustes del cierre): banco, tipo y número de cuenta, titular y su RUT,
+  correo para avisar el pago y WhatsApp de AT. Van en la bienvenida: la cuenta para transferir el anticipo (el 50 %
+  de lo aceptado), a qué correo avisar la transferencia y el WhatsApp para mandar logo y accesos. Si faltan los datos
+  bancarios, el cierre igual corre: la bienvenida dice que los datos de transferencia van por separado y queda la nota
+  interna «Revisar datos bancarios»; el recordatorio llega en el correo a Luis cuando el cliente acepta por la página
+  o por WhatsApp, y en el aviso del panel cuando Luis registra la aceptación a mano. Sin correo para el pago, la
+  bienvenida pide avisar respondiendo el correo; sin WhatsApp de AT, se usa el número público de AT.
+- **WhatsApp automático: instalado, pero APAGADO a propósito (27-sep).** Se enciende con cuatro cosas juntas:
+  plantilla de Meta aprobada, flujo n8n `Ex5wZac9VCc66WOm` activo, constante `AT_N8N_CC_WHATSAPP` en `wp-config.php`
+  y opción `at_cc_wa_plantilla_activa` = `1`; además `AT_REST_SECRET` (ya definida en PROD) viaja como `X-AT-Secret`.
+  Estado real: Meta aprobó `propuesta_respuesta` y `propuesta_respuesta_v2`, las dos como **Marketing**; el flujo está
+  publicado y activo con `propuesta_respuesta` (la que dice lo propuesto, decisión de Luis; 27-sep 00:46); el bot
+  principal tiene la ruta de los botones y el contexto de la propuesta (00:47); Luis puso la constante en PROD. La
+  primera prueba real (00:48, una propuesta de prueba y el número de prueba de Luis) salió de WordPress y n8n, y Meta
+  la aceptó pero **no la entregó: error 131049**, el límite por usuario de mensajes de Marketing
+  ([Meta](https://developers.facebook.com/documentation/business-messaging/whatsapp/templates/marketing-templates/per-user-limits/):
+  esperar 24 h antes de reintentar). Como el panel diría «WhatsApp enviado» aunque Meta no lo entregue, la opción quedó
+  en `0`. Las tres condiciones para volver a encenderla quedaron el 27-sep: el aviso de mensajes no entregados y el
+  enlace para los datos del contrato (Task 19, EN PROD) y la plantilla de Utilidad `propuesta_estado_revision`
+  (nombre, número de propuesta y empresa), enviada a Meta como UTILITY y en revisión (el flujo ya la sabe armar:
+  cambiar `PLANTILLA` en su nodo «Preparar plantilla»). Encenderla es decisión de Luis. Una segunda prueba real al
+  número de prueba nuevo de Luis (27-sep 08:30) sí salió (`sent`, cobrable como marketing). Respaldos de n8n en
+  `C:/Users/luis_/respaldos/n8n/2026-09-26-wa-plantilla/`. Mientras tanto el panel ofrece «Enviar por mi WhatsApp». Las rutas `POST /wp-json/at/v1/propuesta-respuesta` y
+  `/propuesta-contexto` (para el bot) exigen la cabecera `X-AT-Secret` igual a `AT_REST_SECRET`: sin ella responden
+  401 (500 si la constante faltara).
+  **Task 19 (EN PROD desde el 27-sep 09:07 en WordPress y 09:08 en el bot): avisos de entrega y enlace para los datos.**
+  (1) Cada envío automático guarda en su nota interna `pedido_respuesta` el `wamid` que devuelve el flujo
+  (`{"ok":true,"wamid":"wamid.…"}`) y el teléfono normalizado (`at_cc_enviar_whatsapp_plantilla_detalle()`; la función
+  de siempre sigue devolviendo solo el motivo del error). El panel ya no dice «Meta confirma la entrega después»: dice
+  «WhatsApp enviado a Meta. Si no se lo entrega al cliente, te llega un aviso por correo y queda anotado en Seguimiento».
+  (2) Ruta nueva `POST /wp-json/at/v1/propuesta-whatsapp-estado`, con la misma clave `X-AT-Secret`. Cuerpo:
+  `{"estados":[{"wamid":"wamid.…","estado":"failed","codigo":131049,"titulo":"…","telefono":"569…"}]}` (hasta 20 por
+  llamada; lo demás se ignora). Solo cuenta `failed` de un `wamid` que tenga su nota `pedido_respuesta`; el resto
+  (otros flujos, `sent`, `delivered`, `read`, cuerpos raros) se ignora sin error. Por cada fallo nuevo queda la nota
+  interna `whatsapp_no_entregado` (motivo, `wamid`, código y título de Meta) y sale un correo a Luis con el motivo en
+  simple (131049: límite de mensajes de marketing por persona, no reintentar antes de 24 horas; 131026: el número no
+  puede recibirlo; 131047: pasaron más de 24 horas desde el último mensaje del cliente; otro: el texto de Meta), la
+  aclaración de que la propuesta no cambió de estado y el enlace a la ficha para «Enviar por mi WhatsApp». Un mismo
+  `wamid` avisa una sola vez. Responde `{"ok":true,"avisados":n,"ignorados":m}`. (3) En «Respuesta del cliente», si el
+  último envío automático quedó sin entregar, aparece un aviso con el motivo y el botón «Enviar por mi WhatsApp».
+  (4) Cuando el cliente acepta por WhatsApp, `/propuesta-respuesta` agrega `url_datos` (la página de la propuesta con
+  `respuesta=completar` desde el 27-sep 22:08, antes `respuesta=aceptada`, que abre «Datos para tu contrato») mientras el contrato admita datos y le falte la dirección;
+  sin contrato, ya revisado o con dirección, no viene. **En n8n (bot principal `bBcNlFgBzQ0766Mq`, 27-sep 09:08):** la
+  salida falsa de «Has Message?» (lo que llega sin mensajes, es decir, los estados de Meta) va a «Extraer Estados
+  Fallidos», que junta solo los `failed` (hasta 20) y los manda por «Avisar Estado Propuesta» a la ruta nueva; «Armar
+  Respuesta Propuesta» pone `url_datos` en su mensaje al «Acepto» (solo si es de automatizatech.cl). Probado de punta a
+  punta en PROD: un `failed` 131049 simulado con el formato real de Meta entró al bot, WordPress respondió
+  `avisados: 1`, quedó la nota y salió el correo; repetido, no avisó otra vez. Respaldo del bot
+  `bot_principal_antes_estados_20260927-090826.json` en la carpeta de respaldos de n8n. Pruebas:
+  `tests/cierre/whatsapp-estado-wp-test.php` (WordPress) y las de los nodos del bot fuera del repo.
+  **Revisión de la Task 19 (27-sep, EN PROD):** (a) `whatsapp_no_entregado` quedó en la lista de tipos de Seguimiento
+  (`get_detail_types()`, «📵 WhatsApp no entregado (interno)»): sin eso, editar la nota con ✏️ la guardaba como
+  `propuesta_enviada`, que es pública; la prueba RF9 ahora recorre `at_cc_tipos_internos()` entero. (b) Dos llamadas
+  simultáneas con el mismo `wamid` ya no avisan dos veces (candado con `add_option()`). (c) Si el `failed` llega antes que
+  la nota del envío, queda en espera 15 minutos y se avisa al anotar el envío (para el bot sigue contando como
+  `ignorados`). (d) Con un 131049 de menos de 24 horas en esa propuesta, ni el envío ni «Pedir respuesta» mandan otra
+  plantilla: el aviso ofrece «Enviar por mi WhatsApp». (e) `url_datos` solo con `salida` = `acepta` y estado `aceptada`.
+  (f) El `wamid` se compara exacto: el LIKE de la base no distingue mayúsculas y el `wamid` es base64.
+- **Código y pruebas:** `inc/cierre-cliente/` (lo carga `inc/admin-proposals.php` vía `cargar.php`; `puras.php` sin
+  WordPress), `contracts/`, `lib/contract-pdf-fpdf.php`, `mu-plugins/crm-ai-completo.php` (pestaña «📜 Contratos y
+  operación» del CRM) y `ver-presentacion.php`. Pruebas: `tests/cierre/` y `tests/propuestas/`.
+- **Despliegue y rollback (26-sep, marca `20260926-133408`):** respaldos en `~/respaldos/`: tema completo,
+  `cierre-cliente-antes-20260926-133408.tar.gz` (los 17 archivos reemplazados), `contracts-htaccess.antes-…` y
+  `tablas-antes-cierre-20260926-133408.sql` (seis tablas). Rollback, en este orden: (1) desarchivar las siete desde
+  el panel (o `UPDATE wp_automatiza_propuestas SET status = 'sent' WHERE id IN (11,12,14,16,21,22,26) AND status =
+  'archivada'`), porque el código anterior no conoce ese estado; (2) `cd ~ && tar xzf
+  respaldos/cierre-cliente-antes-20260926-133408.tar.gz`; (3) borrar `inc/cierre-cliente/` y la plantilla nueva. La
+  columna `crm_cliente_id` puede quedarse (admite nulos) y el `.htaccess` de contratos conviene dejarlo. El script
+  de despliegue y reversión está anotado en la bóveda privada (nota del despliegue del 26-sep).
+- **Segunda subida (26-sep 20:13, tareas 16 y 17, autorizada por Luis):** 5 archivos (`inc/cierre-cliente/ajustes.php`,
+  `bienvenida.php`, `respuesta.php`, `whatsapp.php` y `mu-plugins/crm-ai-completo.php`). El portal y la ficha del CRM leen las notas
+  del cliente por su ficha operativa enlazada (`at_cc_techs_de_crm()`), nunca por el id del CRM; y Ajustes del cierre suma
+  «Correo principal del cierre» (hoy `contacto@automatizatech.cl`) y «Copia oculta», que va en los avisos a Luis, la bienvenida
+  y «Pedir respuesta». Las respuestas de los clientes llegan solo al principal. Respaldo
+  `~/respaldos/cierre-t16-t17-antes-20260926-201327.tar.gz` (rollback: `tar xzf` de ese archivo desde `~` y borrar las
+  opciones `at_cc_correo_avisos` y `at_cc_correo_copia`). Código en PROD: commit `793e995`.
+- **Subidas del 26 y 27-sep (noche, con el primer contrato real; autorizadas por Luis):** cada una cotejó PROD por
+  huella, respaldó, subió con `php -l` antes de reemplazar y verificó desde afuera y con el panel como administrador.
+  (1) 26-sep 23:31, visor de firma: `contracts/sign-contract.php`, respaldo
+  `~/respaldos/visor-firma-antes-20260926-233134.tar.gz`. (2) 26-sep 23:59, Task 18 + correo de envío + firmas del
+  detalle: `inc/cierre-cliente/puras.php`, `respuesta.php`, `pagina.php`, `inc/propuestas-admin/acciones.php`,
+  `clasico.php` y `contracts/admin-contracts.php`, respaldo `~/respaldos/cierre-pendientes-antes-20260926-235907.tar.gz`.
+  (3) 27-sep 01:25, revisión completa de la Task 18 y costo de la versión final con la revisión de texto de las
+  fotos: `respuesta.php`, `pagina.php`, `inc/proposals-flow.php`, `ficha.php` y `clasico.php`, respaldo
+  `~/respaldos/cierre-pendientes-antes-20260927-012502.tar.gz`. Rollback de cualquiera: `cd ~ && tar xzf <respaldo>`
+  (en orden inverso si se deshacen varias). El mismo 27-sep `wp-content/debug.log` (74 MB) quedó comprimido en
+  `~/respaldos/debug-log-20260927-042647.log.gz` y vacío; desde afuera responde 403.
+- **Subida del 27-sep 22:08 (autorizada por Luis; commit `7e7c3bf`), pensada para registrar a mano la aceptación de
+  la 43:** (1) la bienvenida sale después de crear el contrato y, si al contrato le falta la dirección, trae el botón
+  «Completar mis datos del contrato» (antes pedía responder el correo con los datos); (2) «Datos para tu contrato» pide
+  nombre y documento (RUT, DNI o pasaporte) de quien firma cuando al contrato le falta (aceptación a mano sin el número o
+  por WhatsApp), obligatorios; `ContractService::actualizar_datos_cliente()` los acepta solo para completar, nunca para
+  sobrescribir al que aceptó; (3) cuando el cliente deja sus datos a Luis le llega «… dejó sus datos para el contrato»,
+  que dice si el contrato quedó listo para revisar y firmar o qué falta, sin el número del documento; (4) el enlace a
+  «Datos para tu contrato» (bienvenida y WhatsApp) usa `respuesta=completar`, que abre el formulario sin el «¡Gracias!
+  Recibimos tu aceptación», reservado a quien acaba de aceptar en la página (`aceptada` sigue abriéndolo para enlaces
+  viejos); (5) la barra y los diálogos de `ver-presentacion.php` llevan el logo real y los colores del logo (marino
+  `#063f76`, turquesa `#17b7b1`, verde `#4abc9b`, noche `#0a1628`); (6) cláusula «Uso de inteligencia artificial»
+  (pedido de Luis): duodécima en el contrato de servicios v1.1 (las siguientes se corren en uno: garantía 13.1, fases
+  15.1) y undécima bis en el de soporte v2.1. Archivos: `puras.php`, `respuesta.php`, `bienvenida.php`, `pagina.php`,
+  `contracts/contract-service.php` y las dos plantillas. Respaldos `~/respaldos/cierre-pendientes-antes-20260927-220751.tar.gz`
+  y `~/respaldos/plantillas-contrato-antes-20260927-220847/`; a las 22:14 se resubieron cuatro de esos archivos solo con
+  comentarios sin nombres de clientes (el repositorio es público), respaldo `~/respaldos/cierre-pendientes-antes-20260927-221417.tar.gz`. Verificado: huellas, `php -l`, panel y formulario como
+  administrador, la página de la 43 desde afuera (tres diálogos con logo, sin el verde de antes) y PROD cargando la
+  cláusula en las dos plantillas. Pruebas: `bienvenida-datos-wp-test.php`, `datos-documento-wp-test.php`,
+  `plantilla-test.php`, `contrato-wp-test.php` (33 grupos, 1300 comprobaciones). Pendiente: verlo en un celular real.
+- **Primera propuesta real aceptada (id 53), aceptación anulada el 26-sep 23:59** para que el cliente la repita con el
+  formulario nuevo (decisión de Luis): la propuesta volvió a `sent`, su fila del CRM a prospecto, y se borraron el
+  contrato sin firma del cliente, la ficha operativa creada al aceptar con sus notas copiadas, las dos entradas del
+  historial del CRM y la nota de la aceptación. Quedó una nota interna en Seguimiento y el respaldo completo (filas y
+  archivos) en `~/respaldos/revertir-53-20260926-235947/`.
+
+## Precios, reaprobación y enlaces (lecciones del 2026-09-28)
 - **Guardar no guarda precios.** Las filas de la tabla de inversión solo se guardan con «Pedir cambios» o
   «Aprobar». Si Luis cambia precios y aprieta Guardar, se pierden.
 - **Aprobar manda las filas que están en pantalla**, no las de la base. Si un agente cambió los precios por script

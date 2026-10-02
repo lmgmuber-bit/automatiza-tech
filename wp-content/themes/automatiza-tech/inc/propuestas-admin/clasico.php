@@ -151,6 +151,15 @@ function automatiza_tech_proposals_page_clasico() {
             $send_email = false;
             $bloqueo_envio = true;
         }
+        // Revisión final (26-sep), hallazgo 4: la misma guarda que at_pa_guardar() (acciones.php).
+        // Una propuesta con respuesta del cliente (aceptada, evaluando o rechazada) no se reenvía ni
+        // pierde su estado en un guardado desde esta página.
+        // Task 14: una archivada también (se desarchiva desde «Respuesta del cliente» en la ficha nueva).
+        $estado_protegido = $actual && in_array((string) $actual->status, ['aceptada', 'evaluando', 'rechazada', 'archivada'], true);
+        if ($send_email && $estado_protegido) {
+            $send_email = false;
+            $bloqueo_envio_aceptada = true;
+        }
         $update_data = [
             'client_name' => $client_name,
             'company_name' => $company_name,
@@ -160,9 +169,10 @@ function automatiza_tech_proposals_page_clasico() {
             'n8n_chat_url' => $n8n_url,
         ];
         // v3: el guardado normal no debe reescribir el estado del flujo; solo lo toca al enviar.
+        // Tampoco lo hace si la propuesta ya tiene respuesta del cliente.
         if ($send_email) {
             $update_data['status'] = 'sent';
-        } elseif (!$es_v3) {
+        } elseif (!$es_v3 && !$estado_protegido) {
             $update_data['status'] = 'pending';
         }
         // Solo actualizar prompts si se enviaron (no vacíos). En v3 el payload lo maneja
@@ -179,8 +189,19 @@ function automatiza_tech_proposals_page_clasico() {
 
         $wpdb->update($table_name, $update_data, ['id' => $id]);
 
-        if (!empty($bloqueo_envio)) {
+        // T14 ronda 1 (2ª revisión), hallazgo 2: el aviso de archivada va primero, en cualquier flujo (en
+        // una v3 archivada la guarda de v3 corta antes y su aviso no explicaba por qué no salió).
+        if ((!empty($bloqueo_envio) || !empty($bloqueo_envio_aceptada)) && $actual && (string) $actual->status === 'archivada') {
+            $message = '<div class="notice notice-warning"><p>Propuesta guardada, pero <strong>no se envió</strong>: esta propuesta está archivada. Desarchívala en «Respuesta del cliente» para volver a enviarla.</p></div>';
+        } elseif (!empty($bloqueo_envio)) {
             $message = '<div class="notice notice-warning"><p>Propuesta guardada, pero <strong>no se envió</strong>: una propuesta v3 solo se envía cuando está <strong>lista</strong> (versión final verificada).</p></div>';
+        } elseif (!empty($bloqueo_envio_aceptada)) {
+            $descripcion_respuesta = [
+                'aceptada'  => 'el cliente ya aceptó esta propuesta',
+                'evaluando' => 'el cliente la sigue evaluando',
+                'rechazada' => 'el cliente ya rechazó esta propuesta',
+            ][$actual ? (string) $actual->status : ''] ?? 'el cliente ya respondió esta propuesta';
+            $message = '<div class="notice notice-warning"><p>Propuesta guardada, pero <strong>no se envió</strong>: ' . esc_html($descripcion_respuesta) . '. Para pedirle otra respuesta, usa el panel de «Respuesta del cliente».</p></div>';
         }
 
         // Obtener datos actualizados para el email
@@ -188,7 +209,7 @@ function automatiza_tech_proposals_page_clasico() {
 
         // --- ENVIAR EMAIL (solo si el checkbox está marcado) ---
         if (!$send_email) {
-            if (empty($bloqueo_envio)) {
+            if (empty($bloqueo_envio) && empty($bloqueo_envio_aceptada)) {
                 $message = '<div class="notice notice-success is-dismissible"><p>✅ Propuesta guardada correctamente. <strong>No se envió correo</strong> (checkbox desmarcado).</p></div>';
             }
         } else {
@@ -303,10 +324,15 @@ function automatiza_tech_proposals_page_clasico() {
             $sender_email = defined('SMTP_USER') ? SMTP_USER : 'contacto@automatizatech.cl';
             $headers[] = 'From: Automatiza Tech <' . $sender_email . '>';
             // Agregar Reply-To para que el cliente responda al admin real
-            $admin_email = get_option('admin_email');
+            // (26-sep) Igual que los correos del cierre: el correo principal de «Ajustes del cierre».
+            $admin_email = function_exists('at_cc_correo_avisos') ? at_cc_correo_avisos() : get_option('admin_email');
             $headers[] = 'Reply-To: ' . $admin_email;
             // Copia oculta para registro interno
             $headers[] = 'Bcc: automatizacionesbotcore@gmail.com';
+            // Y la copia oculta de «Ajustes del cierre», si hay una y no es el mismo cliente.
+            if (function_exists('at_cc_cabecera_copia')) {
+                $headers = array_merge($headers, at_cc_cabecera_copia((string) $to));
+            }
 
             // Capturar errores de envío
             global $phpmailer;
@@ -854,8 +880,8 @@ function automatiza_tech_proposals_page_clasico() {
                                   <p>
                                     <button type="submit" name="at_v3_accion" value="cambios" class="button">✏️ Pedir cambios (sin costo)</button>
                                     <button type="submit" name="at_v3_accion" value="aprobar" class="button button-primary"
-                                      onclick="return confirm('Se generarán <?php echo (int) $costo['fotos']; ?> fotos (≈ US$<?php echo esc_js(number_format($costo['usd_lista'], 4, ',', '.')); ?> de lista) y la versión final. ¿Aprobar?');">
-                                      ✅ Aprobar y generar versión final (<?php echo (int) $costo['fotos']; ?> fotos ≈ US$<?php echo esc_html(number_format($costo['usd_lista'], 4, ',', '.')); ?>)</button>
+                                      onclick="return confirm('Se generarán <?php echo (int) $costo['fotos']; ?> fotos, se revisará que no tengan texto (≈ US$<?php echo esc_js(number_format($costo['usd_lista'], 4, ',', '.')); ?> de lista; hasta US$<?php echo esc_js(number_format($costo['usd_max'], 4, ',', '.')); ?> si hay que rehacerlas) y la versión final. ¿Aprobar?');">
+                                      ✅ Aprobar y generar versión final (<?php echo (int) $costo['fotos']; ?> fotos + revisión ≈ US$<?php echo esc_html(number_format($costo['usd_lista'], 4, ',', '.')); ?>)</button>
                                     <?php if (in_array($edit_proposal->status, ['ajustando', 'generando'], true)): ?>
                                     <button type="submit" name="at_v3_accion" value="destrabar" class="button"
                                       onclick="return confirm('¿Destrabar esta propuesta? Va a quedar en estado «error» para poder reintentar. No se llama a n8n ni se tocan precios.');">
@@ -882,13 +908,17 @@ function automatiza_tech_proposals_page_clasico() {
                                         <?php
                                         $puede = at_propuesta_puede_enviarse($edit_proposal->flujo ?? null, (string) $edit_proposal->status);
                                         $es_v3_checkbox = ($edit_proposal->flujo ?? '') === 'v3';
-                                        $send_email_attr = !$puede ? 'disabled' : ($es_v3_checkbox ? '' : 'checked');
+                                        // Revisión final (26-sep), hallazgo 4: como en ficha.php, con respuesta del cliente la casilla queda desmarcada y deshabilitada.
+                                        $tiene_respuesta_checkbox = in_array((string) $edit_proposal->status, ['aceptada', 'evaluando', 'rechazada'], true);
+                                        // Task 14: archivada, igual que con respuesta del cliente.
+                                        $archivada_checkbox = (string) $edit_proposal->status === 'archivada';
+                                        $send_email_attr = ($tiene_respuesta_checkbox || $archivada_checkbox || !$puede) ? 'disabled' : ($es_v3_checkbox ? '' : 'checked');
                                         ?>
                                         <input type="checkbox" name="send_email" value="1" id="send_email" <?php echo $send_email_attr; ?> style="width: 20px; height: 20px;">
                                         <span style="color: #065f46; font-weight: 600;">📧 Enviar correo con la propuesta al cliente</span>
                                     </label>
                                     <p style="margin: 8px 0 0 30px; color: #047857; font-size: 13px;">Si desmarcas esta opción, solo se guardarán los datos sin enviar el correo.</p>
-                                    <?php if (!$puede): ?><p style="margin:8px 0 0 30px;color:#b45309;">Se habilita cuando la propuesta esté <strong>lista</strong>.</p><?php endif; ?>
+                                    <?php if ($archivada_checkbox): ?><p style="margin:8px 0 0 30px;color:#b45309;">Esta propuesta está archivada: desarchívala para volver a enviarla.</p><?php elseif (!$puede): ?><p style="margin:8px 0 0 30px;color:#b45309;">Se habilita cuando la propuesta esté <strong>lista</strong>.</p><?php endif; ?>
                                 </div>
 
                                 <!-- SECCIÓN DE PERSONALIZACIÓN DEL CORREO -->

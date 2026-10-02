@@ -13,8 +13,13 @@ function at_pa_grupos_estado(): array {
 		'generando' => ['etiqueta' => 'Generando', 'estados' => ['generando']],
 		'lista'     => ['etiqueta' => 'Lista para enviar', 'estados' => ['lista']],
 		'enviadas'  => ['etiqueta' => 'Enviadas', 'estados' => ['sent']],
+		'evaluando' => ['etiqueta' => 'En evaluación', 'estados' => ['evaluando']],
+		'aceptadas' => ['etiqueta' => 'Aceptadas', 'estados' => ['aceptada', 'contracted']],
+		'rechazadas' => ['etiqueta' => 'Rechazadas', 'estados' => ['rechazada']],
 		'pendiente' => ['etiqueta' => 'Pendiente', 'estados' => ['pending']],
 		'error'     => ['etiqueta' => 'Error', 'estados' => ['error']],
+		// Task 14: viejas o reemplazadas; el cliente ya no puede responderlas (cierre-cliente/archivo.php).
+		'archivadas' => ['etiqueta' => 'Archivadas', 'estados' => ['archivada']],
 	];
 }
 
@@ -33,6 +38,8 @@ function at_pa_estado_etiqueta(?string $status): array {
 	$singular = [
 		'borrador' => 'Borrador', 'draft' => 'Borrador', 'ajustando' => 'Ajustando', 'generando' => 'Generando',
 		'lista' => 'Lista para enviar', 'sent' => 'Enviada', 'pending' => 'Pendiente', 'error' => 'Error',
+		'evaluando' => 'En evaluación', 'aceptada' => 'Aceptada', 'rechazada' => 'Rechazada', 'contracted' => 'Contratada',
+		'archivada' => 'Archivada',
 	];
 	$s = (string) $status;
 	if (isset($singular[$s])) {

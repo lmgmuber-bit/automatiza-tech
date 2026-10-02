@@ -189,9 +189,16 @@ function at_pt_rest_render(WP_REST_Request $r) {
 	if (!preg_match('/^[A-Za-z0-9_-]{6,64}$/', $uid)) {
 		$uid = '';
 	}
+	$render = at_pt_armar_render($plan, at_pt_datos_render($f), $modo === 'final');
+	// Propuesta del flujo anterior: su portada y su cierre viven en WordPress, no en el almacén del renderer. Van en
+	// images para que esas láminas del plan no queden sin foto; si el renderer tiene las suyas, n8n las pone encima.
+	$fotos = at_pt_fotos_propuesta_wp($uid);
+	if ($fotos) {
+		$render['images'] = (object) array_merge((array) $render['images'], $fotos);
+	}
 	return new WP_REST_Response([
 		'ok'             => true,
-		'render'         => at_pt_armar_render($plan, at_pt_datos_render($f), $modo === 'final'),
+		'render'         => $render,
 		'propuesta_uid'  => $uid,
 		// Para el botón de los correos a Luis; 0 si la ficha no está enlazada al CRM.
 		'crm_cliente_id' => (int) at_pt_db_partes($f)['crm_id'],

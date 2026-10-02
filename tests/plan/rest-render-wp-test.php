@@ -124,4 +124,33 @@ pt_pedir('POST', "/plan/{$pid2}/error", []);
 ok(at_pt_plan($pid2)->estado === 'error' && at_pt_plan($pid2)->nota === 'n8n avisó un error sin detalle.', '5) sin nota: un texto por defecto');
 ok(pt_pedir('POST', '/plan/' . pt_plan_inexistente() . '/error', ['nota' => 'x'])->get_status() === 404, '5) plan que no existe: 404');
 
+// 6) Propuesta del flujo anterior: sus fotos viven en WordPress (uploads/propuestas/<uid>/cover.jpg y next_steps.jpg),
+// no en el almacén del renderer. El render las lleva en images para que la portada y el cierre del plan no queden sin
+// foto (n8n solo las pisa si el renderer tiene las suyas).
+$m6 = pt_marca();
+$cli6 = pt_cliente($m6);
+$pid6 = at_pt_crear_plan(pt_contrato($cli6['tech'], pt_propuesta($m6)));
+pt_pedir('POST', "/plan/{$pid6}/borrador", ['plan' => pt_plan_ia(), 'origen' => 'borrador']);
+$uid6 = substr(md5($m6), 0, 12);
+$up = wp_upload_dir();
+$dir6 = trailingslashit($up['basedir']) . 'propuestas/' . $uid6 . '/';
+wp_mkdir_p($dir6);
+register_shutdown_function(function () use ($dir6) {
+	foreach (glob($dir6 . '*') ?: [] as $a) { @unlink($a); }
+	@rmdir($dir6);
+});
+$sin = pt_pedir('GET', "/plan/{$pid6}/render", null, true, ['modo' => 'final'])->get_data();
+ok(wp_json_encode($sin['render']['images'] ?? null) === '{}', '6) sin fotos guardadas en WordPress: images sigue vacío ({})');
+file_put_contents($dir6 . 'cover.jpg', 'jpg de prueba');
+file_put_contents($dir6 . 'next_steps.jpg', 'jpg de prueba');
+$con = pt_pedir('GET', "/plan/{$pid6}/render", null, true, ['modo' => 'final'])->get_data();
+$img = (array) ($con['render']['images'] ?? []);
+ok(($img['cover'] ?? '') === trailingslashit($up['baseurl']) . 'propuestas/' . $uid6 . '/cover.jpg', '6) portada: la foto de la propuesta guardada en WordPress');
+ok(($img['cierre'] ?? '') === trailingslashit($up['baseurl']) . 'propuestas/' . $uid6 . '/next_steps.jpg', '6) cierre: la foto de próximos pasos de la propuesta');
+ok(count($img) === 2 && strpos(wp_json_encode($con['render']['images']), '{') === 0, '6) solo esas dos láminas, y images sigue saliendo como objeto JSON');
+@unlink($dir6 . 'next_steps.jpg');
+$solo = (array) (pt_pedir('GET', "/plan/{$pid6}/render", null, true, ['modo' => 'draft'])->get_data()['render']['images'] ?? []);
+ok(array_keys($solo) === ['cover'], '6) con solo la portada guardada, solo la portada (también en la vista previa, que no paga fotos)');
+ok(at_pt_fotos_propuesta_wp('../x') === [] && at_pt_fotos_propuesta_wp('') === [], '6) un código raro no busca nada fuera de la carpeta de la propuesta');
+
 fin();

@@ -187,6 +187,15 @@ semanas, una lámina por fase, «Qué necesitamos de ti», reuniones y soporte, 
 con los enlaces para agendar la llamada de seguimiento por WhatsApp con Tech. El enlace web de agenda queda vacío hasta la
 Etapa 2. Desplegado desde `claude/plan-renderer` `1a9a0df` (zip subido por Luis a Easypanel).
 
+## Portada y cierre: de dónde salen sus fotos
+
+Con propuesta, la portada y el cierre del plan reutilizan las fotos de la propuesta, sin costo. Hay dos lugares posibles:
+
+- **Propuesta v3:** sus fotos están en el renderer (`/p/<uid>/img/manifest.json`, `cover` y `next_steps`). n8n las toma de ahí.
+- **Propuesta del flujo anterior:** sus fotos están en WordPress (`wp-content/uploads/propuestas/<uid>/cover.jpg` y `next_steps.jpg`). Desde el 2026-10-02, `GET /plan/{id}/render` las manda en `render.images` (`at_pt_fotos_propuesta_wp()`, `datos.php`). Si el renderer tiene las suyas, n8n las pone encima.
+
+Antes de ese arreglo, un plan con propuesta del flujo anterior salía sin foto en la portada y el cierre. La nota del plan lo avisaba: «la propuesta no tiene foto guardada para portada, cierre». Un plan generado antes del arreglo se corrige volviendo a aprobarlo: sus otras fotos ya están guardadas y no se pagan de nuevo.
+
 ## Revisión de texto de las fotos y su costo
 
 Las fotos nuevas del plan (Método AT, carta Gantt, una por fase, «Qué necesitamos», reuniones, portal, y con contrato sin

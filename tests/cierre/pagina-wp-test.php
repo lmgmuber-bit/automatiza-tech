@@ -168,7 +168,32 @@ ok(preg_match('/name="(razon_social|rut_empresa)"[^>]*required/', $h15) === 0, '
 ok(strpos($h15, '<input type="text" id="at-cc-a-direccion" name="direccion" required maxlength="300"') !== false && strpos($h15, 'Dirección (calle, número, comuna y ciudad)') !== false, 'T18: la dirección es obligatoria');
 ok(strpos($h15, 'id="at-cc-datos"') === false, 'T18: el diálogo de datos no se dibuja junto al de aceptar (comparten los nombres de campo)');
 ok(strpos($h15, 'max-height:calc(100dvh - 32px)') !== false && strpos($h15, 'overflow-y:auto') !== false, 'T18: el diálogo se puede desplazar en un celular (max-height con dvh y overflow)');
-ok(strpos($h15, 'var inicial = ""') !== false && strpos($h15, 'role="alert"') === false, 'T18: sin respuesta=datos el diálogo no se abre solo ni trae aviso');
+ok(strpos($h15, 'var inicial = ""') !== false && strpos($h15, 'role="alert"') === false, 'T18: sin respuesta=datos el diálogo no se abre solo ni trae aviso');
+
+// 29-sep (pedido de Luis): el enlace «Aceptar» del correo ya no abre el diálogo al cargar; primero se lee la
+// propuesta. «Acepto la propuesta» pregunta «¿Ya revisaste toda la propuesta?» hasta que la presentación avisa
+// (postMessage, validando su origen) que el cliente llegó a la última lámina.
+$p29 = clone $t15_render;
+$p29->gamma_iframe_url = 'https://render.ejemplo.cl:8443/p/abc/index.html';
+$_GET['responder'] = 'aceptar';
+ob_start();
+at_cc_render_barra($p29);
+$h29 = (string) ob_get_clean();
+$_GET['responder'] = 'evaluar';
+ob_start();
+at_cc_render_barra($p29);
+$h29e = (string) ob_get_clean();
+unset($_GET['responder']);
+ok(strpos($h29, 'var inicial = ""') !== false, '29-sep: con responder=aceptar el diálogo de aceptar NO se abre al cargar');
+ok(strpos($h29, 'Revisa la propuesta hasta la última lámina y, si estás de acuerdo, acéptala aquí.') !== false && strpos($h15, 'Revisa la propuesta hasta la última lámina') === false, '29-sep: la guía de la barra sale solo al llegar por el enlace de aceptar');
+ok(strpos($h29e, 'var inicial = "at-cc-evalua"') !== false, '29-sep: responder=evaluar sigue abriendo «La sigo evaluando»');
+ok(strpos($h29, '<dialog class="at-cc-dlg" id="at-cc-previo">') !== false && strpos($h29, '¿Ya revisaste toda la propuesta?') !== false && strpos($h29, 'data-at-cc-seguir>Sí, estoy de acuerdo</button>') !== false && strpos($h29, 'data-cerrar>Ver la propuesta</button>') !== false, '29-sep: existe la confirmación previa con «Ver la propuesta» y «Sí, estoy de acuerdo»');
+ok(strpos($h29, "if (id === 'at-cc-acepta' && !llegoAlFinal && document.getElementById('at-cc-previo')) { id = 'at-cc-previo'; }") !== false, '29-sep: el botón pasa por la confirmación mientras no llegue al final');
+ok(strpos($h29, 'var origenDeck = "https:\/\/render.ejemplo.cl:8443"') !== false && strpos($h29, 'e.origin !== origenDeck') !== false && strpos($h29, "m.type !== 'at-deck-lamina'") !== false, '29-sep: solo se acepta el aviso de lámina que viene del origen de la presentación (con puerto)');
+ok(strpos($h15, 'var origenDeck = ""') !== false, '29-sep: sin URL de presentación no se escucha ningún aviso');
+$acepta29 = substr($h29, (int) strpos($h29, '<dialog class="at-cc-dlg" id="at-cc-acepta">'), (int) strpos($h29, '<dialog class="at-cc-dlg" id="at-cc-previo">') - (int) strpos($h29, '<dialog class="at-cc-dlg" id="at-cc-acepta">'));
+ok(strpos($acepta29, 'data-cerrar>Seguir viendo la propuesta</button>') !== false && strpos($acepta29, 'data-cerrar>Volver</button>') === false, '29-sep: el diálogo de datos invita a seguir viendo la propuesta en vez de «Volver»');
+ok(strpos($h29, 'Al confirmar registramos tu aceptación') !== false, '29-sep: el diálogo dice que confirmar registra la aceptación');
 
 // Con respuesta=datos, el diálogo de aceptar se reabre solo y trae el aviso adentro (y en la barra).
 $_GET['respuesta'] = 'datos';

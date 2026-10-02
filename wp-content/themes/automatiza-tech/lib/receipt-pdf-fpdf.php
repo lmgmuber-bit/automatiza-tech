@@ -297,15 +297,27 @@ class ReceiptPDFFPDF extends FPDF {
             $qty = is_object($item) ? $item->quantity : $item['quantity'];
             $price = is_object($item) ? $item->price : $item['price'];
             
-            $this->SetX(15);
             $this->SetFillColor($index % 2 == 0 ? 250 : 255, $index % 2 == 0 ? 250 : 255, $index % 2 == 0 ? 250 : 255);
             $this->SetTextColor($this->text_color[0], $this->text_color[1], $this->text_color[2]);
             $this->SetFont('Arial', '', 10);
             $this->SetDrawColor(200, 200, 200);
-            $this->Cell(100, 12, utf8_to_latin1($name), 1, 0, 'L', true);
-            $this->Cell(40, 12, $qty, 1, 0, 'C', true);
+            // La descripción salta de línea y la fila crece con ella (antes era una sola línea de 100 mm y un texto
+            // largo se cortaba). Mínimo 12 mm, como antes; 5 mm por línea más 2 mm arriba y abajo.
+            $texto = utf8_to_latin1($name);
+            $lineas = $this->contar_lineas(98, $texto);
+            $alto = max(12, $lineas * 5 + 4);
+            if ($this->GetY() + $alto > $this->PageBreakTrigger) {
+                $this->AddPage();
+            }
+            $x = 15;
+            $y = $this->GetY();
+            $this->Rect($x, $y, 100, $alto, 'DF');
+            $this->SetXY($x + 1, $y + ($alto - $lineas * 5) / 2);
+            $this->MultiCell(98, 5, $texto, 0, 'L');
+            $this->SetXY($x + 100, $y);
+            $this->Cell(40, $alto, $qty, 1, 0, 'C', true);
             $this->SetFont('Arial', 'B', 10);
-            $this->Cell(40, 12, $this->format_currency($price * $qty), 1, 1, 'R', true);
+            $this->Cell(40, $alto, $this->format_currency($price * $qty), 1, 1, 'R', true);
             $total_items += ($price * $qty);
         }
         
@@ -435,6 +447,56 @@ class ReceiptPDFFPDF extends FPDF {
         }
     }
     
+    /**
+     * Cuántas líneas ocupa $txt en un MultiCell de ancho $w con la fuente actual (el cálculo clásico de FPDF:
+     * corta en espacios y, si una palabra no cabe, en el carácter).
+     */
+    private function contar_lineas($w, $txt) {
+        $cw = $this->CurrentFont['cw'];
+        $wmax = ($w - 2 * $this->cMargin) * 1000 / $this->FontSize;
+        $s = str_replace("\r", '', (string) $txt);
+        $nb = strlen($s);
+        if ($nb > 0 && $s[$nb - 1] === "\n") {
+            $nb--;
+        }
+        $sep = -1;
+        $i = 0;
+        $j = 0;
+        $l = 0;
+        $nl = 1;
+        while ($i < $nb) {
+            $c = $s[$i];
+            if ($c === "\n") {
+                $i++;
+                $sep = -1;
+                $j = $i;
+                $l = 0;
+                $nl++;
+                continue;
+            }
+            if ($c === ' ') {
+                $sep = $i;
+            }
+            $l += isset($cw[$c]) ? $cw[$c] : 0;
+            if ($l > $wmax) {
+                if ($sep === -1) {
+                    if ($i === $j) {
+                        $i++;
+                    }
+                } else {
+                    $i = $sep + 1;
+                }
+                $sep = -1;
+                $j = $i;
+                $l = 0;
+                $nl++;
+            } else {
+                $i++;
+            }
+        }
+        return $nl;
+    }
+
     private function format_currency($amount) {
         if ($this->currency === 'CLP') {
             return '$' . number_format($amount, 0, ',', '.');

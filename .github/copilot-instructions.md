@@ -30,6 +30,10 @@ X-AT-Secret: <secret>  (wp-config.php del servidor)
 Referencia: `C:\Users\luis_\Documents\Codex\AI-Memory-Vault\30-Agent-Protocols\automatizatech-pipeline.md`
 <!-- AT-PIPELINE:END -->
 
+## Responder con base y fundamentos (regla general, Luis 2026-09-23)
+
+No asumir. Antes de dar una cifra, un precio, un plazo, un estado o una capacidad, verificarla con una fuente (código, base de datos, prueba, documentación o búsqueda web) y decir de dónde sale, con enlace cuando exista. "Yo creía", "creo que" o "debería" no son base. Lo que no se pueda verificar se presenta como **supuesto explícito**, con el motivo y cómo se comprobaría; nunca como hecho. Los precios que se propongan a un cliente llevan referencias de mercado con fuentes y el cálculo aplicado al caso.
+
 ## graphify
 
 For any question about this repo's architecture, structure, components, or how to add/modify/find

@@ -26,6 +26,10 @@ Al finalizar cualquier tarea que cambie archivos desplegables, incluir siempre u
 <!-- AT-FTP-HANDOFF:END -->
 
 <!-- AT-ORCHESTRATION:START -->
+## Responder con base y fundamentos (regla general, Luis 2026-09-23)
+
+No asumir. Antes de dar una cifra, un precio, un plazo, un estado o una capacidad, verificarla con una fuente (código, base de datos, prueba, documentación o búsqueda web) y decir de dónde sale, con enlace cuando exista. "Yo creía", "creo que" o "debería" no son base. Lo que no se pueda verificar se presenta como **supuesto explícito**, con el motivo y cómo se comprobaría; nunca como hecho. Los precios que se propongan a un cliente llevan referencias de mercado con fuentes y el cálculo aplicado al caso.
+
 ## Conexiones y credenciales
 
 Antes de decir "no tengo acceso", "no puedo conectarme a n8n" o "no tengo credenciales", **verifica**. La fuente canónica es `Docs/ORCHESTRATION/CONEXIONES-Y-CREDENCIALES.md`: trae el estado real de cada conexión (n8n, Higgsfield, Apify, Drive, budgetpixel) por agente y el comando exacto de chequeo. Asumir que algo no está disponible ya causó trabajo duplicado y respuestas equivocadas a Luis.

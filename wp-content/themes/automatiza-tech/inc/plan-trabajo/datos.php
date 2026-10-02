@@ -486,3 +486,27 @@ function at_pt_contexto(object $fila): array {
 		'rubro'          => mb_substr($rubro, 0, 100),
 	];
 }
+
+/**
+ * Portada y cierre de una propuesta guardados en WordPress (uploads/propuestas/<uid>/cover.* y next_steps.*), como los
+ * deja el flujo anterior de propuestas: ['cover' => url, 'cierre' => url] con los que existan; [] con un código raro.
+ * Las propuestas v3 guardan sus fotos en el renderer y n8n las prefiere a estas.
+ */
+function at_pt_fotos_propuesta_wp(string $uid): array {
+	if (!preg_match('/^[A-Za-z0-9_-]{6,64}$/', $uid)) {
+		return [];
+	}
+	$up = wp_upload_dir();
+	$dir = trailingslashit($up['basedir']) . 'propuestas/' . $uid . '/';
+	$url = trailingslashit($up['baseurl']) . 'propuestas/' . $uid . '/';
+	$fotos = [];
+	foreach (['cover' => 'cover', 'cierre' => 'next_steps'] as $lamina => $archivo) {
+		foreach (['jpg', 'jpeg', 'png', 'webp'] as $ext) {
+			if (is_file($dir . $archivo . '.' . $ext)) {
+				$fotos[$lamina] = $url . $archivo . '.' . $ext;
+				break;
+			}
+		}
+	}
+	return $fotos;
+}

@@ -183,3 +183,42 @@ test('escapes each item in next_steps', () => {
   assert.ok(html.includes('<li>Paso &lt;b&gt;Uno&lt;/b&gt;</li>'));
   assert.ok(html.includes('<li>Paso &lt;i&gt;Dos&lt;/i&gt;</li>'));
 });
+
+test('turns http(s) URLs in next_steps and paragraphs into links, leaving trailing punctuation out', () => {
+  const html = renderProposalHtml(
+    {
+      ...DATA,
+      solution_text: 'Prototipo en https://automatizatech.cl/demos/botilleria/ (cifras de ejemplo).',
+      next_steps: ['Recorrer el prototipo: https://automatizatech.cl/demos/botilleria/ (tres propuestas).', 'Kick-off'],
+    },
+    {}
+  );
+  assert.ok(
+    html.includes(
+      '<a href="https://automatizatech.cl/demos/botilleria/" target="_blank" rel="noopener noreferrer">automatizatech.cl/demos/botilleria/</a> (tres propuestas).'
+    )
+  );
+  assert.ok(html.includes('Prototipo en <a href="https://automatizatech.cl/demos/botilleria/"'));
+  assert.ok(!html.includes('botilleria/">https://'));
+});
+
+test('does not build a link out of an escaped script or a URL with an angle bracket', () => {
+  const html = renderProposalHtml({ ...DATA, next_steps: ['Ver https://x.cl/<script>alert(1)</script>'] }, {});
+  assert.ok(html.includes('<a href="https://x.cl/" target="_blank" rel="noopener noreferrer">x.cl/</a>&lt;script&gt;'));
+  assert.ok(!html.includes('<script>alert(1)'));
+});
+
+test('pricing table gets is-dense only past six rows', () => {
+  const row = { service: 'Ítem', price_label: '$1' };
+  const six = renderProposalHtml({ ...DATA, pricing_rows: Array(6).fill(row) }, {});
+  const seven = renderProposalHtml({ ...DATA, pricing_rows: Array(7).fill(row) }, {});
+  assert.ok(six.includes('<table class="pricing-table">'));
+  assert.ok(seven.includes('<table class="pricing-table is-dense">'));
+});
+
+test('the deck tells the embedding page which slide the client is on (only slide number and total)', () => {
+  const html = renderProposalHtml(DATA, {});
+  assert.ok(html.includes("window.parent.postMessage({ type: 'at-deck-lamina', lamina: k + 1, total: slides.length }, '*')"));
+  assert.ok(html.includes('if (window.parent === window || k === ultimaAvisada) return;'));
+  assert.ok(html.includes('.observe(slides[slides.length - 1])'));
+});

@@ -1,9 +1,10 @@
 const crypto = require('node:crypto');
 const path = require('node:path');
 const express = require('express');
-const { validatePayload } = require('./schema');
+const { validatePayload, validatePlanPayload } = require('./schema');
 const { generateProposalImages } = require('./higgsfield');
 const { renderProposalHtml } = require('./template');
+const { renderPlanHtml } = require('./template-plan');
 const { renderToFiles } = require('./render');
 const { persistImages } = require('./images-store');
 const { promptHash, readManifest, writeManifest, reusablePhotos } = require('./photo-manifest');
@@ -38,7 +39,9 @@ function createApp({ publicDir, baseUrl, higgsfieldCredentials, renderKey = '' }
     }
     return res.status(401).json({ error: 'unauthorized' });
   }, async (req, res) => {
-    const { valid, errors } = validatePayload(req.body);
+    // Un plan de trabajo llega con document_type 'plan'; sin ese campo es una propuesta, como siempre.
+    const esPlan = Boolean(req.body) && req.body.document_type === 'plan';
+    const { valid, errors } = esPlan ? validatePlanPayload(req.body) : validatePayload(req.body);
     if (!valid) {
       return res.status(400).json({ error: 'invalid payload', details: errors });
     }
@@ -141,7 +144,7 @@ function createApp({ publicDir, baseUrl, higgsfieldCredentials, renderKey = '' }
 
     let html;
     try {
-      html = renderProposalHtml(data, images);
+      html = esPlan ? renderPlanHtml(data, images) : renderProposalHtml(data, images);
       await renderToFiles(html, outputDir);
     } catch (err) {
       console.error('POST /render failed:', err.stack || err.message);

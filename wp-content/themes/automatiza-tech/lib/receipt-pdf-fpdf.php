@@ -390,7 +390,9 @@ class ReceiptPDFFPDF extends FPDF {
         $col_width = 60;
         $x_start = 15;
         $y_start = $this->GetY();
-        
+
+        // El RUT faltaba aquí: el pie decía «RUT:» vacío y PHP avisaba «Undefined variable $company_rut».
+        $company_rut = get_option('company_rut', '77.123.456-7');
         $company_email = get_option('company_email', 'contacto@automatizatech.cl');
         $company_phone = get_option('company_phone', '+56 9 2700 2984');
         $company_website = get_option('company_website', 'www.automatizatech.cl');

@@ -1,0 +1,44 @@
+{
+  "viewport": "1200x2000",
+  "device": "Chrome desktop; no representa hardware Galaxy Tab A7",
+  "cases": [
+    {
+      "theme": "adulto-estudio-bn",
+      "fps": 15,
+      "mode": "final-only",
+      "available": true,
+      "previewFps": 15,
+      "inferenceMs": 28.69999998807907,
+      "compositionMs": 353.59999999403954,
+      "preview": "final-only",
+      "fallback": "",
+      "sceneMs": 168.2000000178814
+    },
+    {
+      "theme": "adulto-glam-dorado",
+      "fps": 19,
+      "mode": "live",
+      "available": true,
+      "previewFps": 25,
+      "inferenceMs": 31.200000017881393,
+      "compositionMs": 224.5,
+      "preview": "live",
+      "fallback": "",
+      "sceneMs": 137.90000000596046
+    },
+    {
+      "theme": "adulto-noche-brujas",
+      "fps": 20.3,
+      "mode": "live",
+      "available": true,
+      "previewFps": 22.9,
+      "inferenceMs": 30.599999994039536,
+      "compositionMs": 245.5,
+      "preview": "live",
+      "fallback": "",
+      "sceneMs": 163.80000001192093
+    }
+  ],
+  "browser": "Chrome/153.0.8010.53",
+  "linkedPhotos": 4
+}

@@ -1,33 +1,60 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { resolve } from 'node:path'
+import { readFileSync } from 'node:fs'
 
-// Base RELATIVA: funciona en cualquier carpeta (WAMP local, Hostinger, subcarpetas)
-// sin importar el nombre ni la profundidad de la ruta.
+// Fuente bajo public/ por el reparto 020/021; salida compilada junto a index.html.
+function feriaEntry() {
+  const model = resolve(__dirname, 'src/feria/models/selfie_segmenter.tflite')
+  const sdk = resolve(__dirname, 'node_modules/@mediapipe/tasks-vision/vision_bundle.cjs')
+  return {
+    name: 'feria-entry',
+    configureServer(server) {
+      server.middlewares.use((req, res, next) => {
+        const path = req.url?.split('?')[0]
+        if (path === '/feria.html') req.url = '/public' + req.url
+        if (path === '/vendor/mediapipe/selfie_segmenter.tflite' || path === '/feria/vision-segmenter.js') {
+          res.setHeader('Content-Type', path.endsWith('.js') ? 'text/javascript' : 'application/octet-stream')
+          res.end(readFileSync(path.endsWith('.js') ? sdk : model))
+          return
+        }
+        next()
+      })
+    },
+    generateBundle: { order: 'post', handler(_options, bundle) {
+      const html = bundle['public/feria.html']
+      if (html) {
+        html.fileName = 'feria.html'
+        html.source = String(html.source).replaceAll('../assets/', './assets/')
+        delete bundle['public/feria.html']; bundle['feria.html'] = html
+      }
+      this.emitFile({ type: 'asset', fileName: 'vendor/mediapipe/selfie_segmenter.tflite', source: readFileSync(model) })
+      this.emitFile({ type: 'asset', fileName: 'feria/vision-segmenter.js', source: readFileSync(sdk) })
+    } },
+  }
+}
+
+// Base RELATIVA: funciona en WAMP, Hostinger y subcarpetas.
 export default defineConfig({
   base: './',
-  plugins: [react()],
+  plugins: [react(), feriaEntry()],
   build: {
     rollupOptions: {
-      // Dos entradas separadas a propósito: la tablet del kiosco no descarga
-      // el código del Álbum Recuerdo, y quien abre el álbum desde su celular
-      // no descarga los mundos 3D del kiosco (three.js pesa 734 kB).
       input: {
         main: resolve(__dirname, 'index.html'),
         album: resolve(__dirname, 'album.html'),
         cartel: resolve(__dirname, 'cartel-qr.html'),
         carteles: resolve(__dirname, 'carteles.html'),
+        feria: resolve(__dirname, 'public/feria.html'),
       },
     },
   },
   server: {
-    host: true, // permite abrir desde la tablet por IP en la misma WiFi (dev)
+    host: true,
     port: 5173,
-    // Vite no ejecuta PHP: sin esto el dev server queda sin datos de fiesta y
-    // el kiosco arranca en la pantalla de error. Se delegan los endpoints PHP
-    // al WAMP local (solo desarrollo; en producción todo va servido junto).
     proxy: {
       '/api.php': { target: 'http://localhost/automatiza-tech/CumpleBooth/dist', changeOrigin: true },
+      '/feria-api.php': { target: 'http://localhost/automatiza-tech/CumpleBooth/dist', changeOrigin: true },
       '/upload.php': { target: 'http://localhost/automatiza-tech/CumpleBooth/dist', changeOrigin: true },
       '/album-api.php': { target: 'http://localhost/automatiza-tech/CumpleBooth/dist', changeOrigin: true },
       '/ver-media.php': { target: 'http://localhost/automatiza-tech/CumpleBooth/dist', changeOrigin: true },

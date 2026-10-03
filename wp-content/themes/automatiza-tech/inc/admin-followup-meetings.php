@@ -2358,30 +2358,14 @@ function automatiza_tech_verify_client_by_phone($request) {
     $propuestas_table = $wpdb->prefix . 'automatiza_propuestas';
     $leads_table = $wpdb->prefix . 'automatiza_leads';
     
-    $phone = $request->get_param('phone');
+    $phone = (string) $request->get_param('phone');
     
-    // Normalizar teléfono (eliminar espacios, guiones, etc.)
-    $phone_normalized = preg_replace('/[^0-9+]/', '', $phone);
-    
-    // Buscar variantes del número (con y sin código de país)
-    $phone_variants = array();
-    $phone_variants[] = $phone_normalized;
-    
-    // Si empieza con +56, agregar versión sin código de país
-    if (strpos($phone_normalized, '+56') === 0) {
-        $phone_variants[] = substr($phone_normalized, 3); // Sin +56
-        $phone_variants[] = '9' . substr($phone_normalized, 4); // Solo 9XXXXXXXX
-    }
-    // Si empieza con 56 (sin +), agregar versiones
-    elseif (strpos($phone_normalized, '56') === 0 && strlen($phone_normalized) >= 11) {
-        $phone_variants[] = '+' . $phone_normalized; // Con +
-        $phone_variants[] = substr($phone_normalized, 2); // Sin 56
-    }
-    // Si empieza con 9, agregar versiones con código de país
-    elseif (strpos($phone_normalized, '9') === 0 && strlen($phone_normalized) == 9) {
-        $phone_variants[] = '+56' . $phone_normalized;
-        $phone_variants[] = '56' . $phone_normalized;
-    }
+    // 01-oct-2026: las propuestas y las citas guardan el teléfono con o sin espacios ("+56 9 1234 5678",
+    // "+56912345678") y WhatsApp lo manda como "56912345678". Se compara por los últimos 9 dígitos de
+    // ambos lados, sin espacios ni signos; con menos de 9 dígitos no se busca.
+    $digitos = preg_replace('/\D/', '', $phone);
+    $ultimos9 = strlen($digitos) >= 9 ? substr($digitos, -9) : '';
+    $telefono_sql = "RIGHT(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(phone, ' ', ''), '-', ''), '+', ''), '(', ''), ')', ''), '.', ''), 9)";
     
     // 1. Buscar en tabla de propuestas (clientes con propuesta enviada)
     $proposal = null;
@@ -2389,34 +2373,29 @@ function automatiza_tech_verify_client_by_phone($request) {
     // Verificar si existe columna phone en propuestas
     $has_phone_col = $wpdb->get_var("SHOW COLUMNS FROM $propuestas_table LIKE 'phone'");
     
-    if ($has_phone_col) {
-        foreach ($phone_variants as $variant) {
-            $proposal = $wpdb->get_row($wpdb->prepare(
-                "SELECT id, client_name, client_email, company_name, phone, unique_link_id, created_at, status
-                 FROM $propuestas_table 
-                 WHERE phone LIKE %s
-                 ORDER BY created_at DESC 
-                 LIMIT 1",
-                '%' . $wpdb->esc_like($variant) . '%'
-            ));
-            if ($proposal) break;
-        }
+    if ($has_phone_col && $ultimos9 !== '') {
+        $proposal = $wpdb->get_row($wpdb->prepare(
+            "SELECT id, client_name, client_email, company_name, phone, unique_link_id, created_at, status
+             FROM $propuestas_table 
+             WHERE $telefono_sql = %s
+             ORDER BY created_at DESC 
+             LIMIT 1",
+            $ultimos9
+        ));
     }
     
-    // 2. Buscar en tabla de leads (demos agendadas) si no encontró en propuestas
+    // 2. Buscar en tabla de leads (demos agendadas) si no encontró en propuestas.
+    // automatiza_leads no tiene columna de empresa: pedirla hacía fallar la consulta.
     $lead = null;
-    if (!$proposal) {
-        foreach ($phone_variants as $variant) {
-            $lead = $wpdb->get_row($wpdb->prepare(
-                "SELECT id, name, email, phone, company, created_at, status
-                 FROM $leads_table 
-                 WHERE phone LIKE %s
-                 ORDER BY created_at DESC 
-                 LIMIT 1",
-                '%' . $wpdb->esc_like($variant) . '%'
-            ));
-            if ($lead) break;
-        }
+    if (!$proposal && $ultimos9 !== '') {
+        $lead = $wpdb->get_row($wpdb->prepare(
+            "SELECT id, name, email, phone, created_at, status
+             FROM $leads_table 
+             WHERE $telefono_sql = %s
+             ORDER BY created_at DESC 
+             LIMIT 1",
+            $ultimos9
+        ));
     }
     
     // Determinar resultado
@@ -2442,7 +2421,7 @@ function automatiza_tech_verify_client_by_phone($request) {
             'client_type' => 'lead',
             'client_name' => $lead->name ?: 'Prospecto',
             'client_email' => $lead->email,
-            'company_name' => $lead->company ?: '',
+            'company_name' => '',
             'phone' => $lead->phone,
             'message' => '¡Hola ' . ($lead->name ?: '') . '! Veo que ya tuviste una demo con nosotros. Podemos agendar tu reunión de seguimiento.'
         );

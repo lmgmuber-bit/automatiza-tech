@@ -41,6 +41,10 @@ $sql = "CREATE TABLE IF NOT EXISTS $table_name (
     resolution_notes text DEFAULT NULL,
     notification_whatsapp tinyint(1) DEFAULT 0,
     notification_email tinyint(1) DEFAULT 0,
+    fix_attempts tinyint(2) unsigned DEFAULT 0,
+    fix_status enum('pendiente','resuelto','requiere_intervencion') DEFAULT 'pendiente',
+    fix_history longtext DEFAULT NULL,
+    last_fix_attempt_at datetime DEFAULT NULL,
     created_at datetime DEFAULT CURRENT_TIMESTAMP,
     updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (id),
@@ -53,9 +57,32 @@ $sql = "CREATE TABLE IF NOT EXISTS $table_name (
 
 require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
 $result = dbDelta($sql);
+$dbdelta_error = $wpdb->last_error;
 
 // Verificar si la tabla existe
 $table_exists = $wpdb->get_var("SHOW TABLES LIKE '$table_name'") === $table_name;
+
+// Fallback: dbDelta a veces no agrega columnas a una tabla que ya existía
+// (falla silenciosa si el usuario de BD no tiene permiso ALTER, por ejemplo).
+// Verificamos columna por columna y las agregamos directo si faltan.
+$columnas_argos_mecanico = array(
+    'fix_attempts'        => "ALTER TABLE $table_name ADD COLUMN fix_attempts tinyint(2) unsigned DEFAULT 0 AFTER notification_email",
+    'fix_status'          => "ALTER TABLE $table_name ADD COLUMN fix_status enum('pendiente','resuelto','requiere_intervencion') DEFAULT 'pendiente' AFTER fix_attempts",
+    'fix_history'         => "ALTER TABLE $table_name ADD COLUMN fix_history longtext DEFAULT NULL AFTER fix_status",
+    'last_fix_attempt_at' => "ALTER TABLE $table_name ADD COLUMN last_fix_attempt_at datetime DEFAULT NULL AFTER fix_history",
+);
+$columnas_reales_pre = $wpdb->get_col("SHOW COLUMNS FROM $table_name");
+$fallback_log = array();
+foreach ($columnas_argos_mecanico as $col => $alter_sql) {
+    if (!in_array($col, $columnas_reales_pre, true)) {
+        $ok = $wpdb->query($alter_sql);
+        $fallback_log[] = array(
+            'columna' => $col,
+            'ok' => $ok !== false,
+            'error' => $wpdb->last_error,
+        );
+    }
+}
 
 ?>
 <!DOCTYPE html>
@@ -146,7 +173,7 @@ $table_exists = $wpdb->get_var("SHOW TABLES LIKE '$table_name'") === $table_name
 <body>
     <div class="container">
         <h1>🛡️ ARGOS - Setup Base de Datos</h1>
-        <p class="subtitle">Sistema de Monitoreo de Errores N8N</p>
+        <p class="subtitle">Sistema de Monitoreo de Errores N8N — script v2-fallback-columnas (2026-08-16)</p>
         
         <?php if ($table_exists): ?>
             <div class="status success">
@@ -160,6 +187,26 @@ $table_exists = $wpdb->get_var("SHOW TABLES LIKE '$table_name'") === $table_name
             </div>
         <?php endif; ?>
         
+        <?php if (!empty($fallback_log)): ?>
+        <div class="info-box">
+            <h3>🔩 Fallback columnas ARGOS Mecánico (dbDelta no las agregó solo)</h3>
+            <div class="table-structure">
+<?php
+if ($dbdelta_error) {
+    echo "dbDelta error: " . esc_html($dbdelta_error) . "\n\n";
+}
+foreach ($fallback_log as $entry) {
+    echo ($entry['ok'] ? "OK " : "FALLO ") . esc_html($entry['columna']);
+    if (!$entry['ok'] && $entry['error']) {
+        echo " -> " . esc_html($entry['error']);
+    }
+    echo "\n";
+}
+?>
+            </div>
+        </div>
+        <?php endif; ?>
+
         <div class="info-box">
             <h3>📊 Estructura de la Tabla</h3>
             <div class="table-structure">

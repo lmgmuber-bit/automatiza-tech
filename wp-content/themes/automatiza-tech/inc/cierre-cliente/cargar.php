@@ -18,3 +18,4 @@ require_once __DIR__ . '/pagina.php';
 require_once __DIR__ . '/panel.php';
 require_once __DIR__ . '/archivo.php';
 require_once __DIR__ . '/whatsapp.php';
+require_once __DIR__ . '/whatsapp-recordatorios.php';

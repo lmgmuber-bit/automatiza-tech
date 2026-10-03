@@ -36,7 +36,7 @@ class Ai1wm_Import_Options {
 		Ai1wm_Status::info( __( 'Preparing WordPress options...', 'all-in-one-wp-migration' ) );
 
 		// Get database client
-		$db_client = Ai1wm_Database_Utility::create_client();
+		$db_client = Ai1wm_Database_Utility::get_client();
 
 		$tables = $db_client->get_tables();
 

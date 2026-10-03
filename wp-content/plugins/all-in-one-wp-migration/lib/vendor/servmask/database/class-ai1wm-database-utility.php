@@ -33,30 +33,55 @@ class Ai1wm_Database_Utility {
 
 	protected static $db_client = null;
 
+	/**
+	 * Set the database client instance for injection
+	 *
+	 * @param  Ai1wm_Database $db_client Database client instance.
+	 * @return void
+	 */
 	public static function set_client( $db_client ) {
 		self::$db_client = $db_client;
 	}
 
 	/**
-	 * Get MySQLClient to be used for DB manipulation
+	 * Get the database client instance, creating it if not set
 	 *
 	 * @return Ai1wm_Database
 	 */
-	public static function create_client() {
-		global $wpdb;
-
-		if ( self::$db_client ) {
-			return self::$db_client;
+	public static function get_client() {
+		if ( self::$db_client === null ) {
+			return self::create_client();
 		}
 
+		return self::$db_client;
+	}
+
+	/**
+	 * Create DB client to be used for DB manipulation
+	 *
+	 * @return Ai1wm_Database
+	 */
+	private static function create_client() {
+		global $wpdb;
+
+		// SQLite
 		if ( $wpdb instanceof WP_SQLite_DB || $wpdb instanceof WP_SQLite_DB\wpsqlitedb ) {
 			return new Ai1wm_Database_Sqlite( $wpdb );
 		}
 
+		// MariaDB
+		if ( ( $server_version = $wpdb->get_var( 'SELECT VERSION()' ) ) ) {
+			if ( stripos( $server_version, 'MariaDB' ) !== false ) {
+				return new Ai1wm_Database_Mariadb( $wpdb );
+			}
+		}
+
+		// MySQLi
 		if ( PHP_MAJOR_VERSION >= 7 ) {
 			return new Ai1wm_Database_Mysqli( $wpdb );
 		}
 
+		// MySQL
 		if ( empty( $wpdb->use_mysqli ) ) {
 			return new Ai1wm_Database_Mysql( $wpdb );
 		}
@@ -343,6 +368,29 @@ class Ai1wm_Database_Utility {
 				$pos--;
 				return '';
 		}
+	}
+
+	/**
+	 * Parse MySQL server version
+	 *
+	 * @param  string $info Server info
+	 * @return string
+	 */
+	public static function parse_server_version( $info ) {
+		$matches = array();
+		if ( preg_match( '/(\d+\.\d+\.\d+)-(\d+\.\d+\.\d+)/i', $info, $matches ) ) {
+			if ( isset( $matches[2] ) ) {
+				return $matches[2];
+			}
+		}
+
+		if ( preg_match( '/(\d+\.\d+\.\d+)/i', $info, $matches ) ) {
+			if ( isset( $matches[1] ) ) {
+				return $matches[1];
+			}
+		}
+
+		return '0.0.0';
 	}
 
 	/**

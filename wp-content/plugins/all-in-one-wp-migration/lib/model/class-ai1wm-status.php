@@ -31,8 +31,17 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class Ai1wm_Status {
 
+	/**
+	 * @var string|null
+	 */
+	public static $job_id = null;
+
 	public static function error( $title, $message ) {
 		self::log( array( 'type' => 'error', 'title' => $title, 'message' => $message ) );
+	}
+
+	public static function left_error( $title, $message ) {
+		self::log( array( 'type' => 'error', 'title' => $title, 'message' => $message, 'leftAligned' => true ) );
 	}
 
 	public static function info( $message ) {
@@ -72,6 +81,18 @@ class Ai1wm_Status {
 	}
 
 	public static function log( $data ) {
+		global $ai1wm_params;
+
+		// Job-scoped write (when job_id is set, e.g. REST API or any pipeline with storage)
+		if ( self::$job_id !== null ) {
+			$job_data = $data;
+			if ( isset( $ai1wm_params['archive'] ) ) {
+				$job_data['archive'] = $ai1wm_params['archive'];
+			}
+			update_option( 'ai1wm_status_' . self::$job_id, $job_data, false );
+		}
+
+		// Global write (only for non-scheduled, preserves existing browser UI behavior)
 		if ( ! ai1wm_is_scheduled_backup() ) {
 			update_option( AI1WM_STATUS, $data );
 		}

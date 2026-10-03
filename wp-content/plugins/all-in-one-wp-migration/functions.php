@@ -65,6 +65,29 @@ function ai1wm_storage_path( $params ) {
 }
 
 /**
+ * Resolve the backups path.
+ * If the stored option points to a stale path (e.g., from a server migration)
+ * where neither the path nor its parent directory exist, the option is deleted
+ * and the default path is returned.
+ *
+ * @return string
+ */
+function ai1wm_resolve_backups_path() {
+	$backups_path = get_option( AI1WM_BACKUPS_PATH_OPTION, false );
+	if ( $backups_path === false ) {
+		return AI1WM_DEFAULT_BACKUPS_PATH;
+	}
+
+	$parent_backups_path = dirname( $backups_path );
+	if ( ! is_dir( $parent_backups_path ) || ! is_writable( $parent_backups_path ) ) {
+		delete_option( AI1WM_BACKUPS_PATH_OPTION );
+		return AI1WM_DEFAULT_BACKUPS_PATH;
+	}
+
+	return $backups_path;
+}
+
+/**
  * Get backup absolute path
  *
  * @param  array  $params Request parameters
@@ -343,11 +366,14 @@ function ai1wm_cookies_path( $params ) {
 /**
  * Get error log absolute path
  *
- * @param  string $nonce Log nonce
+ * @param  mixed  $nonce Log file identifier
  * @return string
  */
 function ai1wm_error_path( $nonce ) {
-	return AI1WM_STORAGE_PATH . DIRECTORY_SEPARATOR . sprintf( AI1WM_ERROR_NAME, $nonce );
+	// Build the file name from the base name of a clean string identifier.
+	$nonce = is_scalar( $nonce ) ? str_replace( chr( 0 ), '', (string) $nonce ) : '';
+
+	return AI1WM_STORAGE_PATH . DIRECTORY_SEPARATOR . sprintf( AI1WM_ERROR_NAME, ai1wm_basename( $nonce ) );
 }
 
 /**
@@ -392,7 +418,10 @@ function ai1wm_backup_url( $params ) {
  * @return integer
  */
 function ai1wm_archive_bytes( $params ) {
-	return filesize( ai1wm_archive_path( $params ) );
+	$archive_path = ai1wm_archive_path( $params );
+	clearstatcache( true, $archive_path );
+
+	return filesize( $archive_path );
 }
 
 /**
@@ -1879,8 +1908,8 @@ function ai1wm_is_filename_supported( $file, $extensions = array( 'wpress' ) ) {
  */
 function ai1wm_is_filedata_supported( $file ) {
 	if ( ( $file_handle = @fopen( $file, 'rb' ) ) ) {
-		if ( ( $file_buffer = @fread( $file_handle, 4377 ) ) ) {
-			if ( ( $file_data = @unpack( 'a255filename/a14size/a12mtime/a4096path', $file_buffer ) ) !== false ) {
+		if ( ( $file_buffer = @fread( $file_handle, Ai1wm_Archiver::HEADER_SIZE ) ) ) {
+			if ( ( $file_data = @unpack( 'a255filename/a14size/a12mtime/a4088path/a8crc32', $file_buffer ) ) !== false ) {
 				if ( AI1WM_PACKAGE_NAME === trim( $file_data['filename'] ) ) {
 					return true;
 				}
@@ -1901,8 +1930,8 @@ function ai1wm_is_filedata_supported( $file ) {
  */
 function ai1wm_is_gzipped_filedata_supported( $file ) {
 	if ( ( $file_handle = @gzopen( $file, 'rb' ) ) ) {
-		if ( ( $file_buffer = @gzread( $file_handle, 4377 ) ) ) {
-			if ( ( $file_data = @unpack( 'a255filename/a14size/a12mtime/a4096path', $file_buffer ) ) !== false ) {
+		if ( ( $file_buffer = @gzread( $file_handle, Ai1wm_Archiver::HEADER_SIZE ) ) ) {
+			if ( ( $file_data = @unpack( 'a255filename/a14size/a12mtime/a4088path/a8crc32', $file_buffer ) ) !== false ) {
 				if ( AI1WM_PACKAGE_NAME === trim( $file_data['filename'] ) ) {
 					return true;
 				}
@@ -2448,6 +2477,13 @@ function ai1wm_allowed_html_tags() {
 		),
 		'br'     => array(),
 		'em'     => array(),
+		'h3'     => array(),
+		'i'      => array(
+			'class'       => array(),
+			'aria-hidden' => array(),
+			'aria-label'  => array(),
+		),
+		'small'  => array(),
 		'strong' => array(),
 		'input'  => array(
 			'type'       => array(),

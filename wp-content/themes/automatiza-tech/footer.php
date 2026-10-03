@@ -104,11 +104,11 @@
                     </div>
                     <div class="col-md-6 text-md-end">
                         <div class="footer-links">
-                            <a href="/privacy-policy">Política de Privacidad</a>
+                            <a href="/privacidad/">Política de Privacidad</a>
                             <span class="separator">|</span>
-                            <a href="/terms-of-service">Términos de Servicio</a>
+                            <a href="/terminos/">Términos de Servicio</a>
                             <span class="separator">|</span>
-                            <a href="/cookies-policy">Política de Cookies</a>
+                            <a href="/cookies/">Política de Cookies</a>
                         </div>
                     </div>
                 </div>
@@ -123,14 +123,15 @@
     <i class="fas fa-chevron-up"></i>
 </button>
 
-<!-- Cookie Notice -->
+<!-- Cookie Notice (consentimiento Ley 21.719: aceptar o rechazar no esenciales) -->
 <div id="cookie-notice" class="cookie-notice" style="display: none;">
     <div class="container">
         <div class="cookie-content">
-            <p>Utilizamos cookies para mejorar tu experiencia en nuestro sitio web. Al continuar navegando, aceptas nuestro uso de cookies.</p>
+            <p>Usamos cookies esenciales para que el sitio funcione y, solo con tu permiso, analítica y píxeles publicitarios. Puedes cambiar tu elección cuando quieras en la <a href="/cookies/" style="text-decoration:underline">Política de Cookies</a>.</p>
             <div class="cookie-buttons">
                 <button id="accept-cookies" class="btn btn-primary btn-sm">Aceptar</button>
-                <a href="/cookies-policy" class="btn btn-outline btn-sm">Más información</a>
+                <button id="reject-cookies" class="btn btn-outline btn-sm">Rechazar</button>
+                <a href="/cookies/" class="btn btn-outline btn-sm">Más información</a>
             </div>
         </div>
     </div>
@@ -361,6 +362,14 @@
                         </select>
                     </div>
                 </div>
+                <label style="display:flex;align-items:flex-start;gap:8px;margin-bottom:14px;color:rgba(255,255,255,0.75);font-size:12.5px;line-height:1.45;cursor:pointer;">
+                    <input type="checkbox" name="privacy_accept" required value="1" style="margin-top:2px;accent-color:#06d6a0;width:16px;height:16px;flex-shrink:0;">
+                    <span>He leído y acepto la <a href="/privacidad/" target="_blank" rel="noopener" style="color:#06d6a0;text-decoration:underline;">Política de Privacidad</a> *</span>
+                </label>
+                <label style="display:flex;align-items:flex-start;gap:8px;margin-bottom:14px;color:rgba(255,255,255,0.6);font-size:12.5px;line-height:1.45;cursor:pointer;">
+                    <input type="checkbox" name="marketing_optin" value="1" style="margin-top:2px;accent-color:#06d6a0;width:16px;height:16px;flex-shrink:0;">
+                    <span>Quiero recibir novedades y ofertas de AutomatizaTech (opcional)</span>
+                </label>
                 <div id="agenda-msg" style="display:none;text-align:center;padding:8px;border-radius:8px;margin-bottom:12px;font-size:13px;"></div>
                 <button type="submit" id="agenda-submit-btn" style="
                     width:100%;padding:13px;
@@ -651,7 +660,10 @@
                         email: String(email || '').trim(),
                         phone: String(cc || '+56') + String(phoneDigits || ''),
                         scheduled_date: String(date || '').trim(),
-                        scheduled_time: String(time || '').trim()
+                        scheduled_time: String(time || '').trim(),
+                        privacy_accepted: data.get('privacy_accept') === '1',
+                        privacy_accepted_at: new Date().toISOString(),
+                        marketing_optin: data.get('marketing_optin') === '1'
                     }
                 };
 
@@ -819,19 +831,32 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Cookie notice
+    // Cookie notice — consentimiento con aceptar/rechazar (Ley 21.719).
+    // GA4/Meta Pixel deben chequear at_cookie_consent === 'accepted' antes de cargar.
     const cookieNotice = document.getElementById('cookie-notice');
     const acceptCookies = document.getElementById('accept-cookies');
-    
-    if (cookieNotice && !localStorage.getItem('cookies-accepted')) {
+    const rejectCookies = document.getElementById('reject-cookies');
+    const legacyAccepted = localStorage.getItem('cookies-accepted') === 'true';
+    if (legacyAccepted && !localStorage.getItem('at_cookie_consent')) {
+        localStorage.setItem('at_cookie_consent', 'accepted');
+    }
+
+    if (cookieNotice && !localStorage.getItem('at_cookie_consent')) {
         cookieNotice.style.display = 'block';
     }
-    
+
+    function setCookieConsent(value) {
+        localStorage.setItem('at_cookie_consent', value);
+        localStorage.setItem('cookies-accepted', value === 'accepted' ? 'true' : 'false');
+        if (cookieNotice) cookieNotice.style.display = 'none';
+        document.dispatchEvent(new CustomEvent('at:cookie-consent', { detail: { consent: value } }));
+    }
+
     if (acceptCookies) {
-        acceptCookies.addEventListener('click', function() {
-            localStorage.setItem('cookies-accepted', 'true');
-            cookieNotice.style.display = 'none';
-        });
+        acceptCookies.addEventListener('click', function() { setCookieConsent('accepted'); });
+    }
+    if (rejectCookies) {
+        rejectCookies.addEventListener('click', function() { setCookieConsent('rejected'); });
     }
 
     // Intersection Observer for animations

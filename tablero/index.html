@@ -10,7 +10,7 @@
 <meta http-equiv="X-Content-Type-Options" content="nosniff">
 <meta http-equiv="X-Frame-Options" content="DENY">
 <meta http-equiv="Referrer-Policy" content="no-referrer">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.tailwindcss.com 'unsafe-inline'; style-src 'self' https://cdn.tailwindcss.com https://fonts.googleapis.com 'unsafe-inline'; font-src https://fonts.gstatic.com data:; img-src 'self' data:; connect-src 'self' https://automatizatech.cl https://www.automatizatech.cl; frame-ancestors 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.tailwindcss.com 'unsafe-inline'; style-src 'self' https://cdn.tailwindcss.com https://fonts.googleapis.com 'unsafe-inline'; font-src https://fonts.gstatic.com data:; img-src 'self' data: blob:; connect-src 'self' https://automatizatech.cl https://www.automatizatech.cl; frame-ancestors 'none'; base-uri 'self'; form-action 'self'">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%231A3A6B'/%3E%3Ctext x='32' y='44' font-family='Arial Black,sans-serif' font-size='34' font-weight='900' fill='%2300C9B1' text-anchor='middle'%3EAT%3C/text%3E%3C/svg%3E">
 <script src="https://cdn.tailwindcss.com"></script>
 <script>
@@ -125,7 +125,7 @@
         </div>
       </div>
       <div class="flex flex-wrap items-center gap-2 sm:gap-2.5">
-        <input id="busqueda" type="search" placeholder="Filtrar…" class="px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm focus:outline-none focus:border-at-teal focus:ring-2 focus:ring-at-teal/20 dark:text-white w-full sm:w-44 transition">
+        <input id="busqueda" type="search" placeholder="ID, título o responsable…" class="px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm focus:outline-none focus:border-at-teal focus:ring-2 focus:ring-at-teal/20 dark:text-white w-full sm:w-52 transition">
         <select id="ddModo" class="px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm dark:text-white cursor-pointer focus:outline-none focus:border-at-teal transition">
           <option value="on">Drag: Activado</option>
           <option value="off">Drag: Off</option>
@@ -256,7 +256,7 @@
       <div class="grid grid-cols-2 md:grid-cols-4 gap-3" id="metricPrioridades"></div>
     </div>
 
-    <p class="text-[11px] text-at-gray text-center pb-4">Métricas calculadas en vivo desde los datos del tablero. Sin tracking externo. v7.2.</p>
+    <p class="text-[11px] text-at-gray text-center pb-4">Métricas calculadas en vivo desde los datos del tablero. Sin tracking externo. v8.3.0.</p>
   </div>
 </section>
 
@@ -266,7 +266,7 @@
     <img src="./logo-at.svg" alt="AutomatizaTech" class="hidden h-8 w-auto dark:block" onerror="this.style.display='none'; this.parentElement.querySelector('.mono').style.display='inline';">
     <span class="mono font-extrabold text-at-navy dark:text-at-teal text-sm" style="display:none;">AT</span>
   </div>
-  <p class="font-medium">Tablero interno v7.2 · Método AutomatizaTech + tareas equipo multi-agente · automatizatech.cl</p>
+  <p class="font-medium">Tablero interno v8.3.0 · Método AutomatizaTech + tareas equipo multi-agente · automatizatech.cl</p>
 </footer>
 
 <div id="modalCli" class="hidden fixed inset-0 z-20 bg-at-navy/40 backdrop-blur-sm items-center justify-center p-4">
@@ -372,7 +372,7 @@
 
 <script>
 // ==========================================================================
-// Tablero Ágil AutomatizaTech — v8
+// Tablero Ágil AutomatizaTech — v8.3.0
 //
 // Datos: la API de PROD es la fuente operativa. localStorage conserva solo
 // la última respuesta como caché de lectura. Sin API se usan ejemplos
@@ -428,6 +428,11 @@ const ES_PROD = /^(www\.)?automatizatech\.cl$/i.test(location.hostname);
 const API_URL = ES_PROD ? "/api-tablero.php" : "https://automatizatech.cl/api-tablero.php";
 let API_TOKEN = "";
 let API_STATE = "local";
+const ATTACHMENT_MAX_BYTES = 2097152;
+const ATTACHMENT_MAX_PER_TASK = 5;
+const ATTACHMENT_MIMES = ["image/jpeg", "image/png", "image/webp"];
+const ATTACHMENT_OBJECT_URLS = new Map();
+let ATTACHMENT_RENDER_GENERATION = 0;
 function cargarToken() {
   try {
     API_TOKEN = sessionStorage.getItem(STORAGE_KEY_TOKEN) || "";
@@ -465,7 +470,7 @@ const INFO_ETAPAS_CLI = {
 const INFO_ETAPAS_INT = {
   1: { que: "Tareas identificadas pero sin arrancar.", quePasa: "Sin asignatario activo o esperando priorización.", salida: "Idea -> backlog cuando se detecta el trabajo.", ejemplo: "v9 con BD real omnichannel: está acá hasta que Luis apruebe Opción A/B." },
   2: { que: "Tareas asignadas y priorizadas, listas para ejecutar.", quePasa: "El asignatario las toma cuando libera capacidad.", salida: "Tarea ejecutándose -> pasa a En progreso.", ejemplo: "Configurar provider opencode-go: asignada a OpenCode Go, lista para arrancar." },
-  3: { que: "Tareas siendo ejecutadas ahora.", quePasa: "WIP limit sugerido: 2-3 por persona para evitar context-switching.", salida: "Entrega -> pasa a En revisión.", ejemplo: "Aprobar tablero v7.2: Luis lo está probando ahora." },
+  3: { que: "Tareas siendo ejecutadas ahora.", quePasa: "WIP limit sugerido: 2-3 por persona para evitar context-switching.", salida: "Entrega -> pasa a En revisión.", ejemplo: "Aprobar tablero interno: Luis lo está probando ahora." },
   4: { que: "Tareas entregadas esperando validación.", quePasa: "Un reviewer (otro agente o Luis) valida con la Definition of Done.", salida: "Aprobada -> Hecho. Rechazada -> vuelve a En progreso.", ejemplo: "Convenciones de código AT: OpenCode Go entregó, Claude revisando." },
   5: { que: "Tareas cerradas con evidencia aceptada.", quePasa: "Quedan visibles para auditoría y métricas.", salida: "Historial completo + evidencia archivada.", ejemplo: "Prompt maestro Claude Orquestador v1.0: entregado y aceptado." },
   6: { que: "Tareas pausadas por dependencia externa o bloqueadas.", quePasa: "Requieren acción externa (cliente, API key, aprobación) para desbloquear.", salida: "Desbloqueo -> vuelve a Por hacer o En progreso.", ejemplo: "Umbría Studio: esperando fotos + Meta Business del cliente hace 30 días." }
@@ -565,8 +570,13 @@ async function cargarDatosRemotos() {
   if (!API_TOKEN) return { ok: false, razon: "sin-token" };
   try {
     const r = await fetch(API_URL, { method: "GET", headers: apiHeaders(false), cache: "no-store" });
-    if (!r.ok) return { ok: false, razon: "http-" + r.status };
-    const j = await r.json();
+    const texto = await r.text();
+    let j = null;
+    try { j = texto ? JSON.parse(texto) : null; } catch(e) {}
+    if (!r.ok) {
+      const detalle = j && j.error ? ": " + String(j.error).slice(0,160) : "";
+      return { ok: false, razon: "http-" + r.status + detalle };
+    }
     if (!j || !j.ok || !j.data) return { ok: false, razon: "json-invalido" };
     return { ok: true, clientes: j.data.clientes || [], internas: j.data.internas || [] };
   } catch (e) {
@@ -596,12 +606,56 @@ async function postEditAPI(tipo, dato) {
   try {
     const body = JSON.stringify(Object.assign({ tipo: tipo }, dato));
     const r = await fetch(API_URL, { method: "POST", headers: apiHeaders(true), body: body, cache: "no-store" });
-    if (!r.ok) return { ok: false, razon: "http-" + r.status };
-    const j = await r.json();
+    const texto = await r.text();
+    let j = null;
+    try { j = texto ? JSON.parse(texto) : null; } catch(e) {}
+    if (!r.ok) {
+      const detalle = j && j.error ? ": " + String(j.error).slice(0,160) : "";
+      return { ok: false, razon: "http-" + r.status + detalle };
+    }
     return { ok: !!j.ok, razon: j.error || "" };
   } catch (e) {
     return { ok: false, razon: "fetch-error: " + (e.message || e) };
   }
+}
+async function subirAdjuntoAPI(atId, archivo) {
+  if (!API_TOKEN) return { ok: false, razon: "sin-token" };
+  const form = new FormData();
+  form.append("accion", "upload_attachment");
+  form.append("tipo", "int");
+  form.append("at_id", atId);
+  form.append("imagen", archivo, archivo.name);
+  try {
+    const r = await fetch(API_URL, { method: "POST", headers: apiHeaders(false), body: form, cache: "no-store" });
+    const texto = await r.text();
+    let j = null;
+    try { j = texto ? JSON.parse(texto) : null; } catch(e) {}
+    if (!r.ok || !j || !j.ok) {
+      const detalle = j && j.error ? String(j.error).slice(0,160) : "http-" + r.status;
+      return { ok: false, razon: detalle };
+    }
+    return { ok: true, data: j.data };
+  } catch (e) {
+    return { ok: false, razon: "fetch-error: " + (e.message || e) };
+  }
+}
+async function cargarAdjuntoBlob(id) {
+  if (!API_TOKEN) return null;
+  try {
+    const url = new URL(API_URL, location.href);
+    url.searchParams.set("accion", "attachment");
+    url.searchParams.set("id", String(id));
+    const r = await fetch(url.toString(), { method: "GET", headers: apiHeaders(false), cache: "no-store" });
+    if (!r.ok) return null;
+    const tipo = (r.headers.get("Content-Type") || "").split(";")[0].trim().toLowerCase();
+    if (!ATTACHMENT_MIMES.includes(tipo)) return null;
+    return await r.blob();
+  } catch(e) { return null; }
+}
+function limpiarAdjuntoObjectUrls() {
+  ATTACHMENT_RENDER_GENERATION += 1;
+  ATTACHMENT_OBJECT_URLS.forEach(url => URL.revokeObjectURL(url));
+  ATTACHMENT_OBJECT_URLS.clear();
 }
 async function cargarSeeds() {
   const tieneLScli = (() => { try { return !!localStorage.getItem(STORAGE_KEY_CLI); } catch(e) { return false; } })();
@@ -672,7 +726,7 @@ function renderClientes() {
     const counter = kanban.querySelector(`[data-colcli="${i}"]`);
     const items = CLIENTES.filter(c => {
       if (c.paso !== i) return false;
-      if (busq && !c.nombre.toLowerCase().includes(busq) && !c.contacto.toLowerCase().includes(busq) && !c.rubro.toLowerCase().includes(busq)) return false;
+      if (busq && !c.id.toLowerCase().includes(busq) && !c.nombre.toLowerCase().includes(busq) && !c.contacto.toLowerCase().includes(busq) && !c.rubro.toLowerCase().includes(busq)) return false;
       return true;
     });
     items.sort((a, b) => (staleInfo(a)?.cls === "badge-stalled" ? 1 : 0) - (staleInfo(b)?.cls === "badge-stalled" ? 1 : 0));
@@ -715,7 +769,8 @@ function cardInt(t, idx) {
   const av = ASIG_AVATARS[t.asignadoA] || { cls: "avatar-Luis", initials: "??" };
   const stale = staleInfo(t);
   const delay = Math.min(idx * 30, 300);
-  const nombreBusq = escAttr((t.titulo+' '+t.asignadoA+' '+t.tipo).toLowerCase());
+  const nombreBusq = escAttr((t.id+' '+t.titulo+' '+t.asignadoA+' '+t.tipo).toLowerCase());
+  const adjuntos = Array.isArray(t.adjuntos) ? t.adjuntos.length : 0;
   return `
     <article class="card reveal priority-${escAttr(t.prioridad)} bg-white dark:bg-slate-900 rounded-xl p-3 card-shadow cursor-pointer dark:text-white border border-slate-100 dark:border-slate-800" ${dragAttr} data-id="${escAttr(t.id)}" data-tipo="int" data-nombre="${nombreBusq}" style="animation-delay:${Number(delay)}ms">
       <div class="flex items-start justify-between gap-2 mb-2">
@@ -726,7 +781,10 @@ function cardInt(t, idx) {
             <span class="text-xs text-at-gray truncate font-medium">${esc(t.asignadoA)}</span>
           </div>
         </div>
-        <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-at-gray shrink-0">${esc(t.id.replace("AT-INT-",""))}</span>
+        <div class="flex items-center gap-1 shrink-0">
+          ${adjuntos ? `<span class="text-[10px] px-1.5 py-0.5 rounded bg-at-teal/10 text-at-teal-dark dark:text-at-teal" title="${adjuntos} adjunto(s)">📎 ${adjuntos}</span>` : ''}
+          <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-at-gray">${esc(t.id.replace("AT-INT-",""))}</span>
+        </div>
       </div>
       <div class="flex items-center justify-between text-[11px] gap-1 flex-wrap mb-1">
         <span class="px-2 py-0.5 rounded-full font-semibold ${estadoClass(t.estado)}">${esc(ESTADO_INT_LABEL[t.estado] || t.estado)}</span>
@@ -767,7 +825,7 @@ function renderInternas() {
     const items = INTERNAS.filter(t => {
       if (ESTADO_TO_COL_INT[t.estado] !== i) return false;
       if (filtroAsig && t.asignadoA !== filtroAsig) return false;
-      if (busq && !t.titulo.toLowerCase().includes(busq) && !t.asignadoA.toLowerCase().includes(busq) && !t.tipo.toLowerCase().includes(busq)) return false;
+      if (busq && !t.id.toLowerCase().includes(busq) && !t.titulo.toLowerCase().includes(busq) && !t.asignadoA.toLowerCase().includes(busq) && !t.tipo.toLowerCase().includes(busq)) return false;
       return true;
     });
     items.sort((a, b) => (staleInfo(a)?.cls === "badge-stalled" ? 1 : 0) - (staleInfo(b)?.cls === "badge-stalled" ? 1 : 0));
@@ -958,6 +1016,87 @@ async function guardarCli(id) {
 }
 
 // ============== MODAL INTERNA ==============
+function formatearBytes(bytes) {
+  const n = Number(bytes) || 0;
+  return n < 1024 * 1024 ? `${Math.max(1, Math.round(n / 1024))} KB` : `${(n / 1024 / 1024).toFixed(1)} MB`;
+}
+function adjuntosIntHTML(t) {
+  const adjuntos = Array.isArray(t.adjuntos) ? t.adjuntos : [];
+  if (!adjuntos.length) return '<p class="text-xs text-at-gray italic py-2">Sin imágenes adjuntas.</p>';
+  return `<div class="grid grid-cols-1 sm:grid-cols-2 gap-2">${adjuntos.map(a => `
+    <div class="relative rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 overflow-hidden">
+      <a data-adjunto-link="${Number(a.id)}" href="#" target="_blank" rel="noopener" class="block aspect-video bg-slate-100 dark:bg-slate-900">
+        <img data-adjunto-img="${Number(a.id)}" alt="Adjunto ${escAttr(a.filename)}" class="w-full h-full object-cover" loading="lazy">
+      </a>
+      <div class="p-2 pr-9 min-w-0">
+        <p class="text-xs font-semibold text-at-navy dark:text-white truncate" title="${escAttr(a.filename)}">${esc(a.filename)}</p>
+        <p class="text-[10px] text-at-gray">${esc(formatearBytes(a.file_size))}</p>
+      </div>
+      <button type="button" data-delete-adjunto="${Number(a.id)}" class="absolute right-1.5 bottom-1.5 w-7 h-7 rounded-full bg-red-50 dark:bg-red-950/40 text-red-600 hover:bg-red-100 border border-red-200 text-xs" aria-label="Eliminar ${escAttr(a.filename)}" title="Eliminar imagen">✕</button>
+    </div>`).join("")}</div>`;
+}
+async function hidratarAdjuntosInt(t) {
+  limpiarAdjuntoObjectUrls();
+  const generation = ATTACHMENT_RENDER_GENERATION;
+  const adjuntos = Array.isArray(t.adjuntos) ? t.adjuntos : [];
+  await Promise.all(adjuntos.map(async a => {
+    const blob = await cargarAdjuntoBlob(a.id);
+    if (!blob) return;
+    const modal = document.getElementById("modalInt");
+    if (generation !== ATTACHMENT_RENDER_GENERATION || !modal || modal.classList.contains("hidden")) return;
+    const objectUrl = URL.createObjectURL(blob);
+    ATTACHMENT_OBJECT_URLS.set(Number(a.id), objectUrl);
+    const img = document.querySelector(`[data-adjunto-img="${Number(a.id)}"]`);
+    const link = document.querySelector(`[data-adjunto-link="${Number(a.id)}"]`);
+    if (img) img.src = objectUrl;
+    if (link) link.href = objectUrl;
+  }));
+}
+function renderAdjuntosInt(t) {
+  const contenedor = document.getElementById("adjuntosIntList");
+  if (!contenedor) return;
+  contenedor.innerHTML = adjuntosIntHTML(t);
+  contenedor.querySelectorAll("[data-delete-adjunto]").forEach(btn => {
+    btn.addEventListener("click", () => eliminarAdjuntoInt(t.id, Number(btn.dataset.deleteAdjunto)));
+  });
+  hidratarAdjuntosInt(t);
+}
+async function subirAdjuntoInt(id) {
+  const t = INTERNAS.find(x => x.id === id); if (!t) return;
+  if (!escrituraRemotaDisponible()) { toast("Conecta la API antes de adjuntar imágenes"); return; }
+  const input = document.getElementById("edIntAdjunto");
+  const archivo = input && input.files ? input.files[0] : null;
+  if (!archivo) { toast("Selecciona una imagen primero"); return; }
+  if (!ATTACHMENT_MIMES.includes(archivo.type)) { toast("Formato no permitido: usa JPG, PNG o WebP"); return; }
+  if (archivo.size < 1 || archivo.size > ATTACHMENT_MAX_BYTES) { toast("La imagen debe pesar máximo 2 MB"); return; }
+  const actuales = Array.isArray(t.adjuntos) ? t.adjuntos : [];
+  if (actuales.length >= ATTACHMENT_MAX_PER_TASK) { toast("Máximo 5 imágenes por tarea"); return; }
+  const boton = document.getElementById("btnSubirAdjuntoInt");
+  if (boton) { boton.disabled = true; boton.textContent = "Subiendo…"; }
+  const res = await subirAdjuntoAPI(t.id, archivo);
+  if (boton) { boton.disabled = false; boton.textContent = "📎 Adjuntar"; }
+  if (!res.ok) { toast("No se adjuntó: " + res.razon); return; }
+  t.adjuntos = [...actuales, res.data];
+  if (input) input.value = "";
+  persistirInt();
+  auditar(t.id, "Adjunto", `Imagen ${res.data.filename} agregada`);
+  renderAdjuntosInt(t);
+  renderInternas();
+  toast("📎 Imagen guardada en BD");
+}
+async function eliminarAdjuntoInt(taskId, attachmentId) {
+  const t = INTERNAS.find(x => x.id === taskId); if (!t) return;
+  const adjunto = (Array.isArray(t.adjuntos) ? t.adjuntos : []).find(a => Number(a.id) === attachmentId);
+  if (!adjunto || !confirm(`¿Eliminar la imagen ${adjunto.filename}?`)) return;
+  const res = await postEditAPI("int", { accion: "delete_attachment", attachment_id: attachmentId });
+  if (!res.ok) { toast("No se eliminó: " + res.razon); return; }
+  t.adjuntos = t.adjuntos.filter(a => Number(a.id) !== attachmentId);
+  persistirInt();
+  auditar(t.id, "Adjunto", `Imagen ${adjunto.filename} eliminada`);
+  renderAdjuntosInt(t);
+  renderInternas();
+  toast("Imagen eliminada");
+}
 function abrirModalInt(id) {
   const t = INTERNAS.find(x => x.id === id); if (!t) return;
   const stale = staleInfo(t);
@@ -987,6 +1126,18 @@ function abrirModalInt(id) {
       <div><label class="text-at-gray uppercase tracking-wider text-[10px] font-semibold block mb-1">Prioridad</label><select id="edIntPrio" class="w-full px-2 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm dark:text-white focus:outline-none focus:border-at-teal">${prioOpts}</select></div>
     </div>
     <div><label class="text-at-gray uppercase tracking-wider text-[10px] font-semibold block mb-1">Notas</label><textarea id="edIntNotas" rows="4" class="w-full px-2 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm dark:text-white focus:outline-none focus:border-at-teal resize-none">${esc(t.notas)}</textarea></div>
+    <section class="border-t border-slate-100 dark:border-slate-800 pt-3">
+      <div class="flex items-center justify-between gap-2 mb-2">
+        <p class="text-at-gray uppercase tracking-wider text-[10px] font-semibold">🖼️ Imágenes opcionales</p>
+        <span class="text-[10px] text-at-gray">JPG, PNG o WebP · máx. 2 MB · hasta 5</span>
+      </div>
+      <div id="adjuntosIntList">${adjuntosIntHTML(t)}</div>
+      <div class="mt-2 flex flex-col sm:flex-row gap-2">
+        <input id="edIntAdjunto" type="file" accept="image/jpeg,image/png,image/webp" class="min-w-0 flex-1 text-xs px-2 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 dark:text-white">
+        <button id="btnSubirAdjuntoInt" type="button" class="px-3 py-2 rounded-lg border border-at-teal text-at-teal-dark dark:text-at-teal text-sm font-semibold hover:bg-at-teal/10 transition">📎 Adjuntar</button>
+      </div>
+      <p class="text-[10px] text-at-gray mt-1">La tarea puede guardarse sin imagen. Los adjuntos se almacenan separados y sólo se cargan con token válido.</p>
+    </section>
     ${stale ? `<p class="text-xs ${escAttr(stale.cls)} px-2 py-1 rounded-full inline-block font-semibold">${esc(stale.txt)} — ${esc(stale.title)}. Al guardar se resetea el reloj.</p>` : ''}
     <div class="text-[11px] text-at-gray border-t border-slate-100 dark:border-slate-800 pt-2 font-mono">Días desde última: <strong>${d}</strong> · ID: ${esc(t.id)}</div>
     <div class="border-t border-slate-100 dark:border-slate-800 pt-3">
@@ -998,7 +1149,9 @@ function abrirModalInt(id) {
       <button data-close="modalInt" class="px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 text-sm dark:text-white hover:border-at-teal transition">Cancelar</button>
     </div>`;
   document.getElementById("btnGuardarInt").addEventListener("click", () => guardarInt(t.id));
+  document.getElementById("btnSubirAdjuntoInt").addEventListener("click", () => subirAdjuntoInt(t.id));
   const m = document.getElementById("modalInt"); m.classList.remove("hidden"); m.classList.add("flex");
+  renderAdjuntosInt(t);
 }
 async function guardarInt(id) {
   const t = INTERNAS.find(x => x.id === id); if (!t) return;
@@ -1032,6 +1185,7 @@ async function guardarInt(id) {
 function cerrarModal(id) {
   const m = document.getElementById(id);
   m.classList.add("hidden"); m.classList.remove("flex");
+  if (id === "modalInt") limpiarAdjuntoObjectUrls();
 }
 function toast(msg) {
   const t = document.getElementById("toast");
@@ -1041,7 +1195,7 @@ function toast(msg) {
   t._tm = setTimeout(() => t.classList.add("hidden"), 3200);
 }
 function exportarJSON() {
-  const data = { clientes: CLIENTES, internas: INTERNAS, audit: AUDIT, exportadoEn: new Date().toISOString(), version: "v8" };
+  const data = { clientes: CLIENTES, internas: INTERNAS, audit: AUDIT, exportadoEn: new Date().toISOString(), version: "v8.3.0" };
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");

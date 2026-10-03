@@ -1,0 +1,85 @@
+ticket_id: AT-CUMPLECLICK-024
+title: "Eventos escolares: colegios y jardines sobre el modo feria (cursos, autorizados, marco grande, retención)"
+origin: direct_luis
+portfolio: "AT"
+priority: P1
+status: READY
+
+governance:
+  professional_standard: "Docs/ENGINEERING_STANDARDS/PROFESSIONAL_ENGINEERING_STANDARD.md"
+  quality_gate: C2
+
+objective: >
+  Que Luis cree un evento de tipo Colegio o Jardín en el admin (institución, cursos, lista de niños autorizados por
+  sus apoderados) y que en la tablet cada niño viva el recorrido completo de una fiesta: elige su nombre de la lista
+  de su curso, intro de la temática, ruleta, personaje, juego, foto con marco grande o Asómate, QR, diploma con curso
+  y despedida. Fotos ligadas al curso, galería por curso para imprimir y entregar, borrado a los 7 días con
+  retention --solo-ferias y su cron. Plan y fundamentos en CumpleBooth/docs/PLAN-COLEGIOS-Y-JARDINES-2026-09-29.md.
+owner: codex
+reviewer: claude
+active_orchestrator: claude
+
+ownership:
+  current_owner: codex
+  previous_owners: []
+  takeover_allowed: true
+  takeover_count: 0
+  takeover_reason: null
+  urgency: high
+  resolution_status: pending
+  reassignment_authorized_by: "Luis Miguel (28-09-2026: 'ármame un plan parecido a la feria donde yo agrego el evento y las temáticas se comportan como una fiesta')"
+  handoff_ref: "CumpleBooth/docs/PLAN-COLEGIOS-Y-JARDINES-2026-09-29.md"
+  handoff_quality: COMPLETE
+
+scope:
+  allowed_files:
+    - "CumpleBooth/database/migrations/028_eventos_escolares*.php"
+    - "CumpleBooth/database/aplicar-028.php"
+    - "CumpleBooth/public/lib.ferias.php"
+    - "CumpleBooth/public/feria-api.php"
+    - "CumpleBooth/public/api.php"
+    - "CumpleBooth/public/upload.php"
+    - "CumpleBooth/scripts/retention.php"
+    - "CumpleBooth/public/admin/ferias.php"
+    - "CumpleBooth/public/legal/autorizacion-imagen-eventos.md"
+    - "CumpleBooth/tests/backend/ferias*.php"
+    - "CumpleBooth/docs/**"
+  forbidden_files:
+    - "CumpleBooth/src/**"
+    - "CumpleBooth/public/feria.html"
+    - "CumpleBooth/public/data/themes.json"
+  locked_files: []
+  branch: "codex/eventos-escolares"
+  base_commit: "0357996"
+  depends_on:
+    - "AT-CUMPLECLICK-020"
+  notes: >
+    El kiosco (src/feria/: paso de nombre con lista por curso, curso en upload, diploma con curso) lo hace Claude en
+    claude/feria-prod sobre el contrato de feria-api.php que fije Codex. La migración 027 está reservada para el
+    publicador de Instagram (ticket 019); esta es la 028. La migración va antes que el código y cc_ferias tiene lista
+    fija de columnas: tocar los seis lugares.
+
+routing:
+  complexity: C2
+  risk: medium
+  uncertainty: low
+  reversibility: easy
+  selected_profile: executor
+  selected_model: "codex"
+  rationale: "Backend y admin sobre el modo feria ya construido (020); Claude revisa, hace el kiosco y despliega con el go de Luis."
+  independent_review: true
+  human_gate: true
+
+acceptance:
+  criteria:
+    - "Migración 028 idempotente con .down: cc_ferias.tipo (feria|colegio|jardin), institucion, contacto, contacto_tel; cc_evento_cursos; cc_evento_autorizados (evento, curso, nombre, apoderado, autorizado, observacion); cc_feria_fotos.curso."
+    - "Admin → Eventos: tipo, institución, cursos; pegar lista de autorizados desde planilla (curso; nombre; apoderado; sí/no); conteo por curso de autorizados y fotos; una feria existente sigue funcionando igual."
+    - "feria-api.php publica cursos y nombres autorizados; nunca nombres no autorizados ni datos de apoderados."
+    - "upload.php acepta curso con feria_reserva; la foto queda ligada al curso."
+    - "Galería del evento filtra e imprime por curso; ZIP por curso solo con sesión de admin."
+    - "retention.php --solo-ferias borra fotos y registros de eventos vencidos según retencion_dias; comando de cron documentado en FTP-MANIFEST para hPanel."
+    - "Borrador de autorizacion-imagen-eventos.md con los ocho puntos de la sección 6.4 del plan, marcado 'pendiente de abogado'."
+  tests:
+    - "tests/backend/ferias*.php (cursos, autorizados, curso en foto, retención)"
+    - "php -l de todo lo tocado"
+    - "Prueba de punta a punta en local con el kiosco de Claude"

@@ -1,0 +1,73 @@
+ticket_id: AT-CUMPLECLICK-022
+title: "La Mansión de la Noche de Brujas: experiencia 3D inmersiva de Halloween"
+origin: direct_luis
+portfolio: "AT"
+priority: P1
+status: READY
+
+governance:
+  professional_standard: "Docs/ENGINEERING_STANDARDS/PROFESSIONAL_ENGINEERING_STANDARD.md"
+  quality_gate: C2
+
+objective: >
+  Un mundo 3D inmersivo y sorprendente para la temática Noche de Brujas, como los juegos arácnidos y Aurora de Cristal:
+  partidas de 60 a 90 s en una mansión de noche, con farol, calabazas que se encienden, fantasmitas amistosos, relámpagos,
+  giroscopio y, al cierre, la foto de la cabina en el retrato de la galería. Todo público, sin gore. Listo y probado en
+  tablet antes del 31-10-2026.
+owner: codex
+reviewer: claude
+active_orchestrator: claude
+
+ownership:
+  current_owner: codex
+  previous_owners: []
+  takeover_allowed: true
+  takeover_count: 0
+  takeover_reason: null
+  urgency: high
+  resolution_status: pending
+  reassignment_authorized_by: "Luis Miguel (26-09-2026: 'dale a Codex una tarea así como hizo los juegos de Spidey')"
+  handoff_ref: "CumpleBooth/docs/CODEX-HANDOFF-JUEGO-NOCHE-BRUJAS-2026-09-26.md"
+  handoff_quality: COMPLETE
+
+scope:
+  allowed_files:
+    - "C:/wamp64/www/cumpleclick-juego-noche-brujas/** (repositorio nuevo y local)"
+  forbidden_files:
+    - "C:/wamp64/www/automatiza-tech/** (lo integra Claude)"
+    - "C:/wamp64/www/tucumple-repo/**"
+    - "C:/wamp64/www/cumpleclick-juego-*/** (los otros juegos: solo lectura como referencia)"
+  locked_files: []
+  branch: "main (repo nuevo, sin push)"
+  base_commit: null
+  depends_on:
+    - "Temática adulto-noche-brujas (hecha por Claude, en el worktree modo-feria) como referencia visual."
+
+routing:
+  complexity: C2
+  risk: medium
+  uncertainty: medium
+  reversibility: easy
+  selected_profile: strong_reasoner
+  selected_model: "codex (runtime)"
+  rationale: "Juego 3D nuevo con la pila de Aurora; el riesgo es el rendimiento en la Tab A7 y las trampas de despliegue ya conocidas (.mjs, CSP, parámetros)."
+  independent_review: true
+  human_gate: true
+
+acceptance:
+  criteria:
+    - "Cuatro escenas (jardín, vestíbulo, pasillo de retratos, galería) en 60 a 90 s, con farol, calabazas, fantasmitas y puntaje por medallas."
+    - "Relámpago, giroscopio con alternativa táctil y retrato final con la foto de la cabina (o el nombre si no hay foto)."
+    - "Parámetros p, nombre (fiesta), jugador, volver y kiosco; volver al menú y pantalla completa."
+    - ".htaccess con AddType .mjs; sin style inline (CSP style-src 'self')."
+    - "P10 >= 30 fps a 1200 x 2000; peso <= 15 MB; prefers-reduced-motion sin destellos."
+    - "Español de Chile, todo público, sin gore y sin franquicias."
+    - "Registro de Higgsfield con cada request_id y total dentro del tope aprobado."
+  tests:
+    - "Pruebas del repo (node --test) y una corrida completa grabada o capturada a 1200 x 2000."
+    - "fps medidos (P10 y promedio)."
+
+delivery:
+  pr: "Commit en main del repo nuevo (sin push) con README, capturas, fps y lista FTP hacia app/juego/mansion/."
+  deploy: "No despliega Codex. Claude sube el repo privado, integra (cb_juegos, menú, modo feria) y despliega con el go de Luis."
+  credits: "Solo Higgsfield por su API y solo dentro del tope que Luis escriba en el prompt (propuesto USD 1,50); sin tope, no genera."

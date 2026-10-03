@@ -14,6 +14,16 @@ if (cb_storage_mode() === 'db') {
     $parties = $pdo->prepare("SELECT id,public_slug FROM cc_parties WHERE $eligibleSql");
     $parties->execute([$cutoffDate]);
     $partyRows = $parties->fetchAll();
+    // Modo feria (2026-09-26): sus fotos se guardan menos, `cc_ferias.retencion_dias` desde la
+    // fecha de la feria (7 por defecto, lo decidió Luis). Se suman a las vencidas por la regla general.
+    require_once dirname(__DIR__) . '/public/lib.ferias.php';
+    $feriasVencidas = cb_ferias_vencidas(time());
+    $idsGenerales = array_map('intval', array_column($partyRows, 'id'));
+    foreach ($feriasVencidas as $feriaVencida) {
+        if (!in_array($feriaVencida['id'], $idsGenerales, true)) {
+            $partyRows[] = $feriaVencida;
+        }
+    }
     $partyIds = array_map('intval', array_column($partyRows, 'id'));
     $photoRows = [];
     $profileMediaRows = [];
@@ -48,8 +58,8 @@ if (cb_storage_mode() === 'db') {
             }
         }
     }
-    fwrite(STDOUT, 'Fiestas vencidas: ' . count($partyRows) . '; fotos privadas: ' . count($photoRows)
-        . '; archivos de perfil: ' . count($profileMediaRows) . "\n");
+    fwrite(STDOUT, 'Fiestas vencidas: ' . count($partyRows) . ' (de ellas ferias: ' . count($feriasVencidas) . ')'
+        . '; fotos privadas: ' . count($photoRows) . '; archivos de perfil: ' . count($profileMediaRows) . "\n");
     if (!$apply) { exit(0); }
 
     $pdo->beginTransaction();
@@ -63,6 +73,12 @@ if (cb_storage_mode() === 'db') {
         if ($predictionSchemaReady && $partyIds) {
             $dropPredictions = $pdo->prepare("DELETE FROM cc_predictions WHERE party_id IN ($marks)");
             $dropPredictions->execute($partyIds);
+        }
+        // El nombre que escribió cada visitante de una feria también se va; el número, el modo
+        // y la temática quedan para saber cuántas fotos se hicieron.
+        if (cb_ferias_listo() && $partyIds) {
+            $pdo->prepare("UPDATE cc_feria_fotos SET nombre='', updated_at=? WHERE feria_id IN (SELECT id FROM cc_ferias WHERE party_id IN ($marks))")
+                ->execute(array_merge([$now], $partyIds));
         }
         $dropGuests = $pdo->prepare('DELETE FROM cc_guests WHERE party_id=?');
         $anon = $pdo->prepare("UPDATE cc_parties SET birthday_person_name='Evento archivado',active=0,gallery_pin_hash=NULL,gallery_pin_hmac=NULL,anonymized_at=?,updated_at=? WHERE id=?");

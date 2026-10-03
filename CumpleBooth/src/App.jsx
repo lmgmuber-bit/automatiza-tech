@@ -1,5 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import QRCode from 'qrcode'
+import FeriaBooth from './feria/FeriaBooth.jsx'
+import { apiQuery, feriaFromResponse } from './feria/contract.js'
+import { loadImage } from './feria/media.js'
+import { createFeriaPhoto } from './feria/photo.js'
 import { ensureCanvasFonts } from './fonts.js'
 import { applyThemeColors } from './themeVars.js'
 import {
@@ -38,6 +42,8 @@ const BASE = import.meta.env.BASE_URL // base relativa './' — funciona en cual
 const BRAND_LOGO_SRC = BASE + 'brand/cumpleclick-mark.svg'
 
 let CONFIG = null
+let FERIA = null
+let FERIA_THEME = null
 // Versión de assets del tema activo (rompe-cache). La escribe buildRuntime.
 let ASSETS_VERSION = 0
 let PARTY_SLUG = null
@@ -45,7 +51,8 @@ let THEME_SLUG = null
 // Juego 3D "Tu Cumple en 3D" (carpeta hermana juego/, mismo hosting que el kiosco).
 // Solo las temáticas con mundo 3D lo ofrecen desde la bienvenida; el juego recibe
 // la fiesta por ?p= y, con ?kiosco=1, muestra "Volver al kiosco" en pausa y al final.
-const TEMAS_JUEGO_3D = ['hielo', 'heroes', 'spidey']
+// Fiestas Patrias (26-09): su juego es Chile en Volantín, que el menú ofrece por la temática de la fiesta.
+const TEMAS_JUEGO_3D = ['hielo', 'heroes', 'spidey', 'fiestas-patrias']
 function juego3dUrl() {
   return BASE + 'juego/?p=' + encodeURIComponent(PARTY_SLUG || '') + '&kiosco=1'
 }
@@ -430,7 +437,7 @@ export default function App() {
     setStatus('loading')
     let alive = true
 
-    fetch(BASE + 'api.php?p=' + encodeURIComponent(p), { cache: 'no-store' })
+    fetch(BASE + 'api.php?' + apiQuery(location.search), { cache: 'no-store' })
       .then(async (res) => {
         const data = await res.json().catch(() => null)
         if (!data || !data.ok) {
@@ -440,7 +447,12 @@ export default function App() {
       })
       .then((data) => {
         if (!alive) return
+        FERIA = feriaFromResponse(data)
+        FERIA_THEME = FERIA ? data.theme : null
         buildRuntime(data.party, data.theme, p)
+        if (FERIA) THEME_LABEL = (data.theme.nombre || '').toUpperCase()
+        // Los récords de los minijuegos guardan el nombre del niño en la tablet: en una feria son desconocidos.
+        if (FERIA) configurarRecords(null)
         applyThemeVars(data.theme && data.theme.colors)
         setStatus('ready')
       })
@@ -461,12 +473,48 @@ export default function App() {
     return <ErrorScreen code={errorCode} onRetry={() => setRetryTick((t) => t + 1)} />
   }
   // status === 'ready' → RUNTIME ya está poblado, es seguro montar la app
+  if (FERIA) return <FeriaBooth key={slug} feria={FERIA} theme={THEME_SLUG} themeData={FERIA_THEME}
+    characters={PERSONAJES} filter={FERIA_THEME?.filtro} base={BASE} Spinner={Spinner} Character={VideoPersonaje}
+    renderPhoto={composeFeriaPhoto} renderDiploma={composeFeriaDiploma}
+    asomate={CONFIG.asomate || null} gameFor={feriaGameFor} Game={Juego} AsomatePick={AsomateElegir} Capture={Capture}
+    AsomateReview={AsomatePreview} asomatePerson={personajeDeAsomate} prepareAsomate={prepararAsomateFeria}
+    welcomeSrc={FERIA_THEME?.videos?.welcome || THEME_SLUG === 'carreras' ? WELCOME_VIDEO_PRIMARY : null}
+    despedidaSrc={FERIA_THEME?.videos?.despedida ? CONFIG.videos.despedida : null}
+    volantinUrl={THEME_SLUG === 'fiestas-patrias' ? BASE + 'juego/volantin/' : null}
+    music={MUSIC_ENABLED ? CONFIG.audio.musica : null} />
   return <BoothApp key={slug} />
 }
 
 /* ============================================================
    Pantallas de la puerta de entrada (sin RUNTIME todavía, look genérico)
    ============================================================ */
+// Adaptadores exclusivos de feria; el recorrido normal conserva sus compositores.
+// THEME_FLOW se reasigna al cargar la temática: se consulta al momento, no se copia.
+const feriaGameFor = (nombre) => THEME_FLOW.gameFor(nombre)
+const prepararAsomateFeria = () => { prepararDetector(BASE).catch(() => {}) }
+
+async function composeFeriaPhoto(source, name, person, filter, segmenter) {
+  await Promise.all([ensureCanvasFonts(), preloadBrandLogo()])
+  return createFeriaPhoto({ source, name, person, filter, segmenter, base: BASE, theme: FERIA_THEME,
+    frame: async (image) => {
+      const [background, character] = await Promise.all([
+        loadImage(CONFIG.images.fondo), loadImage(CHAR_PNG[person?.name]).catch(() => null),
+      ])
+      return composeImage(background, image, name, character, person?.name || '')
+    },
+  })
+}
+
+async function composeFeriaDiploma(name, person, heroe = null) {
+  await Promise.all([ensureCanvasFonts(), preloadBrandLogo()])
+  // Asómate: el diploma se arma sobre la escena del niño convertido en personaje, como en DiplomaScreen.
+  if (heroe) return composeDiploma(name, null, await loadImage(heroe).catch(() => null))
+  const [winner, hero] = await Promise.all([
+    loadImage(CHAR_IMG[person?.name]).catch(() => null), loadImage(CHAR_PNG[person?.name]).catch(() => null),
+  ])
+  return composeDiploma(name, winner, hero)
+}
+
 function NoPartyScreen() {
   return (
     <div className="app">
@@ -751,13 +799,15 @@ function BoothApp() {
           invitados={invitadosList}
           etiqueta={trasInvitados === 'asomate-elegir'
             ? 'Elegir personaje 🦸'
-            : 'Toca para girar la ruleta 🎉'}
+            : PERSONAJES.length ? 'Toca para girar la ruleta 🎉' : 'Toca para tu foto 📸'}
           onStart={(nombre) => {
             setInvitado(nombre)
             // Asomate tambien pasa por aca: sin invitado el diploma salia a nombre de
             // "Invitado" y sin personaje, y la foto entraba a la galeria como foto.png,
             // sin dueno. Un toque mas, y el recuerdo queda con nombre.
-            go(trasInvitados)
+            // Una temática sin personajes (Fiestas Patrias, 26-09) no tiene ruleta: con cero personajes el Spinner
+            // quedaba trabado (ángulo 360/0 y personaje indefinido). Se pasa directo a la cámara.
+            go(trasInvitados === 'spinner' && !PERSONAJES.length ? 'capture' : trasInvitados)
           }}
         />
       )}
@@ -1568,6 +1618,12 @@ function Spinner({ onDone }) {
     // El slot win queda bajo la flecha cuando la rotación ≡ -win*angle (mod
     // 360). Cinco vueltas desde donde está la rueda, más el ajuste para caer
     // en el ganador.
+    if (FERIA && REDUCE_MOTION) {
+      if (rotRef.current) rotRef.current.style.setProperty('--spin', `${-win * angle}deg`)
+      setWinner(PERSONAJES[win])
+      autoRef.current = setTimeout(() => onDone(PERSONAJES[win]), 8000)
+      return () => clearTimeout(autoRef.current)
+    }
     const bruto = base + 360 * 5
     const ajuste = ((-win * angle - bruto) % 360 + 360) % 360
     const finalR = bruto + ajuste
@@ -1943,6 +1999,8 @@ function componerGrupal(fondoImg, fotoImg, caja, titulo, opciones = {}) {
 
 /** El texto del pie. En grupo saluda a todos; solo, al invitado. */
 function tituloAsomate(invitado, cuantos) {
+  // En una feria no hay cumpleañero (26-09: salía "Tomás en el cumple de <feria>" en la foto que se lleva la gente).
+  if (FERIA) return cuantos > 1 ? `Amigos en ${FERIA.nombre}` : (invitado ? `${invitado} en ${FERIA.nombre}` : `Un recuerdo de ${FERIA.nombre}`)
   const quien = nombreEvento()
   if (cuantos > 1) return quien ? `El cumple de ${quien} y sus amigos` : '¡Amigos!'
   if (invitado && quien) return `${invitado} en el cumple de ${quien}`
@@ -2233,7 +2291,8 @@ function AsomatePreview({ elenco, fotos, invitado, onRetry, onSave }) {
     // Primero a la tablet y después al servidor, igual que la cabina: si el wifi se cae, la
     // foto ya está en el aparato. Hasta hoy Asómate no dejaba ninguna copia y, si la subida
     // fallaba, la pantalla igual decía que la descarga local estaba segura.
-    guardarEnLaTablet(compuesta, `asomate-${invitado || 'invitados'}`)
+    // En feria la copia la guarda la cabina de feria con su número F-###; aquí saldría una segunda sin número.
+    if (!FERIA) guardarEnLaTablet(compuesta, `asomate-${invitado || 'invitados'}`)
     onSave(compuesta, paraDiploma)
   }
 
@@ -2745,11 +2804,13 @@ const esBabyShower = () => CONFIG?.eventType === 'baby_shower'
 // `fraseA()` en src/album/evento.js para el Album Recuerdo.
 const nombreEvento = () => String(CONFIG?.nombre || '').trim()
 const eventoFraseA = () => {
+  if (FERIA) return `a ${FERIA.nombre}`
   const nombre = nombreEvento()
   if (esBabyShower()) return nombre ? `al baby shower de ${nombre}` : 'al baby shower'
   return nombre ? `a la fiesta de ${nombre}` : 'a la fiesta'
 }
 const eventoFraseEn = () => {
+  if (FERIA) return FERIA.nombre
   const nombre = nombreEvento()
   if (esBabyShower()) return nombre ? `el baby shower de ${nombre}` : 'el baby shower'
   return nombre ? `la fiesta de ${nombre}` : 'la fiesta'
@@ -4529,7 +4590,9 @@ function composeImage(bgImg, photoImg, invitado = '', charImg = null, charName =
   // Agradecimiento al costado del marco: K-Pop a la derecha (Luis, 2026-07-28),
   // Héroes a la izquierda y alineado a la izquierda (Luis, 2026-08-01, con
   // captura). El resto sigue como siempre: centrado debajo de la foto completa.
-  const textSide = THEME_SLUG === 'kpop' ? 'right' : THEME_SLUG === 'heroes' ? 'left' : null
+  // Héroes pasó a la derecha el 26-09: con el marco calibrado sobre fondo-sala.jpg (antes usaba el marco por
+  // defecto y la foto caía sobre los globos) a la izquierda quedan 190 px y el texto salía diminuto sobre el borde.
+  const textSide = THEME_SLUG === 'kpop' || THEME_SLUG === 'heroes' ? 'right' : null
   const textBeside = textSide !== null
   const textSideMargin = W * 0.045
   const textSideCx = textSide === 'right' ? (frameRight + W) / 2 : frameLeft / 2
@@ -5411,7 +5474,7 @@ function composeDiploma(invitado = '', winnerImage = null, heroeImagen = null) {
 
   // "en la fiesta de {nombre} · {fecha si está}"
   const fecha = formatFecha(CONFIG && CONFIG.fecha)
-  const fiestaLine = CONFIG
+  const fiestaLine = FERIA ? `en ${FERIA.nombre} · ${FERIA.fecha_texto}` : CONFIG
     ? `en ${eventoFraseEn()}${fecha ? ' · ' + fecha : ''}`
     : ''
   if (fiestaLine) {

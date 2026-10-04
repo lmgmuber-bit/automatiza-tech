@@ -4283,3 +4283,42 @@ ni nada de `C:/Users/luis_/Documents/CumpleClick/` (registros de generación, `v
 - Cómo suenan las voces en la tablet: se midió nivel (-15 LUFS los 16 videos) y transcripción (`scribe_v1`, 15 de 16 exactas;
   "Momi" se transcribe "Mommy"), no el acento. El acento chileno de Matilda en v3 es un juicio de Luis, no una medida.
 - Asómate del diploma en Navidad: el piso del diploma usa `banda.suelo` 0,79, no el de la temática.
+
+## PENDIENTE 2026-10-04: Portada de Revista CLICK para adultos (LOCAL, SIN DEPLOY)
+
+Rama `claude/revista-click` (sin remoto), que parte de `claude/tematicas-brujitas-navidad`: **se sube junto con esa rama o
+después de ella**, nunca sola (el build trae los cambios de las dos). Detalle de la temática en `docs/TEMATICA-REVISTA-CLICK.md`.
+
+**Qué cambia:** temática nueva de adultos, `adulto-revista`. El invitado elige una de tres portadas (alfombra roja, estudio
+fucsia, blanco y negro) y sale en la portada de la revista CLICK con su nombre. Las demás temáticas no cambian: el menú de
+portadas, el encuadre y el texto solo aparecen con el bloque `revista` de `themes.json`.
+
+| Orden | Clase | Local | PROD |
+|---|---|---|---|
+| 1 | OBLIGATORIO | `public/themes/adulto-revista/` (6 JPG: `revista-alfombra`, `revista-estudio`, `revista-bn`, `fondo-sala`, `fondo-evento`, `fondo-banner`) | `app/themes/adulto-revista/` (nueva) |
+| 2 | OBLIGATORIO | `public/fonts/revista/` (4 `.woff2` y 2 licencias `OFL-*.txt`) | `app/fonts/revista/` (nueva) |
+| 3 | OBLIGATORIO | `public/lib.ferias.php` (`cb_feria_revista()`) | `app/lib.ferias.php` |
+| 4 | OBLIGATORIO | `public/data/themes.json` | `app/data/themes.json` |
+| 5 | OBLIGATORIO | `dist/assets/*` nuevos de este build (al 04-10: `main-CscEkOrF.js`, `feria-DTgANUAn.js`, `feria-DQBWgOF5.js`, `feria-C7PwMTWO.css`) | `app/assets/` |
+| 6 | OBLIGATORIO, al final | `dist/index.html`, `dist/feria.html` | `app/index.html`, `app/feria.html` |
+
+Sin migración. El 1 y el 2 van antes del 4 (`themes.json` apunta a escenas que tienen que existir) y el 3 antes del 6. Los
+nombres de `dist/assets/` cambian con cada build: el día del deploy se sacan de `dist/index.html` y `dist/feria.html` y se
+cotejan por sha256 contra PROD. Respaldar `lib.ferias.php`, `themes.json`, `index.html` y `feria.html` antes de pisarlos.
+**Verificar el `Content-Type` de un `.woff2` en `app/fonts/revista/`** (debe ser `font/woff2`; si el servidor no lo conoce,
+las portadas salen con la letra de respaldo, sin error a la vista). **No subir** `design/`, `docs/`, `tests/` ni la carpeta de
+generación `C:/Users/luis_/Documents/CumpleClick/tematicas-adultos-2026-10/`.
+
+**Después de subir:** en el admin, habilitar "Portada de Revista" en la lista de Adultos del evento que la vaya a usar (no se
+activa sola en ningún evento).
+
+**Pruebas en local (04-10):** `revista.test.mjs` 11 de 11; `ferias-http.php` 161 comprobaciones; `feria-integracion.test.mjs`
+con cámara simulada recorre las tres portadas (menú sin Asómate, vista previa 9:16, foto 1080x1920 con recorte, el título en la
+foto y el gris solo en la de blanco y negro). Suite completa del frontend con las cuatro de navegador: 267 de 267.
+Costo de las escenas: USD 0,0486 de lista.
+
+### No probado
+
+- Tablet física y una persona adulta real (la cámara simulada usa el cóndor del juego del volantín).
+- La portada impresa en la Selphy (si los titulares chicos se leen en 10x15).
+- La cámara trasera con la portada.

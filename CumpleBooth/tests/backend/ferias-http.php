@@ -317,6 +317,51 @@ f_check(($r['json']['theme']['modoFoto'] ?? '') === 'marco', 'una temática infa
 $r = pedir('GET', '/feria-api.php?f=' . $feriaAdultos['slug']);
 f_check(array_column($r['json']['mundos']['adulto'] ?? [], 'personajes') === [false, false, false], 'el selector sabe que las adultas van sin ruleta');
 
+// Portada de Revista CLICK (04-10): adulta, con tres portadas que el invitado elige en el menú. El servidor publica solo las
+// que tienen su escena en disco y el filtro únicamente en la de blanco y negro.
+$rev = $temas['adulto-revista'] ?? [];
+f_check(($rev['audiencia'] ?? '') === 'adulto' && ($rev['personajes'] ?? null) === [] && array_key_exists('franquicia', $rev) && $rev['franquicia'] === null,
+    'adulto-revista: adulta, sin personajes y sin franquicia');
+foreach (['fondo-sala.jpg', 'fondo-banner.jpg', 'fondo-evento.jpg', 'revista-alfombra.jpg', 'revista-estudio.jpg', 'revista-bn.jpg'] as $archivo) {
+    $info = @getimagesize($raiz . "/public/themes/adulto-revista/$archivo");
+    f_check($info !== false && $info[0] === 1080 && $info[1] === 1920, "adulto-revista/$archivo existe y mide 1080x1920");
+}
+[$datosRev] = cb_feria_validar(['nombre' => 'Fiesta de la oficina', 'fecha' => $hoy, 'activa' => '1',
+    'mundos_infantil' => ['hielo', 'adulto-revista'], 'mundos_adulto' => ['adulto-revista'], 'max_fotos' => 100]);
+f_check($datosRev['mundos_infantil'] === ['hielo'] && $datosRev['mundos_adulto'] === ['adulto-revista'], 'la revista entra en Adultos y no en Niños');
+$feriaRev = cb_feria_guardar($datosRev, null, 'test');
+$r = pedir('GET', '/api.php?p=' . $feriaRev['slug'] . '&tema=adulto-revista&modo=adulto');
+$tr = $r['json']['theme'] ?? [];
+f_check(($tr['modoFoto'] ?? '') === 'fondo' && ($tr['images']['escena'] ?? '') === 'themes/adulto-revista/revista-alfombra.jpg',
+    'la revista va sobre fondo, con la alfombra roja como escena por defecto');
+f_check(!isset($tr['filtro']), 'la revista no lleva filtro general: solo su portada en blanco y negro');
+f_check(($tr['revista']['titulo'] ?? '') === 'CLICK', 'el título de la revista es CLICK');
+$variantesRev = $tr['revista']['variantes'] ?? [];
+f_check(array_column($variantesRev, 'clave') === ['alfombra', 'estudio', 'bn'], 'tres portadas, en el orden del menú');
+f_check(array_column($variantesRev, 'escena') === ['themes/adulto-revista/revista-alfombra.jpg', 'themes/adulto-revista/revista-estudio.jpg',
+    'themes/adulto-revista/revista-bn.jpg'], 'cada portada con su escena publicada');
+f_check(array_column($variantesRev, 'filtro') === ['bn'], 'solo la portada en blanco y negro lleva filtro');
+f_check(($tr['personajes'] ?? null) === [] && empty($tr['asomate']['personajes'] ?? []), 'sin ruleta ni Asómate: el menú es el de las portadas');
+$r = pedir('GET', '/feria-api.php?f=' . $feriaRev['slug']);
+$mundoRev = array_values(array_filter($r['json']['mundos']['adulto'] ?? [], fn ($m) => ($m['slug'] ?? '') === 'adulto-revista'))[0] ?? [];
+f_check(($mundoRev['imagen'] ?? '') === 'themes/adulto-revista/fondo-banner.jpg' && ($mundoRev['personajes'] ?? true) === false,
+    'el selector muestra la portada de muestra y sabe que no hay ruleta');
+$r = pedir('GET', '/api.php?p=' . $feriaAdultos['slug'] . '&tema=adulto-glam-dorado&modo=adulto');
+f_check(!isset($r['json']['theme']['revista']), 'una temática sin bloque de revista no publica portadas');
+// El bloque se valida pieza por pieza: escena inexistente o con ruta, título con marcas, colores, filtro y tope de cuatro.
+f_check(cb_feria_revista('adulto-revista', ['titulo' => 'CLICK', 'variantes' => [['clave' => 'x', 'escena' => 'no-existe.jpg']]]) === null,
+    'sin escenas en disco no hay portadas');
+f_check(cb_feria_revista('adulto-revista', ['titulo' => 'CLICK', 'variantes' => [['clave' => 'x', 'escena' => '../adulto-glam-dorado/fondo-escena.jpg']]]) === null,
+    'una escena con ruta no pasa');
+f_check(cb_feria_revista('adulto-revista', ['titulo' => '<b>CLICK</b>', 'variantes' => [['clave' => 'a', 'escena' => 'revista-bn.jpg']]]) === null,
+    'un título con marcas no pasa');
+$vRev = cb_feria_revista('adulto-revista', ['titulo' => 'click', 'variantes' => [['clave' => 'a', 'escena' => 'revista-bn.jpg',
+    'tinta' => 'red', 'acento' => '#ABCDEF', 'filtro' => 'sepia']]]);
+f_check(($vRev['titulo'] ?? '') === 'CLICK' && !isset($vRev['variantes'][0]['tinta']) && ($vRev['variantes'][0]['acento'] ?? '') === '#ABCDEF'
+    && !isset($vRev['variantes'][0]['filtro']), 'colores y filtro se validan uno por uno');
+$cincoRev = array_map(fn ($i) => ['clave' => 'v' . $i, 'escena' => 'revista-estudio.jpg'], range(1, 5));
+f_check(count(cb_feria_revista('adulto-revista', ['titulo' => 'CLICK', 'variantes' => $cincoRev])['variantes'] ?? []) === 4, 'máximo cuatro portadas');
+
 // Fiestas Patrias: temática chilena sin personajes, para Niños y Adultos.
 $chile = $temas['fiestas-patrias'] ?? [];
 f_check(!isset($chile['audiencia']) && ($chile['personajes'] ?? null) === [] && array_key_exists('franquicia', $chile) && $chile['franquicia'] === null,

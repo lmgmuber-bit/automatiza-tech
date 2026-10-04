@@ -4,6 +4,7 @@ import FeriaBooth from './feria/FeriaBooth.jsx'
 import { apiQuery, feriaFromResponse } from './feria/contract.js'
 import { loadImage } from './feria/media.js'
 import { createFeriaPhoto } from './feria/photo.js'
+import { cargarFuentesRevista } from './feria/revista.js'
 import { ensureCanvasFonts } from './fonts.js'
 import { applyThemeColors } from './themeVars.js'
 import {
@@ -493,9 +494,10 @@ export default function App() {
 const feriaGameFor = (nombre) => THEME_FLOW.gameFor(nombre)
 const prepararAsomateFeria = () => { prepararDetector(BASE).catch(() => {}) }
 
-async function composeFeriaPhoto(source, name, person, filter, segmenter) {
-  await Promise.all([ensureCanvasFonts(), preloadBrandLogo()])
+async function composeFeriaPhoto(source, name, person, filter, segmenter, opciones = {}) {
+  await Promise.all([ensureCanvasFonts(), preloadBrandLogo(), opciones.portada ? cargarFuentesRevista(BASE) : null])
   return createFeriaPhoto({ source, name, person, filter, segmenter, base: BASE, theme: FERIA_THEME,
+    variante: opciones.variante || null, portada: opciones.portada || null,
     frame: async (image) => {
       const [background, character] = await Promise.all([
         loadImage(CONFIG.images.fondo), loadImage(CHAR_PNG[person?.name]).catch(() => null),

@@ -2234,6 +2234,76 @@
         "welcome": "welcome-noche-brujas.mp4"
       }
     },
+    "adulto-revista": {
+      "nombre": "Portada de Revista",
+      "franquicia": null,
+      "publico": "adulto",
+      "audiencia": "adulto",
+      "diploma": "Estrella de la portada de CLICK",
+      "colors": {
+        "accent": "#E11D74",
+        "accentSoft": "#FBE3EE",
+        "yellow": "#E8C66A",
+        "ink": "#16121A",
+        "bgLight1": "#FFF7FA",
+        "bgLight2": "#F6E3EC",
+        "dark1": "#2A0F1F",
+        "dark2": "#16121A",
+        "dark3": "#C9A24A"
+      },
+      "confetti": [
+        "#E11D74",
+        "#E8C66A",
+        "#FFFFFF",
+        "#16121A",
+        "#C1121F",
+        "#F3E6EC"
+      ],
+      "personajes": [],
+      "frameBox": {
+        "x": 0.1,
+        "y": 0.1,
+        "w": 0.8,
+        "h": 0.45
+      },
+      "modoFoto": "fondo",
+      "fondoEscena": "revista-alfombra.jpg",
+      "musicaHint": "Sin música",
+      "transition": "none",
+      "revista": {
+        "titulo": "CLICK",
+        "variantes": [
+          {
+            "clave": "alfombra",
+            "etiqueta": "Alfombra roja",
+            "detalle": "Fotógrafos y flashes de estreno",
+            "emoji": "📸",
+            "escena": "revista-alfombra.jpg",
+            "tinta": "#FFFFFF",
+            "acento": "#C1121F"
+          },
+          {
+            "clave": "estudio",
+            "etiqueta": "Estudio de color",
+            "detalle": "Sesión de fotos con fondo fucsia",
+            "emoji": "💗",
+            "escena": "revista-estudio.jpg",
+            "tinta": "#FFFFFF",
+            "acento": "#16121A"
+          },
+          {
+            "clave": "bn",
+            "etiqueta": "Blanco y negro",
+            "detalle": "Retrato clásico de estudio",
+            "emoji": "🖤",
+            "escena": "revista-bn.jpg",
+            "filtro": "bn",
+            "tinta": "#FFFFFF",
+            "acento": "#16121A"
+          }
+        ]
+      }
+    },
     "fiestas-patrias": {
       "nombre": "Fiestas Patrias",
       "franquicia": null,

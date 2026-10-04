@@ -355,12 +355,65 @@ function cb_feria_resolver(array $feria, array $resuelto, string $tema, string $
     } else {
         $theme['modoFoto'] = 'marco';
     }
+    // Portada de Revista (04-10): las escenas que el invitado elige en el menú. Solo con foto sobre fondo y solo las que
+    // están en disco; con una sola no hay menú.
+    $revista = $theme['modoFoto'] === 'fondo' ? cb_feria_revista($tema, $themeData['revista'] ?? null) : null;
+    if ($revista !== null) {
+        $theme['revista'] = $revista;
+    }
     return [
         'ok' => true,
         'party' => $party,
         'theme' => $theme,
         'feria' => cb_feria_publica($feria, $modo),
     ];
+}
+
+/**
+ * Portada de Revista CLICK (04-10-2026): el título de la revista y sus variantes de fondo, validados. Una variante sin
+ * escena en disco se cae sola; el título son letras y números (lo dibuja el kiosco, no viene en la imagen).
+ */
+function cb_feria_revista(string $tema, $bloque): ?array
+{
+    if (!is_array($bloque) || !is_array($bloque['variantes'] ?? null)) {
+        return null;
+    }
+    $titulo = strtoupper(trim((string) ($bloque['titulo'] ?? '')));
+    if (!preg_match('/\A[A-Z0-9 ]{1,12}\z/', $titulo)) {
+        return null;
+    }
+    $variantes = [];
+    foreach ($bloque['variantes'] as $v) {
+        if (!is_array($v)) {
+            continue;
+        }
+        $clave = (string) ($v['clave'] ?? '');
+        $escena = (string) ($v['escena'] ?? '');
+        if (!cb_valid_slug($clave, 1, 30) || !preg_match('/\A[a-z0-9][a-z0-9._-]*\.(?:jpe?g|png|webp)\z/i', $escena)
+            || !is_file(cb_themes_dir() . '/' . $tema . '/' . $escena)) {
+            continue;
+        }
+        $limpia = [
+            'clave' => $clave,
+            'etiqueta' => mb_substr(trim((string) ($v['etiqueta'] ?? $clave)), 0, 40),
+            'detalle' => mb_substr(trim((string) ($v['detalle'] ?? '')), 0, 60),
+            'emoji' => mb_substr(trim((string) ($v['emoji'] ?? '')), 0, 4),
+            'escena' => 'themes/' . $tema . '/' . $escena,
+        ];
+        if (($v['filtro'] ?? '') === 'bn') {
+            $limpia['filtro'] = 'bn';
+        }
+        foreach (['tinta', 'acento'] as $color) {
+            if (preg_match('/\A#[0-9a-f]{6}\z/i', (string) ($v[$color] ?? ''))) {
+                $limpia[$color] = (string) $v[$color];
+            }
+        }
+        $variantes[] = $limpia;
+        if (count($variantes) >= 4) {
+            break;
+        }
+    }
+    return $variantes ? ['titulo' => $titulo, 'variantes' => $variantes] : null;
 }
 
 /**

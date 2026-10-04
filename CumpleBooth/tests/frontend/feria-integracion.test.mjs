@@ -69,14 +69,14 @@ test('integración real 020 + build 021: SQLite aislada, tres fondos adultos y f
     CC_INVITATION_DIR: join(temp, 'invitations'), CUMPLECLICK_CONFIG_FILE: join(temp, 'no-config.php'),
     CC_AJUSTES_PATH: join(temp, 'ajustes.json'), CC_SMTP_HOST: '', CC_TEST_BACKEND: backend }
   const setup = join(temp, 'fixture.php')
-  writeFileSync(setup, "<?php\n$r=getenv('CC_TEST_BACKEND');\nrequire $r.'/public/lib.php';\nrequire $r.'/public/lib.ferias.php';\nrequire $r.'/tests/backend/_migraciones.php';\ncb_test_migrar_todo(cb_pdo());\n$hoy=(new DateTimeImmutable('now',new DateTimeZone('America/Santiago')))->format('Y-m-d');\ncb_save_parties(['parties'=>['normal-prueba'=>['nombre'=>'Celebración de prueba','tema'=>'hielo','fecha'=>$hoy,'activa'=>true,'invitados'=>[['name'=>'Ana','g'=>'f']],'creada'=>gmdate('Y-m-d H:i:s')]]]);\n[$datos,$errores]=cb_feria_validar(['nombre'=>'Prueba técnica de feria','organizador'=>'Equipo de prueba','organizador_ig'=>'prueba_local','lugar'=>'Entorno local','fecha'=>$hoy,'hora_inicio'=>'10:00','mesa'=>'1','mundos_infantil'=>['hielo','fiestas-patrias'],'mundos_adulto'=>['hielo','adulto-estudio-bn','adulto-glam-dorado','adulto-noche-brujas','fiestas-patrias'],'max_fotos'=>50,'activa'=>'1']);\nif($errores)throw new RuntimeException(implode(' ',$errores));\n$feria=cb_feria_guardar($datos,null,'test');\necho json_encode(['slug'=>$feria['slug']]);\n")
+  writeFileSync(setup, "<?php\n$r=getenv('CC_TEST_BACKEND');\nrequire $r.'/public/lib.php';\nrequire $r.'/public/lib.ferias.php';\nrequire $r.'/tests/backend/_migraciones.php';\ncb_test_migrar_todo(cb_pdo());\n$hoy=(new DateTimeImmutable('now',new DateTimeZone('America/Santiago')))->format('Y-m-d');\ncb_save_parties(['parties'=>['normal-prueba'=>['nombre'=>'Celebración de prueba','tema'=>'hielo','fecha'=>$hoy,'activa'=>true,'invitados'=>[['name'=>'Ana','g'=>'f']],'creada'=>gmdate('Y-m-d H:i:s')]]]);\n[$datos,$errores]=cb_feria_validar(['nombre'=>'Prueba técnica de feria','organizador'=>'Equipo de prueba','organizador_ig'=>'prueba_local','lugar'=>'Entorno local','fecha'=>$hoy,'hora_inicio'=>'10:00','mesa'=>'1','mundos_infantil'=>['hielo','fiestas-patrias'],'mundos_adulto'=>['hielo','adulto-estudio-bn','adulto-glam-dorado','adulto-noche-brujas','adulto-revista','fiestas-patrias'],'max_fotos'=>50,'activa'=>'1']);\nif($errores)throw new RuntimeException(implode(' ',$errores));\n$feria=cb_feria_guardar($datos,null,'test');\necho json_encode(['slug'=>$feria['slug']]);\n")
   const fixture = JSON.parse(execFileSync(php, [setup], { env, encoding: 'utf8' }))
   backendProcess = spawn(php, ['-S', '127.0.0.1:' + backendPort, '-t', join(backend, 'public')], { env, windowsHide: true, stdio: ['ignore','ignore','ignore'] })
   for (let i=0;i<50;i++) { try { const res=await fetch(origin+'/feria-api.php?f='+fixture.slug); if(res.status!==502)break } catch {} await new Promise((done)=>setTimeout(done,100)) }
   const normal = await (await fetch(origin + '/api.php?p=normal-prueba')).text()
   assert.equal(await (await fetch(origin + '/api.php?p=normal-prueba&modo=adulto&tema=adulto-estudio-bn')).text(), normal)
   const selector = await (await fetch(origin + '/feria-api.php?f=' + fixture.slug)).json()
-  assert.equal(selector.mundos.adulto.filter((world)=>world.slug.startsWith('adulto-')).length, 3)
+  assert.equal(selector.mundos.adulto.filter((world)=>world.slug.startsWith('adulto-')).length, 4)
   // Asómate llega por api.php solo si la temática lo trae: fiestas-patrias sí (también en Adultos), glam dorado no.
   const apiDe=async(tema,modo)=>(await (await fetch(origin+'/api.php?'+new URLSearchParams({p:fixture.slug,tema,modo}))).json()).theme
   assert.ok((await apiDe('fiestas-patrias','adulto')).asomate?.personajes?.length>0,'fiestas-patrias adulto publica Asómate')
@@ -150,6 +150,41 @@ test('integración real 020 + build 021: SQLite aislada, tres fondos adultos y f
     await button('Guardar y ver mi QR');await page.waitForSelector('.feria-qr')
     assert.doesNotMatch(await page.$eval('main',(main)=>main.textContent),/diploma|niño|responsable/i)
     await shot(theme+'-qr')
+  }
+  // ── Portada de Revista CLICK (04-10): menú de tres portadas, vista previa entera (9:16) y la foto final con el título ──
+  for(const [etiqueta,escena,bn] of [['Alfombra roja','revista-alfombra.jpg',false],['Estudio de color','revista-estudio.jpg',false],['Blanco y negro','revista-bn.jpg',true]]){
+    await page.goto(origin+'/?'+new URLSearchParams({p:fixture.slug,tema:'adulto-revista',modo:'adulto'}),{waitUntil:'networkidle0'})
+    await page.type('.feria-name-label input','Camila');await button('Continuar')
+    await page.waitForSelector('[data-step=menu]')
+    const menu=await page.$eval('[data-step=menu]',(m)=>({eyebrow:m.querySelector('.feria-eyebrow').textContent,opciones:[...m.querySelectorAll('.feria-opcion strong')].map((b)=>b.textContent),asomate:Boolean(m.querySelector('.feria-opcion-asomate'))}))
+    assert.deepEqual(menu,{eyebrow:'ELIGE TU PORTADA',opciones:['Alfombra roja','Estudio de color','Blanco y negro'],asomate:false},'menú de portadas sin Asómate')
+    const clave=escena.replace('revista-','').replace('.jpg','')
+    await button(etiqueta);await page.waitForSelector('[data-step=camera] .feria-camera-portada')
+    await page.waitForFunction(()=>document.querySelector('.feria-camera-frame canvas')?.dataset.preview||JSON.parse(document.querySelector('main')?.dataset.segmentation||'{}').fallback,{timeout:20000})
+    const marco=await page.$eval('.feria-camera-portada',(f)=>{const r=f.getBoundingClientRect();return r.width/r.height})
+    assert.ok(Math.abs(marco-9/16)<0.01,'la vista previa muestra la portada entera, 9:16: '+marco)
+    await shot('revista-'+clave+'-camara')
+    await button('Tomar mi foto');await page.waitForSelector('.feria-result',{timeout:30000})
+    assert.equal(await page.$eval('main',(main)=>JSON.parse(main.dataset.segmentation).fallback),'','portada con recorte en '+etiqueta)
+    // La foto final contra su escena: donde va el título CLICK (a la izquierda, lejos de la cabeza) tiene que haber
+    // letras; en la esquina de arriba, solo la escena. withRemembrance encoge la portada al 87 % y la centra arriba.
+    const medida=await page.evaluate(async(escenaUrl)=>{
+      const cargar=(src)=>new Promise((ok,mal)=>{const i=new Image();i.onload=()=>ok(i);i.onerror=mal;i.src=src})
+      const [final,fondo]=await Promise.all([cargar(document.querySelector('.feria-result').src),cargar(escenaUrl)])
+      const W=final.naturalWidth,H=final.naturalHeight,alto=H-Math.round(H*0.13),k=alto/H,ox=(W-W*k)/2
+      const pixeles=(dibujar)=>{const c=document.createElement('canvas');c.width=W;c.height=H;const x=c.getContext('2d');dibujar(x);return x.getImageData(0,0,W,H).data}
+      const a=pixeles((x)=>x.drawImage(final,0,0)),b=pixeles((x)=>x.drawImage(fondo,ox,0,W*k,alto))
+      const lum=(d,p)=>0.299*d[p]+0.587*d[p+1]+0.114*d[p+2]
+      const zona=(x0,y0,x1,y1)=>{let s=0,n=0;for(let y=Math.round(y0*alto);y<y1*alto;y+=2)for(let x=Math.round(ox+x0*W*k);x<ox+x1*W*k;x+=2){const p=(y*W+x)*4;s+=Math.abs(lum(a,p)-lum(b,p));n++}return s/n}
+      let color=0,n=0;for(let p=0;p<a.length;p+=4*97){color+=Math.abs(a[p]-a[p+1])+Math.abs(a[p+1]-a[p+2]);n++}
+      return{W,H,titulo:zona(0.08,0.04,0.3,0.12),control:zona(0,0,0.03,0.02),color:color/n}
+    },'/themes/adulto-revista/'+escena)
+    assert.deepEqual([medida.W,medida.H],[1080,1920])
+    assert.ok(medida.titulo>30&&medida.control<15,'el título CLICK está en la foto y la escena intacta alrededor: '+JSON.stringify(medida))
+    assert.ok(bn?medida.color<3:medida.color>10,(bn?'la portada en blanco y negro sale gris':'la portada a color sale a color')+': '+medida.color)
+    evidence.cases.push({theme:'adulto-revista/'+clave,marco,...medida})
+    if(artifacts){const image=await page.$eval('.feria-result',(img)=>img.src);writeFileSync(join(artifacts,'revista-'+clave+'-composicion.jpg'),Buffer.from(image.split(',')[1],'base64'))}
+    await button('Guardar y ver mi QR');await page.waitForSelector('.feria-qr')
   }
   await page.setRequestInterception(true)
   page.on('request',(req)=>req.url().endsWith('selfie_segmenter.tflite')?req.abort():req.continue())

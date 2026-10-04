@@ -1,0 +1,331 @@
+{
+  "name": "Argos Mecánico",
+  "nodes": [
+    {
+      "id": "schedule-trigger-node",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [-200, 0],
+      "parameters": {
+        "rule": {
+          "interval": [
+            { "field": "cronExpression", "expression": "0 */3 * * * *" }
+          ]
+        }
+      }
+    },
+    {
+      "id": "buscar-pendientes-node",
+      "name": "Buscar Pendientes",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [0, 0],
+      "continueOnFail": true,
+      "parameters": {
+        "method": "GET",
+        "url": "https://automatizatech.cl/wp-json/automatiza/v1/n8n-errors/pending-fix",
+        "authentication": "none",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "X-API-Key", "value": "argos-automatiza-2024-secret" }
+          ]
+        },
+        "options": { "timeout": 10000 }
+      }
+    },
+    {
+      "id": "normalizar-pendientes-node",
+      "name": "Normalizar Pendientes",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [200, 0],
+      "parameters": {
+        "jsCode": "const items = $input.all();\nif (!items || items.length === 0) return [];\n// Procesa solo el mas viejo por ciclo (ya viene ordenado ASC por created_at)\n// para evitar sobrecargar el modelo con llamadas concurrentes.\nreturn [{ json: items[0].json }];"
+      }
+    },
+    {
+      "id": "f6290cd3-521c-46d9-83e9-8dad667c647d",
+      "name": "Claude Mecanico",
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.3,
+      "position": [300, 250],
+      "parameters": {
+        "model": { "value": "claude-sonnet-5", "mode": "id" }
+      },
+      "credentials": {
+        "anthropicApi": { "id": "BSDnSnMzaj3b69du", "name": "AT Anthropic API (LangChain)" }
+      }
+    },
+    {
+      "id": "f8e88853-6cd7-49a1-b996-e4d702f10749",
+      "name": "OpenAI Fallback Mecanico",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [460, 250],
+      "parameters": {
+        "model": { "value": "gpt-4.1-mini" }
+      },
+      "credentials": {
+        "openAiApi": { "id": "g52IEXpRfN5r7jKw", "name": "OpenAi account" }
+      }
+    },
+    {
+      "id": "33c8c79c-a1d9-46e9-a6a5-a2ff986336ec",
+      "name": "Leer Workflow",
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.2,
+      "position": [300, 400],
+      "parameters": {
+        "toolDescription": "Lee la configuración completa (nodos, conexiones, settings) del workflow de n8n que falló. Úsalo primero, siempre, antes de proponer cualquier cambio.",
+        "method": "GET",
+        "url": "=https://n8n-n8n.kchiba.easypanel.host/api/v1/workflows/{{ $fromAI('workflow_id', 'ID del workflow a leer', 'string') }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth"
+      },
+      "credentials": {
+        "httpHeaderAuth": { "id": "Syp8IlSVK9atiNSD", "name": "AT n8n Self API" }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "f795790c-2e5f-4a26-8137-c7053dc57b19",
+      "name": "Agente Reparador",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [400, 0],
+      "parameters": {
+        "promptType": "define",
+        "text": "=Repara este error de n8n si puedes, o indica que requiere intervención humana.\n\n**Workflow:** {{ $json.workflow_name }} (id: {{ $json.workflow_id }})\n**Nodo:** {{ $json.error_node }}\n**Error:** {{ $json.error_message }}\n**Stack:** {{ $json.error_stack }}\n**Intento número:** {{ $json.fix_attempts + 1 }} de 3\n**Historial de intentos previos:** {{ $json.fix_history || 'Ninguno, primer intento.' }}",
+        "options": {
+          "systemMessage": "# 🔧 MECÁNICO - Reparador automático de errores n8n\n\nTrabajas para AutomatizaTech junto a ARGOS (que detecta errores y te los pasa).\nTu trabajo: diagnosticar y, si puedes, reparar errores de workflows n8n.\n\n## LO ÚNICO QUE PUEDES TOCAR\nConfiguración del workflow que falló, y SOLO eso:\n- Parámetros de nodo (URLs mal puestas, valores incorrectos)\n- Expresiones rotas ({{ }} con referencias a nodos que ya no existen o mal escritas)\n- Credenciales mal referenciadas dentro del propio workflow\n- Nodos desconectados que deberían estar conectados\n- El campo Error Workflow si falta\n\n## LO QUE NUNCA DEBES HACER\n- Tocar código PHP, WordPress, o cualquier archivo fuera de n8n\n- Hacer un deploy o publicar nada a producción\n- Inventar credenciales nuevas o cambiar a qué cuenta/API apunta un nodo\n- Intentar \"arreglar\" algo borrando nodos o conexiones sin estar seguro\n\n## CUÁNDO ESCALAR EN VEZ DE INTENTAR (usa decision: \"requiere_intervencion\" directo)\n- El error es de una credencial vencida o inválida (401/403 de un servicio externo)\n- El error es de un servicio externo caído (timeout, 500 de una API que no es tuya)\n- El error requiere una decisión de negocio (qué valor poner, qué lógica cambiar)\n- Ya es el intento número 3 y sigue sin arreglarse\n\n## CÓMO TRABAJAR\n1. SIEMPRE usa la herramienta \"Leer Workflow\" primero. Nunca propongas un cambio sin haber leído la configuración real.\n2. Diagnostica la causa exacta antes de tocar nada. Anota el nombre EXACTO del nodo que necesita el cambio (copialo tal cual aparece en la respuesta de \"Leer Workflow\", mayúsculas y todo).\n3. Si el diagnóstico cae en \"cuándo escalar\" (arriba), NO uses \"Modificar Workflow\" — responde directo con decision \"requiere_intervencion\".\n4. Si es reparable, usa \"Modificar Workflow\" con SOLO estos 3 datos:\n   - workflow_id: el id del workflow (el mismo que le pasaste a \"Leer Workflow\")\n   - node_name: el nombre EXACTO del nodo a corregir (copiado literal de \"Leer Workflow\", no lo inventes ni lo abrevies)\n   - node_parameters: un JSON string con SOLO el objeto \"parameters\" corregido de ESE nodo (por ejemplo: {\"url\": \"https://...\", \"method\": \"GET\"}) — NUNCA el workflow completo, NUNCA otros nodos, NUNCA \"nodes\"/\"connections\"/\"name\"/\"settings\". El sistema arma el resto automáticamente y preserva todo lo demás intacto — vos solo corriges el parámetro roto de un nodo.\n5. La herramienta te devuelve found:true/false. Si found es false, el node_name no coincidió con ningún nodo real — revisa el nombre exacto en \"Leer Workflow\" y reintenta, o si no puedes resolverlo usa decision \"fallido\".\n\n6. Responde SIEMPRE con este JSON al final de tu mensaje (nada más después):\n\n{\"decision\": \"resuelto\" | \"fallido\" | \"requiere_intervencion\", \"diagnostico\": \"causa raíz en 1-2 frases\", \"accion\": \"qué hiciste o qué encontraste, en 1-3 frases, lenguaje simple para Luis\"}\n\n\"resuelto\" = usaste Modificar Workflow y quedó arreglado.\n\"fallido\" = lo intentaste pero no funcionó o no encontraste la causa (cuenta como intento).\n\"requiere_intervencion\" = no lo intentaste porque cae fuera de tu alcance (escalamiento inmediato)."
+        },
+        "needsFallback": true
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "aaaffbc1-2bcb-4ae9-af1d-da8c33e55971",
+      "name": "Parsear Decision",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [600, 0],
+      "parameters": {
+        "jsCode": "function extraerUltimoJson(text) {\n  const lastClose = text.lastIndexOf('}');\n  if (lastClose === -1) return null;\n  let depth = 0;\n  for (let i = lastClose; i >= 0; i--) {\n    if (text[i] === '}') depth++;\n    else if (text[i] === '{') {\n      depth--;\n      if (depth === 0) {\n        const candidate = text.slice(i, lastClose + 1);\n        try { return JSON.parse(candidate); } catch (e) { return null; }\n      }\n    }\n  }\n  return null;\n}\n\nconst raw = $json.output || '';\nlet parsed = extraerUltimoJson(raw);\nif (!parsed || !['resuelto', 'fallido', 'requiere_intervencion'].includes(parsed.decision)) {\n  parsed = { decision: 'fallido', diagnostico: 'El agente no devolvió un JSON válido (o falló la llamada al modelo).', accion: 'Sin acción — respuesta inválida o error del modelo.' };\n}\nconst source = $('Normalizar Pendientes').first().json;\nreturn [{ json: { ...source, decision: parsed.decision, diagnostico: parsed.diagnostico, accion: parsed.accion } }];"
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "57a932da-bd78-4208-a4e8-acc6073c4706",
+      "name": "Reportar Intento",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [800, 0],
+      "parameters": {
+        "method": "POST",
+        "url": "https://automatizatech.cl/wp-json/automatiza/v1/n8n-errors/fix-attempt",
+        "authentication": "none",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "X-API-Key", "value": "argos-automatiza-2024-secret" }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ error_id: $json.id, resultado: $json.decision === 'resuelto' ? 'resuelto' : 'fallido', diagnostico: $json.diagnostico, accion: $json.accion, requiere_intervencion_inmediata: $json.decision === 'requiere_intervencion' }) }}",
+        "options": { "timeout": 10000 }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "1f27ca1c-074f-4dc2-98e2-0f90b88c3a54",
+      "name": "Combinar Contexto",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 0],
+      "parameters": {
+        "jsCode": "const decision = $('Parsear Decision').first().json;\nreturn [{ json: { ...decision, ...$json } }];"
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "4342dc2a-4025-4ab5-9d0b-ac4517e3fa94",
+      "name": "Se Resolvio?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [1000, 0],
+      "parameters": {
+        "conditions": {
+          "options": { "version": 2, "leftValue": "", "caseSensitive": true, "typeValidation": "strict" },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "a1b2c3d4-0001-4a00-8000-000000000001",
+              "operator": { "name": "filter.operator.equals", "type": "string", "operation": "equals" },
+              "leftValue": "={{ $json.fix_status }}",
+              "rightValue": "resuelto"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "f4c08ea0-00ff-42f0-b843-abac3b4f1ca7",
+      "name": "Requiere Intervencion?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [1200, 150],
+      "parameters": {
+        "conditions": {
+          "options": { "version": 2, "leftValue": "", "caseSensitive": true, "typeValidation": "strict" },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "a1b2c3d4-0002-4a00-8000-000000000002",
+              "operator": { "name": "filter.operator.equals", "type": "string", "operation": "equals" },
+              "leftValue": "={{ $json.fix_status }}",
+              "rightValue": "requiere_intervencion"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "7b2536d1-396c-4f3d-be50-f984b354eb06",
+      "name": "Construir Correo Exito",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1200, -150],
+      "parameters": {
+        "jsCode": "const d = $json;\nconst workflowName = d.workflow_name || 'Desconocido';\nconst errorNode = d.error_node || 'Desconocido';\nconst accion = (d.accion || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nconst diagnostico = (d.diagnostico || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nconst timestamp = new Date().toLocaleString('es-CL', { timeZone: 'America/Santiago' });\n\nconst html = `\n<!DOCTYPE html>\n<html>\n<head>\n  <meta charset=\"UTF-8\">\n  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n</head>\n<body style=\"margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f5f7fa;\">\n  <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"max-width: 600px; margin: 0 auto; background-color: #ffffff;\">\n\n    <tr>\n      <td style=\"background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); padding: 30px 40px; text-align: center;\">\n        <h1 style=\"color: #ffffff; margin: 0; font-size: 24px; font-weight: 600;\">🔧 MECÁNICO</h1>\n        <p style=\"color: #a0a0a0; margin: 5px 0 0 0; font-size: 14px;\">Reparador automático de ARGOS</p>\n      </td>\n    </tr>\n\n    <tr>\n      <td style=\"background-color: #f0fff4; border-left: 4px solid #28a745; padding: 20px 40px;\">\n        <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\">\n          <tr>\n            <td><span style=\"font-size: 28px;\">✅</span></td>\n            <td style=\"padding-left: 15px;\">\n              <p style=\"margin: 0; font-size: 12px; color: #666; text-transform: uppercase; letter-spacing: 1px;\">Resultado</p>\n              <p style=\"margin: 5px 0 0 0; font-size: 20px; font-weight: 700; color: #28a745;\">Solucionado automáticamente</p>\n            </td>\n          </tr>\n        </table>\n      </td>\n    </tr>\n\n    <tr>\n      <td style=\"padding: 30px 40px;\">\n        <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"background-color: #f8f9fa; border-radius: 12px; overflow: hidden;\">\n          <tr>\n            <td style=\"padding: 20px; border-bottom: 1px solid #e9ecef;\">\n              <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\">\n                <tr>\n                  <td width=\"50%\" style=\"padding-right: 10px;\">\n                    <p style=\"margin: 0; font-size: 11px; color: #6c757d; text-transform: uppercase; letter-spacing: 0.5px;\">📋 Workflow</p>\n                    <p style=\"margin: 5px 0 0 0; font-size: 16px; font-weight: 600; color: #212529;\">${workflowName}</p>\n                  </td>\n                  <td width=\"50%\" style=\"padding-left: 10px;\">\n                    <p style=\"margin: 0; font-size: 11px; color: #6c757d; text-transform: uppercase; letter-spacing: 0.5px;\">🔧 Nodo</p>\n                    <p style=\"margin: 5px 0 0 0; font-size: 16px; font-weight: 600; color: #212529;\">${errorNode}</p>\n                  </td>\n                </tr>\n              </table>\n            </td>\n          </tr>\n          <tr>\n            <td style=\"padding: 20px;\">\n              <p style=\"margin: 0; font-size: 11px; color: #6c757d; text-transform: uppercase; letter-spacing: 0.5px;\">⏰ Timestamp</p>\n              <p style=\"margin: 5px 0 0 0; font-size: 14px; color: #495057;\">${timestamp}</p>\n            </td>\n          </tr>\n        </table>\n      </td>\n    </tr>\n\n    <tr>\n      <td style=\"padding: 0 40px 30px 40px;\">\n        <p style=\"margin: 0 0 12px 0; font-size: 14px; font-weight: 600; color: #212529;\">🔎 Diagnóstico</p>\n        <div style=\"background-color: #e8f4fd; border-left: 4px solid #0d6efd; border-radius: 0 8px 8px 0; padding: 20px;\">\n          <p style=\"margin: 0; font-size: 14px; color: #212529; line-height: 1.6; white-space: pre-wrap;\">${diagnostico}</p>\n        </div>\n      </td>\n    </tr>\n\n    <tr>\n      <td style=\"padding: 0 40px 30px 40px;\">\n        <p style=\"margin: 0 0 12px 0; font-size: 14px; font-weight: 600; color: #212529;\">🔧 Qué se hizo</p>\n        <div style=\"background-color: #f0fff4; border-left: 4px solid #28a745; border-radius: 0 8px 8px 0; padding: 20px;\">\n          <p style=\"margin: 0; font-size: 14px; color: #212529; line-height: 1.6; white-space: pre-wrap;\">${accion}</p>\n        </div>\n      </td>\n    </tr>\n\n    <tr>\n      <td style=\"padding: 0 40px 30px 40px; text-align: center;\">\n        <a href=\"https://automatizatech.cl/wp-admin/admin.php?page=automatiza-n8n-errors\" style=\"display: inline-block; background: linear-gradient(135deg, #0d6efd 0%, #0056b3 100%); color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 600; font-size: 14px;\">Ver Panel de Errores →</a>\n      </td>\n    </tr>\n\n    <tr>\n      <td style=\"background-color: #1a1a2e; padding: 25px 40px; text-align: center;\">\n        <p style=\"margin: 0; color: #a0a0a0; font-size: 13px;\">🔧 El Mecánico repara. Argos vigila.</p>\n        <p style=\"margin: 10px 0 0 0; color: #6c757d; font-size: 11px;\">AutomatizaTech © 2026 - Sistema de Monitoreo</p>\n      </td>\n    </tr>\n\n  </table>\n</body>\n</html>\n`;\n\nconst subject = `✅ Mecánico solucionó: ${workflowName} - ${errorNode}`;\n\nreturn [{ json: { ...d, html, subject } }];"
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "2cce0940-e9f6-4b3c-ad1c-6920199038bd",
+      "name": "Enviar Correo Exito",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 1,
+      "position": [1400, -150],
+      "parameters": {
+        "fromEmail": "Automatiza Tech <contacto@automatizatech.cl>",
+        "toEmail": "lgonzalez@automatizatech.cl",
+        "bccEmail": "automatizacionesbotcore@gmail.com",
+        "subject": "={{ $json.subject }}",
+        "html": "={{ $json.html }}",
+        "options": {}
+      },
+      "credentials": {
+        "smtp": { "id": "dyhVFWmjRNC45ccA", "name": "SMTP account PROD" }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "3dea600e-db11-4a9d-bbe8-7ecbe68b88bf",
+      "name": "Construir Informe",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1400, 150],
+      "parameters": {
+        "jsCode": "const historial = $json.historial || [];\n\nlet informeHtml = '';\nif (Array.isArray(historial) && historial.length > 0) {\n  informeHtml = historial.map(h => {\n    const fecha = h.fecha || '';\n    const intento = h.intento || '';\n    const resultadoLabel = h.resultado === 'resuelto' ? '✅ Resuelto' : '❌ Fallido';\n    const diagnostico = (h.diagnostico || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');\n    const accion = (h.accion || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');\n    return `<p style=\"margin: 16px 0 6px 0; font-size: 14px; font-weight: 600; color: #212529;\">Intento ${intento} · ${fecha}</p>\\n<ul style=\"margin: 0 0 8px 0; padding-left: 20px; font-size: 13px; color: #495057; line-height: 1.6;\">\\n  <li><strong>Diagnóstico:</strong> ${diagnostico}</li>\\n  <li><strong>Acción:</strong> ${accion}</li>\\n  <li><strong>Resultado:</strong> ${resultadoLabel}</li>\\n</ul>`;\n  }).join('\\n');\n} else {\n  informeHtml = '<p style=\"margin:0; font-size: 13px; color: #6c757d;\">Sin historial disponible.</p>';\n}\n\nconst ultimo = Array.isArray(historial) && historial.length > 0 ? historial[historial.length - 1] : null;\nif (ultimo) {\n  const diagUltimo = (ultimo.diagnostico || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');\n  const accionUltimo = (ultimo.accion || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');\n  informeHtml += `<p style=\"margin: 16px 0 0 0; font-size: 14px; color: #212529; line-height: 1.6;\"><strong>Recomendación:</strong> ${diagUltimo} ${accionUltimo}</p>`;\n}\n\nreturn [{ json: { ...$json, informeHtml } }];"
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "5bdbaf92-ded8-4775-b8c0-2fba8020c845",
+      "name": "Construir Correo Escalacion",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1600, 150],
+      "parameters": {
+        "jsCode": "const d = $json;\nconst informe = $json.informeHtml || '';\nconst workflowName = d.workflow_name || 'Desconocido';\nconst errorNode = d.error_node || 'Desconocido';\nconst fixAttempts = $json.fix_attempts || d.fix_attempts || '';\nconst timestamp = new Date().toLocaleString('es-CL', { timeZone: 'America/Santiago' });\n\nconst html = `\n<!DOCTYPE html>\n<html>\n<head>\n  <meta charset=\"UTF-8\">\n  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n</head>\n<body style=\"margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f5f7fa;\">\n  <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"max-width: 600px; margin: 0 auto; background-color: #ffffff;\">\n\n    <tr>\n      <td style=\"background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); padding: 30px 40px; text-align: center;\">\n        <h1 style=\"color: #ffffff; margin: 0; font-size: 24px; font-weight: 600;\">🔧 MECÁNICO</h1>\n        <p style=\"color: #a0a0a0; margin: 5px 0 0 0; font-size: 14px;\">Reparador automático de ARGOS</p>\n      </td>\n    </tr>\n\n    <tr>\n      <td style=\"background-color: #fff8f0; border-left: 4px solid #fd7e14; padding: 20px 40px;\">\n        <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\">\n          <tr>\n            <td><span style=\"font-size: 28px;\">⚠️</span></td>\n            <td style=\"padding-left: 15px;\">\n              <p style=\"margin: 0; font-size: 12px; color: #666; text-transform: uppercase; letter-spacing: 1px;\">Resultado</p>\n              <p style=\"margin: 5px 0 0 0; font-size: 20px; font-weight: 700; color: #fd7e14;\">Requiere tu intervención</p>\n            </td>\n            <td style=\"text-align: right;\">\n              <span style=\"background-color: #fd7e14; color: white; padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 600;\">${fixAttempts} intentos</span>\n            </td>\n          </tr>\n        </table>\n      </td>\n    </tr>\n\n    <tr>\n      <td style=\"padding: 30px 40px;\">\n        <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"background-color: #f8f9fa; border-radius: 12px; overflow: hidden;\">\n          <tr>\n            <td style=\"padding: 20px; border-bottom: 1px solid #e9ecef;\">\n              <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\">\n                <tr>\n                  <td width=\"50%\" style=\"padding-right: 10px;\">\n                    <p style=\"margin: 0; font-size: 11px; color: #6c757d; text-transform: uppercase; letter-spacing: 0.5px;\">📋 Workflow</p>\n                    <p style=\"margin: 5px 0 0 0; font-size: 16px; font-weight: 600; color: #212529;\">${workflowName}</p>\n                  </td>\n                  <td width=\"50%\" style=\"padding-left: 10px;\">\n                    <p style=\"margin: 0; font-size: 11px; color: #6c757d; text-transform: uppercase; letter-spacing: 0.5px;\">🔧 Nodo</p>\n                    <p style=\"margin: 5px 0 0 0; font-size: 16px; font-weight: 600; color: #212529;\">${errorNode}</p>\n                  </td>\n                </tr>\n              </table>\n            </td>\n          </tr>\n          <tr>\n            <td style=\"padding: 20px;\">\n              <p style=\"margin: 0; font-size: 11px; color: #6c757d; text-transform: uppercase; letter-spacing: 0.5px;\">⏰ Timestamp</p>\n              <p style=\"margin: 5px 0 0 0; font-size: 14px; color: #495057;\">${timestamp}</p>\n            </td>\n          </tr>\n        </table>\n      </td>\n    </tr>\n\n    <tr>\n      <td style=\"padding: 0 40px 30px 40px;\">\n        <p style=\"margin: 0 0 12px 0; font-size: 14px; font-weight: 600; color: #212529;\">📋 Informe de intentos</p>\n        <div style=\"background-color: #fff8f0; border-left: 4px solid #fd7e14; border-radius: 0 8px 8px 0; padding: 20px;\">\n          ${informe}\n        </div>\n      </td>\n    </tr>\n\n    <tr>\n      <td style=\"padding: 0 40px 30px 40px; text-align: center;\">\n        <a href=\"https://automatizatech.cl/wp-admin/admin.php?page=automatiza-n8n-errors\" style=\"display: inline-block; background: linear-gradient(135deg, #0d6efd 0%, #0056b3 100%); color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 600; font-size: 14px;\">Ver Panel de Errores →</a>\n      </td>\n    </tr>\n\n    <tr>\n      <td style=\"background-color: #1a1a2e; padding: 25px 40px; text-align: center;\">\n        <p style=\"margin: 0; color: #a0a0a0; font-size: 13px;\">🔧 El Mecánico repara. Argos vigila.</p>\n        <p style=\"margin: 10px 0 0 0; color: #6c757d; font-size: 11px;\">AutomatizaTech © 2026 - Sistema de Monitoreo</p>\n      </td>\n    </tr>\n\n  </table>\n</body>\n</html>\n`;\n\nconst subject = `⚠️ Mecánico no pudo solucionar: ${workflowName} - ${errorNode}`;\n\nreturn [{ json: { ...d, html, subject } }];"
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "a5f1e349-e8e9-4281-ad3a-fcc40f374b21",
+      "name": "Enviar Correo Escalacion",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 1,
+      "position": [1800, 150],
+      "parameters": {
+        "fromEmail": "Automatiza Tech <contacto@automatizatech.cl>",
+        "toEmail": "lgonzalez@automatizatech.cl",
+        "bccEmail": "automatizacionesbotcore@gmail.com",
+        "subject": "={{ $json.subject }}",
+        "html": "={{ $json.html }}",
+        "options": {}
+      },
+      "credentials": {
+        "smtp": { "id": "dyhVFWmjRNC45ccA", "name": "SMTP account PROD" }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "modificar-workflow-tool-2",
+      "name": "Modificar Workflow",
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [460, 400],
+      "parameters": {
+        "description": "Aplica un cambio a UN SOLO nodo del workflow que fallo. SOLO para arreglos de configuracion (URL mal puesta, expresion rota, metodo HTTP incorrecto, credencial mal referenciada). Especifica node_name EXACTO (tal como aparece en Leer Workflow) y node_parameters con SOLO el objeto parameters corregido de ese nodo, como JSON string. El sistema arma el resto del workflow automaticamente preservando todo lo demas intacto.",
+        "source": "database",
+        "workflowId": { "__rl": true, "value": "8UsvHn3cht15RWLH", "mode": "id" },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "workflow_id": "={{ $fromAI('workflow_id', 'ID del workflow a modificar', 'string') }}",
+            "node_name": "={{ $fromAI('node_name', 'Nombre EXACTO del nodo a corregir, tal como aparece en Leer Workflow', 'string') }}",
+            "node_parameters": "={{ $fromAI('node_parameters', 'JSON string con SOLO el objeto parameters corregido de ese nodo', 'string') }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            { "id": "workflow_id", "displayName": "workflow_id", "type": "string", "required": true, "defaultMatch": false, "canBeUsedToMatch": true, "display": true },
+            { "id": "node_name", "displayName": "node_name", "type": "string", "required": true, "defaultMatch": false, "canBeUsedToMatch": true, "display": true },
+            { "id": "node_parameters", "displayName": "node_parameters", "type": "string", "required": true, "defaultMatch": false, "canBeUsedToMatch": true, "display": true }
+          ]
+        }
+      },
+      "credentials": {}
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": { "main": [[{ "node": "Buscar Pendientes", "type": "main", "index": 0 }]] },
+    "Buscar Pendientes": { "main": [[{ "node": "Normalizar Pendientes", "type": "main", "index": 0 }]] },
+    "Claude Mecanico": { "ai_languageModel": [[{ "node": "Agente Reparador", "type": "ai_languageModel", "index": 0 }]] },
+    "OpenAI Fallback Mecanico": { "ai_languageModel": [[{ "node": "Agente Reparador", "type": "ai_languageModel", "index": 1 }]] },
+    "Leer Workflow": { "ai_tool": [[{ "node": "Agente Reparador", "type": "ai_tool", "index": 0 }]] },
+    "Normalizar Pendientes": { "main": [[{ "node": "Agente Reparador", "type": "main", "index": 0 }]] },
+    "Agente Reparador": { "main": [[{ "node": "Parsear Decision", "type": "main", "index": 0 }]] },
+    "Parsear Decision": { "main": [[{ "node": "Reportar Intento", "type": "main", "index": 0 }]] },
+    "Reportar Intento": { "main": [[{ "node": "Combinar Contexto", "type": "main", "index": 0 }]] },
+    "Combinar Contexto": { "main": [[{ "node": "Se Resolvio?", "type": "main", "index": 0 }]] },
+    "Se Resolvio?": {
+      "main": [
+        [{ "node": "Construir Correo Exito", "type": "main", "index": 0 }],
+        [{ "node": "Requiere Intervencion?", "type": "main", "index": 0 }]
+      ]
+    },
+    "Construir Correo Exito": { "main": [[{ "node": "Enviar Correo Exito", "type": "main", "index": 0 }]] },
+    "Requiere Intervencion?": { "main": [[{ "node": "Construir Informe", "type": "main", "index": 0 }]] },
+    "Construir Informe": { "main": [[{ "node": "Construir Correo Escalacion", "type": "main", "index": 0 }]] },
+    "Construir Correo Escalacion": { "main": [[{ "node": "Enviar Correo Escalacion", "type": "main", "index": 0 }]] },
+    "Modificar Workflow": { "ai_tool": [[{ "node": "Agente Reparador", "type": "ai_tool", "index": 0 }]] }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "saveManualExecutions": true,
+    "saveExecutionProgress": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  }
+}

@@ -108,7 +108,8 @@ Diseño: `Docs/superpowers/specs/2026-09-24-modulo-propuestas-admin-design.md`; 
 
 Diseño: `Docs/superpowers/specs/2026-09-25-cierre-de-cliente-design.md`; plan:
 `Docs/superpowers/plans/2026-09-25-cierre-de-cliente.md`; rama `claude/cierre-cliente`. Código en PROD: commit `7e7c3bf`
-(27-sep 22:14; el detalle de cada subida está al final de esta sección).
+(27-sep 22:14; el detalle de cada subida está al final de esta sección), salvo `whatsapp.php` y `cargar.php`, que desde
+el 29-sep 08:13 son de `57800e3` (rama `claude/wa-fallos-recordatorios`, PR #54), más `whatsapp-recordatorios.php`.
 
 - **Responder la propuesta.** `ver-presentacion.php` lleva abajo una barra con «Acepto la propuesta», «La sigo
   evaluando» y «No, gracias» mientras la propuesta está `sent` o `evaluando`. Si está `rechazada`, solo ofrece
@@ -119,6 +120,7 @@ Diseño: `Docs/superpowers/specs/2026-09-25-cierre-de-cliente-design.md`; plan:
   marcada por defecto), la dirección y, si es empresa, su razón social y RUT. Si algo falta o no es válido, la página
   vuelve con el diálogo abierto y el aviso adentro. El correo de
   la propuesta trae el mismo botón «Aceptar la propuesta». La página no se guarda en caché (formularios con nonce).
+- **Diálogo de aceptar al final (EN PROD desde el 2026-09-29 08:38, pedido de Luis, commit `dbf1f9b`):** el enlace «Aceptar la propuesta» del correo y del WhatsApp (`responder=aceptar`) ya no abre el diálogo al cargar: la barra invita a revisar hasta la última lámina. «Acepto la propuesta» pregunta «¿Ya revisaste toda la propuesta?» mientras el cliente no llegue al final; al llegar, la presentación avisa con `postMessage` (`at-deck-lamina`, se valida el origen de `gamma_iframe_url`), el diálogo de datos se abre solo una vez y el botón va directo. Las presentaciones renderizadas antes del renderer `52a43d5` no avisan la lámina: en ellas siempre sale la confirmación previa. Respaldo `~/respaldos/cierre-pagina-antes-20260929-083814.php` (rollback: copiarlo sobre `inc/cierre-cliente/pagina.php`). Prueba `tests/cierre/pagina-wp-test.php` (84).
 - **Al aceptar, todo es automático:** nota en Seguimiento («Aceptó la propuesta», tipo `respuesta_cliente`) con lo
   que el cliente aceptó y la huella SHA-256 del contenido completo de la propuesta; propuesta `aceptada`; prospecto →
   cliente en la ficha única (`wp_automatiza_tech_clients.crm_cliente_id` enlaza con `wp_crm_clientes`); correo de
@@ -282,6 +284,16 @@ Diseño: `Docs/superpowers/specs/2026-09-25-cierre-de-cliente-design.md`; plan:
   administrador, la página de la 43 desde afuera (tres diálogos con logo, sin el verde de antes) y PROD cargando la
   cláusula en las dos plantillas. Pruebas: `bienvenida-datos-wp-test.php`, `datos-documento-wp-test.php`,
   `plantilla-test.php`, `contrato-wp-test.php` (33 grupos, 1300 comprobaciones). Pendiente: verlo en un celular real.
+- **Subida del 29-sep 08:13 (autorizada por Luis; commit `57800e3`, PR #54 sobre este PR): la ruta de estados de la
+  Task 19 también avisa los recordatorios de WhatsApp.** Los 6 flujos que le escriben al cliente con plantilla (citas
+  72 h, 24 h y 1 h; seguimientos 8 AM y 8 PM; aviso de reunión) anotan su wamid en `at/v1/whatsapp-envio`; si Meta no
+  lo entrega, a Luis le llega un correo con el cliente, la cita y el motivo, una vez por mensaje, sin reintentar el
+  recordatorio. Archivos: `whatsapp-recordatorios.php` (nuevo), `whatsapp.php` (unas líneas en
+  `at_cc_rest_estado_whatsapp()`) y `cargar.php`, subidos en ese orden. Respaldo
+  `~/respaldos/wa-fallos-antes-20260929-081312.tar.gz`. Verificado: huellas, `php -l` con el PHP de PROD, sitio y
+  `wp-json` 200, las dos rutas 401 sin clave, y una prueba real con un wamid falso (quedaron la anotación y la marca de
+  «ya avisado», sin fallo del correo en `debug.log`). Detalle en `N8N/PROD/wa-fallos-recordatorios-2026-09-29/README.md`.
+  🔴 Quien vuelva a subir el cierre debe partir de `57800e3` para esos dos archivos, o borra este aviso.
 - **Primera propuesta real aceptada (id 53), aceptación anulada el 26-sep 23:59** para que el cliente la repita con el
   formulario nuevo (decisión de Luis): la propuesta volvió a `sent`, su fila del CRM a prospecto, y se borraron el
   contrato sin firma del cliente, la ficha operativa creada al aceptar con sus notas copiadas, las dos entradas del

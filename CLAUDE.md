@@ -132,6 +132,8 @@ MANDATORY: All on-screen text, UI elements, app interfaces, phone screens, email
 - **Log canonico de publicaciones Reel Diario:** desde 2026-07-13, n8n Plan B actualiza el CSV existente `IG-AT/Reel-Diario/Reel-Diario-Log-Publicaciones.csv` (`file_id=1NpJf8VVTiqcN5LdGFfLdi0T9qQ9iGCRw`) después de cada intento real de publicación: éxito, fallo de contenedor/publicación o rechazo QA. No crea CSVs nuevos; descarga el archivo, actualiza/agrega la fila por `Dia`, acumula `Intentos / Checkpoints` y sube el mismo archivo por Drive API `PATCH uploadType=media`. No loguear skips operativos como `already_published`, `fresh_lock` o `folder_not_found`.
 - **Regla Plan B:** los schedules automáticos mantienen QA normal; no usar `ignore_qa` salvo instrucción explícita de Luis para una prueba manual. El brief diario `at-reel-diario-brief` sigue en Claude; los checkpoints locales Claude siguen no-op.
 
+- **ARGOS Mecánico:** agente n8n que repara errores de configuración de workflows detectados por ARGOS (máx. 3 intentos, siempre avisa a Luis). Spec en `Docs/superpowers/specs/2026-08-16-argos-mecanico-design.md`; solo toca configuración de n8n, nunca PHP ni despliegues. Rama `feat/argos-mecanico` integrada a `main` el 04-oct-2026; lo que corre en PROD ya estaba en `main` desde el PR #65.
+
 ## graphify
 
 This project has a knowledge graph at graphify-out/ with god nodes, community structure, and cross-file relationships.

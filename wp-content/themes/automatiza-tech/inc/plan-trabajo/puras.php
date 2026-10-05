@@ -1307,7 +1307,8 @@ function at_pt_mensajes_agenda(): array {
 		'muchos_intentos'    => 'Hiciste muchos intentos seguidos. Espera un rato o escríbenos por WhatsApp.',
 		'sin_correo'         => 'No tenemos tu correo para enviarte la invitación. Escríbenos por WhatsApp y la agendamos.',
 		'ya_agendada'        => 'Ya tienes una llamada de seguimiento agendada.',
-		'no_guardo'          => 'No pudimos agendar la llamada. Inténtalo de nuevo o escríbenos por WhatsApp.',
+		'limite_reuniones'   => 'Ya tienes 2 reuniones activas. Cancela o espera a que pase alguna, o escríbenos por WhatsApp.',
+		'no_guardo'        => 'No pudimos agendar la llamada. Inténtalo de nuevo o escríbenos por WhatsApp.',
 	];
 }
 

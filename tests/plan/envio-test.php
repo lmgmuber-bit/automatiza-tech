@@ -57,7 +57,7 @@ ok(at_pt_motivo_hora_agenda('2026-10-06', '10:00', $ahora, ['isFullDay' => true]
 ok(at_pt_motivo_hora_agenda('2026-02-30', '10:00', $ahora, $disp) === 'fecha_invalida' && at_pt_motivo_hora_agenda('mañana', '10:00', $ahora, $disp) === 'fecha_invalida', 'fecha que no existe');
 ok(at_pt_motivo_hora_agenda('2026-10-06', '10:30', $ahora, $disp) === 'hora_invalida' && at_pt_motivo_hora_agenda('2026-10-06', '25:00', $ahora, $disp) === 'hora_invalida' && at_pt_motivo_hora_agenda('2026-10-06', '', $ahora, $disp) === 'hora_invalida', 'solo horas en punto válidas');
 $mensajes = at_pt_mensajes_agenda();
-foreach (['fecha_invalida', 'hora_invalida', 'pasada', 'muy_lejos', 'dia_no_disponible', 'fuera_de_horario', 'hora_ocupada', 'plan_no_disponible', 'sesion_vencida', 'muchos_intentos', 'sin_correo', 'ya_agendada', 'no_guardo'] as $k) {
+foreach (['fecha_invalida', 'hora_invalida', 'pasada', 'muy_lejos', 'dia_no_disponible', 'fuera_de_horario', 'hora_ocupada', 'plan_no_disponible', 'sesion_vencida', 'muchos_intentos', 'sin_correo', 'ya_agendada', 'limite_reuniones', 'no_guardo'] as $k) {
 	ok(isset($mensajes[$k]) && is_string($mensajes[$k]) && $mensajes[$k] !== '', "mensaje para «{$k}»");
 }
 

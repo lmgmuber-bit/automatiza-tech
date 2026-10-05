@@ -10,6 +10,7 @@ import { prepararVideo, urlDeVideo } from '../videoListo.js'
 import { fondoEstilo, pendonesDe } from './fondo.js'
 import { textosPortada } from './revista.js'
 import { textosAnioNuevo } from './anioNuevo.js'
+import { textosGraduacion, textosCumpleanos } from './celebraciones.js'
 import { INTRO_ARRANQUE_MS, alVencer, esperaPorDuracion, restanteMinimo } from './intro.js'
 import './feria.css'
 
@@ -62,6 +63,8 @@ export default function FeriaBooth({ feria, theme, themeData, characters, filter
     estilo: { tinta: variante?.tinta, acento: variante?.acento, evento: feria.nombre } }
     : rotulo?.diseno === 'anioNuevo' ? { diseno: 'anioNuevo', textos: textosAnioNuevo({ nombre: firstName(name), fecha: feria.fecha }) }
     : rotulo?.diseno === 'muroLogos' ? { diseno: 'muroLogos', textos: { marca: feria.organizador || feria.nombre }, logo: rotulo.logo || '' }
+    : rotulo?.diseno === 'graduacion' ? { diseno: 'graduacion', textos: textosGraduacion({ nombre: firstName(name), fecha: feria.fecha }), logo: rotulo.logo || '' }
+    : rotulo?.diseno === 'cumpleanos' ? { diseno: 'cumpleanos', textos: textosCumpleanos({ numero: rotulo.numero, festejado: rotulo.festejado }) }
     : null
   useFullscreenOnTap()
   // Los videos de la temática se bajan enteros apenas se abre el kiosco, como la despedida en una fiesta: la intro

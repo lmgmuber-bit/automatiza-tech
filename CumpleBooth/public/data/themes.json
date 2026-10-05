@@ -2384,6 +2384,85 @@
         "diseno": "muroLogos"
       }
     },
+    "adulto-cumpleanos": {
+      "nombre": "Cumpleaños de gala",
+      "franquicia": null,
+      "publico": "adulto",
+      "audiencia": "adulto",
+      "diploma": "Invitado de honor",
+      "colors": {
+        "accent": "#B76E79",
+        "accentSoft": "#F7E4E6",
+        "yellow": "#E8C66A",
+        "ink": "#2A1A1E",
+        "bgLight1": "#FBF4F2",
+        "bgLight2": "#F1DEDA",
+        "dark1": "#5A2E36",
+        "dark2": "#2A1A1E",
+        "dark3": "#D9A7A0"
+      },
+      "confetti": [
+        "#B76E79",
+        "#E8C66A",
+        "#FFFFFF",
+        "#F7E4E6",
+        "#D9A7A0",
+        "#5A2E36"
+      ],
+      "personajes": [],
+      "frameBox": {
+        "x": 0.1,
+        "y": 0.1,
+        "w": 0.8,
+        "h": 0.45
+      },
+      "modoFoto": "fondo",
+      "fondoEscena": "fondo-escena.jpg",
+      "musicaHint": "Sin música",
+      "transition": "none",
+      "rotulo": {
+        "diseno": "cumpleanos"
+      }
+    },
+    "graduacion": {
+      "nombre": "Graduación",
+      "franquicia": null,
+      "publico": "mixto",
+      "diploma": "Orgullo de la generación",
+      "colors": {
+        "accent": "#1F2F6B",
+        "accentSoft": "#E2E7F4",
+        "yellow": "#E8C66A",
+        "ink": "#121A3A",
+        "bgLight1": "#F6F4EC",
+        "bgLight2": "#E7E2D0",
+        "dark1": "#1F2F6B",
+        "dark2": "#0E1638",
+        "dark3": "#C9A24A"
+      },
+      "confetti": [
+        "#1F2F6B",
+        "#E8C66A",
+        "#FFFFFF",
+        "#C9A24A",
+        "#0E1638",
+        "#E2E7F4"
+      ],
+      "personajes": [],
+      "frameBox": {
+        "x": 0.1,
+        "y": 0.1,
+        "w": 0.8,
+        "h": 0.45
+      },
+      "modoFoto": "fondo",
+      "fondoEscena": "fondo-escena.jpg",
+      "musicaHint": "Sin música",
+      "transition": "none",
+      "rotulo": {
+        "diseno": "graduacion"
+      }
+    },
     "fiestas-patrias": {
       "nombre": "Fiestas Patrias",
       "franquicia": null,

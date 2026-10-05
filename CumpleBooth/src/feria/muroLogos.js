@@ -89,16 +89,25 @@ export function capasMuroLogos({ logo = null, texto = '', tono = 'claro' } = {},
       const sw = imagen.naturalWidth || imagen.width; const sh = imagen.naturalHeight || imagen.height
       const k = Math.max(W / sw, H / sh)
       ctx.drawImage(imagen, (W - sw * k) / 2, (H - sh * k) / 2, sw * k, sh * k)
-      if (!logo) return
-      const m = caber(logo.naturalWidth || logo.width, logo.naturalHeight || logo.height, W * 0.26, H * 0.06)
-      const pad = W * 0.02; const x = W * 0.04; const y = H * 0.03
-      ctx.fillStyle = tono === 'oscuro' ? MURO.oscuro : '#FFFFFF'
-      ctx.globalAlpha = 0.92
-      ctx.fillRect(x, y, m.w + pad * 2, m.h + pad * 2)
-      ctx.globalAlpha = 1
-      ctx.drawImage(logo, x + pad, y + pad, m.w, m.h)
+      if (logo) dibujarPlacaLogo(ctx, W, H, logo, { tono })
     },
   }
+}
+
+/** El logo en una placa chica (blanca, u oscura si el logo es claro), arriba a la izquierda salvo que se diga otra cosa.
+ * La usan el muro sin recorte y Graduación (el logo del colegio). */
+export function dibujarPlacaLogo(ctx, W, H, logo, { tono = 'claro', espejo = false, x = 0.04, y = 0.03, ancho = 0.26, alto = 0.06, centrado = false } = {}) {
+  ctx.save()
+  espejar(ctx, W, espejo)
+  const m = caber(logo.naturalWidth || logo.width, logo.naturalHeight || logo.height, W * ancho, H * alto)
+  const pad = W * 0.02
+  ctx.fillStyle = tono === 'oscuro' ? MURO.oscuro : '#FFFFFF'
+  ctx.globalAlpha = 0.92
+  const izq = centrado ? (W - m.w - pad * 2) / 2 : W * x
+  ctx.fillRect(izq, H * y, m.w + pad * 2, m.h + pad * 2)
+  ctx.globalAlpha = 1
+  ctx.drawImage(logo, izq + pad, H * y + pad, m.w, m.h)
+  ctx.restore()
 }
 
 /** El logo del evento, o null si no hay o no carga (el muro sigue con letras). */

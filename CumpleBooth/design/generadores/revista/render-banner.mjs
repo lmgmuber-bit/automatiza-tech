@@ -5,6 +5,8 @@
 //   adulto-anio-nuevo  la bahía con el año que se celebra y el saludo. Por defecto, el año del próximo 31 de diciembre:
 //                      cada temporada hay que volver a correrlo (o pasar la fecha).
 //   adulto-empresa     el muro de prensa con "TU LOGO AQUÍ" repetido.
+//   graduacion         GENERACIÓN y el año del próximo 31 de diciembre, sin logo (cada temporada, volver a correrlo).
+//   adulto-cumpleanos  un 40 de muestra y "¡Feliz cumpleaños!".
 // Uso: node design/generadores/revista/render-banner.mjs [tema] [AAAA-MM-DD]   (requiere Chrome; CHROME_PATH para otra ruta)
 import http from 'node:http'
 import { readFileSync, writeFileSync, existsSync } from 'node:fs'
@@ -15,7 +17,7 @@ const root = resolve(import.meta.dirname, '../../..')
 const chrome = process.env.CHROME_PATH || 'C:/Program Files/Google/Chrome/Application/chrome.exe'
 const tema = process.argv[2] || 'adulto-revista'
 const fecha = process.argv[3] || `${new Date().getFullYear()}-12-31`
-const MUESTRAS = ['adulto-revista', 'adulto-anio-nuevo', 'adulto-empresa']
+const MUESTRAS = ['adulto-revista', 'adulto-anio-nuevo', 'adulto-empresa', 'graduacion', 'adulto-cumpleanos']
 if (!MUESTRAS.includes(tema)) { console.error('tema sin muestra: ' + tema + ' (hay ' + MUESTRAS.join(', ') + ')'); process.exit(1) }
 const destino = join(root, 'public/themes', tema, 'fondo-banner.jpg')
 const mime = { '.js': 'text/javascript', '.jpg': 'image/jpeg', '.png': 'image/png', '.woff2': 'font/woff2', '.html': 'text/html' }
@@ -24,10 +26,13 @@ const pagina = `<!doctype html><meta charset="utf-8"><canvas id="c" width="1080"
 import { prepararCapas } from '/src/feria/portada.js'
 import { textosPortada } from '/src/feria/revista.js'
 import { textosAnioNuevo } from '/src/feria/anioNuevo.js'
+import { textosGraduacion, textosCumpleanos } from '/src/feria/celebraciones.js'
 const MUESTRA = {
   'adulto-revista': ['revista-alfombra.jpg', { diseno: 'revista', textos: { ...textosPortada({ titulo: 'CLICK' }), fecha: '' }, estilo: { tinta: '#FFFFFF', acento: '#C1121F' } }],
   'adulto-anio-nuevo': ['fondo-escena.jpg', { diseno: 'anioNuevo', textos: textosAnioNuevo({ fecha: ${JSON.stringify(fecha)} }) }],
   'adulto-empresa': ['fondo-escena.jpg', { diseno: 'muroLogos', textos: { marca: 'Tu logo aquí' }, logo: '' }],
+  'graduacion': ['fondo-escena.jpg', { diseno: 'graduacion', textos: textosGraduacion({ fecha: ${JSON.stringify(fecha)} }), logo: '' }],
+  'adulto-cumpleanos': ['fondo-escena.jpg', { diseno: 'cumpleanos', textos: textosCumpleanos({ numero: 40 }) }],
 }
 window.listo = (async () => {
   const [escena, portada] = MUESTRA[${JSON.stringify(tema)}]

@@ -86,10 +86,16 @@ if ($listo && ($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
             if (!$logo['ok']) {
                 $errores[] = $logo['error'];
             }
+            // La edad y el nombre del festejado (Cumpleaños con número, 05-10): van en un archivo aparte, sin migración.
+            [$extras, $erroresExtras] = cb_feria_extras_validar($_POST);
+            $errores = array_merge($errores, $erroresExtras);
+            $datos['festejo_edad'] = $extras['edad'];
+            $datos['festejo_nombre'] = $extras['nombre'];
             if ($errores) {
                 $form = [$datos, $id];
             } else {
                 $feria = cb_feria_guardar($datos, $id, $por);
+                cb_feria_extras_guardar((int) $feria['id'], $extras);
                 if ($logo['png'] !== null) {
                     cb_feria_logo_guardar((int) $feria['id'], $logo['png']);
                 } elseif (!empty($_POST['quitar_logo'])) {
@@ -300,7 +306,11 @@ dialog.feria-qr canvas { display: block; margin: 12px auto; max-width: 100%; hei
       </div>
       <?php $logoActual = '';
           if ($fid !== null) { try { $fLogo = cb_feria_por_id($fid); $logoActual = $fLogo ? cb_feria_logo_url($fLogo) : ''; } catch (Throwable $e) { $logoActual = ''; } } ?>
-      <div class="field feria-ancho"><label for="logo">Logo de la empresa (temática Muro de prensa)</label>
+      <?php $extrasActuales = ['edad' => (string) ($d['festejo_edad'] ?? ''), 'nombre' => (string) ($d['festejo_nombre'] ?? '')];
+          if ($fid !== null && !isset($d['festejo_edad'])) { $extrasActuales = cb_feria_extras((int) $fid); } ?>
+      <div class="field"><label for="festejo_nombre">Nombre del festejado (temática Cumpleaños con número)</label><input type="text" id="festejo_nombre" name="festejo_nombre" maxlength="40" value="<?= h($extrasActuales['nombre']) ?>" placeholder="Por ejemplo: Ana"></div>
+      <div class="field"><label for="festejo_edad">Edad que se celebra</label><input type="number" id="festejo_edad" name="festejo_edad" min="1" max="120" inputmode="numeric" value="<?= h($extrasActuales['edad']) ?>" placeholder="40"><small>Sale grande detrás de cada persona. Vacía: la foto lleva solo el saludo.</small></div>
+      <div class="field feria-ancho"><label for="logo">Logo de la empresa o del colegio (temáticas Muro de prensa y Graduación)</label>
         <?php if ($logoActual !== ''): ?><p class="feria-logo-actual"><img src="../<?= h($logoActual) ?>" alt="Logo actual del evento" height="56">
           <label class="feria-mundo"><input type="checkbox" name="quitar_logo" value="1"> Quitar el logo</label></p><?php endif; ?>
         <input type="file" id="logo" name="logo" accept="image/png,image/jpeg,image/webp">

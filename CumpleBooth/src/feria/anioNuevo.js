@@ -28,8 +28,10 @@ export function textosAnioNuevo({ nombre = '', fecha = '', hoy = new Date() } = 
 export const ZONAS_ANIO = { anio: { y: 0.03, h: 0.15, w: 0.9 }, saludo: { y: 0.80, w: 0.86 }, cabeza: 0.225 }
 
 /** El año, grande y dorado, detrás de la persona. */
-export function dibujarAnio(ctx, W, H, textos, { espejo = false } = {}) {
-  const z = ZONAS_ANIO.anio
+// `zona`: Graduación lo usa más abajo (deja lugar a GENERACIÓN) y Cumpleaños más grande (la edad tiene dos cifras).
+// `fondoClaro`: sobre una escena clara (los globos del cumpleaños) el dorado se pierde; va con sombra oscura y borde marcado.
+export function dibujarAnio(ctx, W, H, textos, { espejo = false, zona = ZONAS_ANIO.anio, fondoClaro = false } = {}) {
+  const z = zona
   ctx.save()
   espejar(ctx, W, espejo)
   const medir = (t, s) => { ctx.font = `900 ${s}px ${SERIF}`; return ctx.measureText(t).width }
@@ -46,13 +48,15 @@ export function dibujarAnio(ctx, W, H, textos, { espejo = false } = {}) {
     dorado.addColorStop(0.55, '#E8C66A')
     dorado.addColorStop(1, '#A8792A')
   }
-  ctx.shadowColor = 'rgba(255, 196, 92, 0.55)'
-  ctx.shadowBlur = W * 0.03
+  ctx.shadowColor = fondoClaro ? 'rgba(45, 18, 22, 0.7)' : 'rgba(255, 196, 92, 0.55)'
+  ctx.shadowBlur = W * (fondoClaro ? 0.02 : 0.03)
+  ctx.shadowOffsetY = fondoClaro ? W * 0.006 : 0
   ctx.fillStyle = dorado || '#E8C66A'
   ctx.fillText(textos.anio, W / 2, y, z.w * W)
   ctx.shadowColor = 'transparent'
-  ctx.lineWidth = Math.max(1, W * 0.0025)
-  ctx.strokeStyle = 'rgba(70, 45, 5, 0.45)'
+  ctx.shadowOffsetY = 0
+  ctx.lineWidth = Math.max(1, W * (fondoClaro ? 0.006 : 0.0025))
+  ctx.strokeStyle = fondoClaro ? 'rgba(90, 40, 30, 0.9)' : 'rgba(70, 45, 5, 0.45)'
   if (typeof ctx.strokeText === 'function') ctx.strokeText(textos.anio, W / 2, y, z.w * W)
   ctx.restore()
 }

@@ -483,6 +483,45 @@ $r = $panel->pedirMultipart('/admin/ferias.php', $fichaEmp() + ['quitar_logo' =>
 f_check($r['estado'] === 303 && pedir('GET', '/feria-logo.php?f=' . $feriaEmp['slug'])['estado'] === 404
     && ($temaEmp('adulto-empresa')['rotulo']['logo'] ?? 'x') === '', 'quitar el logo lo borra y el muro vuelve a las letras');
 
+// Graduación y Cumpleaños de gala (05-10): Graduación sirve en Niños y Adultos y lleva el logo del colegio; Cumpleaños toma la
+// edad y el festejado de la ficha del evento (archivo aparte, sin migración), con validación.
+foreach (['graduacion' => 'graduacion', 'adulto-cumpleanos' => 'cumpleanos'] as $t => $diseno) {
+    f_check(($temas[$t]['personajes'] ?? null) === [] && ($temas[$t]['rotulo'] ?? null) === ['diseno' => $diseno], "$t: sin personajes, con el rótulo $diseno");
+    foreach (['fondo-escena.jpg', 'fondo-sala.jpg', 'fondo-banner.jpg', 'fondo-evento.jpg'] as $archivo) {
+        $info = @getimagesize($raiz . "/public/themes/$t/$archivo");
+        f_check($info !== false && $info[0] === 1080 && $info[1] === 1920, "$t/$archivo existe y mide 1080x1920");
+    }
+}
+[$datosGc, $erroresGc] = cb_feria_validar(['nombre' => 'Licenciatura y fiesta', 'organizador' => 'Colegio Demo', 'fecha' => $hoy, 'activa' => '1',
+    'mundos_infantil' => ['graduacion', 'adulto-cumpleanos'], 'mundos_adulto' => ['graduacion', 'adulto-cumpleanos'], 'max_fotos' => 100]);
+f_check($erroresGc === [] && $datosGc['mundos_infantil'] === ['graduacion'] && $datosGc['mundos_adulto'] === ['graduacion', 'adulto-cumpleanos'],
+    'Graduación entra en Niños y en Adultos; Cumpleaños de gala solo en Adultos');
+$feriaGc = cb_feria_guardar($datosGc, null, 'test');
+$temaGc = fn (string $tema, string $modo = 'adulto') => pedir('GET', '/api.php?p=' . $feriaGc['slug'] . '&tema=' . $tema . '&modo=' . $modo)['json']['theme'] ?? [];
+f_check(($temaGc('graduacion', 'infantil')['rotulo'] ?? null) === ['diseno' => 'graduacion', 'logo' => ''], 'Graduación publica su rótulo, sin logo todavía');
+f_check(($temaGc('adulto-cumpleanos')['rotulo'] ?? null) === ['diseno' => 'cumpleanos', 'numero' => '', 'festejado' => ''], 'sin datos, el cumpleaños va sin edad');
+$fichaGc = function (array $mas = []) use ($panel, $feriaGc, $hoy): array {
+    $r = $panel->pedir('GET', '/admin/ferias.php?editar=' . $feriaGc['id']);
+    return array_merge(['csrf' => $panel->csrf($r['html']), 'action' => 'guardar', 'id' => (string) $feriaGc['id'], 'nombre' => 'Licenciatura y fiesta',
+        'organizador' => 'Colegio Demo', 'fecha' => $hoy, 'mundos_infantil' => ['graduacion'], 'mundos_adulto' => ['graduacion', 'adulto-cumpleanos'],
+        'retencion_dias' => '7', 'max_fotos' => '100', 'activa' => '1'], $mas);
+};
+$r = $panel->pedir('GET', '/admin/ferias.php?editar=' . $feriaGc['id']);
+f_check(str_contains($r['html'], 'name="festejo_edad"') && str_contains($r['html'], 'name="festejo_nombre"'), 'la ficha tiene la edad y el nombre del festejado');
+$r = $panel->pedirMultipart('/admin/ferias.php', $fichaGc(['festejo_edad' => '40', 'festejo_nombre' => 'Ana']), ['logo' => ['colegio.png', 'image/png', $pngDe(400, 200)]]);
+f_check($r['estado'] === 303, 'la ficha se guarda con la edad, el festejado y el logo del colegio');
+f_check(($temaGc('adulto-cumpleanos')['rotulo'] ?? null) === ['diseno' => 'cumpleanos', 'numero' => '40', 'festejado' => 'Ana'], 'el kiosco recibe la edad y el festejado');
+f_check(str_starts_with($temaGc('graduacion', 'infantil')['rotulo']['logo'] ?? '', 'feria-logo.php?f='), 'Graduación recibe el logo del colegio');
+$r = $panel->pedir('GET', '/admin/ferias.php?editar=' . $feriaGc['id']);
+f_check(str_contains($r['html'], 'name="festejo_edad" min="1" max="120" inputmode="numeric" value="40"') && str_contains($r['html'], 'value="Ana"'),
+    'la ficha muestra la edad y el festejado guardados');
+$r = $panel->pedirMultipart('/admin/ferias.php', $fichaGc(['festejo_edad' => '200', 'festejo_nombre' => 'Ana']), []);
+f_check($r['estado'] === 200 && str_contains($r['html'], 'La edad del festejado tiene que ser un número entre 1 y 120.')
+    && ($temaGc('adulto-cumpleanos')['rotulo']['numero'] ?? '') === '40', 'una edad imposible se rechaza y no cambia nada');
+$r = $panel->pedirMultipart('/admin/ferias.php', $fichaGc(['festejo_edad' => '', 'festejo_nombre' => '']), []);
+f_check($r['estado'] === 303 && !is_file(cb_feria_extras_ruta((int) $feriaGc['id']))
+    && ($temaGc('adulto-cumpleanos')['rotulo'] ?? null) === ['diseno' => 'cumpleanos', 'numero' => '', 'festejado' => ''], 'vaciar los dos campos borra los datos');
+
 // Fiestas Patrias: temática chilena sin personajes, para Niños y Adultos.
 $chile = $temas['fiestas-patrias'] ?? [];
 f_check(!isset($chile['audiencia']) && ($chile['personajes'] ?? null) === [] && array_key_exists('franquicia', $chile) && $chile['franquicia'] === null,

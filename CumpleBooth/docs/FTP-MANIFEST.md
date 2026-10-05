@@ -4377,3 +4377,34 @@ de Año Nuevo: USD 0,0324 de lista (dos candidatas).
 
 - Tablet física y una persona adulta real; un logo real de un cliente.
 - La foto impresa en la Selphy.
+
+## PENDIENTE 2026-10-05: Graduación y Cumpleaños de gala (LOCAL, SIN DEPLOY)
+
+Rama `claude/graduacion-cumpleanos`, que parte de `claude/adultos-anio-nuevo-empresa` (PR lmgmuber-bit/automatiza-tech#71):
+**se sube junto con esa, o después**, nunca sola. Detalle en `docs/TEMATICAS-GRADUACION-Y-CUMPLEANOS.md`.
+
+**Qué cambia:** Graduación (Niños y Adultos): GENERACIÓN y el año detrás de la persona, "¡Felicitaciones!" y la placa del
+logo del colegio delante. Cumpleaños de gala (Adultos): la edad grande detrás y "¡Feliz cumpleaños, <festejado>!" delante.
+La ficha del evento suma "Nombre del festejado" y "Edad que se celebra".
+
+| Orden | Clase | Local | PROD |
+|---|---|---|---|
+| 1 | OBLIGATORIO | `public/themes/graduacion/` y `public/themes/adulto-cumpleanos/` (4 JPG cada una) | `app/themes/graduacion/`, `app/themes/adulto-cumpleanos/` (nuevas) |
+| 2 | OBLIGATORIO | `public/lib.ferias.php` (edad y festejado, rótulos nuevos) | `app/lib.ferias.php` |
+| 3 | OBLIGATORIO | `public/admin/ferias.php` (campos del festejado) | `app/admin/ferias.php` |
+| 4 | OBLIGATORIO | `public/data/themes.json` | `app/data/themes.json` |
+| 5 | OBLIGATORIO | `dist/assets/*` nuevos de este build (al 05-10: `main-SiNbeaLb.js`, `feria-DTgANUAn.js`, `feria-DQBWgOF5.js`, `feria-C7PwMTWO.css`) | `app/assets/` |
+| 6 | OBLIGATORIO, al final | `dist/index.html`, `dist/feria.html` | `app/index.html`, `app/feria.html` |
+
+Sin migración: la edad y el festejado viven en `<state_dir>/ferias-extras/<id>.json` (la carpeta se crea sola, 770). El 1
+antes del 4 y el 2 antes del 6. Respaldar lo que se pisa. **No subir** `design/`, `docs/`, `tests/` ni la carpeta de
+generación. Las tarjetas del selector de Graduación y Año Nuevo llevan el año: volver a dibujarlas cada temporada.
+
+**Pruebas en local (05-10):** `graduacion-cumpleanos.test.mjs` 5 de 5; `ferias-http.php` 211 comprobaciones;
+`feria-integracion.test.mjs` con las cuatro temáticas nuevas de adultos (año, logo, generación y edad presentes en la foto); suite
+completa del frontend, de a una suite: 283 de 283.
+Gasto: USD 0,0324 de lista, más a lo sumo USD 0,0162 de un envío repetido por error que no se pudo confirmar.
+
+### No probado
+
+- Tablet física, una persona real, el logo real de un colegio y la foto impresa.

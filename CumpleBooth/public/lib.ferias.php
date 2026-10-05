@@ -378,17 +378,25 @@ function cb_feria_resolver(array $feria, array $resuelto, string $tema, string $
 }
 
 /**
- * Los otros diseños que el kiosco dibuja encima de la escena (04-10-2026): `anioNuevo` (el año y el saludo) y `muroLogos`
- * (el muro de prensa de la temática Empresa, con el logo que se subió en la ficha del evento). Cualquier otro valor se ignora.
+ * Los otros diseños que el kiosco dibuja encima de la escena (04-10-2026): `anioNuevo` (el año y el saludo), `muroLogos`
+ * (el muro de prensa de la temática Empresa, con el logo que se subió en la ficha del evento) y, desde el 05-10, `graduacion`
+ * (el año de la generación y el logo del colegio) y `cumpleanos` (la edad y el festejado de la ficha). Otro valor se ignora.
  */
 function cb_feria_rotulo(array $feria, $bloque): ?array
 {
     $diseno = is_array($bloque) ? (string) ($bloque['diseno'] ?? '') : '';
-    if (!in_array($diseno, ['anioNuevo', 'muroLogos'], true)) {
+    if (!in_array($diseno, ['anioNuevo', 'muroLogos', 'graduacion', 'cumpleanos'], true)) {
         return null;
     }
     $rotulo = ['diseno' => $diseno];
-    if ($diseno === 'muroLogos') {
+    if ($diseno === 'cumpleanos') {
+        // La edad y el festejado se escriben en la ficha del evento (05-10).
+        $extras = cb_feria_extras((int) $feria['id']);
+        $rotulo['numero'] = $extras['edad'];
+        $rotulo['festejado'] = $extras['nombre'];
+    }
+    // El muro repite el logo; Graduación lo pone en una placa (el del colegio, 05-10).
+    if ($diseno === 'muroLogos' || $diseno === 'graduacion') {
         // Sin logo (o si el directorio de estado falla) el muro repite en letras el nombre de quien organiza: nunca se cae el kiosco.
         try {
             $rotulo['logo'] = cb_feria_logo_url($feria);
@@ -398,6 +406,73 @@ function cb_feria_rotulo(array $feria, $bloque): ?array
         }
     }
     return $rotulo;
+}
+
+/**
+ * Datos del festejado de un evento (05-10-2026), para la temática Cumpleaños con número: la edad que va grande detrás de la
+ * persona y el nombre al que se saluda. Viven como el logo, en el directorio de estado (`ferias-extras/<id>.json`), sin
+ * columna nueva en la base. Edad de 1 a 120 o vacía; nombre de hasta 40 letras, una línea.
+ */
+function cb_feria_extras_ruta(int $id): string
+{
+    return cb_private_dir((string) cb_config('state_dir'), 'state_dir') . DIRECTORY_SEPARATOR . 'ferias-extras'
+        . DIRECTORY_SEPARATOR . max(0, $id) . '.json';
+}
+
+/** Valida lo que llega de la ficha. Devuelve [extras, errores]. */
+function cb_feria_extras_validar(array $datos): array
+{
+    $errores = [];
+    $edad = trim((string) ($datos['festejo_edad'] ?? ''));
+    if ($edad !== '' && (!ctype_digit($edad) || (int) $edad < 1 || (int) $edad > 120)) {
+        $errores[] = 'La edad del festejado tiene que ser un número entre 1 y 120.';
+        $edad = '';
+    }
+    $nombre = trim((string) preg_replace('/[\x00-\x1F\x7F]+/u', ' ', (string) ($datos['festejo_nombre'] ?? '')));
+    if (mb_strlen($nombre) > 40) {
+        $errores[] = 'El nombre del festejado puede tener a lo más 40 letras.';
+        $nombre = mb_substr($nombre, 0, 40);
+    }
+    return [['edad' => $edad === '' ? '' : (string) (int) $edad, 'nombre' => $nombre], $errores];
+}
+
+/** Los datos guardados del festejado (vacíos si no hay archivo o si el archivo no se puede leer). */
+function cb_feria_extras(int $id): array
+{
+    $vacio = ['edad' => '', 'nombre' => ''];
+    try {
+        $ruta = cb_feria_extras_ruta($id);
+    } catch (Throwable $e) {
+        return $vacio;
+    }
+    $crudo = is_file($ruta) ? json_decode((string) @file_get_contents($ruta), true) : null;
+    if (!is_array($crudo)) {
+        return $vacio;
+    }
+    [$extras] = cb_feria_extras_validar(['festejo_edad' => $crudo['edad'] ?? '', 'festejo_nombre' => $crudo['nombre'] ?? '']);
+    return $extras;
+}
+
+function cb_feria_extras_guardar(int $id, array $extras): void
+{
+    $ruta = cb_feria_extras_ruta($id);
+    if ($extras['edad'] === '' && $extras['nombre'] === '') {
+        if (is_file($ruta)) {
+            @unlink($ruta);
+        }
+        return;
+    }
+    $dir = dirname($ruta);
+    if (!is_dir($dir) && !mkdir($dir, 0770, true) && !is_dir($dir)) {
+        throw new RuntimeException('No se pudo crear la carpeta de datos del festejado.');
+    }
+    $json = json_encode(['edad' => $extras['edad'], 'nombre' => $extras['nombre']], JSON_UNESCAPED_UNICODE);
+    $tmp = $ruta . '.tmp';
+    if (file_put_contents($tmp, $json, LOCK_EX) === false || !rename($tmp, $ruta)) {
+        @unlink($tmp);
+        throw new RuntimeException('No se pudieron guardar los datos del festejado.');
+    }
+    @chmod($ruta, 0660);
 }
 
 /**

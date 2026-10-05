@@ -147,7 +147,9 @@ Sin atlas, la estrella usa el `-cut.png` fijo: funciona, pero no baila.
    La IA los escribe mal y quedan pegados al asset para siempre.
 
 3. **La música la pone Luis, no se genera.** Son canciones reales con
-   derechos. El kiosco espera `musica-fondo.mp3` y punto.
+   derechos. El kiosco espera `musica-fondo.mp3` y punto. Las temáticas nuevas
+   sin canción de por medio (baby shower, Noche de Brujas, Navidad) las genera
+   Luis con Gemini a partir de prompts: `docs/MUSICA-TEMATICAS-INFANTILES-PROMPTS.md`.
 
 4. **Escenas de grupo (2+ personajes juntos): el filtro nsfw rebota parejo.**
    Está probado varias veces que es consistente, no aleatorio — no insistir.
@@ -161,6 +163,22 @@ Sin atlas, la estrella usa el `-cut.png` fijo: funciona, pero no baila.
 6. **Antes de subir a PROD, actualizar `docs/FTP-MANIFEST.md`.** Los hashes
    de `assets/` cambian en cada build; copiar la tabla anterior deja el kiosco
    en blanco.
+
+7. **Toda voz de una temática nueva es Matilda en Eleven v3** (Luis, 2026-09-29:
+   "de ahora en adelante los audio en las temáticas deben ser con esa voz", porque
+   tiene más acento chileno que las voces prehechas en inglés). Una sola voz para
+   la bienvenida, la despedida y los saludos; el personaje lo pone el video.
+   `voz` `XrExE9yKIg1WjnnlVkGX`, `model_id` `eleven_v3`, `stability` 0,5. Script:
+   `tematicas-2026-10/voces.py`. Cada línea se mide igual que siempre: nivel con
+   `ebur128` (los videos quedaron en -15 LUFS), transcripción con `scribe_v1`
+   sobre la mezcla FINAL y la cola de la última sílaba. v3 habla más lento que v2
+   (una línea pasó de 3,2 a 4,0 s): comprobar que quepa en el clip. Las temáticas
+   ya en PROD conservan sus voces hasta que Luis pida regrabarlas.
+
+8. **Asómate necesita cuerpos de pie y de frente.** Los recortes de los saludos
+   (sentados, flotando, con las alas abiertas) achican a todo el grupo: manda la
+   figura más ancha. Ver `docs/ASOMATE-NUEVAS-TEMATICAS.md`, sección de brujitas y
+   navidad.
 
 ---
 

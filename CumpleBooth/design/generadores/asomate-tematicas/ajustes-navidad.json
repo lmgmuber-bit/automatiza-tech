@@ -1,0 +1,39 @@
+{
+ "_nota": "Óvalos medidos a ojo sobre la cuadrícula (30-09-2026), en píxeles del PNG de origen (720x1280): desde sobre las cejas hasta el mentón, con los ojos del muñeco enteros adentro (si no, asoman junto a la cara de la persona).",
+ "pascuero": {
+  "cx": 384,
+  "cy": 470,
+  "rx": 125,
+  "ry": 105
+ },
+ "pascuera": {
+  "cx": 372,
+  "cy": 376,
+  "rx": 104,
+  "ry": 86
+ },
+ "reno": {
+  "cx": 378,
+  "cy": 392,
+  "rx": 138,
+  "ry": 125
+ },
+ "duende": {
+  "cx": 372,
+  "cy": 522,
+  "rx": 125,
+  "ry": 108
+ },
+ "nieve": {
+  "cx": 378,
+  "cy": 458,
+  "rx": 140,
+  "ry": 100
+ },
+ "pinguino": {
+  "cx": 365,
+  "cy": 563,
+  "rx": 148,
+  "ry": 134
+ }
+}

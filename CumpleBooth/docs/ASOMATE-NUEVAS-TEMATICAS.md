@@ -92,3 +92,43 @@ md5**: el CDN de Hostinger reencoda los PNG.
 Cero créditos y unas dos o tres horas por temática, casi todo revisando los 6 huecos a ojo y
 corrigiendo los que la detección automática deja mal. Con spidey y hielo hicieron falta varias
 vueltas cada una.
+
+---
+
+## Temáticas de peluches con cuerpo nuevo: brujitas y navidad (2026-09-30)
+
+"Cero créditos" vale cuando la temática ya tiene seis recortes de pie y de frente. Las dos temáticas infantiles nuevas tienen
+peluches con poses de saludo (sentado, flotando, alas abiertas, brazo levantado) y **con eso Asómate no sirve**: en una foto de
+grupo manda la figura más ancha (`alturaComunAsomate` en `src/App.jsx`). Con los recortes de los saludos, el peor trío medía
+**450 px** de alto (calabaza redonda 0,75 de ancho sobre alto, fantasma 0,69, murciélago con las alas abiertas); con cuerpos
+de pie, **637 px** en Noche de Brujas y **583 px** en Navidad. Por eso se hicieron cuerpos nuevos.
+
+| Paso | Cómo | Costo |
+|---|---|---|
+| Cuerpo de pie | `alibaba/qwen-image-3/edit` por la API de Higgsfield, con la imagen aprobada del personaje como referencia (`image_urls`): mismo diseño, de frente, brazos abajo, fondo gris liso. Script `tematicas-2026-10/asomate_generar.py` (fuera del repo) | USD 0,04 de lista por imagen; 16 imágenes buenas = USD 0,64 (12 cuerpos y 4 repeticiones) |
+| Recorte y hueco | `design/generadores/asomate-tematicas/asomate_tematica.py`: `cuadricula` (para medir), `ver` (hoja de contacto), `hacer` (instala y anota `themes.json`) | 0 |
+| Óvalos | a ojo, en `ajustes-<tema>.json` | unas 3 horas para las dos |
+
+**Lo que se aprendió:**
+
+- **Sin `aspect_ratio=9:16,image_size=portrait_16_9` el modelo entrega 1024x1024**; con ellos, 720x1280 (probado con el murciélago
+  y la calabaza). Hay que pedir además que la figura llene el 90 % del alto, si no ocupa el 60 % y los píxeles se pierden.
+- **El modelo responde "temporarily unavailable" a ratos**, más si se piden varias a la vez (12 de 12 fallaron con seis
+  peticiones en paralelo). Los fallos no se cobran según la referencia de la API (no se comprobó en la consola). El script
+  reintenta hasta 4 veces con pausa y usa dos hilos.
+- **Hay que pedir la silueta, no solo la pose.** "Brazos abajo" no alcanzó para el muñeco de nieve (las ramas siguen abiertas)
+  ni para la calabaza (pidió el mismo ancho); para achicarla se pidió "más alta y angosta, piernas largas": el cuerpo de
+  Pepa Calabaza quedó de 0,48 de ancho sobre alto y con piernas largas. La versión redonda queda en `tematicas-2026-10/brujitas/asomate/calabaza-v2.png`.
+- **El óvalo cubre los ojos Y las cejas del muñeco.** Si no, asoman como cejas de más sobre la cara del niño (pasó con la
+  calabaza, el gato, el duende y el pingüino en la primera pasada). La hoja `vista-huecos` (agujero en magenta) lo muestra.
+- **Pelo de lana:** los huecos entre hebras tienen alfa bajo y hacían fallar la comprobación del borde de la Señora Pascuera,
+  que se achicaba sola hasta dejar los lentes afuera. `solida()` cierra esos huecos antes de medir el borde.
+- **`asomate.suelo`** (nuevo, opcional): fracción del alto donde pisan los pies de un grupo. El piso de la escena de Navidad
+  empieza en 0,86 y el 0,8 de siempre dejaba al grupo flotando delante de la pared (visto en el navegador). Lo publica
+  `cb_theme_asomate` (solo entre 0,6 y 0,95). El diploma usa su propia banda (`suelo` 0,79).
+- El fondo de Asómate es `fondo-escena.jpg` de la temática (la escena despejada), sin copiarlo a `asomate/`: `fondo` acepta
+  cualquier ruta relativa a la carpeta de la temática.
+
+Prueba: `tests/frontend/asomate-infantiles.test.mjs` (hueco transparente por dentro, figura por fuera, medidas del PNG, peor
+trío) y las 12 comprobaciones nuevas de `tests/backend/ferias-http.php`. Para verlo con la cámara simulada:
+`local-eventos/asomate-de-prueba.mjs <tema> <1-3> <cartas> <salida.jpg>` (con `DIPLOMA=1` sigue hasta el diploma).

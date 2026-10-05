@@ -4,6 +4,7 @@ import FeriaBooth from './feria/FeriaBooth.jsx'
 import { apiQuery, feriaFromResponse } from './feria/contract.js'
 import { loadImage } from './feria/media.js'
 import { createFeriaPhoto } from './feria/photo.js'
+import { cargarFuentesRevista } from './feria/revista.js'
 import { ensureCanvasFonts } from './fonts.js'
 import { applyThemeColors } from './themeVars.js'
 import {
@@ -493,9 +494,10 @@ export default function App() {
 const feriaGameFor = (nombre) => THEME_FLOW.gameFor(nombre)
 const prepararAsomateFeria = () => { prepararDetector(BASE).catch(() => {}) }
 
-async function composeFeriaPhoto(source, name, person, filter, segmenter) {
-  await Promise.all([ensureCanvasFonts(), preloadBrandLogo()])
+async function composeFeriaPhoto(source, name, person, filter, segmenter, opciones = {}) {
+  await Promise.all([ensureCanvasFonts(), preloadBrandLogo(), opciones.portada ? cargarFuentesRevista(BASE) : null])
   return createFeriaPhoto({ source, name, person, filter, segmenter, base: BASE, theme: FERIA_THEME,
+    variante: opciones.variante || null, portada: opciones.portada || null,
     frame: async (image) => {
       const [background, character] = await Promise.all([
         loadImage(CONFIG.images.fondo), loadImage(CHAR_PNG[person?.name]).catch(() => null),
@@ -1850,7 +1852,9 @@ function componerAsomate(fondoImg, lista, titulo, opciones = {}) {
     const k = alturaComun / (g.pies - g.arriba)
     const ox = (W / total) * (i + 0.5) - ((g.izq + g.der) / 2) * k
     // Los pies de todos en el mismo suelo: alineando por la cara quedan flotando.
-    const suelo = banda && banda.suelo ? banda.suelo : (total === 1 ? 0.9 : 0.8)
+    // `opciones.suelo` viene de la temática (30-09): el piso de la escena de Navidad empieza en 0,86 del alto, y con los pies
+    // en 0,8 un grupo quedaba flotando delante de la pared. Sin dato, los de siempre.
+    const suelo = banda && banda.suelo ? banda.suelo : (opciones.suelo || (total === 1 ? 0.9 : 0.8))
     const oy = H * suelo - g.pies * k
     return { k, ox, oy, hx: ox + g.cx * k, hy: oy + g.cy * k, rx: g.rx * k, ry: g.ry * k }
   })
@@ -2259,7 +2263,7 @@ function AsomatePreview({ elenco, fotos, invitado, onRetry, onSave }) {
       foto: r.imgs[i],
       ajuste: ajustes[i],
     }))
-    setCompuesta(componerAsomate(r.fondo, lista, tituloAsomate(invitado, elenco.length)))
+    setCompuesta(componerAsomate(r.fondo, lista, tituloAsomate(invitado, elenco.length), { suelo: Number(CONFIG.asomate?.suelo) || undefined }))
   }, [ajustes, elenco, invitado])
 
   const mover = (clave, valor) =>

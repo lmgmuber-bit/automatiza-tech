@@ -2,13 +2,11 @@ import React, { useEffect, useRef, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import { armIdle, enabledModes, grantConsent, kioskUrl, returnUrl } from './contract.js'
 import { FullscreenButton, useFullscreenOnTap } from './fullscreen.jsx'
+import { fondoEstilo } from './fondo.js'
 import './feria.css'
 
 const BASE = import.meta.env.BASE_URL
 const labels = { infantil: 'Niños', adulto: 'Adultos' }
-// Fondo de la feria (Higgsfield, 26-09): uno por evento, se cambia reemplazando el archivo.
-// Dirección absoluta: una url() relativa dentro de una variable CSS se resuelve contra la hoja que la usa (assets/).
-const fondo = { '--feria-fondo': `url("${new URL(BASE + 'feria/fondo.jpg', location.href).href}")` }
 
 function Selector() {
   const slug = new URLSearchParams(location.search).get('f') || ''
@@ -22,7 +20,17 @@ function Selector() {
   const [videoFailed, setVideoFailed] = useState(false)
   const reduced = useRef(matchMedia('(prefers-reduced-motion: reduce)').matches)
   const heading = useRef(null)
+  const continuar = useRef(null)
+  // Fondo del evento; al tocar una temática, el de esa temática (29-09: cada una con su propio fondo).
+  const fondo = fondoEstilo(BASE, location.href, world?.fondo, data?.feria?.fondo)
   useFullscreenOnTap()
+
+  // Luis (29-09): al elegir la temática había que bajar a mano hasta la autorización y el botón. Ahora baja sola.
+  useEffect(() => {
+    if (!world) return
+    const timer = setTimeout(() => continuar.current?.scrollIntoView({ behavior: reduced.current ? 'auto' : 'smooth', block: 'end' }), 80)
+    return () => clearTimeout(timer)
+  }, [world])
 
   useEffect(() => {
     const controller = new AbortController()
@@ -76,7 +84,7 @@ function Selector() {
         {screen === 'modes' ? <div className="feria-modes">{enabledModes(data.mundos).map((value) => <button className={`feria-mode feria-mode-${value}`} key={value} onClick={() => { setMode(value); setScreen('worlds') }}><span className="feria-mode-art" aria-hidden="true">{value === 'infantil' ? '✦' : '◉'}</span><strong>{labels[value]}</strong><span>{value === 'infantil' ? 'Personajes, fotos y un diploma' : 'Un retrato con tu estilo'}</span><span className="feria-mode-arrow" aria-hidden="true">↗</span></button>)}</div> : <>
           <div className="feria-worlds">{data.mundos[mode].map((item) => <button aria-pressed={world?.slug === item.slug} className="feria-world" key={item.slug} onClick={() => { setWorld(item); setConsent(false) }}><img src={BASE + item.imagen} alt="" onError={(event) => { event.currentTarget.style.visibility = 'hidden' }} /><span>{item.nombre}</span>{world?.slug === item.slug && <b aria-hidden="true">✓</b>}</button>)}</div>
           {mode === 'infantil' && <label className="feria-consent"><input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} />Soy el adulto responsable y autorizo tomar la foto</label>}
-          <button className="feria-primary" disabled={!world || (mode === 'infantil' && !consent)} onClick={enter}>Continuar a mi foto <span aria-hidden="true">→</span></button>
+          <button className="feria-primary" ref={continuar} disabled={!world || (mode === 'infantil' && !consent)} onClick={enter}>Continuar a mi foto <span aria-hidden="true">→</span></button>
         </>}
       </section>
       <footer><button className="feria-quiet" onClick={() => { setScreen(screen === 'worlds' ? 'modes' : 'idle'); setWorld(null); setConsent(false) }}>← Volver</button><span>Una foto, un recuerdo, una sonrisa.</span></footer>

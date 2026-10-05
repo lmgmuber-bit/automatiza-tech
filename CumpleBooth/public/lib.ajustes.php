@@ -4,7 +4,8 @@
  *
  * Van acá y no en el archivo de configuración del servidor porque son de Luis y los cambia
  * cuando quiere, sin tocar nada del hosting: el correo al que le llega copia de todo lo que
- * sale, y el correo al que se manda el enlace para recuperar la contraseña.
+ * sale, el correo al que se manda el enlace para recuperar la contraseña, las cifras del manual
+ * y los textos fijos de la Portada de Revista CLICK.
  *
  * Mismo tipo de dato que `marca.json` y `planes.json`: general, editable desde el admin, en
  * `data/`, que no es accesible por web.
@@ -25,10 +26,48 @@ function cb_ajustes_numericos(): array
     return ['manual_anticipacion_min' => 240, 'manual_dias_lista' => 60];   // clave => máximo
 }
 
+/**
+ * Textos fijos de la Portada de Revista CLICK (04-10-2026). Luis los dejó como estaban, pero quiere poder cambiarlos sin
+ * tocar código: se editan en Ajustes y el kiosco los recibe con la temática (`theme.revista.textos`). Vacío = el de siempre.
+ * clave => [nombre en el admin, máximo de letras, texto de siempre]. Los máximos son los que caben en la portada. Los textos
+ * de siempre son los mismos de TEXTOS_DE_SIEMPRE en src/feria/revista.js (lo verifica tests/frontend/revista.test.mjs).
+ */
+function cb_revista_textos_campos(): array
+{
+    return [
+        'etiqueta' => ['Etiqueta', 14, 'EXCLUSIVA'],
+        'bajada' => ['Bajada', 50, 'Así se vivió {evento}'],
+        'llamado1' => ['Primer llamado', 36, 'Los looks que todos comentan'],
+        'llamado2' => ['Segundo llamado', 36, 'Sus mejores poses'],
+        'antetitulo' => ['Sobre el nombre', 24, 'LA ESTRELLA DE HOY'],
+        'sinNombre' => ['Si no hay nombre', 14, 'ERES TÚ'],
+        'edicion' => ['Edición', 20, 'EDICIÓN ESPECIAL'],
+        'numero' => ['Número', 10, 'N.º 1'],
+    ];
+}
+
+/** Una sola línea y sin caracteres de control: el texto va dibujado en la portada. */
+function cb_revista_texto_limpio($valor): string
+{
+    return trim((string) preg_replace('/[\x00-\x1F\x7F]+/u', ' ', (string) $valor));
+}
+
+/** Los textos que usa la portada: el de Ajustes si Luis escribió uno, si no el de siempre. */
+function cb_revista_textos(): array
+{
+    $propios = cb_ajustes()['revista_textos'];
+    $textos = [];
+    foreach (cb_revista_textos_campos() as $clave => [, , $siempre]) {
+        $textos[$clave] = ($propios[$clave] ?? '') !== '' ? $propios[$clave] : $siempre;
+    }
+    return $textos;
+}
+
 function cb_ajustes(): array
 {
     $vacio = ['bcc_email' => '', 'recovery_email' => ''];
     foreach (array_keys(cb_ajustes_numericos()) as $clave) { $vacio[$clave] = 0; }
+    $vacio['revista_textos'] = array_fill_keys(array_keys(cb_revista_textos_campos()), '');
     $ruta = cb_ajustes_ruta();
     $crudo = is_file($ruta) ? json_decode((string) @file_get_contents($ruta), true) : null;
     if (!is_array($crudo)) {
@@ -45,6 +84,13 @@ function cb_ajustes(): array
     foreach (cb_ajustes_numericos() as $clave => $max) {
         // Cero significa "no escrito": el manual omite la cifra en vez de inventar una.
         $vacio[$clave] = max(0, min($max, (int) ($crudo[$clave] ?? 0)));
+    }
+    // Un texto de la portada que no cabe (el archivo se editó a mano) se ignora: queda el de siempre.
+    foreach (cb_revista_textos_campos() as $clave => [, $max]) {
+        $valor = cb_revista_texto_limpio($crudo['revista_textos'][$clave] ?? '');
+        if (mb_strlen($valor) <= $max) {
+            $vacio['revista_textos'][$clave] = $valor;
+        }
     }
     return $vacio;
 }
@@ -95,6 +141,23 @@ function cb_guardar_ajustes(array $datos): array
         }
         $limpio[$clave] = (int) $valor;
     }
+    // Los textos de la Portada de Revista. Uno que no viene se deja como estaba: así un guardado que no los trae (otra
+    // pantalla, una prueba) no los borra. Vacío vuelve al texto de siempre.
+    $actuales = cb_ajustes()['revista_textos'];
+    $recibidos = is_array($datos['revista_textos'] ?? null) ? $datos['revista_textos'] : [];
+    $limpio['revista_textos'] = [];
+    foreach (cb_revista_textos_campos() as $clave => [$nombre, $max]) {
+        if (!array_key_exists($clave, $recibidos)) {
+            $limpio['revista_textos'][$clave] = $actuales[$clave];
+            continue;
+        }
+        $valor = cb_revista_texto_limpio($recibidos[$clave]);
+        if (mb_strlen($valor) > $max) {
+            $errores[] = 'Portada de Revista: «' . $nombre . '» tiene ' . mb_strlen($valor) . ' letras y en la portada caben ' . $max . '.';
+            continue;
+        }
+        $limpio['revista_textos'][$clave] = $valor;
+    }
     if ($errores) {
         return ['ok' => false, 'errors' => $errores];
     }
@@ -102,11 +165,13 @@ function cb_guardar_ajustes(array $datos): array
     $contenido = [
         '_LEEME' => 'Ajustes generales del admin de CumpleClick. Se editan desde el admin, en la '
             . 'pantalla Ajustes. bcc_email recibe copia oculta de TODO correo que sale; '
-            . 'recovery_email es a donde se manda el enlace para recuperar la contrasena.',
+            . 'recovery_email es a donde se manda el enlace para recuperar la contrasena; '
+            . 'revista_textos son los textos fijos de la Portada de Revista (vacio = el de siempre).',
         'bcc_email' => $limpio['bcc_email'] ?? '',
         'recovery_email' => $limpio['recovery_email'] ?? '',
         'manual_anticipacion_min' => (int) ($limpio['manual_anticipacion_min'] ?? 0),
         'manual_dias_lista' => (int) ($limpio['manual_dias_lista'] ?? 0),
+        'revista_textos' => $limpio['revista_textos'],
     ];
     $json = json_encode($contenido, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     if ($json === false) {

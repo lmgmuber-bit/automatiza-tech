@@ -163,6 +163,10 @@ $mundos = $r['json']['mundos'] ?? [];
 f_check(array_column($mundos['infantil'] ?? [], 'slug') === ['hielo', 'spidey'], 'mundos infantiles');
 f_check(($mundos['adulto'][1]['slug'] ?? '') === 'baby-nube' && ($mundos['adulto'][1]['personajes'] ?? true) === false, 'baby-nube va sin personajes');
 f_check(($mundos['infantil'][0]['personajes'] ?? false) === true && str_starts_with((string) $mundos['infantil'][0]['imagen'], 'themes/hielo/'), 'hielo con personajes e imagen');
+// 29-09: cada temática publica su fondo de pantalla y el evento usa el de su primera temática con fondo propio.
+f_check(($mundos['infantil'][0]['fondo'] ?? '') === 'themes/hielo/fondo-evento.jpg', 'hielo publica su fondo de evento');
+f_check(($r['json']['feria']['fondo'] ?? '') === 'themes/hielo/fondo-evento.jpg', 'el evento usa el fondo de su primera temática');
+f_check(cb_feria_fondo_mundo('no-existe') === '', 'una temática sin archivo no publica fondo');
 f_check(array_key_exists('video_espera', $r['json']), 'trae el video de espera (vacío si el archivo aún no está)');
 
 // ── Número F-### ────────────────────────────────────────────────────────────
@@ -313,6 +317,76 @@ f_check(($r['json']['theme']['modoFoto'] ?? '') === 'marco', 'una temática infa
 $r = pedir('GET', '/feria-api.php?f=' . $feriaAdultos['slug']);
 f_check(array_column($r['json']['mundos']['adulto'] ?? [], 'personajes') === [false, false, false], 'el selector sabe que las adultas van sin ruleta');
 
+// Portada de Revista CLICK (04-10): adulta, con tres portadas que el invitado elige en el menú. El servidor publica solo las
+// que tienen su escena en disco y el filtro únicamente en la de blanco y negro.
+$rev = $temas['adulto-revista'] ?? [];
+f_check(($rev['audiencia'] ?? '') === 'adulto' && ($rev['personajes'] ?? null) === [] && array_key_exists('franquicia', $rev) && $rev['franquicia'] === null,
+    'adulto-revista: adulta, sin personajes y sin franquicia');
+foreach (['fondo-sala.jpg', 'fondo-banner.jpg', 'fondo-evento.jpg', 'revista-alfombra.jpg', 'revista-estudio.jpg', 'revista-bn.jpg'] as $archivo) {
+    $info = @getimagesize($raiz . "/public/themes/adulto-revista/$archivo");
+    f_check($info !== false && $info[0] === 1080 && $info[1] === 1920, "adulto-revista/$archivo existe y mide 1080x1920");
+}
+[$datosRev] = cb_feria_validar(['nombre' => 'Fiesta de la oficina', 'fecha' => $hoy, 'activa' => '1',
+    'mundos_infantil' => ['hielo', 'adulto-revista'], 'mundos_adulto' => ['adulto-revista'], 'max_fotos' => 100]);
+f_check($datosRev['mundos_infantil'] === ['hielo'] && $datosRev['mundos_adulto'] === ['adulto-revista'], 'la revista entra en Adultos y no en Niños');
+$feriaRev = cb_feria_guardar($datosRev, null, 'test');
+$r = pedir('GET', '/api.php?p=' . $feriaRev['slug'] . '&tema=adulto-revista&modo=adulto');
+$tr = $r['json']['theme'] ?? [];
+f_check(($tr['modoFoto'] ?? '') === 'fondo' && ($tr['images']['escena'] ?? '') === 'themes/adulto-revista/revista-alfombra.jpg',
+    'la revista va sobre fondo, con la alfombra roja como escena por defecto');
+f_check(!isset($tr['filtro']), 'la revista no lleva filtro general: solo su portada en blanco y negro');
+f_check(($tr['revista']['titulo'] ?? '') === 'CLICK', 'el título de la revista es CLICK');
+$variantesRev = $tr['revista']['variantes'] ?? [];
+f_check(array_column($variantesRev, 'clave') === ['alfombra', 'estudio', 'bn'], 'tres portadas, en el orden del menú');
+f_check(array_column($variantesRev, 'escena') === ['themes/adulto-revista/revista-alfombra.jpg', 'themes/adulto-revista/revista-estudio.jpg',
+    'themes/adulto-revista/revista-bn.jpg'], 'cada portada con su escena publicada');
+f_check(array_column($variantesRev, 'filtro') === ['bn'], 'solo la portada en blanco y negro lleva filtro');
+f_check(($tr['personajes'] ?? null) === [] && empty($tr['asomate']['personajes'] ?? []), 'sin ruleta ni Asómate: el menú es el de las portadas');
+$r = pedir('GET', '/feria-api.php?f=' . $feriaRev['slug']);
+$mundoRev = array_values(array_filter($r['json']['mundos']['adulto'] ?? [], fn ($m) => ($m['slug'] ?? '') === 'adulto-revista'))[0] ?? [];
+f_check(($mundoRev['imagen'] ?? '') === 'themes/adulto-revista/fondo-banner.jpg' && ($mundoRev['personajes'] ?? true) === false,
+    'el selector muestra la portada de muestra y sabe que no hay ruleta');
+$r = pedir('GET', '/api.php?p=' . $feriaAdultos['slug'] . '&tema=adulto-glam-dorado&modo=adulto');
+f_check(!isset($r['json']['theme']['revista']), 'una temática sin bloque de revista no publica portadas');
+// El bloque se valida pieza por pieza: escena inexistente o con ruta, título con marcas, colores, filtro y tope de cuatro.
+f_check(cb_feria_revista('adulto-revista', ['titulo' => 'CLICK', 'variantes' => [['clave' => 'x', 'escena' => 'no-existe.jpg']]]) === null,
+    'sin escenas en disco no hay portadas');
+f_check(cb_feria_revista('adulto-revista', ['titulo' => 'CLICK', 'variantes' => [['clave' => 'x', 'escena' => '../adulto-glam-dorado/fondo-escena.jpg']]]) === null,
+    'una escena con ruta no pasa');
+f_check(cb_feria_revista('adulto-revista', ['titulo' => '<b>CLICK</b>', 'variantes' => [['clave' => 'a', 'escena' => 'revista-bn.jpg']]]) === null,
+    'un título con marcas no pasa');
+$vRev = cb_feria_revista('adulto-revista', ['titulo' => 'click', 'variantes' => [['clave' => 'a', 'escena' => 'revista-bn.jpg',
+    'tinta' => 'red', 'acento' => '#ABCDEF', 'filtro' => 'sepia']]]);
+f_check(($vRev['titulo'] ?? '') === 'CLICK' && !isset($vRev['variantes'][0]['tinta']) && ($vRev['variantes'][0]['acento'] ?? '') === '#ABCDEF'
+    && !isset($vRev['variantes'][0]['filtro']), 'colores y filtro se validan uno por uno');
+$cincoRev = array_map(fn ($i) => ['clave' => 'v' . $i, 'escena' => 'revista-estudio.jpg'], range(1, 5));
+f_check(count(cb_feria_revista('adulto-revista', ['titulo' => 'CLICK', 'variantes' => $cincoRev])['variantes'] ?? []) === 4, 'máximo cuatro portadas');
+// Los textos fijos de la portada se editan en Admin -> Ajustes (04-10): sin nada escrito llegan los de siempre; lo que Luis
+// escribe llega al kiosco; lo que no cabe se rechaza; un guardado que no los trae no los borra; vacío vuelve al de siempre.
+$siempre = array_map(fn ($c) => $c[2], cb_revista_textos_campos());
+$apiRev = fn () => pedir('GET', '/api.php?p=' . $feriaRev['slug'] . '&tema=adulto-revista&modo=adulto')['json']['theme']['revista']['textos'] ?? null;
+f_check($apiRev() === $siempre, 'sin ajustes, la portada llega con los textos de siempre');
+$r = $panel->pedir('GET', '/admin/ajustes.php');
+f_check($r['estado'] === 200 && str_contains($r['html'], 'Portada de Revista') && str_contains($r['html'], 'name="revista_textos[antetitulo]"')
+    && str_contains($r['html'], 'placeholder="LA ESTRELLA DE HOY"'), 'Ajustes muestra los textos de la portada con el de siempre de ejemplo');
+$formAjustes = ['csrf' => $panel->csrf($r['html']), 'action' => 'guardar', 'bcc_email' => '', 'recovery_email' => '',
+    'manual_anticipacion_min' => '', 'manual_dias_lista' => '',
+    'revista_textos' => ['antetitulo' => 'La reina de hoy', 'llamado1' => 'Moda de feria', 'bajada' => '', 'etiqueta' => '', 'llamado2' => '',
+        'sinNombre' => '', 'edicion' => '', 'numero' => 'N.º 25']];
+$r = $panel->pedir('POST', '/admin/ajustes.php', $formAjustes);
+f_check(str_contains($r['html'], 'Ajustes guardados.') && str_contains($r['html'], 'value="La reina de hoy"'), 'Ajustes guarda los textos de la portada');
+$propios = $apiRev();
+f_check(($propios['antetitulo'] ?? '') === 'La reina de hoy' && ($propios['llamado1'] ?? '') === 'Moda de feria' && ($propios['numero'] ?? '') === 'N.º 25'
+    && ($propios['bajada'] ?? '') === $siempre['bajada'], 'el kiosco recibe lo que se escribió y el de siempre en lo vacío');
+$r = $panel->pedir('POST', '/admin/ajustes.php', array_replace_recursive($formAjustes, ['csrf' => $panel->csrf($r['html']),
+    'revista_textos' => ['antetitulo' => str_repeat('a', 25)]]));
+f_check(str_contains($r['html'], '«Sobre el nombre» tiene 25 letras') && ($apiRev()['antetitulo'] ?? '') === 'La reina de hoy',
+    'un texto que no cabe se rechaza y no cambia nada');
+f_check(!empty(cb_guardar_ajustes(['bcc_email' => '', 'recovery_email' => ''])['ok']) && ($apiRev()['antetitulo'] ?? '') === 'La reina de hoy',
+    'un guardado que no trae los textos no los borra');
+cb_guardar_ajustes(['revista_textos' => array_fill_keys(array_keys($siempre), '')]);
+f_check($apiRev() === $siempre, 'vacío vuelve a los textos de siempre');
+
 // Fiestas Patrias: temática chilena sin personajes, para Niños y Adultos.
 $chile = $temas['fiestas-patrias'] ?? [];
 f_check(!isset($chile['audiencia']) && ($chile['personajes'] ?? null) === [] && array_key_exists('franquicia', $chile) && $chile['franquicia'] === null,
@@ -341,6 +415,35 @@ foreach (($aso['personajes'] ?? []) as $p) {
 }
 f_check($okGeo, 'cada recorte mide lo anotado y su hueco cae dentro de la figura');
 f_check(str_starts_with((string) ($aso['fondo'] ?? ''), 'themes/fiestas-patrias/asomate/fondo.jpg?v='), 'el fondo de Asómate va con sello de versión');
+
+// Noche de Brujas y Navidad (30-09): Asómate con seis cuerpos de pie, el nombre de cada uno sale de la propia temática (no de la clave) y
+// Navidad publica dónde pisan los pies, porque el piso de su escena empieza más abajo que el de siempre.
+[$datosInf] = cb_feria_validar(['nombre' => 'Feria del colegio', 'fecha' => $hoy, 'activa' => '1',
+    'mundos_infantil' => ['brujitas', 'navidad'], 'mundos_adulto' => ['fiestas-patrias'], 'max_fotos' => 100]);
+$feriaInf = cb_feria_guardar($datosInf, null, 'test');
+$esperados = [
+    'brujitas' => ['Brujita Luna', 'Pepa Calabaza', 'Fantasmín', 'Gato Medianoche', 'Murci', 'Momi'],
+    'navidad'  => ['Viejito Pascuero', 'Señora Pascuera', 'Reno Cascabel', 'Duende Ayudante', 'Copito', 'Pingüi'],
+];
+foreach ($esperados as $temaInf => $nombresInf) {
+    $r = pedir('GET', '/api.php?p=' . $feriaInf['slug'] . '&tema=' . $temaInf . '&modo=infantil');
+    $asoInf = $r['json']['theme']['asomate'] ?? null;
+    f_check(is_array($asoInf) && count($asoInf['personajes'] ?? []) === 6, "$temaInf trae Asómate con seis personajes");
+    f_check(array_column($asoInf['personajes'] ?? [], 'nombre') === $nombresInf, "$temaInf: los nombres de Asómate salen de la temática");
+    $okInf = true;
+    foreach (($asoInf['personajes'] ?? []) as $p) {
+        $info = @getimagesize($raiz . "/public/themes/$temaInf/asomate/" . $p['clave'] . '.png');
+        $okInf = $okInf && $info !== false && $info[0] === (int) $p['w'] && $info[1] === (int) $p['h']
+            && $p['cx'] - $p['rx'] > 0 && $p['cx'] + $p['rx'] < $p['w'] && $p['cy'] - $p['ry'] > 0;
+    }
+    f_check($okInf, "$temaInf: cada cuerpo mide lo anotado y su hueco cae dentro");
+    f_check(str_starts_with((string) ($asoInf['fondo'] ?? ''), "themes/$temaInf/fondo-escena.jpg?v="), "$temaInf: Asómate usa la escena despejada, con sello de versión");
+    f_check(($asoInf['boton'] ?? '') !== '' && ($asoInf['titulo'] ?? '') !== '', "$temaInf: el modo lleva su propio nombre");
+}
+$r = pedir('GET', '/api.php?p=' . $feriaInf['slug'] . '&tema=navidad&modo=infantil');
+f_check(($r['json']['theme']['asomate']['suelo'] ?? null) === 0.865, 'Navidad publica dónde pisan los pies del grupo');
+$r = pedir('GET', '/api.php?p=' . $feriaInf['slug'] . '&tema=brujitas&modo=infantil');
+f_check(!array_key_exists('suelo', $r['json']['theme']['asomate'] ?? []), 'Noche de Brujas no lo trae: usa el de siempre');
 
 // ── Retención: 7 días para la feria, nada para la fiesta normal ─────────────
 $pdo->prepare('UPDATE cc_ferias SET fecha = ? WHERE id = ?')->execute([gmdate('Y-m-d', time() - 8 * 86400), $feria['id']]);

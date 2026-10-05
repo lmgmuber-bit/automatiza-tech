@@ -1,11 +1,13 @@
 # -*- coding: utf-8 -*-
-"""Videos de bienvenida de las temáticas nuevas (2026-09-26): Fiestas Patrias y Noche de Brujas.
+"""Videos de bienvenida de las temáticas nuevas (2026-09-26): Fiestas Patrias y Noche de Brujas. Desde el 29-09 también
+las infantiles brujitas y navidad, con sus saludos y su despedida (una toma de 5 s más la voz del personaje).
 
 Igual que las bienvenidas infantiles (720 × 1280, 24 fps, con voz, alrededor de −16 LUFS, sin logo): dos tomas de 5 s
 de Kling 3.0 Pro unidas con un fundido, la voz de Alice (ElevenLabs) y encima, dibujado por código, un título breve
 y, en Fiestas Patrias, la guirnalda de banderas exactas meciéndose (la IA deforma la bandera: nunca se le pide).
 
-Uso: python componer_intro.py fiestas-patrias | noche-brujas
+Uso: python componer_intro.py fiestas-patrias | noche-brujas | brujitas | navidad      (la bienvenida)
+     python componer_intro.py brujitas --clips                                     (saludos y despedida)
 Entradas en ORIGEN (fuera del repo): <toma>.mp4 de Kling y voz-<tema>.mp3. Salida: public/themes/<tema>/welcome-*.mp4
 """
 import math
@@ -23,6 +25,7 @@ sys.path.insert(0, os.path.join(AQUI, "..", "fiestas-patrias"))
 from fiestas_patrias import bandera_chile, con_relieve, fuente  # noqa: E402
 
 ORIGEN = os.environ.get("INTRO_ORIGEN", r"C:/Users/luis_/Documents/CumpleClick/tematicas-adultos-2026-09-26/videos-intro")
+NUEVAS = os.environ.get("INTRO_NUEVAS", r"C:/Users/luis_/Documents/CumpleClick/tematicas-2026-10")
 W, H, FPS = 720, 1280, 24
 FUNDIDO = 0.6
 VOZ_INICIO = 0.7
@@ -37,6 +40,17 @@ TEMAS = {
                      "salida": os.path.join(CB, "public", "themes", "adulto-noche-brujas", "welcome-noche-brujas.mp4"),
                      "titulo": ("Noche de Brujas", 0.4, 3.8), "cierre": None,
                      "relleno": (242, 180, 90), "borde": (42, 21, 48), "sombra": (20, 8, 24), "guirnalda": False},
+    # Infantiles del 29-09: tomas y voces fuera del repo, en tematicas-2026-10/<slug>/ (videos/ y voces/).
+    "brujitas": {"tomas": ("intro-1", "intro-2"), "voz": "../voces/intro.mp3", "voz_inicio": 0.3,
+                 "origen": NUEVAS + "/brujitas/videos", "carpeta": os.path.join(CB, "public", "themes", "brujitas"),
+                 "salida": os.path.join(CB, "public", "themes", "brujitas", "welcome-brujitas.mp4"),
+                 "titulo": ("Noche de Brujas", 0.4, 3.8), "cierre": None,
+                 "relleno": (255, 201, 74), "borde": (46, 26, 71), "sombra": (20, 8, 24), "guirnalda": False},
+    "navidad": {"tomas": ("intro-1", "intro-2"), "voz": "../voces/intro.mp3", "voz_inicio": 0.3,
+                "origen": NUEVAS + "/navidad/videos", "carpeta": os.path.join(CB, "public", "themes", "navidad"),
+                "salida": os.path.join(CB, "public", "themes", "navidad", "welcome-navidad.mp4"),
+                "titulo": ("Navidad", 0.4, 3.8), "cierre": None,
+                "relleno": (255, 255, 255), "borde": (198, 40, 40), "sombra": (31, 61, 43), "guirnalda": False},
 }
 
 
@@ -118,13 +132,15 @@ class Guirnalda:
 
 def componer(tema):
     cfg = TEMAS[tema]
+    origen = cfg.get("origen", ORIGEN)
+    voz_inicio = cfg.get("voz_inicio", VOZ_INICIO)
     tmp = tempfile.mkdtemp(prefix="intro-")
     try:
         # 1) Las dos tomas a 720x1280 y 24 fps, unidas con un fundido.
         normal = []
         for i, toma in enumerate(cfg["tomas"]):
             dst = os.path.join(tmp, "t%d.mp4" % i)
-            run("ffmpeg", "-y", "-i", os.path.join(ORIGEN, toma + ".mp4"), "-an", "-vf",
+            run("ffmpeg", "-y", "-i", os.path.join(origen, toma + ".mp4"), "-an", "-vf",
                 "scale=%d:%d:force_original_aspect_ratio=increase,crop=%d:%d,fps=%d,format=yuv420p" % (W, H, W, H, FPS),
                 "-c:v", "libx264", "-crf", "14", "-preset", "fast", dst)
             normal.append(dst)
@@ -157,15 +173,17 @@ def componer(tema):
             capa.save(os.path.join(cuadros, "%04d.png" % k))
 
         # 3) La voz nivelada a -16 LUFS, entrando a los 0,7 s.
-        voz = os.path.join(ORIGEN, cfg["voz"])
+        voz = os.path.join(origen, cfg["voz"])
         ganancia = LUFS - lufs(voz)
         salida = cfg["salida"]
+        if voz_inicio + duracion(voz) > total:
+            raise SystemExit("%s: la voz (%.2f s desde %.1f s) no cabe en %.2f s de video" % (tema, duracion(voz), voz_inicio, total))
         os.makedirs(os.path.dirname(salida), exist_ok=True)
         run("ffmpeg", "-y", "-i", base, "-framerate", str(FPS), "-i", os.path.join(cuadros, "%04d.png"), "-i", voz,
             "-filter_complex",
             "[0:v][1:v]overlay=0:0:format=auto,format=yuv420p[v];"
             "[2:a]volume=%.2fdB,alimiter=limit=0.89,adelay=%d|%d,apad,atrim=0:%.3f,aformat=channel_layouts=stereo[a]"
-            % (ganancia, VOZ_INICIO * 1000, VOZ_INICIO * 1000, total),
+            % (ganancia, voz_inicio * 1000, voz_inicio * 1000, total),
             "-map", "[v]", "-map", "[a]", "-c:v", "libx264", "-crf", "23", "-preset", "slow", "-profile:v", "high",
             "-r", str(FPS), "-c:a", "aac", "-b:a", "128k", "-ar", "44100", "-movflags", "+faststart", "-shortest", salida)
         print("%s: %.2f s, %d KB, voz %+.1f dB" % (os.path.relpath(salida, CB), duracion(salida), os.path.getsize(salida) // 1024, ganancia))
@@ -173,6 +191,43 @@ def componer(tema):
         shutil.rmtree(tmp, ignore_errors=True)
 
 
+def componer_clips(tema):
+    """Saludos y despedida: una toma de 5 s a 720x1280 y 24 fps con la voz nivelada, sin título encima (el nombre
+    del niño lo escribe el kiosco). El nombre del archivo es convención: saludo-<personaje>.mp4 y despedida-<slug>.mp4."""
+    cfg = TEMAS[tema]
+    origen = cfg["origen"]
+    voces = os.path.join(origen, "..", "voces")
+    for mp3 in sorted(os.listdir(voces)):
+        clip = os.path.splitext(mp3)[0]
+        if clip == "intro" or not mp3.endswith(".mp3"):
+            continue
+        toma = os.path.join(origen, clip + ".mp4")
+        if not os.path.isfile(toma):
+            print("%s: falta la toma, se omite" % clip)
+            continue
+        voz = os.path.join(voces, mp3)
+        total = duracion(toma)
+        inicio = 0.5
+        if inicio + duracion(voz) > total:
+            inicio = max(0.1, total - duracion(voz) - 0.1)
+        if inicio + duracion(voz) > total:
+            raise SystemExit("%s: la voz no cabe en la toma" % clip)
+        ganancia = LUFS - lufs(voz)
+        salida = os.path.join(cfg["carpeta"], ("despedida-%s.mp4" % tema) if clip == "despedida" else clip + ".mp4")
+        run("ffmpeg", "-y", "-i", toma, "-i", voz, "-filter_complex",
+            "[0:v]scale=%d:%d:force_original_aspect_ratio=increase,crop=%d:%d,fps=%d,format=yuv420p[v];"
+            "[1:a]volume=%.2fdB,alimiter=limit=0.89,adelay=%d|%d,apad,atrim=0:%.3f,aformat=channel_layouts=stereo[a]"
+            % (W, H, W, H, FPS, ganancia, inicio * 1000, inicio * 1000, total),
+            "-map", "[v]", "-map", "[a]", "-c:v", "libx264", "-crf", "23", "-preset", "slow", "-profile:v", "high",
+            "-r", str(FPS), "-c:a", "aac", "-b:a", "128k", "-ar", "44100", "-movflags", "+faststart", "-shortest", salida)
+        print("%s: %.2f s, %d KB, voz %+.1f dB desde %.1f s" % (os.path.relpath(salida, CB), duracion(salida),
+                                                               os.path.getsize(salida) // 1024, ganancia, inicio))
+
+
 if __name__ == "__main__":
-    for tema in sys.argv[1:] or list(TEMAS):
-        componer(tema)
+    temas = [a for a in sys.argv[1:] if not a.startswith("--")]
+    for tema in temas or list(TEMAS):
+        if "--clips" in sys.argv:
+            componer_clips(tema)
+        else:
+            componer(tema)

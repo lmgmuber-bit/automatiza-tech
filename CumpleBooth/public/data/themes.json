@@ -2234,6 +2234,76 @@
         "welcome": "welcome-noche-brujas.mp4"
       }
     },
+    "adulto-revista": {
+      "nombre": "Portada de Revista",
+      "franquicia": null,
+      "publico": "adulto",
+      "audiencia": "adulto",
+      "diploma": "Estrella de la portada de CLICK",
+      "colors": {
+        "accent": "#E11D74",
+        "accentSoft": "#FBE3EE",
+        "yellow": "#E8C66A",
+        "ink": "#16121A",
+        "bgLight1": "#FFF7FA",
+        "bgLight2": "#F6E3EC",
+        "dark1": "#2A0F1F",
+        "dark2": "#16121A",
+        "dark3": "#C9A24A"
+      },
+      "confetti": [
+        "#E11D74",
+        "#E8C66A",
+        "#FFFFFF",
+        "#16121A",
+        "#C1121F",
+        "#F3E6EC"
+      ],
+      "personajes": [],
+      "frameBox": {
+        "x": 0.1,
+        "y": 0.1,
+        "w": 0.8,
+        "h": 0.45
+      },
+      "modoFoto": "fondo",
+      "fondoEscena": "revista-alfombra.jpg",
+      "musicaHint": "Sin música",
+      "transition": "none",
+      "revista": {
+        "titulo": "CLICK",
+        "variantes": [
+          {
+            "clave": "alfombra",
+            "etiqueta": "Alfombra roja",
+            "detalle": "Fotógrafos y flashes de estreno",
+            "emoji": "📸",
+            "escena": "revista-alfombra.jpg",
+            "tinta": "#FFFFFF",
+            "acento": "#C1121F"
+          },
+          {
+            "clave": "estudio",
+            "etiqueta": "Estudio de color",
+            "detalle": "Sesión de fotos con fondo fucsia",
+            "emoji": "💗",
+            "escena": "revista-estudio.jpg",
+            "tinta": "#FFFFFF",
+            "acento": "#16121A"
+          },
+          {
+            "clave": "bn",
+            "etiqueta": "Blanco y negro",
+            "detalle": "Retrato clásico de estudio",
+            "emoji": "🖤",
+            "escena": "revista-bn.jpg",
+            "filtro": "bn",
+            "tinta": "#FFFFFF",
+            "acento": "#16121A"
+          }
+        ]
+      }
+    },
     "fiestas-patrias": {
       "nombre": "Fiestas Patrias",
       "franquicia": null,
@@ -2362,6 +2432,557 @@
       },
       "videos": {
         "welcome": "welcome-fiestas-patrias.mp4"
+      }
+    },
+    "brujitas": {
+      "nombre": "Noche de Brujas",
+      "franquicia": null,
+      "publico": "mixto",
+      "diploma": "Invitado de honor de la Noche de Brujas",
+      "colors": {
+        "accent": "#F26A1B",
+        "accentSoft": "#FDE7D6",
+        "yellow": "#FFC94A",
+        "ink": "#2E1A47",
+        "bgLight1": "#F6EEFF",
+        "bgLight2": "#FFE9D6",
+        "dark1": "#5B2A86",
+        "dark2": "#2E1A47",
+        "dark3": "#F26A1B"
+      },
+      "confetti": [
+        "#F26A1B",
+        "#5B2A86",
+        "#FFFFFF",
+        "#FFC94A",
+        "#B084E0",
+        "#FDE7D6"
+      ],
+      "personajes": [
+        {
+          "emoji": "🧙‍♀️",
+          "name": "Brujita Luna",
+          "img": "brujita.jpg",
+          "game": [
+            {
+              "kind": "escudo",
+              "label": "¡Atrapa la calabaza!",
+              "image": "fondo-sala.jpg",
+              "seconds": 15
+            },
+            {
+              "kind": "fichas",
+              "label": "¡Arma la imagen!",
+              "image": "puzzle-brujita.jpg",
+              "cols": 3,
+              "filas": 3
+            },
+            {
+              "kind": "copos",
+              "label": "¡Atrapa los dulces!",
+              "emojis": [
+                "🍬",
+                "🎃",
+                "🍭",
+                "⭐"
+              ],
+              "seconds": 15
+            }
+          ]
+        },
+        {
+          "emoji": "🎃",
+          "name": "Pepa Calabaza",
+          "img": "calabaza.jpg",
+          "game": [
+            {
+              "kind": "fichas",
+              "label": "¡Arma la imagen!",
+              "image": "puzzle-calabaza.jpg",
+              "cols": 3,
+              "filas": 3
+            },
+            {
+              "kind": "copos",
+              "label": "¡Atrapa los dulces!",
+              "emojis": [
+                "🍬",
+                "🎃",
+                "🍭",
+                "⭐"
+              ],
+              "seconds": 15
+            }
+          ]
+        },
+        {
+          "emoji": "👻",
+          "name": "Fantasmín",
+          "img": "fantasmita.jpg",
+          "game": [
+            {
+              "kind": "fichas",
+              "label": "¡Arma la imagen!",
+              "image": "puzzle-fantasmita.jpg",
+              "cols": 3,
+              "filas": 3
+            },
+            {
+              "kind": "copos",
+              "label": "¡Atrapa los dulces!",
+              "emojis": [
+                "🍬",
+                "🎃",
+                "🍭",
+                "⭐"
+              ],
+              "seconds": 15
+            }
+          ]
+        },
+        {
+          "emoji": "🐈‍⬛",
+          "name": "Gato Medianoche",
+          "img": "gato.jpg",
+          "game": [
+            {
+              "kind": "fichas",
+              "label": "¡Arma la imagen!",
+              "image": "puzzle-gato.jpg",
+              "cols": 3,
+              "filas": 3
+            },
+            {
+              "kind": "copos",
+              "label": "¡Atrapa los dulces!",
+              "emojis": [
+                "🍬",
+                "🎃",
+                "🍭",
+                "⭐"
+              ],
+              "seconds": 15
+            }
+          ]
+        },
+        {
+          "emoji": "🦇",
+          "name": "Murci",
+          "img": "murcielaguito.jpg",
+          "game": [
+            {
+              "kind": "fichas",
+              "label": "¡Arma la imagen!",
+              "image": "puzzle-murcielaguito.jpg",
+              "cols": 3,
+              "filas": 3
+            },
+            {
+              "kind": "copos",
+              "label": "¡Atrapa los dulces!",
+              "emojis": [
+                "🍬",
+                "🎃",
+                "🍭",
+                "⭐"
+              ],
+              "seconds": 15
+            }
+          ]
+        },
+        {
+          "emoji": "🤕",
+          "name": "Momi",
+          "img": "momia.jpg",
+          "game": [
+            {
+              "kind": "fichas",
+              "label": "¡Arma la imagen!",
+              "image": "puzzle-momia.jpg",
+              "cols": 3,
+              "filas": 3
+            },
+            {
+              "kind": "copos",
+              "label": "¡Atrapa los dulces!",
+              "emojis": [
+                "🍬",
+                "🎃",
+                "🍭",
+                "⭐"
+              ],
+              "seconds": 15
+            }
+          ]
+        }
+      ],
+      "frameBox": {
+        "x": 0.1087,
+        "y": 0.0936,
+        "w": 0.7686,
+        "h": 0.5097
+      },
+      "marcoGrande": true,
+      "fondoEscena": "fondo-escena.jpg",
+      "musicaHint": "Pendiente: dos pistas instrumentales (Luis, Gemini)",
+      "videos": {
+        "welcome": "welcome-brujitas.mp4",
+        "despedida": "despedida-brujitas.mp4"
+      },
+      "asomate": {
+        "fondo": "fondo-escena.jpg",
+        "personajes": {
+          "brujita": {
+            "w": 530,
+            "h": 1300,
+            "arriba": 0,
+            "pies": 1299,
+            "izq": 0,
+            "der": 529,
+            "cx": 273.4,
+            "cy": 419.6,
+            "rx": 129.4,
+            "ry": 107.1
+          },
+          "calabaza": {
+            "w": 620,
+            "h": 1300,
+            "arriba": 0,
+            "pies": 1299,
+            "izq": 0,
+            "der": 619,
+            "cx": 311.1,
+            "cy": 447.4,
+            "rx": 213.2,
+            "ry": 195.8
+          },
+          "fantasmita": {
+            "w": 691,
+            "h": 1300,
+            "arriba": 0,
+            "pies": 1299,
+            "izq": 0,
+            "der": 690,
+            "cx": 344.0,
+            "cy": 342.6,
+            "rx": 188.9,
+            "ry": 152.3
+          },
+          "gato": {
+            "w": 532,
+            "h": 1300,
+            "arriba": 0,
+            "pies": 1299,
+            "izq": 0,
+            "der": 531,
+            "cx": 278.5,
+            "cy": 475.7,
+            "rx": 178.2,
+            "ry": 144.8
+          },
+          "murcielaguito": {
+            "w": 672,
+            "h": 1300,
+            "arriba": 0,
+            "pies": 1299,
+            "izq": 0,
+            "der": 671,
+            "cx": 338.1,
+            "cy": 440.1,
+            "rx": 193.9,
+            "ry": 153.1
+          },
+          "momia": {
+            "w": 528,
+            "h": 1300,
+            "arriba": 0,
+            "pies": 1299,
+            "izq": 0,
+            "der": 527,
+            "cx": 245.5,
+            "cy": 508.6,
+            "rx": 176.1,
+            "ry": 123.3
+          }
+        },
+        "boton": "🎃 Asómate y sé de la Noche de Brujas",
+        "titulo": "¿Con quién te quieres asomar?"
+      }
+    },
+    "navidad": {
+      "nombre": "Navidad del Viejito Pascuero",
+      "franquicia": null,
+      "publico": "mixto",
+      "diploma": "Ayudante oficial del Viejito Pascuero",
+      "colors": {
+        "accent": "#C62828",
+        "accentSoft": "#FBE4E1",
+        "yellow": "#F4C542",
+        "ink": "#1F3D2B",
+        "bgLight1": "#FFF8EC",
+        "bgLight2": "#E8F3EA",
+        "dark1": "#1B5E20",
+        "dark2": "#1F3D2B",
+        "dark3": "#C62828"
+      },
+      "confetti": [
+        "#C62828",
+        "#1B5E20",
+        "#F4C542",
+        "#FFFFFF",
+        "#8BC34A",
+        "#FBE4E1"
+      ],
+      "personajes": [
+        {
+          "emoji": "🎅",
+          "name": "Viejito Pascuero",
+          "img": "pascuero.jpg",
+          "game": [
+            {
+              "kind": "escudo",
+              "label": "¡Atrapa la estrella!",
+              "image": "fondo-sala.jpg",
+              "seconds": 15
+            },
+            {
+              "kind": "fichas",
+              "label": "¡Arma la imagen!",
+              "image": "puzzle-pascuero.jpg",
+              "cols": 3,
+              "filas": 3
+            },
+            {
+              "kind": "copos",
+              "label": "¡Atrapa los regalos!",
+              "emojis": [
+                "🎁",
+                "⭐",
+                "🍬",
+                "🔔"
+              ],
+              "seconds": 15
+            }
+          ]
+        },
+        {
+          "emoji": "🤶",
+          "name": "Señora Pascuera",
+          "img": "pascuera.jpg",
+          "game": [
+            {
+              "kind": "fichas",
+              "label": "¡Arma la imagen!",
+              "image": "puzzle-pascuera.jpg",
+              "cols": 3,
+              "filas": 3
+            },
+            {
+              "kind": "copos",
+              "label": "¡Atrapa los regalos!",
+              "emojis": [
+                "🎁",
+                "⭐",
+                "🍬",
+                "🔔"
+              ],
+              "seconds": 15
+            }
+          ]
+        },
+        {
+          "emoji": "🦌",
+          "name": "Reno Cascabel",
+          "img": "reno.jpg",
+          "game": [
+            {
+              "kind": "fichas",
+              "label": "¡Arma la imagen!",
+              "image": "puzzle-reno.jpg",
+              "cols": 3,
+              "filas": 3
+            },
+            {
+              "kind": "copos",
+              "label": "¡Atrapa los regalos!",
+              "emojis": [
+                "🎁",
+                "⭐",
+                "🍬",
+                "🔔"
+              ],
+              "seconds": 15
+            }
+          ]
+        },
+        {
+          "emoji": "🧝",
+          "name": "Duende Ayudante",
+          "img": "duende.jpg",
+          "game": [
+            {
+              "kind": "fichas",
+              "label": "¡Arma la imagen!",
+              "image": "puzzle-duende.jpg",
+              "cols": 3,
+              "filas": 3
+            },
+            {
+              "kind": "copos",
+              "label": "¡Atrapa los regalos!",
+              "emojis": [
+                "🎁",
+                "⭐",
+                "🍬",
+                "🔔"
+              ],
+              "seconds": 15
+            }
+          ]
+        },
+        {
+          "emoji": "⛄",
+          "name": "Copito",
+          "img": "nieve.jpg",
+          "game": [
+            {
+              "kind": "fichas",
+              "label": "¡Arma la imagen!",
+              "image": "puzzle-nieve.jpg",
+              "cols": 3,
+              "filas": 3
+            },
+            {
+              "kind": "copos",
+              "label": "¡Atrapa los regalos!",
+              "emojis": [
+                "🎁",
+                "⭐",
+                "🍬",
+                "🔔"
+              ],
+              "seconds": 15
+            }
+          ]
+        },
+        {
+          "emoji": "🐧",
+          "name": "Pingüi",
+          "img": "pinguino.jpg",
+          "game": [
+            {
+              "kind": "fichas",
+              "label": "¡Arma la imagen!",
+              "image": "puzzle-pinguino.jpg",
+              "cols": 3,
+              "filas": 3
+            },
+            {
+              "kind": "copos",
+              "label": "¡Atrapa los regalos!",
+              "emojis": [
+                "🎁",
+                "⭐",
+                "🍬",
+                "🔔"
+              ],
+              "seconds": 15
+            }
+          ]
+        }
+      ],
+      "frameBox": {
+        "x": 0.1062,
+        "y": 0.0832,
+        "w": 0.7932,
+        "h": 0.4894
+      },
+      "marcoGrande": true,
+      "fondoEscena": "fondo-escena.jpg",
+      "musicaHint": "Pendiente: dos pistas instrumentales (Luis, Gemini)",
+      "videos": {
+        "welcome": "welcome-navidad.mp4",
+        "despedida": "despedida-navidad.mp4"
+      },
+      "asomate": {
+        "fondo": "fondo-escena.jpg",
+        "personajes": {
+          "pascuero": {
+            "w": 754,
+            "h": 1300,
+            "arriba": 0,
+            "pies": 1299,
+            "izq": 0,
+            "der": 753,
+            "cx": 383.4,
+            "cy": 417.1,
+            "rx": 156.1,
+            "ry": 131.1
+          },
+          "pascuera": {
+            "w": 551,
+            "h": 1300,
+            "arriba": 0,
+            "pies": 1299,
+            "izq": 0,
+            "der": 550,
+            "cx": 274.1,
+            "cy": 301.7,
+            "rx": 124.5,
+            "ry": 102.9
+          },
+          "reno": {
+            "w": 595,
+            "h": 1300,
+            "arriba": 0,
+            "pies": 1299,
+            "izq": 0,
+            "der": 594,
+            "cx": 311.9,
+            "cy": 343.3,
+            "rx": 160.6,
+            "ry": 145.5
+          },
+          "duende": {
+            "w": 579,
+            "h": 1300,
+            "arriba": 0,
+            "pies": 1299,
+            "izq": 0,
+            "der": 578,
+            "cx": 278.2,
+            "cy": 513.2,
+            "rx": 142.5,
+            "ry": 123.2
+          },
+          "nieve": {
+            "w": 732,
+            "h": 1300,
+            "arriba": 0,
+            "pies": 1299,
+            "izq": 0,
+            "der": 731,
+            "cx": 360.5,
+            "cy": 443.2,
+            "rx": 165.5,
+            "ry": 118.2
+          },
+          "pinguino": {
+            "w": 675,
+            "h": 1300,
+            "arriba": 0,
+            "pies": 1299,
+            "izq": 0,
+            "der": 674,
+            "cx": 336.7,
+            "cy": 539.1,
+            "rx": 193.2,
+            "ry": 174.9
+          }
+        },
+        "boton": "🎄 Asómate y sé parte de la Navidad",
+        "titulo": "¿Con quién te quieres asomar?",
+        "suelo": 0.865
       }
     }
   }

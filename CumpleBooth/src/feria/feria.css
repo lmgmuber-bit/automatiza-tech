@@ -57,6 +57,10 @@
 .feria-name .feria-primary{width:90%}
 .feria-camera-frame{position:relative;width:100%;aspect-ratio:3/4;background:#e7dced;border-radius:28px;overflow:hidden;margin:15px 0}
 .feria-camera-frame video,.feria-camera-frame canvas{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+/* Portada de Revista (04-10): el recuadro toma la forma de la foto final para que el título CLICK y el código de barras no queden cortados. */
+.feria-camera-frame.feria-camera-portada{aspect-ratio:9/16;width:min(100%,calc(60vh * 9 / 16));margin-inline:auto}
+/* En la portada la persona se encuadra sola (encuadrePortada): la silueta de guía no calzaría con lo que se ve. */
+.feria-camera-portada .feria-camera-guide{display:none}
 .feria-camera-guide{position:absolute;left:18%;top:8%;right:18%;bottom:12%;border:2px dashed #ffffffe0;border-radius:48% 48% 15% 15%;pointer-events:none}
 .feria-count{position:absolute;inset:0;display:grid;place-content:center;color:#fff;font-size:160px;text-shadow:0 4px 20px #000;background:#0003}
 .feria-result{max-width:100%;max-height:61%;object-fit:contain;min-height:0;box-shadow:0 12px 40px #341f4c1f;border-radius:10px}
@@ -66,7 +70,7 @@
 .feria-diploma .feria-result{max-height:56%}
 .feria-kiosco .spinner,.feria-kiosco .video-screen{padding-top:6%}
 .feria-kiosco :where(.feria-panel) [role=alert]{color:#922649;font-size:clamp(16px,2.1vw,26px)}
-@media(max-width:650px){.feria-selector{padding:24px 20px}.feria-modes{gap:16px}.feria-selector .feria-mode{padding:20px;border-radius:24px}.feria-worlds{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.feria-selector footer>span{max-width:50%;text-align:right}.feria-consent{padding:10px;gap:8px}.feria-panel{padding:65px 20px 16px;gap:8px}.feria-name-label{margin:10px 0}.feria-kiosco :where(.feria-panel,.feria-kiosk-header) button{padding:14px 20px}.feria-camera-frame{max-height:48vh}.feria-panel h1{margin:6px 0}.feria-panel p{margin:6px 0}.feria-result{max-height:53%}.feria-qr{max-height:38vh;width:auto;max-width:80%}}
+@media(max-width:650px){.feria-selector{padding:24px 20px}.feria-modes{gap:16px}.feria-selector .feria-mode{padding:20px;border-radius:24px}.feria-worlds{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.feria-selector footer>span{max-width:50%;text-align:right}.feria-consent{padding:10px;gap:8px}.feria-panel{padding:65px 20px 16px;gap:8px}.feria-name-label{margin:10px 0}.feria-kiosco :where(.feria-panel,.feria-kiosk-header) button{padding:14px 20px}.feria-camera-frame{max-height:48vh}.feria-camera-frame.feria-camera-portada{width:min(100%,calc(48vh * 9 / 16))}.feria-panel h1{margin:6px 0}.feria-panel p{margin:6px 0}.feria-result{max-height:53%}.feria-qr{max-height:38vh;width:auto;max-width:80%}}
 @media(prefers-reduced-motion:reduce){.feria-selector *,.feria-kiosco *{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
 /* Fondo de la feria (26-09): la escena va detrás de un velo crema para que el texto morado siga leyéndose. */
 .feria-selector,.app.feria-kiosco{background-color:var(--feria-paper);background-image:linear-gradient(180deg,#fffaf0cc 0,#fffaf08c 16%,#fffaf04d 42%,#fffaf04d 72%,#fffaf0b3 100%),var(--feria-fondo,none);background-size:cover;background-position:center;background-repeat:no-repeat}
@@ -84,3 +88,5 @@
 /* 7: la cabecera fija de la feria (~72 px) tapaba el selector de cámara y el borde de arriba de Asómate. */
 .feria-kiosco .camera-picker{top:84px}
 .feria-kiosco .capture,.feria-kiosco .preview,.feria-kiosco .asomate-elegir{padding-top:72px}
+/* 29-09: al elegir temática el selector baja solo hasta la autorización y el botón; este margen deja aire bajo el botón. */
+.feria-selector .feria-primary{scroll-margin-bottom:28px}

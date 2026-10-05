@@ -7,6 +7,8 @@ import { afterName, armIdle, firstName, initialPhotoStep, reservation, returnUrl
 import { downloadImage, withRemembrance } from './media.js'
 import { FullscreenButton, useFullscreenOnTap } from './fullscreen.jsx'
 import { prepararVideo, urlDeVideo } from '../videoListo.js'
+import { fondoEstilo, pendonesDe } from './fondo.js'
+import { textosPortada } from './revista.js'
 import { INTRO_ARRANQUE_MS, alVencer, esperaPorDuracion, restanteMinimo } from './intro.js'
 import './feria.css'
 
@@ -33,6 +35,8 @@ export default function FeriaBooth({ feria, theme, themeData, characters, filter
   const [elenco, setElenco] = useState([])
   const [fotosAsomate, setFotosAsomate] = useState([])
   const [heroe, setHeroe] = useState(null)
+  // Portada de Revista (04-10): el fondo lo elige cada invitado en el menú (alfombra roja, estudio de color, blanco y negro).
+  const [variante, setVariante] = useState(null)
   const locked = useRef(false)
   const reservationRef = useRef(null)
   const uploaded = useRef('')
@@ -46,15 +50,22 @@ export default function FeriaBooth({ feria, theme, themeData, characters, filter
   const camera = useCallback(() => setStep('camera'), [])
   const afterCharacter = useCallback(() => setStep(child && gameFor && person && gameFor(person.name) ? 'juego' : 'camera'), [child, gameFor, person])
   const asomateOk = Boolean(asomate && AsomatePick && Capture && AsomateReview)
+  const revista = themeData?.revista || null
+  const variantes = Array.isArray(revista?.variantes) ? revista.variantes : []
+  const conVariantes = variantes.length > 1
+  const conMenu = asomateOk || conVariantes
+  const filtroFoto = variante?.filtro ?? filter
+  const portada = revista ? { textos: textosPortada({ titulo: revista.titulo, nombre: firstName(name), evento: feria.nombre, fecha: feria.fecha, propios: revista.textos }),
+    estilo: { tinta: variante?.tinta, acento: variante?.acento, evento: feria.nombre } } : null
   useFullscreenOnTap()
   // Los videos de la temática se bajan enteros apenas se abre el kiosco, como la despedida en una fiesta: la intro
   // arranca en el acto aunque el wifi del salón esté lento y no se cae a media descarga (Luis, 28-09).
   useEffect(() => { prepararVideo(welcomeSrc); prepararVideo(despedidaSrc) }, [welcomeSrc, despedidaSrc])
-  const afterWelcome = useCallback(() => setStep(afterName(characters, asomateOk)), [characters, asomateOk])
+  const afterWelcome = useCallback(() => setStep(afterName(characters, conMenu)), [characters, conMenu])
   const { start: startMusic, muted, toggle: toggleMusic } = useFeriaMusic(music, step)
   // Tras el nombre, la intro de la temática como en una fiesta (Luis, 26-09). El toque del nombre es el gesto
   // que deja sonar el video y la música; sin intro se sigue directo.
-  const afterNameStep = () => { startMusic(); setStep(welcomeSrc ? 'welcome' : afterName(characters, asomateOk)) }
+  const afterNameStep = () => { startMusic(); setStep(welcomeSrc ? 'welcome' : afterName(characters, conMenu)) }
 
   useEffect(() => {
     if (themeData.modoFoto !== 'fondo') return
@@ -83,8 +94,8 @@ export default function FeriaBooth({ feria, theme, themeData, characters, filter
       const number = reservationRef.current
       setHeld(number)
       const compositionStart = performance.now()
-      const composed = precompuesta ? source : await renderPhoto(source, firstName(name), person, filter, segmenter)
-      const finalPhoto = await filterImage(await withRemembrance(composed, feria, number), filter)
+      const composed = precompuesta ? source : await renderPhoto(source, firstName(name), person, filtroFoto, segmenter, { variante, portada })
+      const finalPhoto = await filterImage(await withRemembrance(composed, feria, number, pendonesDe(themeData?.confetti)), filtroFoto)
       if (segmenter) segmenter.metrics.compositionMs = performance.now() - compositionStart
       setPhoto(finalPhoto)
     } catch { setError('No pudimos preparar tu recuerdo. La foto sigue aquí: puedes reintentar o guardar la original.') }
@@ -110,7 +121,7 @@ export default function FeriaBooth({ feria, theme, themeData, characters, filter
     if (locked.current) return
     locked.current = true; setBusy(true); setError('')
     try {
-      if (!diploma) setDiploma(await withRemembrance(await renderDiploma(firstName(name), person, route === 'asomate' ? heroe : null), feria, held))
+      if (!diploma) setDiploma(await withRemembrance(await renderDiploma(firstName(name), person, route === 'asomate' ? heroe : null), feria, held, pendonesDe(themeData?.confetti)))
       setStep('diploma')
     } catch { setError('No pudimos preparar el diploma. Puedes intentarlo nuevamente.') }
     finally { locked.current = false; setBusy(false) }
@@ -121,6 +132,7 @@ export default function FeriaBooth({ feria, theme, themeData, characters, filter
     setRoute('asomate'); setElenco([]); setFotosAsomate([]); setStep('asomate-elegir')
   }
   const startPersonaje = () => { setRoute('personaje'); setStep(initialPhotoStep(characters)) }
+  const startPortada = (v) => { setVariante(v); setRoute('personaje'); setStep('camera') }
   const retake = () => {
     setPhoto(null); setError('')
     if (route === 'asomate') { setFotosAsomate([]); setStep('asomate-capturar') } else setStep('camera')
@@ -135,7 +147,7 @@ export default function FeriaBooth({ feria, theme, themeData, characters, filter
   })() : null
 
   return <main className={`app feria-kiosco feria-kiosco-${feria.modo}`} data-step={step} data-segmentation={segmenter ? JSON.stringify(segmenter.metrics) : undefined}
-    style={{ '--feria-fondo': `url("${new URL(base + 'feria/fondo.jpg', location.href).href}")` }}>
+    style={fondoEstilo(base, location.href, themeData?.images?.fondoEvento, feria.fondo)}>
     <header className="feria-kiosk-header"><span>CumpleClick <b>·</b> {feria.nombre}</span><span className="feria-kiosk-acciones">{music && <button className="feria-fullscreen" type="button" onClick={toggleMusic} aria-label={muted ? 'Activar música' : 'Silenciar música'} title={muted ? 'Activar música' : 'Silenciar música'}><span aria-hidden="true">{muted ? '🔇' : '🎵'}</span></button>}<FullscreenButton />{!completed && <button className="feria-quiet" disabled={busy} onClick={finish}>Salir</button>}</span></header>
     {step === 'name' && <section className="feria-panel feria-name"><img className="feria-name-logo" src={base + 'brand/cumpleclick-mark.svg'} alt="CumpleClick" /><span className="feria-eyebrow">{child ? 'TU AVENTURA COMIENZA' : 'UN RETRATO A TU MANERA'}</span><h1 ref={heading} tabIndex={-1}>¿Cómo te llamas?</h1><p>Solo tu primer nombre, si quieres.</p><label className="feria-name-label">Tu nombre <span>(opcional)</span><input value={name} maxLength={20} autoComplete="off" autoCapitalize="words" onChange={(e) => setName(e.target.value)} placeholder="Tu primer nombre" /></label>
       {child && !consent && <label className="feria-consent"><input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} />Soy el adulto responsable y autorizo tomar la foto</label>}
@@ -143,11 +155,12 @@ export default function FeriaBooth({ feria, theme, themeData, characters, filter
     </section>}
     {step === 'welcome' && welcomeSrc && <FeriaVideo marca="welcome" src={welcomeSrc} titulo={name ? '¡Te damos la bienvenida!' : '¡Bienvenidos!'} name={name} emoji="🎉" onDone={afterWelcome} />}
     {step === 'despedida' && despedidaSrc && <FeriaVideo marca="despedida" src={despedidaSrc} titulo="¡Gracias por venir!" name={name} emoji="👋" onDone={leave} />}
-    {step === 'menu' && <section className="feria-panel feria-menu"><span className="feria-eyebrow">{child ? 'ELIGE TU AVENTURA' : 'ELIGE TU FOTO'}</span><h1 ref={heading} tabIndex={-1}>¿Cómo quieres tu foto?</h1>
+    {step === 'menu' && <section className="feria-panel feria-menu"><span className="feria-eyebrow">{conVariantes ? 'ELIGE TU PORTADA' : child ? 'ELIGE TU AVENTURA' : 'ELIGE TU FOTO'}</span><h1 ref={heading} tabIndex={-1}>{conVariantes ? `¿Dónde sales en la portada de ${revista.titulo}?` : '¿Cómo quieres tu foto?'}</h1>
       <div className="feria-menu-opciones">
-        <button className="feria-opcion" onClick={startPersonaje}><span aria-hidden="true">{withCharacters ? '🎡' : '📸'}</span><strong>{withCharacters ? 'Foto con tu personaje' : 'Foto con la temática'}</strong><small>{withCharacters ? 'Gira la ruleta, conoce a tu personaje y juega antes de la foto' : 'Tu foto con el fondo de esta temática'}</small></button>
+        {conVariantes && variantes.map((v) => <button key={v.clave} className="feria-opcion feria-opcion-portada" onClick={() => startPortada(v)}><span aria-hidden="true">{v.emoji || '📸'}</span><strong>{v.etiqueta}</strong>{v.detalle && <small>{v.detalle}</small>}</button>)}
+        {!conVariantes && <button className="feria-opcion" onClick={startPersonaje}><span aria-hidden="true">{withCharacters ? '🎡' : '📸'}</span><strong>{withCharacters ? 'Foto con tu personaje' : 'Foto con la temática'}</strong><small>{withCharacters ? 'Gira la ruleta, conoce a tu personaje y juega antes de la foto' : 'Tu foto con el fondo de esta temática'}</small></button>}
         {volantin && <button className="feria-opcion feria-opcion-juego" onClick={() => location.assign(volantin)}><span aria-hidden="true">🪁</span><strong>Juega Chile en Volantín</strong><small>Encumbra tu volantín de los cerros a la fonda</small></button>}
-        <button className="feria-opcion feria-opcion-asomate" onClick={startAsomate}><strong>{asomate?.boton || '🦸 Asómate y sé el héroe'}</strong><small>{asomate?.titulo || 'Pon tu cara en el traje de tu personaje'}</small></button>
+        {asomateOk && <button className="feria-opcion feria-opcion-asomate" onClick={startAsomate}><strong>{asomate?.boton || '🦸 Asómate y sé el héroe'}</strong><small>{asomate?.titulo || 'Pon tu cara en el traje de tu personaje'}</small></button>}
       </div>
     </section>}
     {step === 'roulette' && <Spinner onDone={winner} />}
@@ -165,7 +178,7 @@ export default function FeriaBooth({ feria, theme, themeData, characters, filter
     {step === 'asomate-preview' && asomateOk && elenco.length > 0 && <AsomateReview elenco={elenco} fotos={fotosAsomate} invitado={name}
       onRetry={() => { setFotosAsomate([]); setStep('asomate-capturar') }}
       onSave={(compuesta, paraDiploma) => { setPerson(asomatePerson ? asomatePerson(elenco) : null); setHeroe(paraDiploma || null); setDiploma(null); prepare(compuesta, true) }} />}
-    {step === 'camera' && <Camera filter={filter} segmenter={segmenter} scene={themeData.images?.escena} base={base} onCapture={prepare} />}
+    {step === 'camera' && <Camera filter={filtroFoto} segmenter={segmenter} scene={variante?.escena || themeData.images?.escena} base={base} onCapture={prepare} portada={portada} />}
     {step === 'preview' && <section className="feria-panel feria-preview"><span className="feria-eyebrow">TU RECUERDO DE HOY</span><h1 ref={heading} tabIndex={-1}>{held ? `Tu foto: ${held.etiqueta}` : 'Preparando tu recuerdo'}</h1>{photo ? <img className="feria-result" src={photo} alt="Tu foto con el recuerdo y el número de la feria" /> : <p role="status">{busy ? 'Estamos preparando tu foto…' : 'La foto está lista para reintentar.'}</p>}
       {error && <p role="alert">{error}</p>}
       <div className="feria-actions">{photo ? <button className="feria-primary" disabled={busy} onClick={save}>{busy ? 'Preparando el QR…' : 'Guardar y ver mi QR'}</button> : <button className="feria-primary" disabled={busy} onClick={() => prepare(raw)}>Reintentar</button>}<button className="feria-quiet" disabled={busy} onClick={retake}>Tomar otra foto</button>{error && raw && <button className="feria-quiet" onClick={() => downloadImage(photo || raw, held?.etiqueta)}>Guardar en esta tablet</button>}</div>

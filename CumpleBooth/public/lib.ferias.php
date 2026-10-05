@@ -17,6 +17,7 @@
  * responde "no hay feria" y una fiesta normal sigue funcionando: ver `cb_ferias_listo()`.
  */
 require_once __DIR__ . '/lib.php';
+require_once __DIR__ . '/lib.ajustes.php';   // textos de la Portada de Revista (04-10)
 
 const CB_FERIA_MODOS = ['infantil' => 'Niños', 'adulto' => 'Adultos'];
 const CB_FERIA_NOMBRE_MAX = 20;
@@ -228,12 +229,40 @@ function cb_feria_publica(array $feria, ?string $modo = null): array
         'fecha_texto' => cb_feria_fecha_texto($feria['fecha']),
         'mesa' => $feria['mesa'],
         'recuerdo' => cb_feria_recuerdo($feria),
+        'fondo' => cb_feria_fondo($feria),
     ];
     if ($modo !== null) {
         $out['modo'] = $modo;
     }
     $out['modos'] = cb_feria_modos($feria);
     return $out;
+}
+
+/**
+ * Fondo de pantalla de una temática para el selector y el kiosco (Luis, 29-09: un evento de Noche de Brujas mostraba
+ * el fondo de Fiestas Patrias). Es `fondo-evento.jpg`, 9:16 y con el centro despejado; sin archivo, cadena vacía.
+ */
+function cb_feria_fondo_mundo(string $slug): string
+{
+    return is_file(cb_themes_dir() . '/' . $slug . '/fondo-evento.jpg') ? 'themes/' . $slug . '/fondo-evento.jpg' : '';
+}
+
+/**
+ * Fondo del evento: el de su primera temática con fondo propio, Niños antes que Adultos, en el orden en que se
+ * marcaron. Sin ninguna, cadena vacía y el kiosco usa el genérico. Cuando el evento tenga su temática principal
+ * como dato (ticket 024), se lee de ahí.
+ */
+function cb_feria_fondo(array $feria): string
+{
+    foreach (cb_feria_modos($feria) as $slugs) {
+        foreach ($slugs as $slug) {
+            $fondo = cb_feria_fondo_mundo($slug);
+            if ($fondo !== '') {
+                return $fondo;
+            }
+        }
+    }
+    return '';
 }
 
 /** Imagen de muestra de un mundo para el selector: el banner si existe, si no el fondo de la sala. */
@@ -259,6 +288,7 @@ function cb_feria_mundos_publicos(array $feria): array
                 'slug' => $slug,
                 'nombre' => (string) ($themes[$slug]['nombre'] ?? $slug),
                 'imagen' => cb_feria_imagen_mundo($slug),
+                'fondo' => cb_feria_fondo_mundo($slug),
                 'personajes' => !empty($themes[$slug]['personajes']),
             ];
         }
@@ -305,6 +335,11 @@ function cb_feria_resolver(array $feria, array $resuelto, string $tema, string $
         // El juego general de la temática no pasa por el filtro de personajes: en Adultos también se apaga.
         $theme['game'] = new stdClass();
     }
+    // Fondo de pantalla del kiosco: el de la temática elegida (29-09); sin archivo, el del evento o el genérico.
+    $fondoMundo = cb_feria_fondo_mundo($tema);
+    if ($fondoMundo !== '') {
+        $theme['images']['fondoEvento'] = $fondoMundo;
+    }
     // Filtro de la foto final, por temática (hoy solo "bn": el estudio en blanco y negro que la
     // competencia vende a adultos). El kiosco lo aplica al componer; sin el campo, foto a color.
     if (($themeData['filtro'] ?? '') === 'bn') {
@@ -321,12 +356,67 @@ function cb_feria_resolver(array $feria, array $resuelto, string $tema, string $
     } else {
         $theme['modoFoto'] = 'marco';
     }
+    // Portada de Revista (04-10): las escenas que el invitado elige en el menú. Solo con foto sobre fondo y solo las que
+    // están en disco; con una sola no hay menú.
+    $revista = $theme['modoFoto'] === 'fondo' ? cb_feria_revista($tema, $themeData['revista'] ?? null) : null;
+    if ($revista !== null) {
+        // Los textos fijos van con la temática: los de Ajustes si Luis escribió alguno, si no los de siempre.
+        $revista['textos'] = cb_revista_textos();
+        $theme['revista'] = $revista;
+    }
     return [
         'ok' => true,
         'party' => $party,
         'theme' => $theme,
         'feria' => cb_feria_publica($feria, $modo),
     ];
+}
+
+/**
+ * Portada de Revista CLICK (04-10-2026): el título de la revista y sus variantes de fondo, validados. Una variante sin
+ * escena en disco se cae sola; el título son letras y números (lo dibuja el kiosco, no viene en la imagen).
+ */
+function cb_feria_revista(string $tema, $bloque): ?array
+{
+    if (!is_array($bloque) || !is_array($bloque['variantes'] ?? null)) {
+        return null;
+    }
+    $titulo = strtoupper(trim((string) ($bloque['titulo'] ?? '')));
+    if (!preg_match('/\A[A-Z0-9 ]{1,12}\z/', $titulo)) {
+        return null;
+    }
+    $variantes = [];
+    foreach ($bloque['variantes'] as $v) {
+        if (!is_array($v)) {
+            continue;
+        }
+        $clave = (string) ($v['clave'] ?? '');
+        $escena = (string) ($v['escena'] ?? '');
+        if (!cb_valid_slug($clave, 1, 30) || !preg_match('/\A[a-z0-9][a-z0-9._-]*\.(?:jpe?g|png|webp)\z/i', $escena)
+            || !is_file(cb_themes_dir() . '/' . $tema . '/' . $escena)) {
+            continue;
+        }
+        $limpia = [
+            'clave' => $clave,
+            'etiqueta' => mb_substr(trim((string) ($v['etiqueta'] ?? $clave)), 0, 40),
+            'detalle' => mb_substr(trim((string) ($v['detalle'] ?? '')), 0, 60),
+            'emoji' => mb_substr(trim((string) ($v['emoji'] ?? '')), 0, 4),
+            'escena' => 'themes/' . $tema . '/' . $escena,
+        ];
+        if (($v['filtro'] ?? '') === 'bn') {
+            $limpia['filtro'] = 'bn';
+        }
+        foreach (['tinta', 'acento'] as $color) {
+            if (preg_match('/\A#[0-9a-f]{6}\z/i', (string) ($v[$color] ?? ''))) {
+                $limpia[$color] = (string) $v[$color];
+            }
+        }
+        $variantes[] = $limpia;
+        if (count($variantes) >= 4) {
+            break;
+        }
+    }
+    return $variantes ? ['titulo' => $titulo, 'variantes' => $variantes] : null;
 }
 
 /**

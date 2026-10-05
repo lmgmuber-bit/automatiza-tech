@@ -1,3 +1,4 @@
+import { PENDONES_GENERICOS } from './fondo.js'
 import { filterFor, souvenirLines } from './contract.js'
 
 export function loadImage(src) {
@@ -26,11 +27,10 @@ export async function filteredPhoto(src, filter) {
 // el nombre del personaje ni el sello del diploma existente.
 // Franja de recuerdo (Luis, 26-09, en la feria): pendones de la feria, el logo real de CumpleClick y el
 // organizador nombrado, sin su logo. Es la misma imagen para la foto impresa y para la digital del QR.
-const PENDONES = ['#D52B1E', '#FFFFFF', '#0039A6']
 let logoMarca = null
 const cargarLogo = () => (logoMarca ||= loadImage(new URL('brand/cumpleclick-mark.svg', document.baseURI).href).catch(() => null))
 
-export async function withRemembrance(src, feria, held) {
+export async function withRemembrance(src, feria, held, pendones = PENDONES_GENERICOS) {
   const [image, logo] = await Promise.all([loadImage(src), cargarLogo()])
   const canvas = document.createElement('canvas')
   canvas.width = image.naturalWidth; canvas.height = image.naturalHeight
@@ -48,7 +48,7 @@ export async function withRemembrance(src, feria, held) {
   context.beginPath(); context.moveTo(0, top + 1); context.lineTo(W, top + 1); context.stroke()
   for (let i = 0; i < cuantos; i++) {
     const x = i * paso
-    context.fillStyle = PENDONES[i % 3]
+    context.fillStyle = pendones[i % pendones.length]
     context.beginPath(); context.moveTo(x + paso * 0.1, top + 1); context.lineTo(x + paso * 0.9, top + 1); context.lineTo(x + paso * 0.5, top + alto); context.closePath(); context.fill()
   }
 

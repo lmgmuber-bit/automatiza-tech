@@ -3,7 +3,8 @@
  * admin/ajustes.php — lo que vale para todo CumpleClick, no para una fiesta.
  *
  * Dos correos que son del administrador y no del cliente: a cual le llega copia oculta de
- * todo lo que sale, y a cual se manda el enlace cuando se olvida la contraseña. Van acá y no
+ * todo lo que sale, y a cual se manda el enlace cuando se olvida la contraseña. También las
+ * cifras del manual y los textos fijos de la Portada de Revista CLICK (04-10). Van acá y no
  * en la configuración del servidor para que Luis los cambie cuando quiera, sin tocar nada del
  * hosting.
  */
@@ -153,6 +154,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'guard
             'recovery_email' => $_POST['recovery_email'] ?? '',
             'manual_anticipacion_min' => $_POST['manual_anticipacion_min'] ?? '',
             'manual_dias_lista' => $_POST['manual_dias_lista'] ?? '',
+            'revista_textos' => is_array($_POST['revista_textos'] ?? null) ? $_POST['revista_textos'] : [],
         ]);
         if (!empty($r['ok'])) {
             $aviso = 'Ajustes guardados.';
@@ -235,6 +237,23 @@ $ajustes = cb_ajustes();
           <input type="number" name="manual_dias_lista" min="0" max="60" inputmode="numeric"
                  value="<?= (int) ($ajustes['manual_dias_lista'] ?? 0) ?: '' ?>" placeholder="3">
         </label>
+      </div>
+    </section>
+
+    <section class="card" id="portada-revista">
+      <h2>Portada de Revista</h2>
+      <p class="muted">
+        Los textos fijos de la portada CLICK, la temática de adultos del modo feria. Si dejas un campo vacío, sale el
+        texto de siempre, que se ve de ejemplo. En la portada todo va en mayúsculas, y en la bajada
+        <code>{evento}</code> se cambia por el nombre del evento. El nombre del invitado y la fecha los pone el kiosco.
+      </p>
+      <div class="cobro-grid">
+        <?php foreach (cb_revista_textos_campos() as $clave => [$nombre, $max, $siempre]): ?>
+        <label><?= h($nombre) ?>
+          <input type="text" name="revista_textos[<?= h($clave) ?>]" maxlength="<?= (int) $max ?>" autocomplete="off"
+                 value="<?= h($ajustes['revista_textos'][$clave] ?? '') ?>" placeholder="<?= h($siempre) ?>">
+        </label>
+        <?php endforeach; ?>
       </div>
     </section>
 

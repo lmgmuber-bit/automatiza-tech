@@ -1,0 +1,39 @@
+{
+ "_nota": "Óvalos medidos a ojo sobre la cuadrícula (30-09-2026), en píxeles del PNG de origen (720x1280): desde sobre las cejas hasta el mentón, con los ojos del muñeco enteros adentro (si no, asoman junto a la cara de la persona).",
+ "brujita": {
+  "cx": 381,
+  "cy": 468,
+  "rx": 116,
+  "ry": 96
+ },
+ "calabaza": {
+  "cx": 373,
+  "cy": 530,
+  "rx": 172,
+  "ry": 158
+ },
+ "fantasmita": {
+  "cx": 372,
+  "cy": 512,
+  "rx": 134,
+  "ry": 108
+ },
+ "gato": {
+  "cx": 379,
+  "cy": 470,
+  "rx": 160,
+  "ry": 130
+ },
+ "murcielaguito": {
+  "cx": 369,
+  "cy": 505,
+  "rx": 152,
+  "ry": 120
+ },
+ "momia": {
+  "cx": 360,
+  "cy": 520,
+  "rx": 160,
+  "ry": 112
+ }
+}

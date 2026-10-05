@@ -101,6 +101,13 @@ function at_pt_agendar_seguimiento(array $entrada, string $ip): array {
 			return at_pt_respuesta_agenda(false, 'ya_agendada', 409, 0, 'Ya tienes una llamada de seguimiento agendada para el '
 				. at_pt_fecha_larga((string) $ya->meeting_date) . ' a las ' . substr((string) $ya->meeting_time, 0, 5) . '. Si necesitas cambiarla, escríbenos por WhatsApp.');
 		}
+		// El mismo máximo que aplica la reunión que crea el bot: 2 activas por correo, sumando seguimientos y demos.
+		if (function_exists('automatiza_tech_limite_reuniones_activas')) {
+			$limite = automatiza_tech_limite_reuniones_activas((string) $d['client_email']);
+			if ($limite['alcanzado']) {
+				return at_pt_respuesta_agenda(false, 'limite_reuniones', 409, 0, $limite['mensaje'] . ' Si necesitas ayuda, escríbenos por WhatsApp.');
+			}
+		}
 		$fecha = $texto('fecha');
 		$hora = substr($texto('hora'), 0, 5);
 		$disp = [];

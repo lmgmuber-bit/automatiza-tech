@@ -104,7 +104,7 @@ ok(pedir($l, $fecha, '13:00', $ip('otra'))['ok'] === true, 'otra IP sí puede');
 $otra = new mysqli(DB_HOST, DB_USER, DB_PASSWORD, DB_NAME);
 $fila_lock = $otra->query("SELECT GET_LOCK('" . AT_PT_AGENDA_LOCK . "', 0)")->fetch_row();
 ok($fila_lock[0] === '1', 'preparación: la segunda conexión toma el candado de la agenda');
-$k = plan_enviado($m . 'g');
+$k = plan_enviado($m . 'g', 'prueba-candado-' . strtolower($m) . '@example.com'); // correo propio: el límite de 2 reuniones activas va por correo
 $t0 = microtime(true);
 $rk = pedir($k, $fecha, '14:00', $ip('g'));
 $espera = microtime(true) - $t0;
@@ -118,6 +118,48 @@ ok($rk2['ok'] === true && $rk2['clave'] === 'agendada' && $cuenta_k() === 1, 'so
 $libre = $wpdb->get_var("SELECT IS_FREE_LOCK('" . AT_PT_AGENDA_LOCK . "')");
 ok((string) $libre === '1', 'el candado queda libre después de agendar');
 $otra->close();
+
+// 05-oct-2026, pendiente 1: la agenda web también respeta el máximo de 2 reuniones activas por correo (seguimientos y
+// demos), igual que la reunión que crea el bot. Antes dejaba agendar una tercera.
+$correo_lim = 'prueba-limite-' . strtolower($m) . '@example.com';
+$lim = plan_enviado($m . 'h', $correo_lim);
+$wpdb->insert($reuniones, ['client_name' => 'Otra reunión', 'client_email' => $correo_lim, 'phone' => '', 'meeting_date' => $fecha,
+	'meeting_time' => '16:00:00', 'meeting_subject' => 'Reunión de Seguimiento', 'notes' => 'Agendada desde whatsapp', 'status' => 'scheduled']);
+$GLOBALS['ptc_creado']['reuniones'][] = (int) $wpdb->insert_id;
+$wpdb->insert($leads, ['created_at' => current_time('mysql'), 'name' => 'Demo prueba', 'email' => $correo_lim, 'phone' => '+56900000000',
+	'session_id' => 'prueba-' . $m, 'token' => 'prueba-' . $m, 'scheduled_date' => $fecha, 'scheduled_time' => '17:00:00', 'status' => 'active']);
+$lead_lim = (int) $wpdb->insert_id;
+register_shutdown_function(function () use ($wpdb, $leads, $lead_lim) { $wpdb->delete($leads, ['id' => $lead_lim]); });
+$cuenta_lim = function () use ($wpdb, $reuniones, $lim) { return (int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM $reuniones WHERE notes LIKE %s", 'Plan de trabajo ' . $wpdb->esc_like((string) $lim->codigo) . '%')); };
+$rl = pedir($lim, $fecha, '15:00', $ip('h'));
+ok($rl['ok'] === false && $rl['clave'] === 'limite_reuniones' && $rl['estado_http'] === 409, 'pendiente 1: con 2 reuniones activas (1 seguimiento y 1 demo) la web no agenda una tercera');
+ok(strpos($rl['mensaje'], 'Ya tienes 2 reuniones activas (1 demo(s) y 1 seguimiento(s))') === 0 && $cuenta_lim() === 0, 'pendiente 1: mismo mensaje que el bot y ninguna reunión creada');
+$wpdb->update($leads, ['status' => 'cancelled'], ['id' => $lead_lim]);
+$rl2 = pedir($lim, $fecha, '15:00', $ip('h2'));
+ok($rl2['ok'] === true && $cuenta_lim() === 1, 'pendiente 1: al cancelar la demo queda una activa y la web sí agenda');
+
+// 05-oct-2026, pendiente 2: la reunión que crea el bot al reagendar (POST /followup-meetings) puede traer la nota
+// «Plan de trabajo <código>», y así la página del plan ve que ya hay llamada y no deja agendar otra.
+exigir('automatiza_tech_create_followup_meeting_api');
+$correo_bot = 'prueba-bot-' . strtolower($m) . '@example.com';
+$pb = plan_enviado($m . 'i', $correo_bot);
+$api = function (array $p) {
+	$req = new WP_REST_Request('POST', '/automatiza-tech/v1/followup-meetings');
+	foreach ($p as $k => $v) { $req->set_param($k, $v); }
+	$res = automatiza_tech_create_followup_meeting_api($req);
+	if (is_array($res) && !empty($res['meeting_id'])) { $GLOBALS['ptc_creado']['reuniones'][] = (int) $res['meeting_id']; }
+	return $res;
+};
+$base_api = ['name' => 'Bot prueba', 'email' => $correo_bot, 'phone' => '', 'date' => $fecha, 'source' => 'whatsapp',
+	'meet_link' => 'https://meet.google.com/abc-defg-hij', 'google_event_id' => 'prueba-' . $m];
+$rb1 = $api($base_api + ['time' => '09:00', 'notes' => 'Plan de trabajo ' . $pb->codigo . '. Reagendada por el cliente por WhatsApp. <b>x</b>']);
+$fila_b1 = is_array($rb1) ? $wpdb->get_row($wpdb->prepare("SELECT notes FROM $reuniones WHERE id = %d", (int) $rb1['meeting_id'])) : null;
+ok($fila_b1 && strpos((string) $fila_b1->notes, 'Plan de trabajo ' . $pb->codigo . '. Reagendada') === 0 && strpos((string) $fila_b1->notes, '<b>') === false, 'pendiente 2: la API guarda la nota que manda el bot, sin HTML');
+ok(at_pt_seguimiento_pendiente((string) $pb->codigo) !== null, 'pendiente 2: el plan ve la reunión creada por el bot');
+ok(pedir($pb, $fecha, '11:00', $ip('i'))['clave'] === 'ya_agendada', 'pendiente 2: la web ya no deja agendar otra llamada para ese plan');
+$rb2 = $api(['name' => 'Bot prueba 2', 'email' => 'prueba-bot2-' . strtolower($m) . '@example.com', 'time' => '12:00'] + $base_api);
+$fila_b2 = is_array($rb2) ? $wpdb->get_row($wpdb->prepare("SELECT notes FROM $reuniones WHERE id = %d", (int) $rb2['meeting_id'])) : null;
+ok($fila_b2 && $fila_b2->notes === 'Agendada desde whatsapp', 'sin nota del bot se guarda la de siempre');
 
 // La ruta REST existe, es pública y devuelve el estado HTTP
 $req = new WP_REST_Request('POST', '/automatiza-tech/v1/plan-seguimiento');

@@ -2442,6 +2442,45 @@ function automatiza_tech_verify_client_by_phone($request) {
 /**
  * Callback para crear una reunión de seguimiento desde API (N8N/WhatsApp)
  */
+/**
+ * Máximo de 2 reuniones activas por correo, sumando seguimientos y DEMOs futuras. Lo usan la API del bot
+ * (automatiza_tech_create_followup_meeting_api) y la agenda web del plan (at_pt_agendar_seguimiento).
+ * Devuelve ['alcanzado' => bool, 'seguimientos' => int, 'demos' => int, 'mensaje' => string].
+ */
+function automatiza_tech_limite_reuniones_activas($email) {
+    global $wpdb;
+    $table_name = $wpdb->prefix . 'automatiza_followup_meetings';
+    $leads_table = $wpdb->prefix . 'automatiza_leads';
+    $current_datetime = current_time('mysql');
+
+    // Contar seguimientos activos
+    $followup_count = intval($wpdb->get_var($wpdb->prepare(
+        "SELECT COUNT(*) FROM $table_name
+         WHERE client_email = %s
+         AND CONCAT(meeting_date, ' ', meeting_time) >= %s
+         AND status NOT IN ('cancelled', 'completed')",
+        $email,
+        $current_datetime
+    )));
+
+    // Contar DEMOs activas
+    $demo_count = intval($wpdb->get_var($wpdb->prepare(
+        "SELECT COUNT(*) FROM $leads_table
+         WHERE email = %s
+         AND CONCAT(scheduled_date, ' ', scheduled_time) >= %s
+         AND (status IS NULL OR status NOT IN ('cancelled', 'no_show'))",
+        $email,
+        $current_datetime
+    )));
+
+    return array(
+        'alcanzado' => ($followup_count + $demo_count) >= 2,
+        'seguimientos' => $followup_count,
+        'demos' => $demo_count,
+        'mensaje' => 'Ya tienes 2 reuniones activas (' . $demo_count . ' demo(s) y ' . $followup_count . ' seguimiento(s)). Cancela o espera a que pase alguna para agendar otra.',
+    );
+}
+
 function automatiza_tech_create_followup_meeting_api($request) {
     global $wpdb;
     $table_name = $wpdb->prefix . 'automatiza_followup_meetings';
@@ -2488,39 +2527,15 @@ function automatiza_tech_create_followup_meeting_api($request) {
     }
     
     // Verificar límite de agendamientos por email (máximo 2 activos en total: DEMOs + Seguimientos)
-    $current_datetime = current_time('mysql');
-    $leads_table = $wpdb->prefix . 'automatiza_leads';
-    
-    // Contar seguimientos activos
-    $followup_count = $wpdb->get_var($wpdb->prepare(
-        "SELECT COUNT(*) FROM $table_name 
-         WHERE client_email = %s 
-         AND CONCAT(meeting_date, ' ', meeting_time) >= %s
-         AND status NOT IN ('cancelled', 'completed')",
-        $email,
-        $current_datetime
-    ));
-    
-    // Contar DEMOs activas
-    $demo_count = $wpdb->get_var($wpdb->prepare(
-        "SELECT COUNT(*) FROM $leads_table 
-         WHERE email = %s 
-         AND CONCAT(scheduled_date, ' ', scheduled_time) >= %s
-         AND (status IS NULL OR status NOT IN ('cancelled', 'no_show'))",
-        $email,
-        $current_datetime
-    ));
-    
-    $active_count = intval($followup_count) + intval($demo_count);
-    
-    if ($active_count >= 2) {
-        return new WP_Error(
-            'limit_reached', 
-            'Ya tienes 2 reuniones activas (' . intval($demo_count) . ' demo(s) y ' . intval($followup_count) . ' seguimiento(s)). Cancela o espera a que pase alguna para agendar otra.', 
-            array('status' => 400)
-        );
+    $limite = automatiza_tech_limite_reuniones_activas($email);
+    if ($limite['alcanzado']) {
+        return new WP_Error('limit_reached', $limite['mensaje'], array('status' => 400));
     }
-    
+
+    // Nota: el bot manda «Plan de trabajo <código>. …» al reagendar, para que la página del plan vea la reunión
+    // (at_pt_seguimiento_pendiente). Sin nota, la de siempre.
+    $notes_param = trim(sanitize_textarea_field((string) $request->get_param('notes')));
+
     // Insertar reunión
     $data = array(
         'client_name' => $name,
@@ -2530,7 +2545,7 @@ function automatiza_tech_create_followup_meeting_api($request) {
         'meeting_date' => $date,
         'meeting_time' => $time_normalized . ':00',
         'meeting_subject' => $subject,
-        'notes' => 'Agendada desde ' . $source,
+        'notes' => $notes_param !== '' ? mb_substr($notes_param, 0, 500) : 'Agendada desde ' . $source,
         'status' => 'scheduled',
         'created_at' => current_time('mysql')
     );

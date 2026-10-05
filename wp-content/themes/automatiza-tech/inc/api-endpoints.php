@@ -757,22 +757,13 @@ function automatiza_tech_save_lead($request) {
     $meet_link = isset($params['meet_link']) ? esc_url_raw($params['meet_link']) : '';
     $google_event_id = isset($params['google_event_id']) ? sanitize_text_field($params['google_event_id']) : '';
     
-    // Validación: Verificar si el email ya tiene 2 o más agendamientos ACTIVOS (futuros)
+    // Validación: máximo 2 reuniones ACTIVAS por correo, sumando demos y seguimientos y sin contar las canceladas.
+    // Es la misma regla de la reunión de seguimiento y de la agenda del plan (automatiza_tech_limite_reuniones_activas).
     $test_email = 'lmgm.uber@gmail.com';
     if (strtolower($email) !== strtolower($test_email)) {
-        $current_datetime = current_time('mysql');
-        
-        // Contamos solo los agendamientos cuya fecha y hora sean mayores o iguales al momento actual
-        $count = $wpdb->get_var($wpdb->prepare(
-            "SELECT COUNT(*) FROM $table_name 
-             WHERE email = %s 
-             AND CONCAT(scheduled_date, ' ', scheduled_time) >= %s",
-            $email,
-            $current_datetime
-        ));
-        
-        if ($count >= 2) {
-            return new WP_Error('email_limit_reached', 'Este correo ya tiene 2 agendamientos activos. Solo se permiten 2 reuniones pendientes simultáneas.', array('status' => 400));
+        $limite = automatiza_tech_limite_reuniones_activas($email);
+        if ($limite['alcanzado']) {
+            return new WP_Error('email_limit_reached', $limite['mensaje'], array('status' => 400));
         }
     }
     
@@ -1007,21 +998,13 @@ function automatiza_tech_check_booking_limit($request) {
         );
     }
 
-    $current_datetime = current_time('mysql');
-    
-    // Contamos solo los agendamientos cuya fecha y hora sean mayores o iguales al momento actual
-    $count = $wpdb->get_var($wpdb->prepare(
-        "SELECT COUNT(*) FROM $table_name 
-         WHERE email = %s 
-         AND CONCAT(scheduled_date, ' ', scheduled_time) >= %s",
-        $email,
-        $current_datetime
-    ));
-    
-    if ($count >= 2) {
+    // Misma regla que POST /leads, la reunión de seguimiento y la agenda del plan: 2 activas por correo,
+    // sumando demos y seguimientos, sin contar las canceladas.
+    $limite = automatiza_tech_limite_reuniones_activas($email);
+    if ($limite['alcanzado']) {
         return array(
             'allowed' => false,
-            'message' => 'Este correo ya tiene 2 agendamientos activos. Solo se permiten 2 reuniones pendientes simultáneas.'
+            'message' => $limite['mensaje']
         );
     }
 

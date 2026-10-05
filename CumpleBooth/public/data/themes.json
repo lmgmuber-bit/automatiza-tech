@@ -2304,6 +2304,86 @@
         ]
       }
     },
+    "adulto-anio-nuevo": {
+      "nombre": "Año Nuevo",
+      "franquicia": null,
+      "publico": "adulto",
+      "audiencia": "adulto",
+      "diploma": "Estrella del Año Nuevo",
+      "colors": {
+        "accent": "#C9A24A",
+        "accentSoft": "#F6EBD0",
+        "yellow": "#E8C66A",
+        "ink": "#0E1630",
+        "bgLight1": "#F7F4EA",
+        "bgLight2": "#E9E2CC",
+        "dark1": "#14204A",
+        "dark2": "#0B1230",
+        "dark3": "#D9B872"
+      },
+      "confetti": [
+        "#E8C66A",
+        "#C0C0C8",
+        "#FFFFFF",
+        "#14204A",
+        "#C9A24A",
+        "#0B1230"
+      ],
+      "personajes": [],
+      "frameBox": {
+        "x": 0.1,
+        "y": 0.1,
+        "w": 0.8,
+        "h": 0.45
+      },
+      "modoFoto": "fondo",
+      "fondoEscena": "fondo-escena.jpg",
+      "musicaHint": "Sin música",
+      "transition": "none",
+      "rotulo": {
+        "diseno": "anioNuevo"
+      }
+    },
+    "adulto-empresa": {
+      "nombre": "Muro de prensa",
+      "franquicia": null,
+      "publico": "adulto",
+      "audiencia": "adulto",
+      "diploma": "Invitado de honor",
+      "colors": {
+        "accent": "#2B3A67",
+        "accentSoft": "#E3E7F1",
+        "yellow": "#C9A24A",
+        "ink": "#1B1F2B",
+        "bgLight1": "#F6F5F2",
+        "bgLight2": "#E6E4DE",
+        "dark1": "#2B3A67",
+        "dark2": "#151A2E",
+        "dark3": "#8A94B8"
+      },
+      "confetti": [
+        "#2B3A67",
+        "#C9A24A",
+        "#FFFFFF",
+        "#8A94B8",
+        "#151A2E",
+        "#E3E7F1"
+      ],
+      "personajes": [],
+      "frameBox": {
+        "x": 0.1,
+        "y": 0.1,
+        "w": 0.8,
+        "h": 0.45
+      },
+      "modoFoto": "fondo",
+      "fondoEscena": "fondo-escena.jpg",
+      "musicaHint": "Sin música",
+      "transition": "none",
+      "rotulo": {
+        "diseno": "muroLogos"
+      }
+    },
     "fiestas-patrias": {
       "nombre": "Fiestas Patrias",
       "franquicia": null,

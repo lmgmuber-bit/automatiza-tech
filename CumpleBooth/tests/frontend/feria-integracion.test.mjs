@@ -69,14 +69,14 @@ test('integración real 020 + build 021: SQLite aislada, tres fondos adultos y f
     CC_INVITATION_DIR: join(temp, 'invitations'), CUMPLECLICK_CONFIG_FILE: join(temp, 'no-config.php'),
     CC_AJUSTES_PATH: join(temp, 'ajustes.json'), CC_SMTP_HOST: '', CC_TEST_BACKEND: backend }
   const setup = join(temp, 'fixture.php')
-  writeFileSync(setup, "<?php\n$r=getenv('CC_TEST_BACKEND');\nrequire $r.'/public/lib.php';\nrequire $r.'/public/lib.ferias.php';\nrequire $r.'/tests/backend/_migraciones.php';\ncb_test_migrar_todo(cb_pdo());\n$hoy=(new DateTimeImmutable('now',new DateTimeZone('America/Santiago')))->format('Y-m-d');\ncb_save_parties(['parties'=>['normal-prueba'=>['nombre'=>'Celebración de prueba','tema'=>'hielo','fecha'=>$hoy,'activa'=>true,'invitados'=>[['name'=>'Ana','g'=>'f']],'creada'=>gmdate('Y-m-d H:i:s')]]]);\n[$datos,$errores]=cb_feria_validar(['nombre'=>'Prueba técnica de feria','organizador'=>'Equipo de prueba','organizador_ig'=>'prueba_local','lugar'=>'Entorno local','fecha'=>$hoy,'hora_inicio'=>'10:00','mesa'=>'1','mundos_infantil'=>['hielo','fiestas-patrias'],'mundos_adulto'=>['hielo','adulto-estudio-bn','adulto-glam-dorado','adulto-noche-brujas','adulto-revista','fiestas-patrias'],'max_fotos'=>50,'activa'=>'1']);\nif($errores)throw new RuntimeException(implode(' ',$errores));\n$feria=cb_feria_guardar($datos,null,'test');\necho json_encode(['slug'=>$feria['slug']]);\n")
+  writeFileSync(setup, "<?php\n$r=getenv('CC_TEST_BACKEND');\nrequire $r.'/public/lib.php';\nrequire $r.'/public/lib.ferias.php';\nrequire $r.'/tests/backend/_migraciones.php';\ncb_test_migrar_todo(cb_pdo());\n$hoy=(new DateTimeImmutable('now',new DateTimeZone('America/Santiago')))->format('Y-m-d');\ncb_save_parties(['parties'=>['normal-prueba'=>['nombre'=>'Celebración de prueba','tema'=>'hielo','fecha'=>$hoy,'activa'=>true,'invitados'=>[['name'=>'Ana','g'=>'f']],'creada'=>gmdate('Y-m-d H:i:s')]]]);\n[$datos,$errores]=cb_feria_validar(['nombre'=>'Prueba técnica de feria','organizador'=>'Equipo de prueba','organizador_ig'=>'prueba_local','lugar'=>'Entorno local','fecha'=>$hoy,'hora_inicio'=>'10:00','mesa'=>'1','mundos_infantil'=>['hielo','fiestas-patrias'],'mundos_adulto'=>['hielo','adulto-estudio-bn','adulto-glam-dorado','adulto-noche-brujas','adulto-revista','adulto-anio-nuevo','adulto-empresa','fiestas-patrias'],'max_fotos'=>50,'activa'=>'1']);\nif($errores)throw new RuntimeException(implode(' ',$errores));\n$feria=cb_feria_guardar($datos,null,'test');\n$l=imagecreatetruecolor(600,200);imagealphablending($l,false);imagesavealpha($l,true);imagefill($l,0,0,imagecolorallocatealpha($l,0,0,0,127));imagefilledrectangle($l,10,10,190,190,imagecolorallocatealpha($l,30,58,138,0));ob_start();imagepng($l);cb_feria_logo_guardar((int)$feria['id'],(string)ob_get_clean());\necho json_encode(['slug'=>$feria['slug']]);\n")
   const fixture = JSON.parse(execFileSync(php, [setup], { env, encoding: 'utf8' }))
   backendProcess = spawn(php, ['-S', '127.0.0.1:' + backendPort, '-t', join(backend, 'public')], { env, windowsHide: true, stdio: ['ignore','ignore','ignore'] })
   for (let i=0;i<50;i++) { try { const res=await fetch(origin+'/feria-api.php?f='+fixture.slug); if(res.status!==502)break } catch {} await new Promise((done)=>setTimeout(done,100)) }
   const normal = await (await fetch(origin + '/api.php?p=normal-prueba')).text()
   assert.equal(await (await fetch(origin + '/api.php?p=normal-prueba&modo=adulto&tema=adulto-estudio-bn')).text(), normal)
   const selector = await (await fetch(origin + '/feria-api.php?f=' + fixture.slug)).json()
-  assert.equal(selector.mundos.adulto.filter((world)=>world.slug.startsWith('adulto-')).length, 4)
+  assert.equal(selector.mundos.adulto.filter((world)=>world.slug.startsWith('adulto-')).length, 6)
   // Asómate llega por api.php solo si la temática lo trae: fiestas-patrias sí (también en Adultos), glam dorado no.
   const apiDe=async(tema,modo)=>(await (await fetch(origin+'/api.php?'+new URLSearchParams({p:fixture.slug,tema,modo}))).json()).theme
   assert.ok((await apiDe('fiestas-patrias','adulto')).asomate?.personajes?.length>0,'fiestas-patrias adulto publica Asómate')
@@ -184,6 +184,35 @@ test('integración real 020 + build 021: SQLite aislada, tres fondos adultos y f
     assert.ok(bn?medida.color<3:medida.color>10,(bn?'la portada en blanco y negro sale gris':'la portada a color sale a color')+': '+medida.color)
     evidence.cases.push({theme:'adulto-revista/'+clave,marco,...medida})
     if(artifacts){const image=await page.$eval('.feria-result',(img)=>img.src);writeFileSync(join(artifacts,'revista-'+clave+'-composicion.jpg'),Buffer.from(image.split(',')[1],'base64'))}
+    await button('Guardar y ver mi QR');await page.waitForSelector('.feria-qr')
+  }
+  // ── Año Nuevo y Muro de prensa (04-10): sin menú, vista previa entera y, en la foto, el año o los logos del evento ──
+  // Zonas en fracciones de la portada (antes de que withRemembrance la encoja al 87 % arriba): el pie del año y la primera
+  // celda del muro, donde el logo de prueba tiene su cuadrado azul. El control, en la esquina, es solo escena.
+  for(const [tema,zona,control] of [['adulto-anio-nuevo',[0.2,0.08,0.8,0.15],[0,0,0.02,0.015]],['adulto-empresa',[0.068,0.03,0.125,0.062],null]]){
+    await page.goto(origin+'/?'+new URLSearchParams({p:fixture.slug,tema,modo:'adulto'}),{waitUntil:'networkidle0'})
+    await page.evaluate(()=>{window.__pasos=[]})
+    await page.type('.feria-name-label input','Camila');await button('Continuar')
+    await page.waitForSelector('[data-step=camera] .feria-camera-portada')
+    assert.deepEqual(await page.evaluate(()=>window.__pasos.filter((p)=>p!=='name')),['camera'],'sin menú en '+tema)
+    await page.waitForFunction(()=>document.querySelector('.feria-camera-frame canvas')?.dataset.preview||JSON.parse(document.querySelector('main')?.dataset.segmentation||'{}').fallback,{timeout:20000})
+    await shot(tema+'-camara')
+    await button('Tomar mi foto');await page.waitForSelector('.feria-result',{timeout:30000})
+    assert.equal(await page.$eval('main',(main)=>JSON.parse(main.dataset.segmentation).fallback),'','foto con recorte en '+tema)
+    const medida=await page.evaluate(async(escenaUrl,zona,control)=>{
+      const cargar=(src)=>new Promise((ok,mal)=>{const i=new Image();i.onload=()=>ok(i);i.onerror=mal;i.src=src})
+      const [final,fondo]=await Promise.all([cargar(document.querySelector('.feria-result').src),cargar(escenaUrl)])
+      const W=final.naturalWidth,H=final.naturalHeight,alto=H-Math.round(H*0.13),k=alto/H,ox=(W-W*k)/2
+      const pixeles=(dibujar)=>{const c=document.createElement('canvas');c.width=W;c.height=H;const x=c.getContext('2d');dibujar(x);return x.getImageData(0,0,W,H).data}
+      const a=pixeles((x)=>x.drawImage(final,0,0)),b=pixeles((x)=>x.drawImage(fondo,ox,0,W*k,alto))
+      const lum=(d,p)=>0.299*d[p]+0.587*d[p+1]+0.114*d[p+2]
+      const medir=([x0,y0,x1,y1])=>{let s=0,n=0;for(let y=Math.round(y0*alto);y<y1*alto;y+=2)for(let x=Math.round(ox+x0*W*k);x<ox+x1*W*k;x+=2){const p=(y*W+x)*4;s+=Math.abs(lum(a,p)-lum(b,p));n++}return s/n}
+      return{W,H,zona:medir(zona),control:control?medir(control):null}
+    },'/themes/'+tema+'/fondo-escena.jpg',zona,control)
+    assert.deepEqual([medida.W,medida.H],[1080,1920])
+    assert.ok(medida.zona>40&&(medida.control===null||medida.control<15),(tema==='adulto-anio-nuevo'?'el año está en la foto':'el logo del evento está en el muro')+': '+JSON.stringify(medida))
+    evidence.cases.push({theme:tema,...medida})
+    if(artifacts){const image=await page.$eval('.feria-result',(img)=>img.src);writeFileSync(join(artifacts,tema+'-composicion.jpg'),Buffer.from(image.split(',')[1],'base64'))}
     await button('Guardar y ver mi QR');await page.waitForSelector('.feria-qr')
   }
   await page.setRequestInterception(true)

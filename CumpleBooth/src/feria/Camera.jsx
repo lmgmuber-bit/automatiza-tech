@@ -2,10 +2,10 @@ import React, { useEffect, useRef, useState } from 'react'
 import { filterFor } from './contract.js'
 import { loadImage } from './media.js'
 import { drawScene, previewDecision } from './segmentation.js'
-import { capasPortada, cargarFuentesRevista } from './revista.js'
+import { prepararCapas } from './portada.js'
 
-// `portada` (Portada de Revista): la vista previa ya muestra el título detrás de la persona y los titulares delante, para
-// que el invitado se acomode viendo cómo va a quedar.
+// `portada` (revista, Año Nuevo o muro de Empresa): la vista previa ya muestra lo que va detrás de la persona y lo que va
+// delante, para que el invitado se acomode viendo cómo va a quedar.
 export default function Camera({ filter, segmenter, scene, base, onCapture, portada = null }) {
   const video = useRef(null)
   const preview = useRef(null)
@@ -18,6 +18,9 @@ export default function Camera({ filter, segmenter, scene, base, onCapture, port
   const [facing, setFacing] = useState('user')
   const [attempt, setAttempt] = useState(0)
   const [count, setCount] = useState(0)
+  const esRevista = portada?.diseno === 'revista'
+  // El diseño cambia solo si cambian sus datos: el objeto se arma de nuevo en cada render del kiosco.
+  const portadaClave = portada ? JSON.stringify(portada) : ''
 
   useEffect(() => {
     let alive = true; let stream
@@ -47,8 +50,8 @@ export default function Camera({ filter, segmenter, scene, base, onCapture, port
       if (!available) { setPreviewMode('frame'); return }
       const background = await loadImage(base + scene).catch(() => null)
       if (!background || stopped) return
-      if (portada) await cargarFuentesRevista(base)
-      const capas = portada ? capasPortada(portada.textos, { ...portada.estilo, espejo: facing === 'user' }, { suave: true }) : null
+      const capas = portada ? await prepararCapas(portada, base, { espejo: facing === 'user', suave: true }).catch(() => null) : null
+      if (stopped) return
       const canvas = preview.current
       canvas.width = 360; canvas.height = 640
       async function tick() {
@@ -77,7 +80,7 @@ export default function Camera({ filter, segmenter, scene, base, onCapture, port
     }
     begin()
     return () => { stopped = true; cancelAnimationFrame(frame) }
-  }, [ready, segmenter, scene, base, facing, portada?.textos?.titular, portada?.estilo?.tinta])
+  }, [ready, segmenter, scene, base, facing, portadaClave])
 
   const capture = () => {
     if (!ready || shooting.current) return
@@ -98,11 +101,12 @@ export default function Camera({ filter, segmenter, scene, base, onCapture, port
   }
 
   return <section className="feria-panel feria-camera">
-    <span className="feria-eyebrow">{portada ? 'TU PORTADA' : 'TU MOMENTO'}</span><h1>{portada ? 'Pose de portada' : 'Una sonrisa para recordar'}</h1>
+    <span className="feria-eyebrow">{esRevista ? 'TU PORTADA' : 'TU MOMENTO'}</span><h1>{esRevista ? 'Pose de portada' : 'Una sonrisa para recordar'}</h1>
     <p>{filter === 'bn' ? 'Retrato en blanco y negro' : 'Mira a la cámara y acomódate al centro.'}</p>
-    {previewMode === 'final-only' && <p>{portada ? 'La portada se armará al guardar tu foto.' : 'El fondo se aplicará al guardar tu foto.'}</p>}
-    {previewMode === 'frame' && <p>{portada ? `Tu foto irá en la portada de ${portada.textos.cabecera}.` : 'Tu foto irá en el marco de esta temática.'}</p>}
-    {/* La portada se ve entera (9:16): el invitado se acomoda mirando el título y los titulares, no un recorte. */}
+    {previewMode === 'final-only' && <p>{esRevista ? 'La portada se armará al guardar tu foto.' : 'El fondo se aplicará al guardar tu foto.'}</p>}
+    {previewMode === 'frame' && <p>{esRevista ? `Tu foto irá en la portada de ${portada.textos.cabecera}.` : portada ? 'Tu foto irá con el diseño de esta temática.' : 'Tu foto irá en el marco de esta temática.'}</p>}
+    {/* Con un diseño encima (revista, Año Nuevo, Empresa) se ve entero (9:16): el invitado se acomoda mirando el título o el
+        muro, no un recorte. */}
     <div className={portada ? 'feria-camera-frame feria-camera-portada' : 'feria-camera-frame'}><video ref={video} autoPlay muted playsInline style={{ filter: filterFor(filter), transform: facing === 'user' ? 'scaleX(-1)' : undefined }} /><canvas ref={preview} aria-label="Vista previa sobre el fondo de la temática" style={{ display: showScene ? 'block' : 'none', filter: filterFor(filter), transform: facing === 'user' ? 'scaleX(-1)' : undefined }} /><span className="feria-camera-guide" aria-hidden="true" />{count > 0 && <strong className="feria-count" role="status">{count}</strong>}</div>
     {error && <div role="alert"><p>{error}</p><button onClick={() => setAttempt(attempt + 1)}>Reintentar cámara</button></div>}
     <button className="feria-primary" disabled={!ready || count > 0} onClick={capture}>Tomar mi foto</button>

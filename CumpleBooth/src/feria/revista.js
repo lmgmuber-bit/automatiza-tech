@@ -8,8 +8,9 @@
 // cámara (360x640). Las funciones que no tocan el lienzo (textos, partir líneas, cajas) se prueban sin navegador.
 
 export const MESES = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE']
-const SERIF = "'Bodoni Moda', 'Didot', 'Bodoni MT', Georgia, serif"
-const SANS = "'Oswald', 'Arial Narrow', 'Roboto Condensed', Arial, sans-serif"
+// Las tipografías y los ayudantes de dibujo los comparten Año Nuevo y el muro de Empresa (anioNuevo.js, muroLogos.js).
+export const SERIF = "'Bodoni Moda', 'Didot', 'Bodoni MT', Georgia, serif"
+export const SANS = "'Oswald', 'Arial Narrow', 'Roboto Condensed', Arial, sans-serif"
 
 /** "2026-10-04" (o una fecha) a "OCTUBRE 2026"; sin fecha válida, el mes en curso. */
 export function fechaPortada(fecha, hoy = new Date()) {
@@ -106,14 +107,14 @@ export function barrasDe(semilla, cuantas = 34) {
   return barras
 }
 
-function sombra(ctx, W, fuerte = 1) {
+export function sombra(ctx, W, fuerte = 1) {
   ctx.shadowColor = `rgba(0,0,0,${0.38 * fuerte})`
   ctx.shadowBlur = W * 0.012 * fuerte
   ctx.shadowOffsetX = 0
   ctx.shadowOffsetY = W * 0.003 * fuerte
 }
 
-function espejar(ctx, W, espejo) {
+export function espejar(ctx, W, espejo) {
   // La vista previa de la cámara frontal se voltea con CSS para que se vea como un espejo: el texto se dibuja ya
   // volteado, así queda derecho después del volteo.
   if (espejo) { ctx.translate(W, 0); ctx.scale(-1, 1) }
@@ -242,6 +243,7 @@ export function capasPortada(textos, estilo = {}, encuadre = {}) {
     antes: (ctx, W, H) => dibujarCabecera(ctx, W, H, textos, estilo),
     despues: (ctx, W, H) => dibujarTitulares(ctx, W, H, textos, estilo),
     encuadre: { cabeza: 0.095, zoomMax: 1.6, ...encuadre },
+    sinRecorte: (canvas, imagen) => dibujarPortadaSinRecorte(canvas, imagen, textos, estilo),
   }
 }
 

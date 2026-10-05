@@ -4333,3 +4333,47 @@ Costo de las escenas: USD 0,0486 de lista.
 - Tablet física y una persona adulta real (la cámara simulada usa el cóndor del juego del volantín).
 - La portada impresa en la Selphy (si los titulares chicos se leen en 10x15).
 - La cámara trasera con la portada.
+
+## PENDIENTE 2026-10-04 (tarde): Año Nuevo y Muro de prensa (Empresa) para adultos (LOCAL, SIN DEPLOY)
+
+Rama `claude/adultos-anio-nuevo-empresa`, que parte de `claude/revista-click` (PR lmgmuber-bit/automatiza-tech#69): **se sube
+junto con la revista, o después**, nunca sola (usa su mecanismo de capas y el build trae los cambios de las dos). Detalle en
+`docs/TEMATICAS-ANIO-NUEVO-Y-EMPRESA.md`.
+
+**Qué cambia:** dos temáticas de adultos nuevas. Año Nuevo: fuegos artificiales sobre la bahía, el año en dorado detrás de la
+persona y el saludo delante. Muro de prensa: el logo del cliente repetido detrás de la persona; el logo se sube en la ficha
+del evento (Admin → Ferias).
+
+| Orden | Clase | Local | PROD |
+|---|---|---|---|
+| 1 | OBLIGATORIO | `public/themes/adulto-anio-nuevo/` y `public/themes/adulto-empresa/` (4 JPG cada una) | `app/themes/adulto-anio-nuevo/`, `app/themes/adulto-empresa/` (nuevas) |
+| 2 | OBLIGATORIO | `public/lib.ferias.php` (rótulo, logo del evento, copia al duplicar) | `app/lib.ferias.php` |
+| 3 | OBLIGATORIO | `public/feria-logo.php` (nuevo) | `app/feria-logo.php` |
+| 4 | OBLIGATORIO | `public/admin/ferias.php` (campo del logo; el formulario pasa a `multipart/form-data`) | `app/admin/ferias.php` |
+| 5 | OBLIGATORIO | `public/data/themes.json` | `app/data/themes.json` |
+| 6 | OBLIGATORIO | `dist/assets/*` nuevos de este build (al 04-10 tarde: `main-CwC3WPQs.js`, `feria-DTgANUAn.js`, `feria-DQBWgOF5.js`, `feria-C7PwMTWO.css`) | `app/assets/` |
+| 7 | OBLIGATORIO, al final | `dist/index.html`, `dist/feria.html` | `app/index.html`, `app/feria.html` |
+
+Sin migración: el logo vive en `<state_dir>/ferias-logos/<id>.png` (el `state_dir` de `cumpleclick-config.php`, fuera del
+webroot) y la carpeta se crea sola con permisos 770. El 1 va antes del 5 y el 2 antes del 7. Respaldar `lib.ferias.php`,
+`admin/ferias.php`, `themes.json`, `index.html` y `feria.html` antes de pisarlos. **Verificar en PROD** que GD tenga WebP
+(`function_exists('imagewebp')`; sin él, un logo WebP se rechaza con el aviso "No se pudo leer el logo como imagen", y PNG y
+JPG siguen funcionando) y que `upload_max_filesize` y `post_max_size` sean de al menos 4 MB. Si el archivo pasa de
+`upload_max_filesize`, el admin avisa que pesa más de lo que acepta el servidor; si pasa de `post_max_size`, PHP descarta el
+formulario entero y el admin dice "La sesión del formulario venció", que confunde.
+**No subir** `design/`, `docs/`, `tests/` ni la carpeta de generación `C:/Users/luis_/Documents/CumpleClick/tematicas-adultos-2026-10/`.
+
+**Después de subir:** habilitar las temáticas en la lista de Adultos de cada evento y subir el logo del cliente en su ficha.
+La tarjeta del selector de Año Nuevo dice "2027": antes de la temporada siguiente, volver a dibujarla con
+`node design/generadores/revista/render-banner.mjs adulto-anio-nuevo`.
+
+**Pruebas en local (04-10 tarde):** `anio-nuevo-empresa.test.mjs` 8 de 8; `ferias-http.php` 191 comprobaciones (subida real
+del logo por la ficha, rechazo de un archivo que no es imagen, transparencia, WebP, quitar y duplicar; la de transparencia se
+verificó en rojo); `feria-integracion.test.mjs` con cámara simulada recorre las dos (sin menú, vista previa 9:16, foto con
+recorte, el año y el logo presentes en la foto). Suite completa del frontend, de a una suite: 278 de 278. Costo de la escena
+de Año Nuevo: USD 0,0324 de lista (dos candidatas).
+
+### No probado
+
+- Tablet física y una persona adulta real; un logo real de un cliente.
+- La foto impresa en la Selphy.

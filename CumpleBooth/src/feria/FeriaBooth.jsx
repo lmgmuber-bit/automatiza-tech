@@ -9,6 +9,7 @@ import { FullscreenButton, useFullscreenOnTap } from './fullscreen.jsx'
 import { prepararVideo, urlDeVideo } from '../videoListo.js'
 import { fondoEstilo, pendonesDe } from './fondo.js'
 import { textosPortada } from './revista.js'
+import { textosAnioNuevo } from './anioNuevo.js'
 import { INTRO_ARRANQUE_MS, alVencer, esperaPorDuracion, restanteMinimo } from './intro.js'
 import './feria.css'
 
@@ -55,8 +56,13 @@ export default function FeriaBooth({ feria, theme, themeData, characters, filter
   const conVariantes = variantes.length > 1
   const conMenu = asomateOk || conVariantes
   const filtroFoto = variante?.filtro ?? filter
-  const portada = revista ? { textos: textosPortada({ titulo: revista.titulo, nombre: firstName(name), evento: feria.nombre, fecha: feria.fecha, propios: revista.textos }),
-    estilo: { tinta: variante?.tinta, acento: variante?.acento, evento: feria.nombre } } : null
+  // Lo que se dibuja encima de la escena (portada.js): la revista, o el rótulo de Año Nuevo o del muro de Empresa (04-10).
+  const rotulo = themeData?.rotulo || null
+  const portada = revista ? { diseno: 'revista', textos: textosPortada({ titulo: revista.titulo, nombre: firstName(name), evento: feria.nombre, fecha: feria.fecha, propios: revista.textos }),
+    estilo: { tinta: variante?.tinta, acento: variante?.acento, evento: feria.nombre } }
+    : rotulo?.diseno === 'anioNuevo' ? { diseno: 'anioNuevo', textos: textosAnioNuevo({ nombre: firstName(name), fecha: feria.fecha }) }
+    : rotulo?.diseno === 'muroLogos' ? { diseno: 'muroLogos', textos: { marca: feria.organizador || feria.nombre }, logo: rotulo.logo || '' }
+    : null
   useFullscreenOnTap()
   // Los videos de la temática se bajan enteros apenas se abre el kiosco, como la despedida en una fiesta: la intro
   // arranca en el acto aunque el wifi del salón esté lento y no se cae a media descarga (Luis, 28-09).

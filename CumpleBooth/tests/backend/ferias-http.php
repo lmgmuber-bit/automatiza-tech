@@ -243,10 +243,30 @@ final class Panel
     public function __construct(private string $base) {}
     public function pedir(string $metodo, string $ruta, ?array $datos = null): array
     {
+        return $this->enviar($metodo, $ruta, $datos !== null ? http_build_query($datos) : null, 'application/x-www-form-urlencoded');
+    }
+    /** Formulario con archivos, como lo manda el navegador. `$archivos`: campo => [nombre, tipo, bytes]. */
+    public function pedirMultipart(string $ruta, array $campos, array $archivos): array
+    {
+        $limite = '----cc' . bin2hex(random_bytes(8));
+        $cuerpo = '';
+        foreach ($campos as $k => $v) {
+            foreach ((array) $v as $item) {
+                $nombre = is_array($v) ? $k . '[]' : $k;
+                $cuerpo .= "--$limite\r\nContent-Disposition: form-data; name=\"$nombre\"\r\n\r\n" . $item . "\r\n";
+            }
+        }
+        foreach ($archivos as $k => [$nombre, $tipo, $bytes]) {
+            $cuerpo .= "--$limite\r\nContent-Disposition: form-data; name=\"$k\"; filename=\"$nombre\"\r\nContent-Type: $tipo\r\n\r\n" . $bytes . "\r\n";
+        }
+        return $this->enviar('POST', $ruta, $cuerpo . "--$limite--\r\n", 'multipart/form-data; boundary=' . $limite);
+    }
+    private function enviar(string $metodo, string $ruta, ?string $cuerpo, string $tipo): array
+    {
         $cab = [];
         if ($this->cookies) { $cab[] = 'Cookie: ' . implode('; ', array_map(fn($k) => $k . '=' . $this->cookies[$k], array_keys($this->cookies))); }
-        $cuerpo = $datos !== null ? http_build_query($datos) : '';
-        if ($datos !== null) { $cab[] = 'Content-Type: application/x-www-form-urlencoded'; $cab[] = 'Content-Length: ' . strlen($cuerpo); }
+        if ($cuerpo !== null) { $cab[] = 'Content-Type: ' . $tipo; $cab[] = 'Content-Length: ' . strlen($cuerpo); }
+        $cuerpo ??= '';
         $ctx = stream_context_create(['http' => ['method' => $metodo, 'header' => implode("\r\n", $cab), 'content' => $cuerpo,
             'follow_location' => 0, 'ignore_errors' => true, 'timeout' => 20]]);
         $html = (string) @file_get_contents($this->base . $ruta, false, $ctx);
@@ -386,6 +406,82 @@ f_check(!empty(cb_guardar_ajustes(['bcc_email' => '', 'recovery_email' => ''])['
     'un guardado que no trae los textos no los borra');
 cb_guardar_ajustes(['revista_textos' => array_fill_keys(array_keys($siempre), '')]);
 f_check($apiRev() === $siempre, 'vacío vuelve a los textos de siempre');
+
+// Año Nuevo y Muro de prensa (04-10): el rótulo de cada una, y el logo del evento subido por la ficha (multipart, como el
+// navegador), servido por feria-logo.php ya vuelto a codificar, rechazado si no es imagen, copiado al duplicar y borrable.
+foreach (['adulto-anio-nuevo' => 'anioNuevo', 'adulto-empresa' => 'muroLogos'] as $t => $diseno) {
+    f_check(($temas[$t]['audiencia'] ?? '') === 'adulto' && ($temas[$t]['personajes'] ?? null) === [] && ($temas[$t]['rotulo'] ?? null) === ['diseno' => $diseno],
+        "$t: adulta, sin personajes, con el rótulo $diseno");
+    foreach (['fondo-escena.jpg', 'fondo-sala.jpg', 'fondo-banner.jpg', 'fondo-evento.jpg'] as $archivo) {
+        $info = @getimagesize($raiz . "/public/themes/$t/$archivo");
+        f_check($info !== false && $info[0] === 1080 && $info[1] === 1920, "$t/$archivo existe y mide 1080x1920");
+    }
+}
+[$datosEmp] = cb_feria_validar(['nombre' => 'Fiesta de fin de año', 'organizador' => 'Empresa Demo', 'fecha' => $hoy, 'activa' => '1',
+    'mundos_adulto' => ['adulto-anio-nuevo', 'adulto-empresa'], 'max_fotos' => 100]);
+$feriaEmp = cb_feria_guardar($datosEmp, null, 'test');
+$temaEmp = fn (string $tema) => pedir('GET', '/api.php?p=' . $feriaEmp['slug'] . '&tema=' . $tema . '&modo=adulto')['json']['theme'] ?? [];
+f_check(($temaEmp('adulto-anio-nuevo')['rotulo'] ?? null) === ['diseno' => 'anioNuevo'], 'Año Nuevo publica su rótulo');
+f_check(($temaEmp('adulto-empresa')['rotulo'] ?? null) === ['diseno' => 'muroLogos', 'logo' => ''], 'sin logo, el muro va con letras');
+f_check(pedir('GET', '/feria-logo.php?f=' . $feriaEmp['slug'])['estado'] === 404 && pedir('GET', '/feria-logo.php?f=no-existe')['estado'] === 404,
+    'sin logo, o con un evento que no existe, feria-logo.php da 404');
+$pngDe = function (int $ancho, int $alto): string {
+    $lienzo = imagecreatetruecolor($ancho, $alto);
+    imagealphablending($lienzo, false);
+    imagesavealpha($lienzo, true);
+    imagefill($lienzo, 0, 0, imagecolorallocatealpha($lienzo, 0, 0, 0, 127));
+    imagefilledrectangle($lienzo, 10, 10, (int) ($alto * 0.9), $alto - 10, imagecolorallocatealpha($lienzo, 30, 58, 138, 0));
+    ob_start();
+    imagepng($lienzo);
+    imagedestroy($lienzo);
+    return (string) ob_get_clean();
+};
+$fichaEmp = function () use ($panel, $feriaEmp, $hoy): array {
+    $r = $panel->pedir('GET', '/admin/ferias.php?editar=' . $feriaEmp['id']);
+    return ['csrf' => $panel->csrf($r['html']), 'action' => 'guardar', 'id' => (string) $feriaEmp['id'], 'nombre' => 'Fiesta de fin de año',
+        'organizador' => 'Empresa Demo', 'fecha' => $hoy, 'mundos_adulto' => ['adulto-anio-nuevo', 'adulto-empresa'], 'retencion_dias' => '7',
+        'max_fotos' => '100', 'activa' => '1'];
+};
+$crudo = function (string $ruta) use ($base): array {
+    $cuerpo = (string) @file_get_contents($base . $ruta, false, stream_context_create(['http' => ['ignore_errors' => true, 'timeout' => 20]]));
+    return ['cabeceras' => strtolower(implode("\n", $http_response_header ?? [])), 'cuerpo' => $cuerpo];
+};
+$r = $panel->pedir('GET', '/admin/ferias.php?editar=' . $feriaEmp['id']);
+f_check(str_contains($r['html'], 'enctype="multipart/form-data"') && str_contains($r['html'], 'name="logo"')
+    && str_contains($r['html'], 'hasta ' . cb_feria_logo_max_texto()), 'la ficha del evento tiene el campo del logo, con el tope real del servidor');
+$r = $panel->pedirMultipart('/admin/ferias.php', $fichaEmp(), ['logo' => ['logo empresa.png', 'image/png', $pngDe(2000, 500)]]);
+f_check($r['estado'] === 303, 'la ficha se guarda con el logo');
+$logoUrl = $temaEmp('adulto-empresa')['rotulo']['logo'] ?? '';
+f_check(str_starts_with($logoUrl, 'feria-logo.php?f=' . rawurlencode($feriaEmp['slug']) . '&v='), 'el muro recibe la dirección del logo');
+$servido = $crudo('/' . $logoUrl);
+$infoLogo = @getimagesizefromstring($servido['cuerpo']);
+f_check(str_contains($servido['cabeceras'], 'content-type: image/png') && str_contains($servido['cabeceras'], 'x-content-type-options: nosniff')
+    && str_contains($servido['cabeceras'], 'no-transform'), 'feria-logo.php sirve un PNG, sin olfateo y sin que el CDN lo re-codifique');
+f_check($infoLogo !== false && $infoLogo[2] === IMAGETYPE_PNG && $infoLogo[0] === 1000 && $infoLogo[1] === 250, 'un logo de 2000 px queda en 1000 px, sin deformarse');
+$imLogo = imagecreatefromstring($servido['cuerpo']);
+f_check(((imagecolorat($imLogo, 900, 125) >> 24) & 0x7F) === 127 && ((imagecolorat($imLogo, 60, 125) >> 24) & 0x7F) === 0,
+    'el logo conserva su transparencia: lo vacío sigue vacío y el dibujo opaco');
+$r = $panel->pedirMultipart('/admin/ferias.php', $fichaEmp(), ['logo' => ['logo.png', 'image/png', '<?php echo "esto no es una imagen"; ?>']]);
+f_check($r['estado'] === 200 && str_contains($r['html'], 'El logo tiene que ser una imagen PNG, JPG o WebP.')
+    && $crudo('/' . $logoUrl)['cuerpo'] === $servido['cuerpo'], 'un archivo que no es imagen se rechaza y el logo anterior sigue igual');
+if (function_exists('imagewebp')) {
+    $lienzo = imagecreatetruecolor(300, 120);
+    imagefill($lienzo, 0, 0, imagecolorallocate($lienzo, 200, 30, 30));
+    ob_start();
+    imagewebp($lienzo);
+    imagedestroy($lienzo);
+    $webp = (string) ob_get_clean();
+    $panel->pedirMultipart('/admin/ferias.php', $fichaEmp(), ['logo' => ['logo.webp', 'image/webp', $webp]]);
+    $infoWebp = @getimagesizefromstring($crudo('/' . ($temaEmp('adulto-empresa')['rotulo']['logo'] ?? ''))['cuerpo']);
+    f_check($infoWebp !== false && $infoWebp[2] === IMAGETYPE_PNG && $infoWebp[0] === 300, 'un logo WebP se acepta y queda guardado como PNG');
+}
+$copiaEmp = cb_feria_duplicar((int) $feriaEmp['id'], 'test');
+f_check(is_file(cb_feria_logo_ruta((int) $copiaEmp['id']))
+    && file_get_contents(cb_feria_logo_ruta((int) $copiaEmp['id'])) === file_get_contents(cb_feria_logo_ruta((int) $feriaEmp['id'])),
+    'duplicar el evento copia el logo');
+$r = $panel->pedirMultipart('/admin/ferias.php', $fichaEmp() + ['quitar_logo' => '1'], []);
+f_check($r['estado'] === 303 && pedir('GET', '/feria-logo.php?f=' . $feriaEmp['slug'])['estado'] === 404
+    && ($temaEmp('adulto-empresa')['rotulo']['logo'] ?? 'x') === '', 'quitar el logo lo borra y el muro vuelve a las letras');
 
 // Fiestas Patrias: temática chilena sin personajes, para Niños y Adultos.
 $chile = $temas['fiestas-patrias'] ?? [];

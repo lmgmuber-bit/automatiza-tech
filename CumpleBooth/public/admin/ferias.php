@@ -81,10 +81,20 @@ if ($listo && ($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
         if ($accion === 'guardar') {
             $id = (int) ($_POST['id'] ?? 0) ?: null;
             [$datos, $errores] = cb_feria_validar($_POST);
+            // El logo de la temática Empresa (04-10): se valida antes de guardar, así un archivo malo no deja la ficha a medias.
+            $logo = cb_feria_logo_procesar(is_array($_FILES['logo'] ?? null) ? $_FILES['logo'] : []);
+            if (!$logo['ok']) {
+                $errores[] = $logo['error'];
+            }
             if ($errores) {
                 $form = [$datos, $id];
             } else {
                 $feria = cb_feria_guardar($datos, $id, $por);
+                if ($logo['png'] !== null) {
+                    cb_feria_logo_guardar((int) $feria['id'], $logo['png']);
+                } elseif (!empty($_POST['quitar_logo'])) {
+                    cb_feria_logo_borrar((int) $feria['id']);
+                }
                 header('Location: ferias.php?ok=' . ($id === null ? 'creada' : 'guardada') . '#feria-' . $feria['id'], true, 303);
                 exit;
             }
@@ -262,7 +272,7 @@ dialog.feria-qr canvas { display: block; margin: 12px auto; max-width: 100%; hei
     <h2><?= $fid === null ? 'Nueva feria' : 'Editar feria' ?></h2>
     <p class="muted">El nombre, el organizador y la fecha van de recuerdo en cada foto: «<?= h(cb_feria_recuerdo($d) ?: 'Nombre de la feria · Organizador · fecha') ?>».</p>
     <?php if ($errores): ?><div class="alert alert-error" role="alert">Revisa la ficha:<ul><?php foreach ($errores as $e): ?><li><?= h($e) ?></li><?php endforeach; ?></ul></div><?php endif; ?>
-    <form method="post" class="feria-form">
+    <form method="post" class="feria-form" enctype="multipart/form-data">
       <?= admin_csrf_field() ?><input type="hidden" name="action" value="guardar"><?php if ($fid !== null): ?><input type="hidden" name="id" value="<?= (int) $fid ?>"><?php endif; ?>
       <div class="field feria-ancho"><label for="nombre">Nombre de la feria</label><input type="text" id="nombre" name="nombre" maxlength="160" required value="<?= h($d['nombre']) ?>" placeholder="Por ejemplo: Mini Paseo Dieciochero"></div>
       <div class="field"><label for="organizador">Organiza</label><input type="text" id="organizador" name="organizador" maxlength="160" value="<?= h($d['organizador']) ?>"></div>
@@ -288,6 +298,13 @@ dialog.feria-qr canvas { display: block; margin: 12px auto; max-width: 100%; hei
           </fieldset>
         <?php endforeach; ?>
       </div>
+      <?php $logoActual = '';
+          if ($fid !== null) { try { $fLogo = cb_feria_por_id($fid); $logoActual = $fLogo ? cb_feria_logo_url($fLogo) : ''; } catch (Throwable $e) { $logoActual = ''; } } ?>
+      <div class="field feria-ancho"><label for="logo">Logo de la empresa (temática Muro de prensa)</label>
+        <?php if ($logoActual !== ''): ?><p class="feria-logo-actual"><img src="../<?= h($logoActual) ?>" alt="Logo actual del evento" height="56">
+          <label class="feria-mundo"><input type="checkbox" name="quitar_logo" value="1"> Quitar el logo</label></p><?php endif; ?>
+        <input type="file" id="logo" name="logo" accept="image/png,image/jpeg,image/webp">
+        <small>PNG con fondo transparente, JPG o WebP, hasta <?= h(cb_feria_logo_max_texto()) ?>. Se repite en el muro detrás de cada persona; sin logo, el muro repite el nombre de quien organiza.</small></div>
       <div class="field"><label for="retencion_dias">Días que se guardan las fotos</label><input type="number" id="retencion_dias" name="retencion_dias" min="1" max="30" value="<?= (int) $d['retencion_dias'] ?>"><small>Después se borran solas.</small></div>
       <div class="field"><label for="max_fotos">Tope de fotos</label><input type="number" id="max_fotos" name="max_fotos" min="10" max="5000" value="<?= (int) $d['max_fotos'] ?>"></div>
       <label class="feria-mundo feria-ancho"><input type="checkbox" name="activa" value="1" <?= !empty($d['activa']) ? 'checked' : '' ?>> Feria activa: la tablet la puede abrir</label>

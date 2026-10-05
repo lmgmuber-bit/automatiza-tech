@@ -364,12 +364,162 @@ function cb_feria_resolver(array $feria, array $resuelto, string $tema, string $
         $revista['textos'] = cb_revista_textos();
         $theme['revista'] = $revista;
     }
+    // Año Nuevo y el muro de Empresa (04-10): lo que el kiosco dibuja encima de la escena, y el logo del evento.
+    $rotulo = $theme['modoFoto'] === 'fondo' ? cb_feria_rotulo($feria, $themeData['rotulo'] ?? null) : null;
+    if ($rotulo !== null) {
+        $theme['rotulo'] = $rotulo;
+    }
     return [
         'ok' => true,
         'party' => $party,
         'theme' => $theme,
         'feria' => cb_feria_publica($feria, $modo),
     ];
+}
+
+/**
+ * Los otros diseños que el kiosco dibuja encima de la escena (04-10-2026): `anioNuevo` (el año y el saludo) y `muroLogos`
+ * (el muro de prensa de la temática Empresa, con el logo que se subió en la ficha del evento). Cualquier otro valor se ignora.
+ */
+function cb_feria_rotulo(array $feria, $bloque): ?array
+{
+    $diseno = is_array($bloque) ? (string) ($bloque['diseno'] ?? '') : '';
+    if (!in_array($diseno, ['anioNuevo', 'muroLogos'], true)) {
+        return null;
+    }
+    $rotulo = ['diseno' => $diseno];
+    if ($diseno === 'muroLogos') {
+        // Sin logo (o si el directorio de estado falla) el muro repite en letras el nombre de quien organiza: nunca se cae el kiosco.
+        try {
+            $rotulo['logo'] = cb_feria_logo_url($feria);
+        } catch (Throwable $e) {
+            error_log('CumpleClick logo de feria: ' . $e->getMessage());
+            $rotulo['logo'] = '';
+        }
+    }
+    return $rotulo;
+}
+
+/**
+ * El logo del cliente para la temática Empresa (04-10-2026). Se sube en la ficha del evento y vive fuera del webroot, en el
+ * directorio de estado, como un PNG que GD vuelve a codificar: lo que se guarda y se sirve nunca es el archivo que mandó el
+ * navegador. Sin columna nueva en la base: el archivo es la marca de que el evento tiene logo.
+ */
+function cb_feria_logo_ruta(int $id): string
+{
+    return cb_private_dir((string) cb_config('state_dir'), 'state_dir') . DIRECTORY_SEPARATOR . 'ferias-logos'
+        . DIRECTORY_SEPARATOR . max(0, $id) . '.png';
+}
+
+/** La dirección del logo para el kiosco (relativa a la app, con la fecha del archivo para que un logo nuevo no quede en caché). */
+function cb_feria_logo_url(array $feria): string
+{
+    $ruta = cb_feria_logo_ruta((int) $feria['id']);
+    return is_file($ruta) ? 'feria-logo.php?f=' . rawurlencode((string) $feria['slug']) . '&v=' . filemtime($ruta) : '';
+}
+
+/**
+ * Lo más que puede pesar el logo: 4 MB, o menos si el servidor acepta menos. Con `upload_max_filesize` más bajo el archivo no
+ * llega; con `post_max_size` más bajo PHP descarta el formulario entero. El admin muestra este número, no uno fijo.
+ */
+function cb_feria_logo_max_bytes(): int
+{
+    $bytes = static function (string $valor): int {
+        $valor = trim($valor);
+        if ($valor === '') {
+            return 0;
+        }
+        $n = (float) $valor;
+        $unidad = strtolower(substr($valor, -1));
+        return (int) ($unidad === 'g' ? $n * 1073741824 : ($unidad === 'm' ? $n * 1048576 : ($unidad === 'k' ? $n * 1024 : $n)));
+    };
+    $limites = array_filter([4 * 1048576, $bytes((string) ini_get('upload_max_filesize')), $bytes((string) ini_get('post_max_size'))],
+        static fn ($l) => $l > 0);
+    return (int) min($limites);
+}
+
+/** El tope del logo para leer: "4 MB", "2 MB", "1,5 MB". */
+function cb_feria_logo_max_texto(): string
+{
+    $mb = cb_feria_logo_max_bytes() / 1048576;
+    return number_format($mb, fmod($mb, 1.0) > 0.0001 ? 1 : 0, ',', '.') . ' MB';
+}
+
+/**
+ * Valida y vuelve a codificar el logo subido (un elemento de `$_FILES`). Devuelve `['ok' => true, 'png' => bytes|null]`
+ * (null: no se subió nada) o `['ok' => false, 'error' => texto]`. PNG, JPG o WebP de hasta cb_feria_logo_max_bytes(); queda en PNG con su
+ * transparencia y a lo más 1000 px por lado (en el muro se ve a unos 240 px).
+ */
+function cb_feria_logo_procesar(array $archivo): array
+{
+    $error = (int) ($archivo['error'] ?? UPLOAD_ERR_NO_FILE);
+    if ($error === UPLOAD_ERR_NO_FILE) {
+        return ['ok' => true, 'png' => null];
+    }
+    if ($error === UPLOAD_ERR_INI_SIZE || $error === UPLOAD_ERR_FORM_SIZE) {
+        return ['ok' => false, 'error' => 'El logo pesa más de lo que acepta el servidor (' . cb_feria_logo_max_texto() . ').'];
+    }
+    $tmp = (string) ($archivo['tmp_name'] ?? '');
+    if ($error !== UPLOAD_ERR_OK || $tmp === '' || !is_uploaded_file($tmp)) {
+        return ['ok' => false, 'error' => 'El logo no llegó bien. Vuelve a elegir el archivo.'];
+    }
+    $peso = (int) ($archivo['size'] ?? 0);
+    if ($peso <= 0 || $peso > cb_feria_logo_max_bytes()) {
+        return ['ok' => false, 'error' => 'El logo tiene que pesar a lo más ' . cb_feria_logo_max_texto() . '.'];
+    }
+    $info = @getimagesize($tmp);
+    if ($info === false || !in_array($info[2] ?? null, [IMAGETYPE_PNG, IMAGETYPE_JPEG, IMAGETYPE_WEBP], true)) {
+        return ['ok' => false, 'error' => 'El logo tiene que ser una imagen PNG, JPG o WebP.'];
+    }
+    if ($info[0] < 16 || $info[1] < 16 || $info[0] > 4096 || $info[1] > 4096) {
+        return ['ok' => false, 'error' => 'El logo tiene que medir entre 16 y 4096 píxeles por lado.'];
+    }
+    $img = @imagecreatefromstring((string) file_get_contents($tmp));
+    if (!$img) {
+        return ['ok' => false, 'error' => 'No se pudo leer el logo como imagen.'];
+    }
+    if (!imageistruecolor($img)) {
+        imagepalettetotruecolor($img);
+    }
+    $w = imagesx($img);
+    $h = imagesy($img);
+    $k = min(1, 1000 / max($w, $h));
+    $nw = max(1, (int) round($w * $k));
+    $nh = max(1, (int) round($h * $k));
+    $out = imagecreatetruecolor($nw, $nh);
+    imagealphablending($out, false);
+    imagesavealpha($out, true);
+    imagefill($out, 0, 0, imagecolorallocatealpha($out, 0, 0, 0, 127));
+    imagecopyresampled($out, $img, 0, 0, 0, 0, $nw, $nh, $w, $h);
+    ob_start();
+    imagepng($out, null, 6);
+    $png = (string) ob_get_clean();
+    imagedestroy($img);
+    imagedestroy($out);
+    return $png !== '' ? ['ok' => true, 'png' => $png] : ['ok' => false, 'error' => 'No se pudo preparar el logo.'];
+}
+
+function cb_feria_logo_guardar(int $id, string $png): void
+{
+    $ruta = cb_feria_logo_ruta($id);
+    $dir = dirname($ruta);
+    if (!is_dir($dir) && !mkdir($dir, 0770, true) && !is_dir($dir)) {
+        throw new RuntimeException('No se pudo crear la carpeta de logos.');
+    }
+    $tmp = $ruta . '.tmp';
+    if (file_put_contents($tmp, $png, LOCK_EX) === false || !rename($tmp, $ruta)) {
+        @unlink($tmp);
+        throw new RuntimeException('No se pudo guardar el logo.');
+    }
+    @chmod($ruta, 0660);
+}
+
+function cb_feria_logo_borrar(int $id): void
+{
+    $ruta = cb_feria_logo_ruta($id);
+    if (is_file($ruta)) {
+        @unlink($ruta);
+    }
 }
 
 /**
@@ -657,7 +807,17 @@ function cb_feria_duplicar(int $id, string $por): array
         'retencion_dias' => $origen['retencion_dias'], 'max_fotos' => $origen['max_fotos'],
         'activa' => false,
     ];
-    return cb_feria_guardar($d, null, $por, $origen['id']);
+    $copia = cb_feria_guardar($d, null, $por, $origen['id']);
+    // El logo de la empresa viaja con la copia: la próxima feria del mismo cliente queda lista. Si falla, la copia igual sirve.
+    try {
+        $desde = cb_feria_logo_ruta((int) $origen['id']);
+        if (is_file($desde)) {
+            cb_feria_logo_guardar((int) $copia['id'], (string) file_get_contents($desde));
+        }
+    } catch (Throwable $e) {
+        error_log('CumpleClick logo al duplicar feria: ' . $e->getMessage());
+    }
+    return $copia;
 }
 
 /**

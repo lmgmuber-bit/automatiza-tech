@@ -19,22 +19,39 @@ export function fechaPortada(fecha, hoy = new Date()) {
   return (MESES[mes] || MESES[hoy.getMonth()]) + ' ' + anio
 }
 
-/** Los textos de la portada. `nombre` es el primer nombre del invitado (opcional); `evento`, el nombre de la feria o fiesta. */
-export function textosPortada({ titulo = 'CLICK', nombre = '', evento = '', fecha = '' } = {}) {
+/** Los textos fijos de siempre. Luis los puede cambiar en Admin -> Ajustes y el servidor los manda con la temática
+ * (`theme.revista.textos`); estos quedan de respaldo. Tienen que ser los mismos de cb_revista_textos_campos() en
+ * public/lib.ajustes.php (lo verifica revista.test.mjs). Sirven de día (una feria) y de noche: nada de "la noche". */
+export const TEXTOS_DE_SIEMPRE = {
+  etiqueta: 'EXCLUSIVA',
+  bajada: 'Así se vivió {evento}',
+  llamado1: 'Los looks que todos comentan',
+  llamado2: 'Sus mejores poses',
+  antetitulo: 'LA ESTRELLA DE HOY',
+  sinNombre: 'ERES TÚ',
+  edicion: 'EDICIÓN ESPECIAL',
+  numero: 'N.º 1',
+}
+
+/** Los textos de la portada. `nombre` es el primer nombre del invitado (opcional); `evento`, el nombre de la feria o fiesta;
+ * `propios`, los textos de Ajustes (uno vacío deja el de siempre). Todo va en mayúsculas menos el número. */
+export function textosPortada({ titulo = 'CLICK', nombre = '', evento = '', fecha = '', propios = null } = {}) {
+  const texto = (clave) => String(propios?.[clave] ?? '').trim() || TEXTOS_DE_SIEMPRE[clave]
+  const mayus = (s) => String(s).toLocaleUpperCase('es-CL')
   const limpio = String(nombre || '').trim()
   const lugar = String(evento || '').trim()
   return {
-    cabecera: String(titulo || 'CLICK').trim().toLocaleUpperCase('es-CL') || 'CLICK',
+    cabecera: mayus(String(titulo || 'CLICK').trim()) || 'CLICK',
     fecha: fechaPortada(fecha),
-    edicion: 'EDICIÓN ESPECIAL',
-    exclusiva: 'EXCLUSIVA',
-    // Sirve de día (una feria) y de noche (un cumpleaños): nada de "la noche" fijo.
-    bajada: lugar ? `Así se vivió ${lugar}` : 'Así se vivió la celebración',
-    llamados: ['Los looks que todos comentan', 'Sus mejores poses'],
-    antetitulo: 'LA ESTRELLA DE HOY',
-    // Sin nombre, la portada le habla al invitado: la frase entera va en el lugar del nombre.
-    titular: limpio ? limpio.toLocaleUpperCase('es-CL') : 'ERES TÚ',
-    numero: 'N.º 1',
+    edicion: mayus(texto('edicion')),
+    exclusiva: mayus(texto('etiqueta')),
+    // {evento} es el nombre del evento; sin nombre, "la celebración".
+    bajada: texto('bajada').replaceAll('{evento}', lugar || 'la celebración'),
+    llamados: [texto('llamado1'), texto('llamado2')],
+    antetitulo: mayus(texto('antetitulo')),
+    // Sin nombre, la portada le habla al invitado: la frase va en el lugar del nombre.
+    titular: mayus(limpio || texto('sinNombre')),
+    numero: texto('numero'),
   }
 }
 
@@ -125,8 +142,8 @@ export function dibujarCabecera(ctx, W, H, textos, { tinta = '#FFFFFF', espejo =
   if ('letterSpacing' in ctx) ctx.letterSpacing = `${W * 0.005}px`
   sombra(ctx, W, 1.6)
   ctx.textAlign = 'left'
-  ctx.fillText(textos.edicion, z.x * W + W * 0.01, yInfo, W * 0.3)
-  if (textos.fecha) { ctx.textAlign = 'right'; ctx.fillText(textos.fecha, (z.x + z.w) * W - W * 0.01, yInfo, W * 0.3) }
+  ctx.fillText(textos.edicion, z.x * W + W * 0.01, yInfo, W * 0.4)
+  if (textos.fecha) { ctx.textAlign = 'right'; ctx.fillText(textos.fecha, (z.x + z.w) * W - W * 0.01, yInfo, W * 0.4) }
   if ('letterSpacing' in ctx) ctx.letterSpacing = '0px'
   ctx.restore()
 }
@@ -143,14 +160,15 @@ export function dibujarTitulares(ctx, W, H, textos, { tinta = '#FFFFFF', acento 
   let y = izq.y * H
   const etiqueta = H * 0.022
   ctx.font = `700 ${etiqueta}px ${SANS}`
-  const anchoEtiqueta = ctx.measureText(textos.exclusiva).width + W * 0.03
+  // Con ancho máximo: un texto propio largo se angosta en vez de estirar la etiqueta hasta la cara.
+  const anchoEtiqueta = Math.min(ctx.measureText(textos.exclusiva).width, W * 0.3) + W * 0.03
   ctx.save()
   ctx.shadowColor = 'transparent'
   ctx.fillStyle = acento
   ctx.fillRect(izq.x * W, y - etiqueta * 1.05, anchoEtiqueta, etiqueta * 1.45)
   ctx.fillStyle = contraste(acento)
   ctx.textAlign = 'left'
-  ctx.fillText(textos.exclusiva, izq.x * W + W * 0.015, y + etiqueta * 0.12)
+  ctx.fillText(textos.exclusiva, izq.x * W + W * 0.015, y + etiqueta * 0.12, W * 0.3)
   ctx.restore()
   y += etiqueta * 1.6
   ctx.fillStyle = tinta
@@ -170,11 +188,17 @@ export function dibujarTitulares(ctx, W, H, textos, { tinta = '#FFFFFF', acento 
   ctx.textAlign = 'right'
   let yd = der.y * H
   textos.llamados.forEach((llamado, i) => {
-    const tam = H * (i === 0 ? 0.027 : 0.023)
-    ctx.font = `${i === 0 ? 700 : 500} ${tam}px ${SANS}`
-    for (const l of partirLineas(llamado.toLocaleUpperCase('es-CL'), der.w * W, (t) => ctx.measureText(t).width).slice(0, 3)) {
+    // Un llamado largo (los textos se editan en Ajustes) achica la letra hasta caber en tres líneas, sin perder palabras.
+    let tam = H * (i === 0 ? 0.027 : 0.023)
+    const partir = () => {
+      ctx.font = `${i === 0 ? 700 : 500} ${tam}px ${SANS}`
+      return partirLineas(llamado.toLocaleUpperCase('es-CL'), der.w * W, (t) => ctx.measureText(t).width)
+    }
+    let lineas = partir()
+    while (lineas.length > 3 && tam > H * 0.017) { tam *= 0.92; lineas = partir() }
+    for (const l of lineas.slice(0, 3)) {
       yd += tam * 1.1
-      ctx.fillText(l, der.x * W, yd)
+      ctx.fillText(l, der.x * W, yd, der.w * W)
     }
     yd += tam * 0.9
   })
@@ -184,7 +208,7 @@ export function dibujarTitulares(ctx, W, H, textos, { tinta = '#FFFFFF', acento 
   ctx.textAlign = 'left'
   ctx.font = `700 ${H * 0.024}px ${SANS}`
   if ('letterSpacing' in ctx) ctx.letterSpacing = `${W * 0.004}px`
-  ctx.fillText(textos.antetitulo, tit.x * W, tit.y * H)
+  ctx.fillText(textos.antetitulo, tit.x * W, tit.y * H, tit.w * W)
   if ('letterSpacing' in ctx) ctx.letterSpacing = '0px'
   const medirNombre = (t, s) => { ctx.font = `italic 700 ${s}px ${SERIF}`; return ctx.measureText(t).width }
   const tamNombre = tamanoQueCabe(textos.titular, tit.w * W, H * 0.1, H * 0.05, medirNombre)
@@ -206,7 +230,7 @@ export function dibujarTitulares(ctx, W, H, textos, { tinta = '#FFFFFF', acento 
   for (const b of barras) { ctx.fillRect(x, cod.y * H + cod.h * H * 0.12, b * unidad, cod.h * H * 0.58); x += (b + 1) * unidad }
   ctx.font = `500 ${cod.h * H * 0.2}px ${SANS}`
   ctx.textAlign = 'center'
-  ctx.fillText(textos.numero, cod.x * W + cod.w * W / 2, cod.y * H + cod.h * H * 0.93)
+  ctx.fillText(textos.numero, cod.x * W + cod.w * W / 2, cod.y * H + cod.h * H * 0.93, cod.w * W * 0.9)
   ctx.restore()
   ctx.restore()
 }

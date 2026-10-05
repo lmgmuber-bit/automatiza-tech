@@ -17,6 +17,7 @@
  * responde "no hay feria" y una fiesta normal sigue funcionando: ver `cb_ferias_listo()`.
  */
 require_once __DIR__ . '/lib.php';
+require_once __DIR__ . '/lib.ajustes.php';   // textos de la Portada de Revista (04-10)
 
 const CB_FERIA_MODOS = ['infantil' => 'Niños', 'adulto' => 'Adultos'];
 const CB_FERIA_NOMBRE_MAX = 20;
@@ -359,6 +360,8 @@ function cb_feria_resolver(array $feria, array $resuelto, string $tema, string $
     // están en disco; con una sola no hay menú.
     $revista = $theme['modoFoto'] === 'fondo' ? cb_feria_revista($tema, $themeData['revista'] ?? null) : null;
     if ($revista !== null) {
+        // Los textos fijos van con la temática: los de Ajustes si Luis escribió alguno, si no los de siempre.
+        $revista['textos'] = cb_revista_textos();
         $theme['revista'] = $revista;
     }
     return [

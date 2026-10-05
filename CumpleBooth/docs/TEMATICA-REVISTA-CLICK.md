@@ -33,6 +33,7 @@ con su número F-###, igual que en las demás temáticas.
 |---|---|
 | Registro de la temática y sus portadas (`revista.titulo`, `revista.variantes[]`) | `public/data/themes.json`, clave `adulto-revista` |
 | Validación y publicación de las portadas | `public/lib.ferias.php`, `cb_feria_revista()` |
+| Textos fijos editables (Admin → Ajustes) | `public/lib.ajustes.php` (`cb_revista_textos_campos()`, `cb_revista_textos()`), `public/admin/ajustes.php` |
 | Menú "ELIGE TU PORTADA" y la portada elegida (escena, filtro, colores) | `src/feria/FeriaBooth.jsx` |
 | Textos y dibujo de la portada; carga de las fuentes | `src/feria/revista.js` |
 | Capas (`antes`/`despues`) y encuadre de portada | `src/feria/segmentation.js`: `drawScene`, `cajaDeMascara`, `encuadrePortada` |
@@ -43,6 +44,15 @@ con su número F-###, igual que en las demás temáticas.
 **El servidor publica solo lo que existe.** `cb_feria_revista()` deja pasar una portada si su escena es un nombre de archivo
 simple que está en disco; el título son letras y números (hasta 12); `tinta` y `acento` solo como `#rrggbb`; el filtro solo
 `bn`; como máximo cuatro portadas. Con una sola portada no hay menú. Una temática sin bloque `revista` no cambia en nada.
+
+**Los textos fijos se editan en Admin → Ajustes**, sección "Portada de Revista" (Luis, 04-10: "deja los textos así, pero
+que yo lo pueda editar si quisiera"). Son ocho: etiqueta (EXCLUSIVA), bajada ("Así se vivió {evento}"), los dos llamados,
+lo que va sobre el nombre (LA ESTRELLA DE HOY), lo que va si no hay nombre (ERES TÚ), la edición y el número. Un campo vacío
+deja el de siempre; cada uno tiene un máximo de letras para que quepa en la portada, y lo que no cabe se rechaza al guardar.
+Se guardan en `data/ajustes.json` (`revista_textos`) y el servidor los manda con la temática (`theme.revista.textos`). Un
+guardado que no los trae no los borra. En la portada todo va en mayúsculas, menos el número. Los textos de siempre están en
+PHP (`cb_revista_textos_campos()`) y en el kiosco (`TEXTOS_DE_SIEMPRE` de `revista.js`); una prueba exige que sean iguales.
+La tarjeta del selector (`fondo-banner.jpg`) es una imagen hecha con los de siempre: no cambia si se editan.
 
 **El encuadre de portada es solo de esta temática.** Las otras temáticas de fondo conservan la escala de la cámara
 (`subjectPlacement`). En la revista, la caja de la persona sale de su máscara y se encuadra para que la coronilla quede al
@@ -74,13 +84,15 @@ del repositorio. Sin música, como las otras temáticas de adultos.
    blanco y negro, `filtro: "bn"`. Máximo cuatro.
 4. Correr `tests/frontend/revista.test.mjs` y `tests/backend/ferias-http.php`, y mirar una foto final de la portada nueva.
 
-Los textos fijos ("LA ESTRELLA DE HOY", los dos llamados, "EDICIÓN ESPECIAL", "N.º 1") están en `textosPortada()`.
+Los textos fijos se cambian en Admin → Ajustes, sin tocar código (ver arriba).
 
 ## Pruebas
 
-- `tests/frontend/revista.test.mjs` (11): textos, fecha, cortes de línea, tamaño de letra, código de barras, orden de las
-  capas, texto volteado en la vista previa, caja de la máscara, encuadre de portada y archivos de la temática.
-- `tests/backend/ferias-http.php`: lo que publica `api.php` y el selector, y la validación de `cb_feria_revista()`.
+- `tests/frontend/revista.test.mjs` (14): textos, fecha, cortes de línea, tamaño de letra, código de barras, orden de las
+  capas, texto volteado en la vista previa, caja de la máscara, encuadre de portada, archivos de la temática, textos de
+  Ajustes, textos de siempre iguales en PHP y en el kiosco, y un llamado largo que achica la letra sin perder palabras.
+- `tests/backend/ferias-http.php`: lo que publica `api.php` y el selector, la validación de `cb_feria_revista()` y la
+  pantalla de Ajustes por HTTP (muestra los campos, guarda, rechaza lo que no cabe, no borra lo que no viene).
 - `tests/frontend/feria-integracion.test.mjs`: con cámara simulada, por cada portada: menú sin Asómate, vista previa 9:16,
   foto final 1080x1920 con recorte, el título CLICK en la foto (comparada contra su escena) y gris solo en la de blanco y negro.
 

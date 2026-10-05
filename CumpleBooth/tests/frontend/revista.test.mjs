@@ -3,11 +3,13 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync, existsSync } from 'node:fs'
+import { execFileSync } from 'node:child_process'
 import { resolve, join } from 'node:path'
-import { textosPortada, fechaPortada, partirLineas, tamanoQueCabe, barrasDe, capasPortada, ZONAS } from '../../src/feria/revista.js'
+import { textosPortada, fechaPortada, partirLineas, tamanoQueCabe, barrasDe, capasPortada, ZONAS, TEXTOS_DE_SIEMPRE } from '../../src/feria/revista.js'
 import { cajaDeMascara, encuadrePortada, subjectPlacement } from '../../src/feria/segmentation.js'
 
 const root = resolve(import.meta.dirname, '../..')
+const php = process.env.PHP_PATH || 'C:/wamp64/bin/php/php8.3.28/php.exe'
 
 // Un contexto 2D de mentira que anota lo que se dibuja: alcanza para saber qué texto va, dónde y con qué ancho máximo.
 function lienzoDeMentira() {
@@ -174,4 +176,33 @@ test('el encuadre de portada: la coronilla sobre el pie del título, sin achicar
 test('las capas de la portada piden el encuadre, suave solo en la vista previa', () => {
   assert.deepEqual(capasPortada(textosPortada({})).encuadre, { cabeza: 0.095, zoomMax: 1.6 })
   assert.equal(capasPortada(textosPortada({}), {}, { suave: true }).encuadre.suave, true)
+})
+
+test('los textos de Ajustes reemplazan a los de siempre; uno vacío deja el de siempre', () => {
+  const t = textosPortada({ nombre: '', evento: 'Feria de Primavera', propios: {
+    antetitulo: 'la reina de hoy', llamado1: 'Moda de feria', bajada: 'Lo mejor de {evento}', sinNombre: 'tú', numero: 'N.º 25', etiqueta: '  ' } })
+  assert.equal(t.antetitulo, 'LA REINA DE HOY', 'en mayúsculas aunque se escriba en minúsculas')
+  assert.deepEqual(t.llamados, ['Moda de feria', 'Sus mejores poses'])
+  assert.equal(t.bajada, 'Lo mejor de Feria de Primavera', '{evento} se cambia por el nombre del evento')
+  assert.equal(t.titular, 'TÚ', 'sin nombre, el texto propio en su lugar')
+  assert.equal(t.numero, 'N.º 25')
+  assert.equal(t.exclusiva, 'EXCLUSIVA', 'en blanco vale como vacío')
+  assert.equal(textosPortada({ propios: { bajada: 'Lo mejor de {evento}' } }).bajada, 'Lo mejor de la celebración')
+})
+
+test('los textos de siempre son los mismos en el kiosco y en Ajustes (PHP)', { skip: !existsSync(php) && 'sin PHP' }, () => {
+  const codigo = 'require $argv[1]; echo json_encode(array_map(fn ($c) => $c[2], cb_revista_textos_campos()), JSON_UNESCAPED_UNICODE);'
+  const salida = execFileSync(php, ['-r', codigo, join(root, 'public/lib.ajustes.php')], { encoding: 'utf8' })
+  assert.deepEqual(JSON.parse(salida), TEXTOS_DE_SIEMPRE)
+})
+
+test('un llamado largo achica la letra y no pierde palabras', () => {
+  const W = 1080, H = 1920
+  const largo = 'Los looks que todos comentan esta vez'
+  const ctx = lienzoDeMentira(); capasPortada(textosPortada({ propios: { llamado1: largo } })).despues(ctx, W, H)
+  const escritos = textosDe(ctx)
+  const inicio = escritos.findIndex((t) => t.startsWith('LOS LOOKS'))
+  const lineas = escritos.slice(inicio, inicio + 3).filter((t) => !t.startsWith('SUS MEJORES'))
+  assert.ok(lineas.length <= 3)
+  assert.equal(lineas.join(' '), largo.toLocaleUpperCase('es-CL'), 'todas las palabras en a lo más tres líneas')
 })

@@ -4297,14 +4297,20 @@ portadas, el encuadre y el texto solo aparecen con el bloque `revista` de `theme
 |---|---|---|---|
 | 1 | OBLIGATORIO | `public/themes/adulto-revista/` (6 JPG: `revista-alfombra`, `revista-estudio`, `revista-bn`, `fondo-sala`, `fondo-evento`, `fondo-banner`) | `app/themes/adulto-revista/` (nueva) |
 | 2 | OBLIGATORIO | `public/fonts/revista/` (4 `.woff2` y 2 licencias `OFL-*.txt`) | `app/fonts/revista/` (nueva) |
-| 3 | OBLIGATORIO | `public/lib.ferias.php` (`cb_feria_revista()`) | `app/lib.ferias.php` |
-| 4 | OBLIGATORIO | `public/data/themes.json` | `app/data/themes.json` |
-| 5 | OBLIGATORIO | `dist/assets/*` nuevos de este build (al 04-10: `main-CscEkOrF.js`, `feria-DTgANUAn.js`, `feria-DQBWgOF5.js`, `feria-C7PwMTWO.css`) | `app/assets/` |
-| 6 | OBLIGATORIO, al final | `dist/index.html`, `dist/feria.html` | `app/index.html`, `app/feria.html` |
+| 3 | OBLIGATORIO | `public/lib.ajustes.php` (textos de la portada en Ajustes) | `app/lib.ajustes.php` |
+| 4 | OBLIGATORIO | `public/lib.ferias.php` (`cb_feria_revista()`; carga `lib.ajustes.php`) | `app/lib.ferias.php` |
+| 5 | OBLIGATORIO | `public/admin/ajustes.php` (sección Portada de Revista) | `app/admin/ajustes.php` |
+| 6 | OBLIGATORIO | `public/data/themes.json` | `app/data/themes.json` |
+| 7 | OBLIGATORIO | `dist/assets/*` nuevos de este build (al 04-10: `main-BVsUG9jR.js`, `feria-DTgANUAn.js`, `feria-DQBWgOF5.js`, `feria-C7PwMTWO.css`) | `app/assets/` |
+| 8 | OBLIGATORIO, al final | `dist/index.html`, `dist/feria.html` | `app/index.html`, `app/feria.html` |
 
-Sin migración. El 1 y el 2 van antes del 4 (`themes.json` apunta a escenas que tienen que existir) y el 3 antes del 6. Los
+Sin migración. **El 3 va antes del 4**: el `lib.ferias.php` nuevo llama a `cb_revista_textos()`, que no existe en el
+`lib.ajustes.php` de PROD: subidos al revés, el kiosco de feria entero da error. El 1 y el 2 van antes del 6 (`themes.json`
+apunta a escenas que tienen que existir) y el 4 antes del 8. Los
 nombres de `dist/assets/` cambian con cada build: el día del deploy se sacan de `dist/index.html` y `dist/feria.html` y se
-cotejan por sha256 contra PROD. Respaldar `lib.ferias.php`, `themes.json`, `index.html` y `feria.html` antes de pisarlos.
+cotejan por sha256 contra PROD. Respaldar `lib.ajustes.php`, `lib.ferias.php`, `admin/ajustes.php`, `themes.json`,
+`index.html` y `feria.html` antes de pisarlos. **Nunca subir `public/data/ajustes.json`**: el de PROD tiene los correos
+reales de Luis y el del repositorio, valores de ejemplo.
 **Verificar el `Content-Type` de un `.woff2` en `app/fonts/revista/`** (debe ser `font/woff2`; si el servidor no lo conoce,
 las portadas salen con la letra de respaldo, sin error a la vista). **No subir** `design/`, `docs/`, `tests/` ni la carpeta de
 generación `C:/Users/luis_/Documents/CumpleClick/tematicas-adultos-2026-10/`.
@@ -4312,9 +4318,13 @@ generación `C:/Users/luis_/Documents/CumpleClick/tematicas-adultos-2026-10/`.
 **Después de subir:** en el admin, habilitar "Portada de Revista" en la lista de Adultos del evento que la vaya a usar (no se
 activa sola en ningún evento).
 
-**Pruebas en local (04-10):** `revista.test.mjs` 11 de 11; `ferias-http.php` 161 comprobaciones; `feria-integracion.test.mjs`
+**Los textos fijos de la portada se editan en Admin → Ajustes** (sección "Portada de Revista"); vacío = el de siempre.
+
+**Pruebas en local (04-10):** `revista.test.mjs` 14 de 14; `ferias-http.php` 168 comprobaciones (incluye la pantalla de
+Ajustes por HTTP); `admin-password`, `manual`, `agenda` y `usuarios-http` siguen en verde; `feria-integracion.test.mjs`
 con cámara simulada recorre las tres portadas (menú sin Asómate, vista previa 9:16, foto 1080x1920 con recorte, el título en la
-foto y el gris solo en la de blanco y negro). Suite completa del frontend con las cuatro de navegador: 267 de 267.
+foto y el gris solo en la de blanco y negro). Suite del frontend: 270 de 270. Las cuatro suites con navegador se corrieron
+de a una: en paralelo, con 0,8 GB libres en el PC, Chrome se quedó sin memoria y tres fallaron por tiempo (no por código).
 Costo de las escenas: USD 0,0486 de lista.
 
 ### No probado

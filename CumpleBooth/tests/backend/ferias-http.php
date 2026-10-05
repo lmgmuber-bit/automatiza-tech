@@ -361,6 +361,31 @@ f_check(($vRev['titulo'] ?? '') === 'CLICK' && !isset($vRev['variantes'][0]['tin
     && !isset($vRev['variantes'][0]['filtro']), 'colores y filtro se validan uno por uno');
 $cincoRev = array_map(fn ($i) => ['clave' => 'v' . $i, 'escena' => 'revista-estudio.jpg'], range(1, 5));
 f_check(count(cb_feria_revista('adulto-revista', ['titulo' => 'CLICK', 'variantes' => $cincoRev])['variantes'] ?? []) === 4, 'máximo cuatro portadas');
+// Los textos fijos de la portada se editan en Admin -> Ajustes (04-10): sin nada escrito llegan los de siempre; lo que Luis
+// escribe llega al kiosco; lo que no cabe se rechaza; un guardado que no los trae no los borra; vacío vuelve al de siempre.
+$siempre = array_map(fn ($c) => $c[2], cb_revista_textos_campos());
+$apiRev = fn () => pedir('GET', '/api.php?p=' . $feriaRev['slug'] . '&tema=adulto-revista&modo=adulto')['json']['theme']['revista']['textos'] ?? null;
+f_check($apiRev() === $siempre, 'sin ajustes, la portada llega con los textos de siempre');
+$r = $panel->pedir('GET', '/admin/ajustes.php');
+f_check($r['estado'] === 200 && str_contains($r['html'], 'Portada de Revista') && str_contains($r['html'], 'name="revista_textos[antetitulo]"')
+    && str_contains($r['html'], 'placeholder="LA ESTRELLA DE HOY"'), 'Ajustes muestra los textos de la portada con el de siempre de ejemplo');
+$formAjustes = ['csrf' => $panel->csrf($r['html']), 'action' => 'guardar', 'bcc_email' => '', 'recovery_email' => '',
+    'manual_anticipacion_min' => '', 'manual_dias_lista' => '',
+    'revista_textos' => ['antetitulo' => 'La reina de hoy', 'llamado1' => 'Moda de feria', 'bajada' => '', 'etiqueta' => '', 'llamado2' => '',
+        'sinNombre' => '', 'edicion' => '', 'numero' => 'N.º 25']];
+$r = $panel->pedir('POST', '/admin/ajustes.php', $formAjustes);
+f_check(str_contains($r['html'], 'Ajustes guardados.') && str_contains($r['html'], 'value="La reina de hoy"'), 'Ajustes guarda los textos de la portada');
+$propios = $apiRev();
+f_check(($propios['antetitulo'] ?? '') === 'La reina de hoy' && ($propios['llamado1'] ?? '') === 'Moda de feria' && ($propios['numero'] ?? '') === 'N.º 25'
+    && ($propios['bajada'] ?? '') === $siempre['bajada'], 'el kiosco recibe lo que se escribió y el de siempre en lo vacío');
+$r = $panel->pedir('POST', '/admin/ajustes.php', array_replace_recursive($formAjustes, ['csrf' => $panel->csrf($r['html']),
+    'revista_textos' => ['antetitulo' => str_repeat('a', 25)]]));
+f_check(str_contains($r['html'], '«Sobre el nombre» tiene 25 letras') && ($apiRev()['antetitulo'] ?? '') === 'La reina de hoy',
+    'un texto que no cabe se rechaza y no cambia nada');
+f_check(!empty(cb_guardar_ajustes(['bcc_email' => '', 'recovery_email' => ''])['ok']) && ($apiRev()['antetitulo'] ?? '') === 'La reina de hoy',
+    'un guardado que no trae los textos no los borra');
+cb_guardar_ajustes(['revista_textos' => array_fill_keys(array_keys($siempre), '')]);
+f_check($apiRev() === $siempre, 'vacío vuelve a los textos de siempre');
 
 // Fiestas Patrias: temática chilena sin personajes, para Niños y Adultos.
 $chile = $temas['fiestas-patrias'] ?? [];

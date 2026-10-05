@@ -55,7 +55,7 @@ export default function FeriaBooth({ feria, theme, themeData, characters, filter
   const conVariantes = variantes.length > 1
   const conMenu = asomateOk || conVariantes
   const filtroFoto = variante?.filtro ?? filter
-  const portada = revista ? { textos: textosPortada({ titulo: revista.titulo, nombre: firstName(name), evento: feria.nombre, fecha: feria.fecha }),
+  const portada = revista ? { textos: textosPortada({ titulo: revista.titulo, nombre: firstName(name), evento: feria.nombre, fecha: feria.fecha, propios: revista.textos }),
     estilo: { tinta: variante?.tinta, acento: variante?.acento, evento: feria.nombre } } : null
   useFullscreenOnTap()
   // Los videos de la temática se bajan enteros apenas se abre el kiosco, como la despedida en una fiesta: la intro

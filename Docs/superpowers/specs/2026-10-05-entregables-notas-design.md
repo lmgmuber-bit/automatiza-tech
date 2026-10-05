@@ -93,7 +93,8 @@ Tres tablas nuevas; `automatiza_clients_details` no cambia.
 
 ### 3. Imágenes (`inc/entregables/imagenes.php`)
 
-- Hasta **3 por nota**, **5 MB** cada una, solo **JPG y PNG**.
+- **Opcionales:** una nota puede llevar de **0 a 3** imágenes (confirmado por Luis el 05-oct); **5 MB** cada una, solo
+  **JPG y PNG**.
 - Validación en el servidor: `is_uploaded_file`, tamaño, `wp_check_filetype_and_ext` + `getimagesize` sobre el contenido
   real (un PHP renombrado a `.jpg` se rechaza), dimensiones máximas razonables (lado ≤ 12.000 px antes de procesar).
 - Cada imagen se **reescribe** con `wp_get_image_editor` (quita EXIF/GPS) y se reduce a un lado máximo de 2.000 px; se

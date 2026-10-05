@@ -2,7 +2,8 @@
 
 Pedido de Luis el 04-10-2026 ("parte con la revista CLICK y los tres fondos, la invitación para después"), a partir de lo que
 ofrece la competencia en Instagram: un "Magazine Booth" de cartón (Tu Fiesta 360) y un tótem con IA (Enjoy Producciones). Rama
-`claude/revista-click`, que parte de `claude/tematicas-brujitas-navidad`. **LOCAL, sin desplegar.**
+`claude/revista-click`, que parte de `claude/tematicas-brujitas-navidad`, en el PR lmgmuber-bit/automatiza-tech#69.
+**Sin desplegar.**
 
 ## Qué ve el invitado
 

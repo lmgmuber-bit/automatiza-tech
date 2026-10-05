@@ -4249,7 +4249,7 @@ antes; los videos `welcome` y `despedida` de cada temática responden 200.
 
 ## PENDIENTE 2026-09-30: Noche de Brujas y Navidad para niños, fondo propio por temática, Asómate (LOCAL, SIN DEPLOY)
 
-Rama `claude/tematicas-brujitas-navidad` (sin remoto; parte de `claude/feria-prod`). **No se sube todavía:** faltan las dos
+Rama `claude/tematicas-brujitas-navidad` (en GitHub desde el 04-10, dentro del PR lmgmuber-bit/automatiza-tech#69; parte de `claude/feria-prod`). **No se sube todavía:** faltan las dos
 músicas (las genera Luis con `docs/MUSICA-TEMATICAS-INFANTILES-PROMPTS.md`) y su go. Todo lo de abajo es local.
 
 **Qué cambia para el niño en la feria:** cada temática tiene su fondo en el selector y en el kiosco (antes todas mostraban el
@@ -4286,7 +4286,8 @@ ni nada de `C:/Users/luis_/Documents/CumpleClick/` (registros de generación, `v
 
 ## PENDIENTE 2026-10-04: Portada de Revista CLICK para adultos (LOCAL, SIN DEPLOY)
 
-Rama `claude/revista-click` (sin remoto), que parte de `claude/tematicas-brujitas-navidad`: **se sube junto con esa rama o
+Rama `claude/revista-click`, PR lmgmuber-bit/automatiza-tech#69 (base `claude/feria-prod`, el #58), que parte de
+`claude/tematicas-brujitas-navidad`: **se sube junto con esa rama o
 después de ella**, nunca sola (el build trae los cambios de las dos). Detalle de la temática en `docs/TEMATICA-REVISTA-CLICK.md`.
 
 **Qué cambia:** temática nueva de adultos, `adulto-revista`. El invitado elige una de tres portadas (alfombra roja, estudio

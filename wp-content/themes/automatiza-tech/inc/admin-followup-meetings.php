@@ -35,6 +35,7 @@ function automatiza_tech_followup_create_table() {
         notes text DEFAULT '',
         status varchar(20) DEFAULT 'scheduled',
         confirmed_at datetime DEFAULT NULL,
+        confirmed_attendance tinyint(1) NOT NULL DEFAULT 0,
         email_sent tinyint(1) DEFAULT 0,
         whatsapp_sent tinyint(1) DEFAULT 0,
         reminder_24h_sent tinyint(1) DEFAULT 0,

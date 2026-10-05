@@ -142,7 +142,9 @@ function at_pt_agendar_seguimiento(array $entrada, string $ip): array {
 	if (!empty($cal['meet_link'])) {
 		$wpdb->update($t, ['meet_link' => (string) $cal['meet_link']], ['id' => $reunion]);
 	}
-	if (empty($cal['email_sent']) && function_exists('automatiza_tech_send_followup_email') && automatiza_tech_send_followup_email($reunion)) {
+	// email_sent = 1 en los dos casos: si lo mandó n8n (antes quedaba en 0 aunque el correo había salido) o el de siempre.
+	if (!empty($cal['email_sent'])
+		|| (function_exists('automatiza_tech_send_followup_email') && automatiza_tech_send_followup_email($reunion))) {
 		$wpdb->update($t, ['email_sent' => 1], ['id' => $reunion]);
 	}
 	$cuando = at_pt_fecha_larga($fecha) . ' a las ' . $hora;

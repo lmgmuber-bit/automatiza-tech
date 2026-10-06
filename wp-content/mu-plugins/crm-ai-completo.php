@@ -122,7 +122,8 @@ if (!class_exists('AutomatizaTech_Clientes_List_Table')) {
         
         public function column_estado($item) {
             $val = is_array($item) ? $item['estado'] : $item->estado;
-            return sprintf('<span class="crm-badge">%s</span>', ucfirst($val));
+            $marca = function_exists('at_en_marca_lista') ? at_en_marca_lista((int) (is_array($item) ? $item['id'] : $item->id)) : '';
+            return sprintf('<span class="crm-badge">%s</span>', ucfirst($val)) . $marca;
         }
         
         public function column_acciones($item) {
@@ -1986,6 +1987,9 @@ class AutomatizaTech_CRM_AI {
                         <?php if (is_array($cliente) && function_exists('at_pt_render_pestana') && current_user_can('manage_options')): ?>
                         <button class="ficha-tab" data-target="tab-plan">🗓️ Plan de trabajo</button>
                         <?php endif; ?>
+                        <?php if (is_array($cliente) && function_exists('at_en_render_pestana') && current_user_can('manage_options')): ?>
+                        <button class="ficha-tab" data-target="tab-entregables">📦 Entregables</button>
+                        <?php endif; ?>
                         <?php endif; ?>
                     </div>
                     
@@ -2252,6 +2256,14 @@ class AutomatizaTech_CRM_AI {
                         <?php at_pt_render_pestana($cliente); ?>
                     </div>
                     </div><!-- /tab-plan -->
+                    <?php endif; ?>
+                    <?php if (is_array($cliente) && function_exists('at_en_render_pestana') && current_user_can('manage_options')): ?>
+                    <!-- Tab: Entregables (inc/entregables/panel.php) -->
+                    <div class="ficha-tab-content" id="tab-entregables">
+                    <div class="ficha-card">
+                        <?php at_en_render_pestana($cliente); ?>
+                    </div>
+                    </div><!-- /tab-entregables -->
                     <?php endif; ?>
                     <?php endif; ?>
                 </div>
@@ -5248,6 +5260,7 @@ class AutomatizaTech_CRM_AI {
                                 }
                             }
                         }
+                        $attachment_html .= function_exists('at_en_html_resumen_portal') ? at_en_html_resumen_portal($h) : '';
                         ?>
                         <div class="timeline-item <?php echo $type === 'separator' ? 'timeline-separator' : ''; ?>">
                             <div class="timeline-marker" style="background:<?php echo $config['color']; ?>; box-shadow: 0 0 0 2px <?php echo $config['color']; ?>;"></div>

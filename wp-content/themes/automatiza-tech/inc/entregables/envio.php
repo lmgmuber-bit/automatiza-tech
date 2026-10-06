@@ -28,12 +28,13 @@ function at_en_cliente(object $ent): array {
 	$c = $wpdb->get_row($wpdb->prepare("SELECT nombre, email, telefono, empresa FROM {$wpdb->prefix}crm_clientes WHERE id = %d", (int) $ent->crm_id));
 	$d = $wpdb->get_row($wpdb->prepare("SELECT title FROM {$wpdb->prefix}automatiza_clients_details WHERE id = %d", (int) $ent->detalle_id));
 	$nombre = trim((string) ($c->nombre ?? ''));
+	$titulo = trim((string) preg_replace('/\s+/u', ' ', (string) ($d->title ?? '')));
 	return [
 		'nombre'   => $nombre !== '' ? trim(explode(' ', $nombre)[0]) : '',
 		'email'    => is_email((string) ($c->email ?? '')) ? (string) $c->email : '',
 		'telefono' => (string) ($c->telefono ?? ''),
 		'empresa'  => (string) ($c->empresa ?? ''),
-		'titulo'   => trim((string) ($d->title ?? '')) !== '' ? trim((string) $d->title) : 'Entregable',
+		'titulo'   => $titulo !== '' ? $titulo : 'Entregable',
 	];
 }
 
@@ -78,6 +79,10 @@ function at_en_enviar_version(int $ent_id, int $numero, bool $prueba): array {
 	if ($para === '') {
 		return ['ok' => false, 'motivo' => 'sin_correo'];
 	}
+	// Envío real: se reclama la versión de forma atómica para que dos clics no manden dos correos.
+	if (!$prueba && !at_en_reclamar_envio_correo($ent_id, $numero)) {
+		return ['ok' => false, 'motivo' => 'ya_enviada'];
+	}
 	$c = at_en_correo_version([
 		'nombre' => $cli['nombre'], 'titulo' => $cli['titulo'], 'numero' => $numero, 'url_version' => (string) $v->url,
 		'url_pagina' => at_en_url_pagina(home_url(), (string) $ent->codigo), 'mensaje' => (string) $v->mensaje,
@@ -85,10 +90,12 @@ function at_en_enviar_version(int $ent_id, int $numero, bool $prueba): array {
 	]);
 	$cab = $prueba ? ['Content-Type: text/html; charset=UTF-8', at_en_from()] : at_en_cabeceras_cliente($para);
 	if (!wp_mail($para, $c['asunto'], $c['html'], $cab)) {
+		if (!$prueba) {
+			at_en_soltar_envio_correo($ent_id, $numero);
+		}
 		return ['ok' => false, 'motivo' => 'correo_fallo'];
 	}
 	if (!$prueba) {
-		at_en_marcar_version_enviada($ent_id, $numero, 'correo');
 		at_en_historial((int) $ent->crm_id, 'entregable_version', $cli['titulo'] . ': versión ' . $numero . ' enviada por correo', 'Enlace: ' . $v->url . ' · Entregable ' . $ent_id . '.');
 	}
 	return ['ok' => true, 'motivo' => ''];

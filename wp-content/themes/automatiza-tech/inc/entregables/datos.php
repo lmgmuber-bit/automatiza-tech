@@ -200,6 +200,22 @@ function at_en_marcar_version_enviada(int $ent_id, int $numero, string $canal): 
 	return $wpdb->update(at_en_tablas()['v'], [$col => current_time('mysql')], ['entregable_id' => $ent_id, 'numero' => $numero]) !== false;
 }
 
+/** Reclama el envío por correo de una versión de forma atómica: true solo para quien la marca primero. */
+function at_en_reclamar_envio_correo(int $ent_id, int $numero): bool {
+	global $wpdb;
+	$filas = $wpdb->query($wpdb->prepare(
+		'UPDATE ' . at_en_tablas()['v'] . ' SET enviado_correo_at = %s WHERE entregable_id = %d AND numero = %d AND enviado_correo_at IS NULL',
+		current_time('mysql'), $ent_id, $numero
+	));
+	return (int) $filas === 1;
+}
+
+/** Libera el cupo reclamado (el correo no salió). */
+function at_en_soltar_envio_correo(int $ent_id, int $numero): void {
+	global $wpdb;
+	$wpdb->query($wpdb->prepare('UPDATE ' . at_en_tablas()['v'] . ' SET enviado_correo_at = NULL WHERE entregable_id = %d AND numero = %d', $ent_id, $numero));
+}
+
 /** Agrega una nota sobre la versión vigente. $imagenes: nombres internos ya guardados (0 a 3). */
 function at_en_agregar_nota(int $ent_id, string $autor, string $nombre, string $texto, array $imagenes, string $ip_hash) {
 	if (!in_array($autor, ['cliente', 'at'], true)) {

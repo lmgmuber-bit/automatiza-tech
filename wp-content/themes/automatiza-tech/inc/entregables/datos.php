@@ -257,6 +257,22 @@ function at_en_marcar_respondida(int $nota_id): void {
 	$wpdb->update(at_en_tablas()['n'], ['respondida' => 1], ['id' => $nota_id, 'autor' => 'cliente']);
 }
 
+/** Reclama la respuesta a una nota del cliente de forma atómica: true solo para quien la marca primero. */
+function at_en_reclamar_respuesta(int $nota_id): bool {
+	global $wpdb;
+	$filas = $wpdb->query($wpdb->prepare(
+		'UPDATE ' . at_en_tablas()['n'] . " SET respondida = 1 WHERE id = %d AND autor = 'cliente' AND respondida = 0",
+		$nota_id
+	));
+	return (int) $filas === 1;
+}
+
+/** Libera la reclamación (la respuesta no se pudo guardar). */
+function at_en_soltar_respuesta(int $nota_id): void {
+	global $wpdb;
+	$wpdb->query($wpdb->prepare('UPDATE ' . at_en_tablas()['n'] . " SET respondida = 0 WHERE id = %d AND autor = 'cliente'", $nota_id));
+}
+
 function at_en_marcar_aviso(int $nota_id, bool $ok): void {
 	global $wpdb;
 	$wpdb->update(at_en_tablas()['n'], ['aviso_ok' => $ok ? 1 : 0], ['id' => $nota_id]);

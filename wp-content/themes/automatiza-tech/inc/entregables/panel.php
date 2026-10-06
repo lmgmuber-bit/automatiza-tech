@@ -23,6 +23,10 @@ function at_en_mensajes_panel(): array {
 		'sin_telefono'    => ['err', 'El cliente no tiene un teléfono válido en su ficha.'],
 		'correo_fallo'    => ['err', 'No se pudo enviar el correo. Revisa el SMTP e inténtalo de nuevo.'],
 		'nota_ajena'      => ['err', 'Esa nota no es de este entregable.'],
+		'ya_respondida'   => ['err', 'Esa nota ya estaba respondida.'],
+		'respuesta_sin_aviso' => ['err', 'Respuesta guardada, pero el cliente no tiene un correo válido: avísale por WhatsApp.'],
+		'sin_entregable'  => ['err', 'El entregable ya no existe.'],
+		'sin_version'     => ['err', 'Esa versión no existe.'],
 		'error'           => ['err', 'No se pudo completar la acción.'],
 	] + array_map(function ($t) { return ['err', $t]; }, at_en_mensajes());
 }
@@ -243,9 +247,14 @@ function at_en_accion_responder(): void {
 	if (!$v['ok']) {
 		at_en_volver((int) $e->crm_id, (int) $e->id, $v['error']);
 	}
+	// Se reclama la nota antes de guardar nada: dos clics seguidos no crean dos respuestas ni dos correos.
+	if (!at_en_reclamar_respuesta((int) $nota->id)) {
+		at_en_volver((int) $e->crm_id, (int) $e->id, 'ya_respondida');
+	}
 	$archivos = at_en_archivos_subidos(isset($_FILES['imagenes']) && is_array($_FILES['imagenes']) ? $_FILES['imagenes'] : []);
 	$imagenes = $archivos ? at_en_procesar_imagenes($archivos, (int) $e->id) : [];
 	if (is_wp_error($imagenes)) {
+		at_en_soltar_respuesta((int) $nota->id);
 		at_en_volver((int) $e->crm_id, (int) $e->id, $imagenes->get_error_code() === 'muchas_imagenes' ? 'muchas_imagenes' : 'imagen');
 	}
 	$id = at_en_agregar_nota((int) $e->id, 'at', $nombre, $texto, $imagenes, '');
@@ -255,12 +264,12 @@ function at_en_accion_responder(): void {
 				@unlink(at_en_dir_imagenes((int) $e->id) . $img);
 			}
 		}
+		at_en_soltar_respuesta((int) $nota->id);
 		at_en_volver((int) $e->crm_id, (int) $e->id, $id->get_error_code());
 	}
-	at_en_marcar_respondida((int) $nota->id);
 	at_en_historial((int) $e->crm_id, 'entregable_respuesta', at_en_cliente($e)['titulo'] . ': respuesta de AT', at_en_extracto($v['texto'], 300));
-	if (!empty($_POST['avisar'])) {
-		at_en_avisar_respuesta((int) $id);
+	if (!empty($_POST['avisar']) && !at_en_avisar_respuesta((int) $id)) {
+		at_en_volver((int) $e->crm_id, (int) $e->id, 'respuesta_sin_aviso');
 	}
 	at_en_volver((int) $e->crm_id, (int) $e->id, 'respuesta_ok');
 }

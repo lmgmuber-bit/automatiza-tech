@@ -110,8 +110,8 @@ if (!empty($meeting->client_email)) {
         $meeting->client_email
     ));
     if ($cliente_row) {
-        $token = md5($cliente_row->id . 'AUTOMATIZA_CRM_V2' . $cliente_row->email);
-        $ficha_url = 'https://automatizatech.cl/?crm_view=timeline&cid=' . $cliente_row->id . '&token=' . $token;
+        $ficha_url = class_exists('AutomatizaTech_CRM_AI') && method_exists('AutomatizaTech_CRM_AI', 'url_ficha_cliente')
+            ? AutomatizaTech_CRM_AI::url_ficha_cliente($cliente_row->id, $cliente_row->email) : '';
         echo "   ✅ Ficha URL: {$ficha_url}\n";
     } else {
         echo "   ⚠️ Cliente no encontrado en tabla crm_clientes por email\n";

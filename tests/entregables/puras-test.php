@@ -1,0 +1,78 @@
+<?php
+// Correr: php tests/entregables/puras-test.php   (sin WordPress)
+require_once __DIR__ . '/../../wp-content/themes/automatiza-tech/inc/plan-trabajo/puras.php';
+require_once __DIR__ . '/../../wp-content/themes/automatiza-tech/inc/entregables/puras.php';
+$fallas = 0;
+function ok($c, $m) { global $fallas; if ($c) { echo "ok   $m\n"; } else { $fallas++; echo "FALLA $m\n"; } }
+function fin(): void { global $fallas; echo $fallas ? "\n$fallas FALLAS\n" : "\nTODO OK\n"; exit($fallas ? 1 : 0); }
+
+// Código y enlaces
+ok(at_en_codigo_valido('Ab3dE5fG7hJ9') && !at_en_codigo_valido('Ab3dE5fG7hJ') && !at_en_codigo_valido('Ab3dE5fG7hJ90') && !at_en_codigo_valido('Ab3dE5fG7h/9') && !at_en_codigo_valido(''), 'código: 12 letras o números exactos');
+ok(at_en_url_pagina('https://automatizatech.cl/', 'Ab3dE5fG7hJ9') === 'https://automatizatech.cl/ver-entregable.php?id=Ab3dE5fG7hJ9', 'enlace a la página sin barra doble');
+ok(at_en_url_pagina('', 'Ab3dE5fG7hJ9') === '' && at_en_url_pagina('https://x.cl', 'malo') === '', 'sin sitio o código raro: sin enlace');
+ok(at_en_url_imagen('https://x.cl', 'Ab3dE5fG7hJ9', 'abcdefghijklmnopqrstuvwx.jpg') === 'https://x.cl/ver-entregable.php?id=Ab3dE5fG7hJ9&img=abcdefghijklmnopqrstuvwx.jpg', 'enlace a una imagen');
+ok(at_en_url_imagen('https://x.cl', 'Ab3dE5fG7hJ9', '../wp-config.php') === '', 'imagen con ruta: sin enlace');
+
+// Token del formulario
+$sal = 'sal-de-prueba';
+$t = at_en_token('Ab3dE5fG7hJ9', 20000, $sal);
+ok((bool) preg_match('/^[a-f0-9]{24}$/', $t), 'token de 24 hexadecimales');
+ok(at_en_token_valido($t, 'Ab3dE5fG7hJ9', 20000, $sal) && at_en_token_valido($t, 'Ab3dE5fG7hJ9', 20001, $sal), 'vale el día de emisión y el siguiente');
+ok(!at_en_token_valido($t, 'Ab3dE5fG7hJ9', 20002, $sal), 'al tercer día vence');
+ok(!at_en_token_valido($t, 'Zb3dE5fG7hJ9', 20000, $sal) && !at_en_token_valido('x' . substr($t, 1), 'Ab3dE5fG7hJ9', 20000, $sal) && !at_en_token_valido('', 'Ab3dE5fG7hJ9', 20000, $sal), 'otro código, token alterado o vacío: no vale');
+
+// Nota
+$n = at_en_validar_nota('  Orly  ', "Hola\r\nme gusta la v3");
+ok($n['ok'] && $n['nombre'] === 'Orly' && $n['texto'] === "Hola\nme gusta la v3", 'nota válida: recorta el nombre y normaliza saltos');
+ok(!at_en_validar_nota('Orly', "   ")['ok'] && at_en_validar_nota('Orly', '  ')['error'] === 'nota_vacia', 'nota vacía: error nota_vacia');
+ok(at_en_validar_nota('', 'texto')['error'] === 'nombre_vacio', 'sin nombre: error nombre_vacio');
+ok(at_en_validar_nota(str_repeat('a', 81), 'texto')['error'] === 'nombre_largo', 'nombre de 81: error nombre_largo');
+$emoji = str_repeat('é', 2999) . '🙂';
+ok(at_en_validar_nota('Orly', $emoji)['ok'], '3.000 caracteres con tildes y emoji: pasa');
+ok(at_en_validar_nota('Orly', $emoji . 'x')['error'] === 'nota_larga', '3.001 caracteres: error nota_larga');
+ok(at_en_validar_nota('Orly', "a\x00b\x07c\td")['texto'] === "abc\td", 'quita caracteres de control salvo tab y salto');
+ok(at_en_validar_nota('Orly', '<script>alert(1)</script>')['texto'] === '<script>alert(1)</script>', 'se guarda tal cual (se escapa al mostrar)');
+
+// Versión
+ok(at_en_url_version_valida(' https://funerariasamordedios.cl/propuestas/ ') === 'https://funerariasamordedios.cl/propuestas/', 'URL de versión http(s) válida');
+ok(at_en_url_version_valida('https://algo.easypanel.host/p/x') === '' && at_en_url_version_valida('javascript:alert(1)') === '' && at_en_url_version_valida('ftp://x') === '' && at_en_url_version_valida('') === '', 'easypanel, javascript, ftp o vacío: inválida');
+ok(at_en_validar_mensaje(str_repeat('a', 6000))['ok'] && at_en_validar_mensaje(str_repeat('a', 6001))['error'] === 'mensaje_largo', 'mensaje hasta 6.000');
+ok(at_en_validar_mensaje('')['ok'], 'mensaje vacío permitido (la plantilla igual dice qué es)');
+
+// Imágenes (reglas puras)
+ok(at_en_nombre_imagen_valido('abcdefghijklmnopqrstuvwx.jpg') && at_en_nombre_imagen_valido('0123456789abcdefghijklmn.png'), 'nombre interno válido');
+ok(!at_en_nombre_imagen_valido('../abcdefghijklmnopqrstuvw.jpg') && !at_en_nombre_imagen_valido('abcdefghijklmnopqrstuvwx.php') && !at_en_nombre_imagen_valido('ABCDEFGHIJKLMNOPQRSTUVWX.jpg'), 'ruta, otra extensión o mayúsculas: inválido');
+$base = ['indice' => 1, 'error' => 0, 'size' => 1000, 'tipo' => 'image/jpeg', 'ancho' => 800, 'alto' => 600];
+ok(at_en_revisar_imagen($base) === '', 'JPG chico: sirve');
+ok(at_en_revisar_imagen(['tipo' => 'image/png'] + $base) === '', 'PNG: sirve');
+ok(at_en_revisar_imagen(['tipo' => 'image/gif'] + $base) === 'La imagen 1 no es JPG ni PNG.', 'GIF: no');
+ok(at_en_revisar_imagen(['tipo' => ''] + $base) === 'La imagen 1 no es JPG ni PNG.', 'sin tipo real (no es imagen): no');
+ok(at_en_revisar_imagen(['size' => 5242881, 'indice' => 2] + $base) === 'La imagen 2 pesa más de 5 MB.', 'más de 5 MB: no');
+ok(at_en_revisar_imagen(['ancho' => 12001] + $base) === 'La imagen 1 es demasiado grande (más de 12.000 px de lado).', 'lado de 12.001 px: no');
+ok(at_en_revisar_imagen(['error' => 1] + $base) === 'La imagen 1 no se pudo subir. Inténtalo de nuevo.', 'error de subida: no');
+
+// Mensaje de Luis → HTML
+$h = at_en_mensaje_html("Hola Orly:\n\nCambié dos cosas:\n- la portada\n- los colores\n\nMira https://x.cl/p?a=1&b=2 y dime.\n<script>alert(1)</script>");
+ok(strpos($h, '<p>Hola Orly:</p>') !== false, 'párrafo por bloque');
+ok(strpos($h, '<ul style="padding-left:20px;margin:0 0 14px;"><li>la portada</li><li>los colores</li></ul>') !== false, 'líneas con «- » forman lista');
+ok(strpos($h, '<a href="https://x.cl/p?a=1&amp;b=2" style="color:#1e3a8a;">https://x.cl/p?a=1&amp;b=2</a>') !== false, 'URL a enlace escapado');
+ok(strpos($h, '<script>') === false && strpos($h, '&lt;script&gt;alert(1)&lt;/script&gt;') !== false, '<script> queda como texto');
+ok(at_en_mensaje_html('') === '', 'mensaje vacío: nada');
+
+// Extracto
+ok(at_en_extracto(str_repeat('a', 500), 400) === str_repeat('a', 400) . '…' && at_en_extracto('corto') === 'corto', 'extracto de 400 con «…»');
+
+// WhatsApp
+$w = at_en_texto_whatsapp_version('Orly', 2, 'Propuestas de diseño', 'https://x.cl/ver-entregable.php?id=Ab3dE5fG7hJ9');
+ok($w === 'Hola Orly, te escribe Luis de AutomatizaTech. Te envié la versión 2 de Propuestas de diseño. Puedes verla y dejarme tus notas aquí: https://x.cl/ver-entregable.php?id=Ab3dE5fG7hJ9', 'WhatsApp de versión');
+ok(strpos(at_en_texto_whatsapp_version('', 1, 'X', 'u'), 'Hola, te escribe Luis') === 0, 'sin nombre: «Hola,»');
+ok(at_en_texto_whatsapp_respuesta('Orly', 2, 'Propuestas de diseño', 'https://x.cl/v') === 'Hola Orly, te respondí tu nota sobre la versión 2 de Propuestas de diseño: https://x.cl/v', 'WhatsApp de respuesta');
+ok(at_en_url_wa('+56 9 1111 1111', 'Hola Orly') === 'https://wa.me/56911111111?text=Hola%20Orly', 'wa.me con el teléfono del cliente');
+ok(at_en_url_wa('', 'Hola') === '', 'sin teléfono: sin enlace');
+
+// Mensajes
+$m = at_en_mensajes();
+foreach (['no_disponible', 'cerrado', 'nota_ok', 'nota_vacia', 'nota_larga', 'nombre_vacio', 'nombre_largo', 'sesion_vencida', 'muchos_intentos', 'imagen', 'muchas_imagenes', 'no_guardo'] as $k) {
+	ok(isset($m[$k]) && $m[$k] !== '', "mensaje «{$k}»");
+}
+fin();

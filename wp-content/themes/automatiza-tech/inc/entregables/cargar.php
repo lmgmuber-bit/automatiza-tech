@@ -10,3 +10,4 @@ require_once __DIR__ . '/puras.php';
 require_once __DIR__ . '/plantillas.php';
 require_once __DIR__ . '/datos.php';
 require_once __DIR__ . '/imagenes.php';
+require_once __DIR__ . '/envio.php';

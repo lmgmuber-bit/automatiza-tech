@@ -10,6 +10,8 @@ $_SERVER['HTTP_HOST'] = $_SERVER['HTTP_HOST'] ?? 'localhost:8093';
 $_SERVER['REQUEST_URI'] = $_SERVER['REQUEST_URI'] ?? '/';
 $_SERVER['REMOTE_ADDR'] = $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
 define('WP_USE_THEMES', false);
+// En CLI no hay subida HTTP real: con esta constante (solo aquí y en accion-run.php) un archivo local cuenta como subido.
+define('AT_EN_PRUEBAS', true);
 require $at_en_wp_load;
 // Las pruebas nunca salen a la red ni mandan correos reales.
 add_filter('pre_http_request', function ($pre, $args, $url) {

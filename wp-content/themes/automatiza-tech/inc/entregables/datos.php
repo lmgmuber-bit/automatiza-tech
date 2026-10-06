@@ -151,16 +151,27 @@ function at_en_activar(int $detalle_id) {
 	return new WP_Error('no_guardo', 'No se pudo activar el entregable.');
 }
 
-/** Crea la versión siguiente dentro de una transacción (dos clics no crean dos v2). Devuelve su número. */
-function at_en_crear_version(int $ent_id, string $url, string $mensaje) {
+/** Enlace y mensaje de una versión ya validados: ['url' =>, 'mensaje' =>] o WP_Error (url_invalida, mensaje_largo, mensaje_easypanel). */
+function at_en_validar_version(string $url, string $mensaje) {
 	$url = at_en_url_version_valida($url);
 	if ($url === '') {
 		return new WP_Error('url_invalida', 'El enlace de la versión debe empezar con http(s):// y no puede ser de easypanel.');
 	}
 	$m = at_en_validar_mensaje($mensaje);
 	if (!$m['ok']) {
-		return new WP_Error($m['error'], 'El mensaje es muy largo (máximo 6.000 caracteres).');
+		return new WP_Error($m['error'], at_en_mensajes()[$m['error']] ?? 'El mensaje es muy largo (máximo 6.000 caracteres).');
 	}
+	return ['url' => $url, 'mensaje' => $m['mensaje']];
+}
+
+/** Crea la versión siguiente dentro de una transacción (dos clics no crean dos v2). Devuelve su número. */
+function at_en_crear_version(int $ent_id, string $url, string $mensaje) {
+	$v = at_en_validar_version($url, $mensaje);
+	if (is_wp_error($v)) {
+		return $v;
+	}
+	$url = $v['url'];
+	$m = ['mensaje' => $v['mensaje']];
 	global $wpdb;
 	$t = at_en_tablas();
 	$wpdb->query('START TRANSACTION');
@@ -178,6 +189,44 @@ function at_en_crear_version(int $ent_id, string $url, string $mensaje) {
 	}
 	$wpdb->query('COMMIT');
 	return $n;
+}
+
+/**
+ * Corrige el enlace y el mensaje de una versión que todavía no se envió (ni por correo ni por WhatsApp).
+ * true, o WP_Error: url_invalida, mensaje_largo, mensaje_easypanel, sin_version, ya_enviada.
+ */
+function at_en_editar_version(int $ent_id, int $numero, string $url, string $mensaje) {
+	$v = at_en_validar_version($url, $mensaje);
+	if (is_wp_error($v)) {
+		return $v;
+	}
+	global $wpdb;
+	// El UPDATE solo pega si sigue sin enviar: un envío que ocurre justo ahora no se pisa.
+	$wpdb->query($wpdb->prepare(
+		'UPDATE ' . at_en_tablas()['v'] . ' SET url = %s, mensaje = %s WHERE entregable_id = %d AND numero = %d AND enviado_correo_at IS NULL AND enviado_whatsapp_at IS NULL',
+		$v['url'], $v['mensaje'], $ent_id, $numero
+	));
+	$actual = at_en_version($ent_id, $numero);
+	if (!$actual) {
+		return new WP_Error('sin_version', 'Esa versión no existe.');
+	}
+	// Si no cambió ninguna fila (mismos datos) el UPDATE no lo dice: se mira el estado real de la versión.
+	if ($actual->enviado_correo_at !== null || $actual->enviado_whatsapp_at !== null) {
+		return new WP_Error('ya_enviada', 'Esa versión ya se envió: crea una versión nueva.');
+	}
+	return true;
+}
+
+/** Versiones que el cliente puede ver: las enviadas por correo o por WhatsApp, de la más nueva a la más antigua. */
+function at_en_versiones_enviadas(int $ent_id): array {
+	global $wpdb;
+	return (array) $wpdb->get_results($wpdb->prepare('SELECT * FROM ' . at_en_tablas()['v'] . ' WHERE entregable_id = %d AND (enviado_correo_at IS NOT NULL OR enviado_whatsapp_at IS NOT NULL) ORDER BY numero DESC', $ent_id));
+}
+
+/** La versión que ve el cliente como vigente: la de mayor número ya enviada; null si todavía no se envió ninguna. */
+function at_en_version_publica(object $ent): ?object {
+	$v = at_en_versiones_enviadas((int) $ent->id);
+	return $v ? $v[0] : null;
 }
 
 function at_en_version(int $ent_id, int $numero): ?object {
@@ -216,8 +265,11 @@ function at_en_soltar_envio_correo(int $ent_id, int $numero): void {
 	$wpdb->query($wpdb->prepare('UPDATE ' . at_en_tablas()['v'] . ' SET enviado_correo_at = NULL WHERE entregable_id = %d AND numero = %d', $ent_id, $numero));
 }
 
-/** Agrega una nota sobre la versión vigente. $imagenes: nombres internos ya guardados (0 a 3). */
-function at_en_agregar_nota(int $ent_id, string $autor, string $nombre, string $texto, array $imagenes, string $ip_hash) {
+/**
+ * Agrega una nota. $imagenes: nombres internos ya guardados (0 a 3). $version_numero: la versión sobre la que va la nota
+ * (el cliente comenta la que ve; AT responde sobre la misma de la nota que contesta); 0 = la vigente.
+ */
+function at_en_agregar_nota(int $ent_id, string $autor, string $nombre, string $texto, array $imagenes, string $ip_hash, int $version_numero = 0) {
 	if (!in_array($autor, ['cliente', 'at'], true)) {
 		return new WP_Error('autor', 'Autor desconocido.');
 	}
@@ -234,7 +286,7 @@ function at_en_agregar_nota(int $ent_id, string $autor, string $nombre, string $
 	}
 	global $wpdb;
 	$ok = $wpdb->insert(at_en_tablas()['n'], [
-		'entregable_id' => $ent_id, 'version_numero' => (int) $e->version_vigente, 'autor' => $autor,
+		'entregable_id' => $ent_id, 'version_numero' => $version_numero > 0 ? $version_numero : (int) $e->version_vigente, 'autor' => $autor,
 		'nombre' => $v['nombre'], 'texto' => $v['texto'], 'imagenes' => wp_json_encode(array_values($imagenes)),
 		'respondida' => 0, 'aviso_ok' => 1, 'ip_hash' => $ip_hash !== '' ? $ip_hash : null, 'creado_at' => current_time('mysql'),
 	]);

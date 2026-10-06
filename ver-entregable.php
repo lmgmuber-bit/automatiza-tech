@@ -9,6 +9,7 @@ if (!defined('DONOTCACHEPAGE')) {
 }
 nocache_headers();
 header('X-Robots-Tag: noindex, nofollow');
+header('Referrer-Policy: no-referrer');
 if (!function_exists('at_en_html_pagina')) {
 	status_header(503);
 	exit('Entregable no disponible por ahora.');
@@ -17,9 +18,10 @@ $ent = at_en_por_codigo((string) $codigo);
 if ($ent && isset($_GET['img']) && is_string($_GET['img'])) {
 	at_en_servir_imagen($ent, (string) wp_unslash($_GET['img']));
 }
-if (!$ent || (int) $ent->version_vigente < 1) {
+if (!$ent || !at_en_version_publica($ent)) { // el cliente solo ve entregables con una versión ya enviada
 	status_header(404);
 	$ent = null;
 }
 $msg = isset($_GET['en_msg']) && is_string($_GET['en_msg']) ? sanitize_key(wp_unslash($_GET['en_msg'])) : '';
-echo at_en_html_pagina($ent, $msg);
+$img = isset($_GET['en_img']) && is_string($_GET['en_img']) ? (int) $_GET['en_img'] : 0;
+echo at_en_html_pagina($ent, $msg, $img);

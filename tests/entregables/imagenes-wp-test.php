@@ -5,7 +5,6 @@ require __DIR__ . '/fixtures.php';
 exigir('at_en_procesar_imagenes', 'at_en_archivos_subidos', 'at_en_ruta_imagen', 'at_en_borrar_imagenes');
 $marca = 'en' . substr(md5(uniqid('', true)), 0, 8);
 register_shutdown_function(function () use ($marca) { en_fx_limpiar($marca); });
-add_filter('at_en_es_subida', '__return_true'); // en CLI no hay subida HTTP real
 $fx = en_fx_cliente($marca);
 $id = at_en_activar($fx['detalle']);
 at_en_crear_version($id, 'https://example.com/v1', '');
@@ -76,13 +75,14 @@ file_put_contents("$tmp/malo.jpg", "<?php echo 'x'; ?>");
 $antes = count(glob(at_en_dir_imagenes($id) . '*'));
 $m = at_en_procesar_imagenes([en_archivo("$tmp/foto.jpg", 'foto.jpg'), en_archivo("$tmp/malo.jpg", 'malo.jpg')], $id);
 ok(is_wp_error($m) && $m->get_error_message() === 'La imagen 2 no es JPG ni PNG.', 'PHP como .jpg: «La imagen 2 no es JPG ni PNG.»');
+ok($m->get_error_code() === 'img_tipo' && ($m->get_error_data()['n'] ?? 0) === 2, 'el error lleva la clave img_tipo y el número de la imagen (2)');
 ok(count(glob(at_en_dir_imagenes($id) . '*')) === $antes, 'si una falla, no queda ninguna guardada');
 
 // Imagen que se puede medir pero no decodificar (cortada): error limpio y sin restos
 file_put_contents("$tmp/cortada.jpg", substr((string) file_get_contents("$tmp/foto.jpg"), 0, 400));
 $antes2 = count(glob(at_en_dir_imagenes($id) . '*'));
 $c = at_en_procesar_imagenes([en_archivo("$tmp/fuente.jpg", 'f.jpg'), en_archivo("$tmp/cortada.jpg", 'c.jpg')], $id);
-ok(is_wp_error($c) && $c->get_error_message() === 'La imagen 2 no se pudo procesar. Prueba con otra.', 'imagen ilegible: «no se pudo procesar»');
+ok(is_wp_error($c) && $c->get_error_message() === 'La imagen 2 no se pudo procesar. Prueba con otra.' && $c->get_error_code() === 'img_proceso' && ($c->get_error_data()['n'] ?? 0) === 2, 'imagen ilegible: «no se pudo procesar» (img_proceso, imagen 2)');
 ok(count(glob(at_en_dir_imagenes($id) . '*')) === $antes2, 'imagen ilegible: no queda ninguna guardada (ni la buena ni a medias)');
 
 // Más de 3
@@ -90,16 +90,19 @@ $cuatro = array_fill(0, 4, en_archivo("$tmp/foto.jpg", 'f.jpg'));
 ok(is_wp_error(at_en_procesar_imagenes($cuatro, $id)) && at_en_procesar_imagenes($cuatro, $id)->get_error_code() === 'muchas_imagenes', 'más de 3: rechazado');
 
 // Más de 5 MB (se informa el size; no hace falta un archivo real de 5 MB)
-ok(is_wp_error(at_en_procesar_imagenes([['size' => 5242881] + en_archivo("$tmp/foto.jpg", 'f.jpg')], $id)), 'más de 5 MB: rechazado');
+$pe = at_en_procesar_imagenes([['size' => 5242881] + en_archivo("$tmp/foto.jpg", 'f.jpg')], $id);
+ok(is_wp_error($pe) && $pe->get_error_code() === 'img_peso' && ($pe->get_error_data()['n'] ?? 0) === 1, 'más de 5 MB: img_peso, imagen 1');
 
 // Lado de 12.001 px
 en_png("$tmp/ancha.png", 12001, 1);
-ok(is_wp_error(at_en_procesar_imagenes([['type' => 'image/png'] + en_archivo("$tmp/ancha.png", 'a.png')], $id)), '12.001 px de lado: rechazado');
+$pl = at_en_procesar_imagenes([['type' => 'image/png'] + en_archivo("$tmp/ancha.png", 'a.png')], $id);
+ok(is_wp_error($pl) && $pl->get_error_code() === 'img_lado', '12.001 px de lado: img_lado');
 
-// Subida que no es HTTP real
-remove_filter('at_en_es_subida', '__return_true');
-ok(is_wp_error(at_en_procesar_imagenes([en_archivo("$tmp/foto.jpg", 'foto.jpg')], $id)), 'sin is_uploaded_file: rechazado');
-add_filter('at_en_es_subida', '__return_true');
+// Subida que no es real: con la constante de pruebas cuenta un archivo local, pero una ruta que no existe nunca
+$ps = at_en_procesar_imagenes([['tmp_name' => "$tmp/no-existe.jpg"] + en_archivo("$tmp/foto.jpg", 'foto.jpg')], $id);
+ok(is_wp_error($ps) && $ps->get_error_code() === 'img_subida', 'ruta que no es un archivo subido: img_subida');
+// (El caso «un archivo local que NO viene de una subida HTTP» sin la constante de pruebas se prueba en vista-wp-test.php con EN_SIN_PRUEBAS.)
+ok(defined('AT_EN_PRUEBAS') && AT_EN_PRUEBAS === true && !has_filter('at_en_es_subida'), 'ya no hay filtro at_en_es_subida: solo la constante de pruebas');
 
 // Pertenencia
 $e = at_en_por_id($id);

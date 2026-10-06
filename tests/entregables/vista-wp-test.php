@@ -20,6 +20,8 @@ ok(strpos(at_en_html_pagina(null), 'noindex') !== false, 'noindex en la página'
 // Con versión
 at_en_crear_version($id, 'https://example.com/v1', 'Primera');
 at_en_crear_version($id, 'https://example.com/v2', 'Segunda');
+at_en_marcar_version_enviada($id, 1, 'correo'); // el cliente solo ve versiones ya enviadas
+at_en_marcar_version_enviada($id, 2, 'whatsapp');
 $e = at_en_por_id($id);
 $h = at_en_html_pagina($e);
 ok(strpos($h, 'Propuestas ' . $marca) !== false && strpos($h, 'Empresa ' . $marca) !== false, 'título y empresa');
@@ -56,10 +58,33 @@ ok(en_query(en_correr('at_en_nota', 0, '-', ['texto' => ''] + $base)['redirect']
 file_put_contents($tmp . '.jpg', '<?php echo 1;');
 $malo = ['imagenes' => ['name' => ['x.jpg'], 'type' => ['image/jpeg'], 'tmp_name' => [$tmp . '.jpg'], 'error' => [0], 'size' => [12]]];
 $rm = en_correr('at_en_nota', 0, '-', $base, $malo);
-ok(en_query($rm['redirect'])['en_msg'] === 'imagen' && count(at_en_notas($id)) === 2, 'imagen falsa: no se guarda la nota');
-ok(strpos(at_en_html_pagina(at_en_por_id($id), 'imagen'), 'Una de las imágenes no sirve.') !== false, 'mensaje de imagen en la página');
+$qm = en_query($rm['redirect']);
+ok(($qm['en_msg'] ?? '') === 'img_tipo' && ($qm['en_img'] ?? '') === '1' && count(at_en_notas($id)) === 2, 'imagen falsa: img_tipo en la imagen 1 y no se guarda la nota');
+ok(strpos(at_en_html_pagina(at_en_por_id($id), 'imagen'), 'Una de las imágenes no sirve.') !== false, 'mensaje genérico de imagen en la página');
+ok(strpos(at_en_html_pagina(at_en_por_id($id), 'img_tipo', 1), 'La imagen 1 no es JPG ni PNG.') !== false, 'la página dice la razón concreta de la imagen');
+// Una buena y una falsa: el error apunta a la segunda y no se guarda ni la nota ni la imagen buena
+$antes_img = count((array) glob(at_en_dir_imagenes($id) . '*'));
+$dos = ['imagenes' => ['name' => ['a.png', 'x.jpg'], 'type' => ['image/png', 'image/jpeg'], 'tmp_name' => [$tmp, $tmp . '.jpg'], 'error' => [0, 0], 'size' => [filesize($tmp), 12]]];
+$q2 = en_query(en_correr('at_en_nota', 0, '-', $base, $dos)['redirect']);
+ok(($q2['en_msg'] ?? '') === 'img_tipo' && ($q2['en_img'] ?? '') === '2' && count(at_en_notas($id)) === 2 && count((array) glob(at_en_dir_imagenes($id) . '*')) === $antes_img, 'buena + falsa: img_tipo en la imagen 2 y no queda nada guardado');
+$hx = at_en_html_pagina(at_en_por_id($id), $q2['en_msg'], (int) $q2['en_img']);
+ok(strpos($hx, 'La imagen 2 no es JPG ni PNG.') !== false, 'la página muestra «La imagen 2 no es JPG ni PNG.»');
+ok(strpos(at_en_html_pagina(at_en_por_id($id), 'img_tipo', 7), 'La imagen 1 no es JPG ni PNG.') !== false && strpos(at_en_html_pagina(at_en_por_id($id), 'img_peso', 2), 'La imagen 2 pesa más de 5 MB.') !== false, 'el número se formatea y un número raro cae en 1');
+// Cuatro imágenes: muchas_imagenes
+$cuatro = ['imagenes' => ['name' => array_fill(0, 4, 'a.png'), 'type' => array_fill(0, 4, 'image/png'), 'tmp_name' => array_fill(0, 4, $tmp), 'error' => array_fill(0, 4, 0), 'size' => array_fill(0, 4, filesize($tmp))]];
+ok((en_query(en_correr('at_en_nota', 0, '-', $base, $cuatro)['redirect'])['en_msg'] ?? '') === 'muchas_imagenes', 'cuatro imágenes: muchas_imagenes');
+// Sin la constante de pruebas rige is_uploaded_file(): un archivo local que no viene de una subida HTTP se rechaza
+$qs = en_query(en_correr('at_en_nota', 0, '-', $base, ['imagenes' => ['name' => ['a.png'], 'type' => ['image/png'], 'tmp_name' => [$tmp], 'error' => [0], 'size' => [filesize($tmp)]]], ['EN_SIN_PRUEBAS' => '1'])['redirect']);
+ok(($qs['en_msg'] ?? '') === 'img_subida' && ($qs['en_img'] ?? '') === '1' && count(at_en_notas($id)) === 2, 'sin AT_EN_PRUEBAS: un archivo local no cuenta como subido (img_subida) y no se guarda la nota');
 $qx = en_query(en_correr('at_en_nota', 0, '-', ['codigo' => 'NoExiste1234'] + $base)['redirect']);
 ok(($qx['en_msg'] ?? '') === 'no_disponible', 'código inexistente');
+
+// Formulario: mejora con JavaScript, pero el formulario del servidor sigue completo
+$hf = at_en_html_pagina(at_en_por_id($id));
+ok(strpos($hf, '<script>') !== false && strpos($hf, 'sessionStorage') !== false && strpos($hf, 'at_en_borrador_') !== false && strpos($hf, (string) AT_EN_MAX_BYTES) !== false && strpos($hf, 'data-m-peso="La imagen %d pesa más de 5 MB."') !== false && strpos($hf, 'id="en-error"') !== false, 'el formulario trae el script (tope de 5 MB, borrador del navegador y caja de error)');
+ok(strpos($hf, 'enctype="multipart/form-data"') !== false && strpos($hf, 'name="nombre"') !== false && strpos($hf, 'name="texto"') !== false && strpos($hf, 'name="imagenes[]"') !== false && strpos($hf, 'type="submit"') !== false && strpos($hf, ' data-ok="1"') === false, 'sin JavaScript el formulario funciona igual (campos y envío del servidor)');
+ok(strpos(at_en_html_pagina(at_en_por_id($id), 'nota_ok'), 'data-ok="1"') !== false, 'tras nota_ok el formulario manda borrar el borrador');
+ok(strpos($hf, '<script src=') === false, 'el script es propio, sin librerías externas');
 
 // POST que superó post_max_size: PHP vacía $_POST y $_FILES; el código viaja en la URL de la acción
 $rg = en_correr('at_en_nota', 0, '-', [], [], ['EN_CONTENT_LENGTH' => '99999999', 'EN_GET_CODIGO' => $cod]);

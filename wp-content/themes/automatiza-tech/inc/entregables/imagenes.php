@@ -68,6 +68,11 @@ function at_en_abrir_editor_gd(string $ruta) {
 	}
 }
 
+/** Error de una imagen: el código es una clave de at_en_mensajes() y el dato lleva el número de la imagen (1..3). */
+function at_en_error_imagen(string $clave, int $n): WP_Error {
+	return new WP_Error($clave, at_en_formatear_mensaje(at_en_mensajes()[$clave], $n), ['n' => $n]);
+}
+
 /** Valida y guarda 0 a 3 imágenes; devuelve sus nombres internos o WP_Error (sin dejar archivos a medias). */
 function at_en_procesar_imagenes(array $archivos, int $ent_id) {
 	if (count($archivos) > AT_EN_MAX_IMAGENES) {
@@ -77,7 +82,8 @@ function at_en_procesar_imagenes(array $archivos, int $ent_id) {
 	foreach (array_values($archivos) as $i => $a) {
 		$tmp = (string) ($a['tmp_name'] ?? '');
 		// Lo primero: que sea una subida HTTP real. Si no, no se toca la ruta (ni se mide).
-		$es_subida = $tmp !== '' && (bool) apply_filters('at_en_es_subida', is_uploaded_file($tmp), $tmp);
+		// AT_EN_PRUEBAS solo se define en tests/entregables (no hay subida HTTP en CLI); en PROD no existe.
+		$es_subida = $tmp !== '' && (is_uploaded_file($tmp) || (defined('AT_EN_PRUEBAS') && AT_EN_PRUEBAS === true && is_file($tmp)));
 		$medida = ['tipo' => '', 'ancho' => 0, 'alto' => 0];
 		$size = (int) ($a['size'] ?? 0);
 		if ($es_subida && is_file($tmp)) {
@@ -85,13 +91,13 @@ function at_en_procesar_imagenes(array $archivos, int $ent_id) {
 			$size = max($size, (int) @filesize($tmp)); // no se confía solo en el tamaño informado
 		}
 		$error = $es_subida ? (int) ($a['error'] ?? 0) : UPLOAD_ERR_CANT_WRITE;
-		$m = at_en_revisar_imagen(['indice' => $i + 1, 'error' => $error, 'size' => $size] + $medida);
-		if ($m !== '') {
-			return new WP_Error('imagen', $m);
+		$clave = at_en_clave_error_imagen(['indice' => $i + 1, 'error' => $error, 'size' => $size] + $medida);
+		if ($clave !== '') {
+			return at_en_error_imagen($clave, $i + 1);
 		}
 		$ft = wp_check_filetype_and_ext($tmp, (string) ($a['name'] ?? ''), ['jpg|jpeg' => 'image/jpeg', 'png' => 'image/png']);
 		if ($ft['type'] && !in_array($ft['type'], ['image/jpeg', 'image/png'], true)) {
-			return new WP_Error('imagen', 'La imagen ' . ($i + 1) . ' no es JPG ni PNG.');
+			return at_en_error_imagen('img_tipo', $i + 1);
 		}
 	}
 	$dir = at_en_dir_imagenes($ent_id);
@@ -121,7 +127,7 @@ function at_en_procesar_imagenes(array $archivos, int $ent_id) {
 			foreach ($guardadas as $g) {
 				@unlink($dir . $g);
 			}
-			return new WP_Error('imagen', 'La imagen ' . ($i + 1) . ' no se pudo procesar. Prueba con otra.');
+			return at_en_error_imagen('img_proceso', $i + 1);
 		}
 		$guardadas[] = $nombre;
 	}

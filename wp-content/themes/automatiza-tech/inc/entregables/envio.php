@@ -11,13 +11,16 @@ function at_en_logo(): string {
 }
 
 /** Pestaña «Entregables» de la ficha del cliente en el CRM. */
-function at_en_url_ficha(int $crm_id, int $ent_id = 0, string $msg = ''): string {
+function at_en_url_ficha(int $crm_id, int $ent_id = 0, string $msg = '', int $n_img = 0): string {
 	$args = ['page' => 'automatiza-crm-ficha', 'id' => $crm_id];
 	if ($ent_id > 0) {
 		$args['en'] = $ent_id;
 	}
 	if ($msg !== '') {
 		$args['en_msg'] = $msg;
+	}
+	if ($n_img > 0) {
+		$args['en_img'] = $n_img;
 	}
 	return add_query_arg($args, admin_url('admin.php')) . '#tab-entregables';
 }
@@ -61,6 +64,45 @@ function at_en_cabeceras_cliente(string $para): array {
 	return $h;
 }
 
+/** Clave del motivo de la última falla de envío de quien está en el panel (cada usuario ve solo el suyo). */
+function at_en_clave_motivo_fallo(int $ent_id): string {
+	return 'at_en_fallo_' . get_current_user_id() . '_' . $ent_id;
+}
+
+/** Guarda 60 s el motivo de una falla de envío para mostrarlo en el panel tras la redirección. */
+function at_en_guardar_motivo_fallo(int $ent_id, string $motivo): void {
+	$motivo = trim((string) preg_replace('/\s+/u', ' ', wp_strip_all_tags($motivo)));
+	if ($motivo === '') {
+		delete_transient(at_en_clave_motivo_fallo($ent_id));
+		return;
+	}
+	set_transient(at_en_clave_motivo_fallo($ent_id), mb_substr($motivo, 0, 300, 'UTF-8'), MINUTE_IN_SECONDS);
+}
+
+/** Motivo guardado de la última falla de envío ('' si no hay o ya pasó un minuto). Se escapa al mostrar. */
+function at_en_motivo_fallo(int $ent_id): string {
+	$m = get_transient(at_en_clave_motivo_fallo($ent_id));
+	return is_string($m) ? $m : '';
+}
+
+/** wp_mail que, si falla, deja guardado el motivo que informó wp_mail_failed (SMTP, autenticación…). */
+function at_en_enviar_correo(int $ent_id, string $para, string $asunto, string $html, array $cab): bool {
+	$motivo = '';
+	$captura = function ($err) use (&$motivo) {
+		if (is_wp_error($err)) {
+			$motivo = (string) $err->get_error_message();
+		}
+	};
+	add_action('wp_mail_failed', $captura);
+	try {
+		$ok = (bool) wp_mail($para, $asunto, $html, $cab);
+	} finally {
+		remove_action('wp_mail_failed', $captura);
+	}
+	at_en_guardar_motivo_fallo($ent_id, $ok ? '' : $motivo);
+	return $ok;
+}
+
 /** Envía la versión N al cliente (o a Luis si $prueba). Una versión ya enviada por correo no se reenvía. */
 function at_en_enviar_version(int $ent_id, int $numero, bool $prueba): array {
 	$ent = at_en_por_id($ent_id);
@@ -89,7 +131,7 @@ function at_en_enviar_version(int $ent_id, int $numero, bool $prueba): array {
 		'logo' => at_en_logo(), 'prueba' => $prueba,
 	]);
 	$cab = $prueba ? ['Content-Type: text/html; charset=UTF-8', at_en_from()] : at_en_cabeceras_cliente($para);
-	if (!wp_mail($para, $c['asunto'], $c['html'], $cab)) {
+	if (!at_en_enviar_correo($ent_id, $para, $c['asunto'], $c['html'], $cab)) {
 		if (!$prueba) {
 			at_en_soltar_envio_correo($ent_id, $numero);
 		}
@@ -130,13 +172,14 @@ function at_en_avisar_respuesta(int $nota_id): bool {
 	}
 	$cli = at_en_cliente($ent);
 	if ($cli['email'] === '') {
+		at_en_guardar_motivo_fallo((int) $ent->id, ''); // sin correo no hay falla de envío que explicar
 		return false;
 	}
 	$c = at_en_correo_respuesta([
 		'nombre' => $cli['nombre'], 'titulo' => $cli['titulo'], 'numero' => (int) $n->version_numero, 'texto' => (string) $n->texto,
 		'url_pagina' => at_en_url_pagina(home_url(), (string) $ent->codigo), 'logo' => at_en_logo(),
 	]);
-	return (bool) wp_mail($cli['email'], $c['asunto'], $c['html'], at_en_cabeceras_cliente($cli['email']));
+	return at_en_enviar_correo((int) $ent->id, $cli['email'], $c['asunto'], $c['html'], at_en_cabeceras_cliente($cli['email']));
 }
 
 function at_en_texto_wa_version(object $ent, int $numero): string {

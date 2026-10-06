@@ -83,38 +83,62 @@ function at_en_validar_mensaje(string $m): array {
 	if (mb_strlen($m, 'UTF-8') > AT_EN_MAX_MENSAJE) {
 		return ['ok' => false, 'error' => 'mensaje_largo', 'mensaje' => $m];
 	}
+	// Hostinger rechaza los correos con enlaces a easypanel: tampoco se aceptan dentro del mensaje de Luis.
+	if (stripos($m, 'easypanel') !== false) {
+		return ['ok' => false, 'error' => 'mensaje_easypanel', 'mensaje' => $m];
+	}
 	return ['ok' => true, 'error' => '', 'mensaje' => $m];
 }
 
 /**
- * Revisa una imagen subida con datos ya medidos: indice (1..3), error (UPLOAD_ERR_*), size (bytes), tipo (MIME real del
- * contenido, '' si no es imagen), ancho y alto. '' si sirve; si no, el mensaje para el cliente.
+ * Clave del primer problema de una imagen subida con datos ya medidos: indice (1..3), error (UPLOAD_ERR_*), size (bytes),
+ * tipo (MIME real del contenido, '' si no es imagen), ancho y alto. '' si sirve. Las claves están en at_en_mensajes().
  */
-function at_en_revisar_imagen(array $i): string {
-	$n = (int) ($i['indice'] ?? 1);
+function at_en_clave_error_imagen(array $i): string {
 	if ((int) ($i['error'] ?? 0) !== 0) {
-		return "La imagen {$n} no se pudo subir. Inténtalo de nuevo.";
+		return 'img_subida';
 	}
 	if (!in_array((string) ($i['tipo'] ?? ''), ['image/jpeg', 'image/png'], true)) {
-		return "La imagen {$n} no es JPG ni PNG.";
+		return 'img_tipo';
 	}
 	if ((int) ($i['size'] ?? 0) > AT_EN_MAX_BYTES) {
-		return "La imagen {$n} pesa más de 5 MB.";
+		return 'img_peso';
 	}
 	$ancho = (int) ($i['ancho'] ?? 0);
 	$alto = (int) ($i['alto'] ?? 0);
 	if ($ancho < 1 || $alto < 1) { // getimagesize no pudo leerla
-		return "La imagen {$n} no es JPG ni PNG.";
+		return 'img_tipo';
 	}
 	if ($ancho > AT_EN_MAX_LADO_ENTRADA || $alto > AT_EN_MAX_LADO_ENTRADA) {
-		return "La imagen {$n} es demasiado grande (más de 12.000 px de lado).";
+		return 'img_lado';
 	}
 	if ($ancho * $alto > AT_EN_MAX_PIXELES) {
-		return "La imagen {$n} es demasiado grande (más de 25 megapíxeles).";
+		return 'img_mp';
 	}
 	return '';
 }
 
+/** Texto de un mensaje que lleva «%d» (el número de la imagen, 1..3; sin número válido, 1). Sin «%d» queda tal cual. */
+function at_en_formatear_mensaje(string $texto, int $n): string {
+	return strpos($texto, '%d') === false ? $texto : sprintf($texto, ($n >= 1 && $n <= AT_EN_MAX_IMAGENES) ? $n : 1);
+}
+
+/** '' si la imagen sirve; si no, el mensaje para el cliente («La imagen 2 no es JPG ni PNG.»). */
+function at_en_revisar_imagen(array $i): string {
+	$clave = at_en_clave_error_imagen($i);
+	return $clave === '' ? '' : at_en_formatear_mensaje(at_en_mensajes()[$clave], (int) ($i['indice'] ?? 1));
+}
+
+/** Lo único que viaja en la redirección por una imagen mala: [clave de la lista blanca, número 1..3 o 0]. */
+function at_en_redireccion_error_imagen(string $codigo, int $n): array {
+	if ($codigo === 'muchas_imagenes') {
+		return ['muchas_imagenes', 0];
+	}
+	if (strpos($codigo, 'img_') === 0 && isset(at_en_mensajes()[$codigo]) && $n >= 1 && $n <= AT_EN_MAX_IMAGENES) {
+		return [$codigo, $n];
+	}
+	return ['imagen', 0];
+}
 /** Escapa y convierte las URL en enlaces. */
 function at_en_enlazar(string $t): string {
 	$e = htmlspecialchars($t, ENT_QUOTES, 'UTF-8');
@@ -191,8 +215,15 @@ function at_en_mensajes(): array {
 		'sesion_vencida'  => 'La página quedó abierta mucho rato. Recárgala y vuelve a enviar tu nota.',
 		'muchos_intentos' => 'Enviaste muchas notas seguidas. Espera un rato o escríbenos por WhatsApp.',
 		'imagen'          => 'Una de las imágenes no sirve.',
+		'img_tipo'         => 'La imagen %d no es JPG ni PNG.',
+		'img_peso'         => 'La imagen %d pesa más de 5 MB.',
+		'img_lado'         => 'La imagen %d es demasiado grande (más de 12.000 px de lado).',
+		'img_mp'           => 'La imagen %d es demasiado grande (más de 25 megapíxeles).',
+		'img_subida'       => 'La imagen %d no se pudo subir. Inténtalo de nuevo.',
+		'img_proceso'      => 'La imagen %d no se pudo procesar. Prueba con otra.',
 		'muchas_imagenes' => 'Puedes adjuntar hasta 3 imágenes por nota.',
 		'no_guardo'       => 'No pudimos guardar tu nota. Inténtalo de nuevo o escríbenos por WhatsApp.',
 		'envio_grande'    => 'Las imágenes pesan demasiado en total. Envía menos imágenes o más livianas.',
+		'mensaje_easypanel' => 'El mensaje tiene un enlace de easypanel: Hostinger rechaza esos correos. Usa el enlace de automatizatech.cl (ver-presentacion.php).',
 	];
 }

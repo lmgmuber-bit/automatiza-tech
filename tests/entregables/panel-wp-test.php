@@ -31,6 +31,12 @@ $r = en_correr('at_en_version_crear', $admin, 'at_en_' . $id, ['entregable_id' =
 ok(en_query($r['redirect'])['en_msg'] === 'version_creada' && (int) at_en_por_id($id)->version_vigente === 1, 'versión 1 creada');
 $r = en_correr('at_en_version_crear', $admin, 'at_en_' . $id, ['entregable_id' => $id, 'url' => 'https://x.easypanel.host/', 'mensaje' => '']);
 ok(en_query($r['redirect'])['en_msg'] === 'url_invalida', 'URL easypanel: url_invalida');
+$nver = count(at_en_versiones($id));
+$r = en_correr('at_en_version_crear', $admin, 'at_en_' . $id, ['entregable_id' => $id, 'url' => 'https://example.com/v9', 'mensaje' => 'Míralo en https://algo.EasyPanel.host/x']);
+ok(en_query($r['redirect'])['en_msg'] === 'mensaje_easypanel' && count(at_en_versiones($id)) === $nver, 'easypanel en el mensaje: mensaje_easypanel y no se crea la versión');
+$_GET['en_msg'] = 'mensaje_easypanel';
+ok(strpos($pestana(), 'El mensaje tiene un enlace de easypanel: Hostinger rechaza esos correos. Usa el enlace de automatizatech.cl (ver-presentacion.php).') !== false, 'la pestaña explica el problema del enlace de easypanel');
+unset($_GET['en_msg']);
 $html = $pestana();
 ok(strpos($html, 'srcdoc=') !== false && strpos($html, 'Enviarme una prueba') !== false && strpos($html, 'Enviar al cliente por correo') !== false && strpos($html, 'Enviar por mi WhatsApp') !== false, 'vista previa y botones de envío');
 ok(strpos($html, esc_html(at_en_texto_wa_version(at_en_por_id($id), 1))) !== false, 'texto de WhatsApp para copiar');
@@ -103,6 +109,20 @@ $imgs = json_decode((string) $ultima->imagenes, true);
 ok(en_query($r['redirect'])['en_msg'] === 'respuesta_ok' && count($imgs) === 1 && is_file(at_en_dir_imagenes($id) . $imgs[0]), 'respuesta con imagen guardada');
 ok(strpos($pestana(), esc_url(at_en_url_imagen(home_url(), (string) at_en_por_id($id)->codigo, $imgs[0]))) !== false, 'la miniatura sale en la línea de tiempo');
 @unlink($tmp);
+// Respuesta con una imagen falsa: el error dice cuál y la respuesta no queda guardada ni marcada
+file_put_contents($tmp . '.jpg', '<?php echo 1;');
+$n9 = at_en_agregar_nota($id, 'cliente', 'Cliente', 'Respuesta con foto mala', [], '');
+$antes9 = count(at_en_notas($id));
+$files9 = ['imagenes' => ['name' => ['x.jpg'], 'type' => ['image/jpeg'], 'tmp_name' => [$tmp . '.jpg'], 'error' => [0], 'size' => [12]]];
+$r = en_correr('at_en_responder', $admin, 'at_en_' . $id, ['entregable_id' => $id, 'nota_id' => $n9, 'texto' => 'Con imagen mala'], $files9);
+$q9 = en_query($r['redirect']);
+ok(($q9['en_msg'] ?? '') === 'img_tipo' && ($q9['en_img'] ?? '') === '1' && count(at_en_notas($id)) === $antes9 && (int) at_en_nota($n9)->respondida === 0, 'respuesta con imagen falsa: img_tipo en la imagen 1 y la nota sigue pendiente');
+$_GET['en_msg'] = 'img_tipo';
+$_GET['en_img'] = '1';
+ok(strpos($pestana(), 'La imagen 1 no es JPG ni PNG.') !== false, 'la pestaña muestra «La imagen 1 no es JPG ni PNG.»');
+unset($_GET['en_msg'], $_GET['en_img']);
+at_en_marcar_respondida($n9);
+@unlink($tmp . '.jpg');
 
 // Ronda de correcciones: mensajes de envío, respuesta sin duplicados, aviso sin correo
 $r = en_correr('at_en_version_enviar', $admin, 'at_en_' . $id, ['entregable_id' => $id, 'numero' => 99]);
@@ -132,4 +152,38 @@ at_en_marcar_respondida($n8);
 ok(at_en_reclamar_respuesta($n8) === false, 'reclamar una nota ya respondida: false');
 at_en_soltar_respuesta($n8);
 ok(at_en_reclamar_respuesta($n8) === true && at_en_reclamar_respuesta($n8) === false, 'soltar la reclamación permite reclamar una sola vez');
+
+// Texto del aviso sin correo y motivo real de una falla de envío
+$_GET['en_msg'] = 'respuesta_sin_aviso';
+$ps = $pestana();
+ok(strpos($ps, 'Respuesta guardada, pero no se pudo avisar al cliente por correo (sin correo válido o falla del envío): avísale por WhatsApp.') !== false, 'respuesta_sin_aviso: texto que cubre sin correo y falla del envío');
+unset($_GET['en_msg']);
+// wp_mail falla (con wp_mail_failed): el motivo se guarda 60 s y se ve, escapado, junto al aviso
+$n10 = at_en_agregar_nota($id, 'cliente', 'Cliente', 'Aviso que falla', [], '');
+$r = en_correr('at_en_responder', $admin, 'at_en_' . $id, ['entregable_id' => $id, 'nota_id' => $n10, 'texto' => 'Respuesta con aviso roto', 'avisar' => '1'], [], ['EN_MAIL_FALLA' => '1']);
+ok(en_query($r['redirect'])['en_msg'] === 'respuesta_sin_aviso', 'el aviso al cliente falla: respuesta_sin_aviso');
+wp_set_current_user($admin);
+ok(at_en_motivo_fallo($id) === 'SMTP simulado: no se pudo autenticar x', 'el motivo de wp_mail_failed quedó guardado (sin etiquetas)');
+$_GET['en_msg'] = 'respuesta_sin_aviso';
+$_GET['en'] = $id;
+ok(strpos($pestana(), 'Motivo: SMTP simulado: no se pudo autenticar x') !== false, 'la pestaña muestra el motivo guardado');
+// Correo de la versión que falla: correo_fallo + motivo
+$vn = at_en_crear_version($id, 'https://example.com/vf', '');
+delete_transient('at_en_fallo_' . $admin . '_' . $id);
+$r = en_correr('at_en_version_enviar', $admin, 'at_en_' . $id, ['entregable_id' => $id, 'numero' => $vn], [], ['EN_MAIL_FALLA' => '1']);
+ok(en_query($r['redirect'])['en_msg'] === 'correo_fallo' && at_en_version($id, $vn)->enviado_correo_at === null && at_en_motivo_fallo($id) !== '', 'enviar la versión con el SMTP caído: correo_fallo, no se marca y queda el motivo');
+delete_transient('at_en_fallo_' . $admin . '_' . $id);
+ok(at_en_motivo_fallo($id) === '', 'sin motivo guardado: vacío');
+at_en_guardar_motivo_fallo($id, '<script>alert(1)</script> falla');
+$_GET['en_msg'] = 'correo_fallo';
+$pf = $pestana();
+ok(strpos($pf, '<script>alert(1)</script>') === false && strpos($pf, 'Motivo: falla') !== false, 'el motivo se muestra como texto, sin etiquetas ni scripts');
+unset($_GET['en_msg'], $_GET['en']);
+delete_transient('at_en_fallo_' . $admin . '_' . $id);
+// El motivo es de quien envió: otro usuario no lo ve
+at_en_guardar_motivo_fallo($id, 'solo para quien envió');
+wp_set_current_user((int) $sin_permiso);
+ok(at_en_motivo_fallo($id) === '', 'el motivo no lo ve otro usuario');
+wp_set_current_user($admin);
+delete_transient('at_en_fallo_' . $admin . '_' . $id);
 fin();

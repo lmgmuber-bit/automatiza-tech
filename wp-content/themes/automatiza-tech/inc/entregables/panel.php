@@ -288,3 +288,12 @@ add_action('admin_post_at_en_version_enviar', 'at_en_accion_version_enviar');
 add_action('admin_post_at_en_version_whatsapp', 'at_en_accion_version_whatsapp');
 add_action('admin_post_at_en_responder', 'at_en_accion_responder');
 add_action('admin_post_at_en_estado', 'at_en_accion_estado');
+
+/** La ficha del CRM solo abre por hash la pestaña del plan; esta abre la de Entregables (#tab-entregables) al volver de una acción. */
+function at_en_abrir_pestana_por_hash(): void {
+	if (sanitize_key(wp_unslash($_GET['page'] ?? '')) !== 'automatiza-crm-ficha' || !current_user_can('manage_options')) {
+		return;
+	}
+	echo '<script>document.addEventListener("DOMContentLoaded",function(){if(window.location.hash!=="#tab-entregables"){return;}var b=document.querySelector(\'.ficha-tab[data-target="tab-entregables"]\');if(b){b.click();}});</script>';
+}
+add_action('admin_footer', 'at_en_abrir_pestana_por_hash');

@@ -68,7 +68,7 @@ Lista de subida para FTP (rutas relativas a la raíz del sitio, orden de arriba)
 
 ## Riesgos y decisiones pendientes
 
-- Antes de activar notas para un cliente real, decidir con Luis lo del enlace del portal (ver la bóveda).
+- Enlace del portal: resuelto el 06-oct-2026 (los enlaces del portal van firmados con una clave del servidor; PR #75). Ya se pueden activar notas para clientes reales.
 
 ## Qué NO se ha probado todavía
 

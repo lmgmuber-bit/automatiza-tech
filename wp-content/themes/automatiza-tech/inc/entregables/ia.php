@@ -106,7 +106,8 @@ function at_en_ia_registrar_consumo(array $r, string $tipo): void {
 	$fila = [
 		'user_id' => get_current_user_id(), 'client_identifier' => 'entregables', 'model_used' => $modelo,
 		'prompt_tokens' => $in, 'completion_tokens' => $out, 'total_tokens' => $in + $out,
-		'cost_estimated' => at_en_ia_costo($modelo, $in, $out), 'request_endpoint' => 'chat/completions',
+		'cost_estimated' => at_en_ia_costo($modelo, $in, $out), 'costo_usd' => at_en_ia_costo($modelo, $in, $out),
+		'tokens_total' => $in + $out, 'tokens_input' => $in, 'tokens_output' => $out, 'request_endpoint' => 'chat/completions',
 		'request_type' => $tipo, 'created_at' => current_time('mysql'),
 	];
 	$wpdb->insert($tabla, array_intersect_key($fila, $columnas));

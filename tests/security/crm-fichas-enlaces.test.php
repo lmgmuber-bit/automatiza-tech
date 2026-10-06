@@ -450,7 +450,8 @@ comprobar('sin at_cc_correo_avisos() el aviso va al correo del administrador', (
 // Falla el envío al cliente
 $tr = ruta_transients();
 $s = vista_anterior('cliente', $viejo_c, 'POST', array('transients' => $tr, 'mail_falla_a' => 'ana@example.test'));
-comprobar('cliente, correo que falla: no marca el límite', strpos($s, '[[SET_TRANSIENT') === false && !is_file($tr));
+comprobar('cliente, correo que falla: igual marca el límite (sin avisos repetidos)', strpos($s, '[[SET_TRANSIENT') !== false);
+comprobar('cliente, correo que falla: el aviso a Luis dice que no se pudo enviar', strpos($s, 'No se pudo enviar') !== false && strpos($s, 'Se envió al correo registrado') === false);
 comprobar('cliente, correo que falla: dice «No pudimos enviar» con el WhatsApp',
     strpos($s, 'No pudimos enviar el correo') !== false && strpos($s, 'wa.me/56927002984') !== false && strpos($s, 'Listo.') === false);
 @unlink($tr);

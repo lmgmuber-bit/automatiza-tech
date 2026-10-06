@@ -4526,9 +4526,11 @@ class AutomatizaTech_CRM_AI {
         $nombre_aviso = $nombre !== '' ? $nombre : 'Un cliente';
         $asunto_aviso = '🔗 ' . trim(preg_replace('/[\r\n]+/', ' ', $nombre_aviso)) . ' pidió su enlace nuevo a la ficha';
         $cuerpo_aviso = '<p>Ficha de ' . esc_html($tipo) . ' n.º ' . (int) $id . ' (' . esc_html($nombre_aviso) . '): pidió que le reenviemos su enlace nuevo.</p>'
-            . '<p>Se envió al correo registrado.</p>';
+            . ($enviado ? '<p>Se envió al correo registrado.</p>' : '<p><strong>No se pudo enviar</strong> al correo registrado: escríbele por WhatsApp.</p>');
         wp_mail($aviso_a, $asunto_aviso, $cuerpo_aviso, ['Content-Type: text/html; charset=UTF-8']);
 
+        // Con o sin éxito, una sola solicitud cada 10 minutos por ficha (sin avisos repetidos).
+        set_transient($clave, 1, 600);
         if (!$enviado) {
             wp_die(
                 '<h1>No pudimos enviar el correo</h1>'
@@ -4540,7 +4542,6 @@ class AutomatizaTech_CRM_AI {
             );
         }
 
-        set_transient($clave, 1, 600);
         wp_die(
             '<h1>Listo</h1>'
             . '<p>Listo. Te enviamos el enlace nuevo a tu correo registrado. Revisa también la carpeta de spam.</p>',

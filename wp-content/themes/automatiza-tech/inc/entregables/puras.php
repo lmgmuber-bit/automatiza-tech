@@ -10,12 +10,13 @@ if (!defined('AT_EN_MAX_TEXTO')) {
 	define('AT_EN_MAX_IMAGENES', 3);
 	define('AT_EN_MAX_BYTES', 5242880);
 	define('AT_EN_MAX_LADO_ENTRADA', 12000);
+	define('AT_EN_MAX_PIXELES', 40000000);
 	define('AT_EN_LADO_FINAL', 2000);
 	define('AT_EN_NOTAS_POR_HORA', 10);
 }
 
 function at_en_codigo_valido(string $c): bool {
-	return (bool) preg_match('/^[A-Za-z0-9]{12}$/', $c);
+	return (bool) preg_match('/^[A-Za-z0-9]{12}\z/', $c);
 }
 
 /** Enlace público del entregable; '' sin sitio o con código inválido. */
@@ -25,7 +26,7 @@ function at_en_url_pagina(string $base, string $codigo): string {
 }
 
 function at_en_nombre_imagen_valido(string $n): bool {
-	return (bool) preg_match('/^[a-z0-9]{24}\.(jpg|png)$/', $n);
+	return (bool) preg_match('/^[a-z0-9]{24}\.(jpg|png)\z/', $n);
 }
 
 function at_en_url_imagen(string $base, string $codigo, string $nombre): string {
@@ -40,7 +41,7 @@ function at_en_token(string $codigo, int $dia, string $sal): string {
 
 /** Vale el día en que se emitió y el siguiente. */
 function at_en_token_valido(string $token, string $codigo, int $hoy, string $sal): bool {
-	if (!preg_match('/^[a-f0-9]{24}$/', $token)) {
+	if (!preg_match('/^[a-f0-9]{24}\z/', $token)) {
 		return false;
 	}
 	return hash_equals(at_en_token($codigo, $hoy, $sal), $token) || hash_equals(at_en_token($codigo, $hoy - 1, $sal), $token);
@@ -48,13 +49,13 @@ function at_en_token_valido(string $token, string $codigo, int $hoy, string $sal
 
 /** Saltos \r\n → \n y sin caracteres de control (salvo tab y salto de línea). */
 function at_en_limpiar_texto(string $t): string {
-	$t = str_replace(["\r\n", "\r"], "\n", $t);
+	$t = str_replace(["\r\n", "\r"], "\n", mb_convert_encoding($t, 'UTF-8', 'UTF-8')); // descarta bytes UTF-8 inválidos
 	return (string) preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/u', '', $t);
 }
 
 /** Valida una nota (del cliente o de AT). El texto se guarda tal cual: se escapa al mostrar. */
 function at_en_validar_nota(string $nombre, string $texto): array {
-	$nombre = trim(at_en_limpiar_texto(str_replace("\n", ' ', $nombre)));
+	$nombre = trim((string) preg_replace('/\s+/u', ' ', at_en_limpiar_texto($nombre)));
 	$texto = trim(at_en_limpiar_texto($texto));
 	$r = ['ok' => false, 'error' => '', 'nombre' => $nombre, 'texto' => $texto];
 	if ($nombre === '') {
@@ -100,8 +101,16 @@ function at_en_revisar_imagen(array $i): string {
 	if ((int) ($i['size'] ?? 0) > AT_EN_MAX_BYTES) {
 		return "La imagen {$n} pesa más de 5 MB.";
 	}
-	if ((int) ($i['ancho'] ?? 0) > AT_EN_MAX_LADO_ENTRADA || (int) ($i['alto'] ?? 0) > AT_EN_MAX_LADO_ENTRADA || (int) ($i['ancho'] ?? 0) < 1 || (int) ($i['alto'] ?? 0) < 1) {
+	$ancho = (int) ($i['ancho'] ?? 0);
+	$alto = (int) ($i['alto'] ?? 0);
+	if ($ancho < 1 || $alto < 1) { // getimagesize no pudo leerla
+		return "La imagen {$n} no es JPG ni PNG.";
+	}
+	if ($ancho > AT_EN_MAX_LADO_ENTRADA || $alto > AT_EN_MAX_LADO_ENTRADA) {
 		return "La imagen {$n} es demasiado grande (más de 12.000 px de lado).";
+	}
+	if ($ancho * $alto > AT_EN_MAX_PIXELES) {
+		return "La imagen {$n} es demasiado grande (más de 40 megapíxeles).";
 	}
 	return '';
 }

@@ -75,4 +75,17 @@ $m = at_en_mensajes();
 foreach (['no_disponible', 'cerrado', 'nota_ok', 'nota_vacia', 'nota_larga', 'nombre_vacio', 'nombre_largo', 'sesion_vencida', 'muchos_intentos', 'imagen', 'muchas_imagenes', 'no_guardo'] as $k) {
 	ok(isset($m[$k]) && $m[$k] !== '', "mensaje «{$k}»");
 }
+
+// Ronda de correcciones 1
+ok(!at_en_codigo_valido("Ab3dE5fG7hJ9\n"), 'código con salto de línea final: inválido');
+ok(!at_en_nombre_imagen_valido("abcdefghijklmnopqrstuvwx.jpg\n"), 'nombre de imagen con salto final: inválido');
+ok(at_en_url_pagina('https://x.cl', "Ab3dE5fG7hJ9\n") === '' && at_en_url_imagen('https://x.cl', 'Ab3dE5fG7hJ9', "abcdefghijklmnopqrstuvwx.jpg\n") === '', 'enlaces con salto final: sin enlace');
+ok(!at_en_token_valido($t . "\n", 'Ab3dE5fG7hJ9', 20000, $sal), 'token con salto final: no vale');
+ok(at_en_validar_nota("Orly\r\nBcc: a@b.c", 'hola')['nombre'] === 'Orly Bcc: a@b.c', 'nombre con CRLF: una sola línea');
+ok(at_en_validar_nota("Orly\rX", 'hola')['nombre'] === 'Orly X', 'nombre con CR: una sola línea');
+ok(at_en_revisar_imagen(['ancho' => 8000, 'alto' => 6000] + $base) === 'La imagen 1 es demasiado grande (más de 40 megapíxeles).', '8000x6000: más de 40 MP');
+ok(at_en_revisar_imagen(['ancho' => 4000, 'alto' => 3000] + $base) === '', '4000x3000: sirve');
+ok(at_en_revisar_imagen(['ancho' => 0, 'alto' => 0] + $base) === 'La imagen 1 no es JPG ni PNG.', 'sin dimensiones: no es imagen');
+$inv = at_en_validar_nota('Orly', "caf\xe9 rico");
+ok($inv['ok'] && $inv['texto'] !== '' && mb_check_encoding($inv['texto'], 'UTF-8') && strpos($inv['texto'], 'rico') !== false, 'UTF-8 inválido: se descartan los bytes malos y se conserva el resto');
 fin();

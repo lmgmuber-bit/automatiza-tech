@@ -1505,9 +1505,9 @@ function automatiza_tech_send_followup_email($meeting_id, $target_profiles = nul
         ));
         if ($cliente_email_row) {
             // Cliente convertido → enlace a ficha pública existente
-            $token_cl = md5($cliente_email_row->id . 'AUTOMATIZA_CRM_V2' . $cliente_email_row->email);
-            $timeline_link = 'https://automatizatech.cl/?crm_view=timeline&cid=' . $cliente_email_row->id . '&token=' . $token_cl;
-            $timeline_section = '
+            $timeline_link = class_exists('AutomatizaTech_CRM_AI') && method_exists('AutomatizaTech_CRM_AI', 'url_ficha_cliente')
+                ? AutomatizaTech_CRM_AI::url_ficha_cliente($cliente_email_row->id, $cliente_email_row->email) : '';
+            $timeline_section = $timeline_link === '' ? '' : '
             <div style="background: linear-gradient(135deg, #ebf4ff, #e0e7ff); border: 2px solid #667eea; border-radius: 12px; padding: 20px; margin: 25px 0; text-align: center;">
                 <p style="color: #4c51bf; margin: 0 0 15px 0; font-size: 16px;"><strong>📂 Tu Portal de Cliente</strong></p>
                 <p style="color: #555; margin: 0 0 15px; font-size: 14px;">Accede a tu ficha personalizada para ver proyectos, historial y consultar con MAXTECH 🤖</p>
@@ -2069,8 +2069,8 @@ function automatiza_tech_send_followup_whatsapp($meeting_id, $context = 'new') {
         if ($cliente_row) {
             // Es cliente convertido → tipo seguimiento con ficha
             $meeting_type = 'seguimiento';
-            $token = md5($cliente_row->id . 'AUTOMATIZA_CRM_V2' . $cliente_row->email);
-            $ficha_url = 'https://automatizatech.cl/?crm_view=timeline&cid=' . $cliente_row->id . '&token=' . $token;
+            $ficha_url = class_exists('AutomatizaTech_CRM_AI') && method_exists('AutomatizaTech_CRM_AI', 'url_ficha_cliente')
+                ? AutomatizaTech_CRM_AI::url_ficha_cliente($cliente_row->id, $cliente_row->email) : '';
         }
     }
     
@@ -3510,8 +3510,8 @@ function automatiza_tech_call_followup_reschedule_workflow($meeting, $new_date, 
         ));
         if ($cliente_row) {
             $meeting_type = 'seguimiento';
-            $token = md5($cliente_row->id . 'AUTOMATIZA_CRM_V2' . $cliente_row->email);
-            $ficha_url = 'https://automatizatech.cl/?crm_view=timeline&cid=' . $cliente_row->id . '&token=' . $token;
+            $ficha_url = class_exists('AutomatizaTech_CRM_AI') && method_exists('AutomatizaTech_CRM_AI', 'url_ficha_cliente')
+                ? AutomatizaTech_CRM_AI::url_ficha_cliente($cliente_row->id, $cliente_row->email) : '';
         }
     }
 

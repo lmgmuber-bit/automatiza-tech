@@ -205,6 +205,7 @@ class AutomatizaTech_CRM_AI {
         // Public Timeline View
         add_action('template_redirect', [$this, 'render_public_timeline']);
         add_action('template_redirect', [$this, 'render_public_prospect_timeline']);
+        add_action('admin_notices', [$this, 'aviso_secreto_fichas']);
         
         // Chat Público Cliente
         add_action('wp_ajax_nopriv_crm_chat_cliente', [$this, 'ajax_chat_cliente']);
@@ -2126,11 +2127,14 @@ class AutomatizaTech_CRM_AI {
                                     <th>Portal Cliente</th>
                                     <td>
                                         <?php
-                                        $token = $this->_generar_token($cliente['id'] ?? 0, $cliente['email'] ?? '');
-                                        $link_timeline = home_url('/?crm_view=timeline&cid=' . ($cliente['id'] ?? 0) . '&token=' . $token);
+                                        $link_timeline = self::url_ficha_cliente($cliente['id'] ?? 0, $cliente['email'] ?? '');
                                         ?>
+                                        <?php if ($link_timeline): ?>
                                         <a href="<?php echo esc_url($link_timeline); ?>" target="_blank" class="button button-small">🔗 Ver Vista de Cliente</a>
                                         <br><small style="color:#666;">Enlace público seguro para el cliente.</small>
+                                        <?php else: ?>
+                                        <small style="color:#b91c1c;">Enlace desactivado: falta <code>AT_CRM_FICHA_SECRET</code> en wp-config.php.</small>
+                                        <?php endif; ?>
                                     </td>
                                 </tr>
                                 <tr>
@@ -4376,12 +4380,189 @@ class AutomatizaTech_CRM_AI {
     }
     
     // ========== VISTA PÚBLICA TIMELINE ==========
-    
-    private function _generar_token($cliente_id, $email) {
-        return md5($cliente_id . 'AUTOMATIZA_CRM_V2' . $email);
+
+    // Los enlaces de las fichas públicas (cliente y prospecto) llevan un HMAC-SHA256 hecho con una
+    // clave que vive solo en el servidor (AT_CRM_FICHA_SECRET, en wp-config.php). Sin esa clave no
+    // se genera ni se acepta ningún enlace. El correo entra en la firma: si cambia, el enlace muere.
+    const URL_BASE_FICHAS = 'https://automatizatech.cl/';
+
+    private static function _secreto_fichas() {
+        $secreto = defined('AT_CRM_FICHA_SECRET') ? (string) AT_CRM_FICHA_SECRET : '';
+        return strlen($secreto) >= 32 ? $secreto : '';
     }
-    
-    /** URL pública de la línea de tiempo del cliente; '' si no existe o no tiene correo. */
+
+    private static function _token_ficha($tipo, $id, $email) {
+        $secreto = self::_secreto_fichas();
+        if ($secreto === '') {
+            return '';
+        }
+        $mensaje = 'at-crm-ficha|v3|' . $tipo . '|' . (int) $id . '|' . strtolower(trim((string) $email));
+        return hash_hmac('sha256', $mensaje, $secreto);
+    }
+
+    private static function _token_ficha_valido($tipo, $id, $email, $token) {
+        if (!is_string($token) || !preg_match('/^[0-9a-f]{64}$/', $token)) {
+            return false;
+        }
+        $esperado = self::_token_ficha($tipo, $id, $email);
+        return $esperado !== '' && hash_equals($esperado, $token);
+    }
+
+    /**
+     * Reconoce un enlace emitido antes del cambio de firma (32 caracteres hexadecimales) solo para
+     * ofrecer el reenvio del enlace nuevo al correo registrado. NUNCA da acceso a la ficha.
+     */
+    private static function _token_anterior_valido($tipo, $id, $email, $token) {
+        if (!is_string($token) || !preg_match('/^[0-9a-f]{32}\z/', $token)) {
+            return false;
+        }
+        if ($tipo === 'cliente') {
+            $anterior = md5($id . 'AUTOMATIZA_CRM_V2' . $email);
+        } elseif ($tipo === 'prospecto') {
+            $anterior = md5($id . 'AUTOMATIZA_PROSPECT_V1' . $email);
+        } else {
+            return false;
+        }
+        return hash_equals($anterior, $token);
+    }
+
+    private static function _url_ficha($tipo, $id, $email) {
+        $token = self::_token_ficha($tipo, $id, $email);
+        if ($token === '') {
+            return '';
+        }
+        $vista = $tipo === 'prospecto' ? 'prospect_timeline&pid=' : 'timeline&cid=';
+        // Dominio fijo y no home_url(): un enlace con token no debe depender de la petición en curso.
+        return self::URL_BASE_FICHAS . '?crm_view=' . $vista . (int) $id . '&token=' . $token;
+    }
+
+    /** Enlace público a la ficha de un cliente; '' si falta la clave. */
+    public static function url_ficha_cliente($cliente_id, $email) {
+        return self::_url_ficha('cliente', $cliente_id, $email);
+    }
+
+    /** Las fichas no se guardan en caché (LiteSpeed cachea 7 días por URL) ni se indexan. */
+    private static function _sin_cache_ficha() {
+        if (!defined('DONOTCACHEPAGE')) {
+            define('DONOTCACHEPAGE', true);
+        }
+        do_action('litespeed_control_set_nocache', 'ficha pública del CRM');
+        nocache_headers();
+        if (!headers_sent()) {
+            header('X-Robots-Tag: noindex, nofollow');
+            header('Referrer-Policy: no-referrer');
+        }
+    }
+
+    private static function _url_whatsapp_enlace() {
+        return 'https://wa.me/56927002984?text=' . rawurlencode('Hola, necesito el enlace nuevo de mi ficha');
+    }
+
+    /** Una sola respuesta para enlaces viejos, ajenos o mal formados: no revela si la ficha existe. */
+    private static function _responder_enlace_no_vigente() {
+        $whatsapp = self::_url_whatsapp_enlace();
+        wp_die(
+            '<h1>Este enlace ya no está vigente</h1>'
+            . '<p>Actualizamos los enlaces de acceso a las fichas. Escríbenos y te enviamos el tuyo.</p>'
+            . '<p><a href="' . esc_url($whatsapp) . '">Pedir el enlace por WhatsApp</a>'
+            . ' · <a href="mailto:contacto@automatizatech.cl">contacto@automatizatech.cl</a></p>',
+            'Enlace no vigente',
+            ['response' => 403]
+        );
+    }
+
+    /**
+     * Enlace anterior al cambio de firma de un registro que existe: ofrece enviar el enlace nuevo
+     * SOLO al correo registrado (la pagina nunca lo muestra ni muestra el enlace). Siempre termina.
+     */
+    private static function _responder_enlace_anterior($tipo, $id, $token, $email, $nombre) {
+        $whatsapp = self::_url_whatsapp_enlace();
+        $es_post = isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] === 'POST'
+            && isset($_POST['at_crm_reenviar']) && $_POST['at_crm_reenviar'] === '1';
+
+        if (!$es_post) {
+            $vista = $tipo === 'prospecto' ? 'prospect_timeline&pid=' : 'timeline&cid=';
+            $accion = self::URL_BASE_FICHAS . '?crm_view=' . $vista . (int) $id . '&token=' . $token;
+            wp_die(
+                '<h1>Actualizamos tu enlace de acceso</h1>'
+                . '<p>Actualizamos los enlaces de acceso a las fichas por seguridad. Te enviamos el nuevo a tu correo registrado.</p>'
+                . '<form method="post" action="' . esc_url($accion) . '">'
+                . '<input type="hidden" name="at_crm_reenviar" value="1">'
+                . '<button type="submit">Enviarme el enlace nuevo</button>'
+                . '</form>',
+                'Actualizamos tu enlace',
+                ['response' => 200]
+            );
+        }
+
+        $clave = 'at_crm_reenvio_' . $tipo . '_' . (int) $id;
+        if (get_transient($clave)) {
+            wp_die(
+                '<h1>Ya te enviamos el enlace</h1>'
+                . '<p>Ya te enviamos el enlace nuevo hace unos minutos. Revisa tu correo, también la carpeta de spam.</p>',
+                'Actualizamos tu enlace',
+                ['response' => 200]
+            );
+        }
+
+        $email = trim((string) $email);
+        $nuevo = self::_url_ficha($tipo, $id, $email);
+        if ($nuevo === '' || !is_email($email)) {
+            self::_responder_enlace_no_vigente();
+        }
+
+        $nombre = trim((string) $nombre);
+        $partes = $nombre !== '' ? preg_split('/\s+/', $nombre) : [];
+        $primer_nombre = $partes ? (string) $partes[0] : '';
+        $saludo = $primer_nombre !== '' ? 'Hola ' . esc_html($primer_nombre) . ',' : 'Hola,';
+        $remitente = (defined('SMTP_USER') && SMTP_USER) ? SMTP_USER : 'contacto@automatizatech.cl';
+        $cabeceras = ['Content-Type: text/html; charset=UTF-8', 'From: AutomatizaTech <' . $remitente . '>'];
+
+        $cuerpo = '<div style="font-family:Arial,Helvetica,sans-serif;max-width:560px;margin:0 auto;background:#ffffff;">'
+            . '<div style="background:linear-gradient(135deg,#1e3a8a,#06d6a0);background-color:#1e3a8a;padding:28px 24px;text-align:center;">'
+            . '<img src="https://automatizatech.cl/wp-content/themes/automatiza-tech/assets/images/logo-automatiza-tech.png" alt="AutomatizaTech" width="140" style="max-width:140px;height:auto;">'
+            . '<h1 style="color:#ffffff;font-size:22px;margin:16px 0 0;">Tu nuevo enlace de acceso</h1>'
+            . '</div>'
+            . '<div style="padding:28px 24px;color:#1f2937;font-size:15px;line-height:1.6;">'
+            . '<p>' . $saludo . '</p>'
+            . '<p>Aquí está el enlace nuevo para abrir tu ficha en AutomatizaTech.</p>'
+            . '<p style="text-align:center;margin:28px 0;"><a href="' . esc_url($nuevo) . '" style="background:#1e3a8a;color:#ffffff;text-decoration:none;padding:12px 28px;border-radius:8px;font-weight:bold;display:inline-block;">Abrir mi ficha</a></p>'
+            . '<p style="color:#6b7280;font-size:13px;">Si no pediste este enlace, ignora este correo.</p>'
+            . '</div>'
+            . '<div style="background:#f3f4f6;padding:14px 24px;text-align:center;color:#6b7280;font-size:12px;">© AutomatizaTech · automatizatech.cl</div>'
+            . '</div>';
+
+        $enviado = wp_mail($email, 'Tu nuevo enlace de acceso — AutomatizaTech', $cuerpo, $cabeceras);
+
+        $aviso_a = function_exists('at_cc_correo_avisos') ? at_cc_correo_avisos() : get_option('admin_email');
+        $nombre_aviso = $nombre !== '' ? $nombre : 'Un cliente';
+        $asunto_aviso = '🔗 ' . trim(preg_replace('/[\r\n]+/', ' ', $nombre_aviso)) . ' pidió su enlace nuevo a la ficha';
+        $cuerpo_aviso = '<p>Ficha de ' . esc_html($tipo) . ' n.º ' . (int) $id . ' (' . esc_html($nombre_aviso) . '): pidió que le reenviemos su enlace nuevo.</p>'
+            . ($enviado ? '<p>Se envió al correo registrado.</p>' : '<p><strong>No se pudo enviar</strong> al correo registrado: escríbele por WhatsApp.</p>');
+        wp_mail($aviso_a, $asunto_aviso, $cuerpo_aviso, ['Content-Type: text/html; charset=UTF-8']);
+
+        // Con o sin éxito, una sola solicitud cada 10 minutos por ficha (sin avisos repetidos).
+        set_transient($clave, 1, 600);
+        if (!$enviado) {
+            wp_die(
+                '<h1>No pudimos enviar el correo</h1>'
+                . '<p>No pudimos enviar el correo. Escríbenos por WhatsApp y te enviamos el enlace.</p>'
+                . '<p><a href="' . esc_url($whatsapp) . '">Pedir el enlace por WhatsApp</a>'
+                . ' · <a href="mailto:contacto@automatizatech.cl">contacto@automatizatech.cl</a></p>',
+                'Actualizamos tu enlace',
+                ['response' => 200]
+            );
+        }
+
+        wp_die(
+            '<h1>Listo</h1>'
+            . '<p>Listo. Te enviamos el enlace nuevo a tu correo registrado. Revisa también la carpeta de spam.</p>',
+            'Actualizamos tu enlace',
+            ['response' => 200]
+        );
+    }
+
+    /** URL pública de la línea de tiempo del cliente (firmada); '' si no existe, no tiene correo o falta la clave. */
     public function url_portal($cliente_id) {
         global $wpdb;
         $cliente_id = (int) $cliente_id;
@@ -4389,7 +4570,14 @@ class AutomatizaTech_CRM_AI {
         if (!$email) {
             return '';
         }
-        return home_url('/?crm_view=timeline&cid=' . $cliente_id . '&token=' . $this->_generar_token($cliente_id, $email));
+        return self::url_ficha_cliente($cliente_id, $email);
+    }
+
+    public function aviso_secreto_fichas() {
+        if (self::_secreto_fichas() !== '' || !current_user_can('manage_options')) {
+            return;
+        }
+        echo '<div class="notice notice-error"><p><strong>CRM:</strong> los enlaces de las fichas públicas están desactivados: falta la constante <code>AT_CRM_FICHA_SECRET</code> (mínimo 32 caracteres) en <code>wp-config.php</code>.</p></div>';
     }
 
     public function render_public_timeline() {
@@ -4397,18 +4585,19 @@ class AutomatizaTech_CRM_AI {
         
         if (isset($_GET['crm_view']) && $_GET['crm_view'] === 'timeline') {
             global $wpdb;
-            
+            self::_sin_cache_ficha();
+
             $cliente_id = intval($_GET['cid'] ?? 0);
             $token = $_GET['token'] ?? '';
-            
-            if (!$cliente_id || !$token) {
-                wp_die('Enlace no válido.');
-            }
-            
-            $cliente = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$this->tabla_clientes} WHERE id = %d", $cliente_id));
-            
-            if (!$cliente || $this->_generar_token($cliente->id, $cliente->email) !== $token) {
-                wp_die('Acceso denegado o enlace expirado.');
+
+            $cliente = $cliente_id ? $wpdb->get_row($wpdb->prepare("SELECT * FROM {$this->tabla_clientes} WHERE id = %d", $cliente_id)) : null;
+
+            if (!$cliente || !self::_token_ficha_valido('cliente', $cliente->id, $cliente->email, $token)) {
+                if ($cliente && self::_token_anterior_valido('cliente', $cliente->id, $cliente->email, $token)
+                    && self::_url_ficha('cliente', $cliente->id, $cliente->email) !== '') {
+                    self::_responder_enlace_anterior('cliente', $cliente->id, $token, $cliente->email, $cliente->nombre);
+                }
+                self::_responder_enlace_no_vigente();
             }
             
             // Datos para la vista
@@ -4631,6 +4820,8 @@ class AutomatizaTech_CRM_AI {
             <head>
                 <meta charset="UTF-8">
                 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <meta name="robots" content="noindex, nofollow">
+                <meta name="referrer" content="no-referrer">
                 <title>Timeline del Cliente - AutomatizaTech</title>
                 <style>
                     body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f7fa; color: #333; margin: 0; padding: 0; line-height: 1.6; }
@@ -6146,18 +6337,13 @@ class AutomatizaTech_CRM_AI {
     }
 
     // ========== VISTA PÚBLICA PROSPECT TIMELINE ==========
-    
-    private function _generar_token_prospecto($propuesta_id, $email) {
-        return md5($propuesta_id . 'AUTOMATIZA_PROSPECT_V1' . $email);
-    }
-    
+
     public static function get_prospect_timeline_url($propuesta_id) {
         global $wpdb;
         $table = $wpdb->prefix . 'automatiza_propuestas';
         $propuesta = $wpdb->get_row($wpdb->prepare("SELECT id, client_email FROM $table WHERE id = %d", $propuesta_id));
         if (!$propuesta || empty($propuesta->client_email)) return '';
-        $token = md5($propuesta->id . 'AUTOMATIZA_PROSPECT_V1' . $propuesta->client_email);
-        return 'https://automatizatech.cl/?crm_view=prospect_timeline&pid=' . $propuesta->id . '&token=' . $token;
+        return self::_url_ficha('prospecto', $propuesta->id, $propuesta->client_email);
     }
     
     /**
@@ -6177,21 +6363,22 @@ class AutomatizaTech_CRM_AI {
         if (!isset($_GET['crm_view']) || $_GET['crm_view'] !== 'prospect_timeline') return;
         
         global $wpdb;
-        
+        self::_sin_cache_ficha();
+
         $propuesta_id = intval($_GET['pid'] ?? 0);
         $token = $_GET['token'] ?? '';
-        
-        if (!$propuesta_id || !$token) {
-            wp_die('Enlace no válido.');
-        }
-        
+
         $table_propuestas = $wpdb->prefix . 'automatiza_propuestas';
         $table_details = $wpdb->prefix . 'automatiza_propuestas_details';
-        
-        $propuesta = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table_propuestas WHERE id = %d", $propuesta_id));
-        
-        if (!$propuesta || $this->_generar_token_prospecto($propuesta->id, $propuesta->client_email) !== $token) {
-            wp_die('Acceso denegado o enlace expirado.');
+
+        $propuesta = $propuesta_id ? $wpdb->get_row($wpdb->prepare("SELECT * FROM $table_propuestas WHERE id = %d", $propuesta_id)) : null;
+
+        if (!$propuesta || !self::_token_ficha_valido('prospecto', $propuesta->id, $propuesta->client_email, $token)) {
+            if ($propuesta && self::_token_anterior_valido('prospecto', $propuesta->id, $propuesta->client_email, $token)
+                && self::_url_ficha('prospecto', $propuesta->id, $propuesta->client_email) !== '') {
+                self::_responder_enlace_anterior('prospecto', $propuesta->id, $token, $propuesta->client_email, $propuesta->client_name);
+            }
+            self::_responder_enlace_no_vigente();
         }
         
         // Obtener detalles de seguimiento
@@ -6379,6 +6566,8 @@ class AutomatizaTech_CRM_AI {
         <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <meta name="robots" content="noindex, nofollow">
+            <meta name="referrer" content="no-referrer">
             <title>Seguimiento - <?php echo esc_html($propuesta->client_name ?: 'Prospecto'); ?> - AutomatizaTech</title>
             <style>
                 body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f7fa; color: #333; margin: 0; padding: 0; line-height: 1.6; }
@@ -6691,9 +6880,6 @@ class AutomatizaTech_CRM_AI {
 
     private function _ajax_chat_history_inner() {
         global $wpdb;
-        
-        // Ensure Schema
-        $this->_ensure_db_schema();
 
         $cliente_id = isset($_POST['cid']) ? intval($_POST['cid']) : 0;
         $token = isset($_POST['token']) ? sanitize_text_field($_POST['token']) : '';
@@ -6701,9 +6887,12 @@ class AutomatizaTech_CRM_AI {
 
         $cliente = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$this->tabla_clientes} WHERE id = %d", $cliente_id));
 
-        if (!$cliente || $this->_generar_token($cliente->id, $cliente->email) !== $token) {
+        if (!$cliente || !self::_token_ficha_valido('cliente', $cliente->id, $cliente->email, $token)) {
             wp_send_json_error('Acceso denegado.');
         }
+
+        // Ensure Schema (solo con un enlace válido)
+        $this->_ensure_db_schema();
 
         $session_id = 'client_' . $cliente_id . '_chat';
 
@@ -6770,9 +6959,6 @@ class AutomatizaTech_CRM_AI {
     private function _ajax_chat_cliente_inner() {
         global $wpdb;
 
-        // Ensure Schema
-        $this->_ensure_db_schema();
-
         $cliente_id = isset($_POST['cid']) ? intval($_POST['cid']) : 0;
         $token = isset($_POST['token']) ? sanitize_text_field($_POST['token']) : '';
         $mensaje = isset($_POST['mensaje']) ? sanitize_textarea_field($_POST['mensaje']) : '';
@@ -6780,9 +6966,12 @@ class AutomatizaTech_CRM_AI {
 
         $cliente = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$this->tabla_clientes} WHERE id = %d", $cliente_id));
 
-        if (!$cliente || $this->_generar_token($cliente->id, $cliente->email) !== $token) {
+        if (!$cliente || !self::_token_ficha_valido('cliente', $cliente->id, $cliente->email, $token)) {
             wp_send_json_error('Acceso denegado o token inválido.');
         }
+
+        // Ensure Schema (solo con un enlace válido)
+        $this->_ensure_db_schema();
 
         $session_id = 'client_' . $cliente->id . '_chat';
         $uploaded_files_urls = [];
@@ -7164,8 +7353,7 @@ class AutomatizaTech_CRM_AI {
                 }
                 $historial_html .= '</ul>';
                 
-                $token = $this->_generar_token($cliente_id, $cliente->email);
-                $link_timeline = home_url('/?crm_view=timeline&cid=' . $cliente_id . '&token=' . $token);
+                $link_timeline = self::url_ficha_cliente($cliente_id, $cliente->email);
                 
                 // Plantilla HTML Nuevo Proyecto
                 $cuerpo = '<!DOCTYPE html>
@@ -7596,8 +7784,7 @@ class AutomatizaTech_CRM_AI {
             if ($cliente && !empty($cliente->email)) {
                 
                 // --- Variables Comunes ---
-                $token = $this->_generar_token($cliente_id, $cliente->email);
-                $link_timeline = home_url('/?crm_view=timeline&cid=' . $cliente_id . '&token=' . $token);
+                $link_timeline = self::url_ficha_cliente($cliente_id, $cliente->email);
                 
                 // Historial para email
                 $historial_items = $wpdb->get_results($wpdb->prepare("SELECT * FROM {$this->tabla_historial} WHERE cliente_id = %d ORDER BY created_at DESC LIMIT 5", $cliente_id));
@@ -7795,8 +7982,7 @@ class AutomatizaTech_CRM_AI {
         $subject = '¡Bienvenido a Automatiza.tech!';
         
         // Generar enlace al timeline público
-        $token = $this->_generar_token($cliente_id, $cliente->email);
-        $link_timeline = home_url('/?crm_view=timeline&cid=' . $cliente_id . '&token=' . $token);
+        $link_timeline = self::url_ficha_cliente($cliente_id, $cliente->email);
         
         // Obtener nombre del proyecto (si existe alguno reciente, o genérico)
         $proyecto_reciente = $wpdb->get_row($wpdb->prepare("SELECT nombre FROM {$this->tabla_proyectos} WHERE cliente_id = %d ORDER BY created_at DESC LIMIT 1", $cliente_id));
@@ -8495,8 +8681,7 @@ class AutomatizaTech_CRM_AI {
             $evidencias_links[] = $historial->attachment_url;
         }
 
-        $token = $this->_generar_token($cliente_id, $cliente->email);
-        $link_timeline = home_url('/?crm_view=timeline&cid=' . $cliente_id . '&token=' . $token);
+        $link_timeline = self::url_ficha_cliente($cliente_id, $cliente->email);
 
         $asunto = "Actualización de tu Proyecto: " . $nombre_proyecto;
         

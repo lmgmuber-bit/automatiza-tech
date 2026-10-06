@@ -72,7 +72,7 @@ ok(at_en_url_wa('', 'Hola') === '', 'sin teléfono: sin enlace');
 
 // Mensajes
 $m = at_en_mensajes();
-foreach (['no_disponible', 'cerrado', 'nota_ok', 'nota_vacia', 'nota_larga', 'nombre_vacio', 'nombre_largo', 'sesion_vencida', 'muchos_intentos', 'imagen', 'muchas_imagenes', 'no_guardo'] as $k) {
+foreach (['no_disponible', 'cerrado', 'nota_ok', 'nota_vacia', 'nota_larga', 'nombre_vacio', 'nombre_largo', 'sesion_vencida', 'muchos_intentos', 'imagen', 'muchas_imagenes', 'no_guardo', 'envio_grande'] as $k) {
 	ok(isset($m[$k]) && $m[$k] !== '', "mensaje «{$k}»");
 }
 

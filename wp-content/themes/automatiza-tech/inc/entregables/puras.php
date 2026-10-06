@@ -193,5 +193,6 @@ function at_en_mensajes(): array {
 		'imagen'          => 'Una de las imágenes no sirve.',
 		'muchas_imagenes' => 'Puedes adjuntar hasta 3 imágenes por nota.',
 		'no_guardo'       => 'No pudimos guardar tu nota. Inténtalo de nuevo o escríbenos por WhatsApp.',
+		'envio_grande'    => 'Las imágenes pesan demasiado en total. Envía menos imágenes o más livianas.',
 	];
 }

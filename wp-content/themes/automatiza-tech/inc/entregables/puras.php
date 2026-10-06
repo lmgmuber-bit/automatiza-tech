@@ -10,7 +10,7 @@ if (!defined('AT_EN_MAX_TEXTO')) {
 	define('AT_EN_MAX_IMAGENES', 3);
 	define('AT_EN_MAX_BYTES', 5242880);
 	define('AT_EN_MAX_LADO_ENTRADA', 12000);
-	define('AT_EN_MAX_PIXELES', 40000000);
+	define('AT_EN_MAX_PIXELES', 25000000);
 	define('AT_EN_LADO_FINAL', 2000);
 	define('AT_EN_NOTAS_POR_HORA', 10);
 }
@@ -110,7 +110,7 @@ function at_en_revisar_imagen(array $i): string {
 		return "La imagen {$n} es demasiado grande (más de 12.000 px de lado).";
 	}
 	if ($ancho * $alto > AT_EN_MAX_PIXELES) {
-		return "La imagen {$n} es demasiado grande (más de 40 megapíxeles).";
+		return "La imagen {$n} es demasiado grande (más de 25 megapíxeles).";
 	}
 	return '';
 }

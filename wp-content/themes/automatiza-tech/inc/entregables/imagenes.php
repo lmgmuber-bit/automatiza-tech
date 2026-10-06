@@ -15,7 +15,10 @@ function at_en_dir_base(): string {
 		wp_mkdir_p($dir);
 	}
 	if (!is_file($dir . '.htaccess')) {
-		file_put_contents($dir . '.htaccess', "Require all denied\n<IfModule !mod_authz_core.c>\nDeny from all\n</IfModule>\n");
+		$reglas = "<IfModule mod_authz_core.c>\nRequire all denied\n</IfModule>\n<IfModule !mod_authz_core.c>\nDeny from all\n</IfModule>\n";
+		if (@file_put_contents($dir . '.htaccess', $reglas) === false) {
+			error_log('at_en_dir_base: no se pudo escribir el .htaccess de ' . $dir);
+		}
 	}
 	if (!is_file($dir . 'index.php')) {
 		file_put_contents($dir . 'index.php', "<?php\n// Silencio.\n");
@@ -52,6 +55,19 @@ function at_en_medir(string $ruta): array {
 	return ['tipo' => (string) ($info['mime'] ?? ''), 'ancho' => (int) $info[0], 'alto' => (int) $info[1]];
 }
 
+/** Abre la imagen con GD siempre: el EXIF/GPS se saca al reescribir y no depende del editor del servidor (Imagick solo lo quita al achicar). */
+function at_en_abrir_editor_gd(string $ruta) {
+	$solo_gd = function () {
+		return ['WP_Image_Editor_GD'];
+	};
+	add_filter('wp_image_editors', $solo_gd, PHP_INT_MAX);
+	try {
+		return wp_get_image_editor($ruta);
+	} finally {
+		remove_filter('wp_image_editors', $solo_gd, PHP_INT_MAX);
+	}
+}
+
 /** Valida y guarda 0 a 3 imágenes; devuelve sus nombres internos o WP_Error (sin dejar archivos a medias). */
 function at_en_procesar_imagenes(array $archivos, int $ent_id) {
 	if (count($archivos) > AT_EN_MAX_IMAGENES) {
@@ -60,10 +76,16 @@ function at_en_procesar_imagenes(array $archivos, int $ent_id) {
 	// Primero se revisan todas; recién después se guarda (una mala no deja otras guardadas).
 	foreach (array_values($archivos) as $i => $a) {
 		$tmp = (string) ($a['tmp_name'] ?? '');
-		$medida = ($tmp !== '' && is_file($tmp)) ? at_en_medir($tmp) : ['tipo' => '', 'ancho' => 0, 'alto' => 0];
+		// Lo primero: que sea una subida HTTP real. Si no, no se toca la ruta (ni se mide).
 		$es_subida = $tmp !== '' && (bool) apply_filters('at_en_es_subida', is_uploaded_file($tmp), $tmp);
+		$medida = ['tipo' => '', 'ancho' => 0, 'alto' => 0];
+		$size = (int) ($a['size'] ?? 0);
+		if ($es_subida && is_file($tmp)) {
+			$medida = at_en_medir($tmp);
+			$size = max($size, (int) @filesize($tmp)); // no se confía solo en el tamaño informado
+		}
 		$error = $es_subida ? (int) ($a['error'] ?? 0) : UPLOAD_ERR_CANT_WRITE;
-		$m = at_en_revisar_imagen(['indice' => $i + 1, 'error' => $error, 'size' => (int) ($a['size'] ?? 0)] + $medida);
+		$m = at_en_revisar_imagen(['indice' => $i + 1, 'error' => $error, 'size' => $size] + $medida);
 		if ($m !== '') {
 			return new WP_Error('imagen', $m);
 		}
@@ -79,9 +101,13 @@ function at_en_procesar_imagenes(array $archivos, int $ent_id) {
 		$tmp = (string) $a['tmp_name'];
 		$ext = at_en_medir($tmp)['tipo'] === 'image/png' ? 'png' : 'jpg';
 		$nombre = strtolower(wp_generate_password(24, false, false)) . '.' . $ext;
-		$ed = wp_get_image_editor($tmp);
+		$ed = at_en_abrir_editor_gd($tmp);
 		$ok = !is_wp_error($ed);
 		if ($ok) {
+			// Fotos de celular en vertical: se giran según el EXIF antes de que este se pierda.
+			if (method_exists($ed, 'maybe_exif_rotate')) {
+				$ed->maybe_exif_rotate();
+			}
 			$tam = $ed->get_size();
 			if (max((int) $tam['width'], (int) $tam['height']) > AT_EN_LADO_FINAL) {
 				$ok = !is_wp_error($ed->resize(AT_EN_LADO_FINAL, AT_EN_LADO_FINAL, false));
@@ -89,7 +115,9 @@ function at_en_procesar_imagenes(array $archivos, int $ent_id) {
 			// Guardar siempre reescribe la imagen: el EXIF (con el GPS) no pasa.
 			$ok = $ok && !is_wp_error($ed->save($dir . $nombre, $ext === 'png' ? 'image/png' : 'image/jpeg'));
 		}
+		unset($ed); // libera la imagen decodificada antes de la siguiente
 		if (!$ok || !is_file($dir . $nombre)) {
+			@unlink($dir . $nombre);
 			foreach ($guardadas as $g) {
 				@unlink($dir . $g);
 			}
@@ -119,14 +147,19 @@ function at_en_ruta_imagen(object $ent, string $nombre): string {
 function at_en_servir_imagen(object $ent, string $nombre): void {
 	$ruta = at_en_ruta_imagen($ent, $nombre);
 	if ($ruta === '') {
+		nocache_headers();
 		status_header(404);
 		exit;
+	}
+	while (ob_get_level() > 0) {
+		ob_end_clean();
 	}
 	header('Content-Type: ' . (substr($nombre, -4) === '.png' ? 'image/png' : 'image/jpeg'));
 	header('Content-Length: ' . filesize($ruta));
 	header('Cache-Control: private, no-store, no-transform');
 	header('X-Content-Type-Options: nosniff');
 	header('X-Robots-Tag: noindex, nofollow');
+	header("Content-Security-Policy: default-src 'none'; sandbox");
 	readfile($ruta);
 	exit;
 }

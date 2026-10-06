@@ -83,7 +83,8 @@ ok(at_en_url_pagina('https://x.cl', "Ab3dE5fG7hJ9\n") === '' && at_en_url_imagen
 ok(!at_en_token_valido($t . "\n", 'Ab3dE5fG7hJ9', 20000, $sal), 'token con salto final: no vale');
 ok(at_en_validar_nota("Orly\r\nBcc: a@b.c", 'hola')['nombre'] === 'Orly Bcc: a@b.c', 'nombre con CRLF: una sola línea');
 ok(at_en_validar_nota("Orly\rX", 'hola')['nombre'] === 'Orly X', 'nombre con CR: una sola línea');
-ok(at_en_revisar_imagen(['ancho' => 8000, 'alto' => 6000] + $base) === 'La imagen 1 es demasiado grande (más de 40 megapíxeles).', '8000x6000: más de 40 MP');
+ok(at_en_revisar_imagen(['ancho' => 8000, 'alto' => 6000] + $base) === 'La imagen 1 es demasiado grande (más de 25 megapíxeles).', '8000x6000: más de 25 MP');
+ok(at_en_revisar_imagen(['ancho' => 6000, 'alto' => 5000] + $base) === 'La imagen 1 es demasiado grande (más de 25 megapíxeles).', '6000x5000 (30 MP): no');
 ok(at_en_revisar_imagen(['ancho' => 4000, 'alto' => 3000] + $base) === '', '4000x3000: sirve');
 ok(at_en_revisar_imagen(['ancho' => 0, 'alto' => 0] + $base) === 'La imagen 1 no es JPG ni PNG.', 'sin dimensiones: no es imagen');
 $inv = at_en_validar_nota('Orly', "caf\xe9 rico");

@@ -33,6 +33,10 @@ $campo = ['name' => ['a.jpg', ''], 'type' => ['image/jpeg', ''], 'tmp_name' => [
 ok(count(at_en_archivos_subidos($campo)) === 1 && at_en_archivos_subidos($campo)[0]['name'] === 'a.jpg', 'normaliza y omite los vacíos');
 ok(at_en_archivos_subidos([]) === [], 'sin imágenes: lista vacía (son opcionales)');
 
+// Control: la fuente trae de verdad el marcador de GPS (si no, «se borró el EXIF» no probaría nada)
+en_jpg_con_exif("$tmp/fuente.jpg", 800, 600, $marca);
+ok(strpos((string) file_get_contents("$tmp/fuente.jpg"), 'GPS-PRUEBA-' . $marca) !== false, 'control: la foto original trae el GPS');
+
 // JPG con EXIF grande → reescrito, sin EXIF y achicado
 en_jpg_con_exif("$tmp/foto.jpg", 2600, 1300, $marca);
 $r = at_en_procesar_imagenes([en_archivo("$tmp/foto.jpg", 'foto.jpg')], $id);
@@ -42,6 +46,25 @@ ok(is_file($guardada) && strpos((string) file_get_contents($guardada), 'GPS-PRUE
 $tam = getimagesize($guardada);
 ok($tam && max($tam[0], $tam[1]) <= 2000, 'lado máximo 2.000 px');
 ok(is_file(at_en_dir_base() . '.htaccess') && strpos((string) file_get_contents(at_en_dir_base() . '.htaccess'), 'Require all denied') !== false && is_file(at_en_dir_base() . 'index.php'), 'carpeta bloqueada con .htaccess e index.php');
+
+// Siempre GD, aunque otro filtro pida Imagick (que solo borra el EXIF al achicar: una foto chica conservaría el GPS)
+$vistos = null;
+$pide_imagick = function ($lista) use (&$vistos) {
+	// Se engancha al final del mismo gancho: ve lo que queda después de que el módulo fuerza GD.
+	static $enganchado = false;
+	if (!$enganchado) {
+		$enganchado = true;
+		add_filter('wp_image_editors', function ($l) use (&$vistos) { $vistos = $l; return $l; }, PHP_INT_MAX);
+	}
+	return ['WP_Image_Editor_Imagick'];
+};
+add_filter('wp_image_editors', $pide_imagick, 99);
+$rg = at_en_procesar_imagenes([en_archivo("$tmp/fuente.jpg", 'fuente.jpg')], $id);
+remove_filter('wp_image_editors', $pide_imagick, 99);
+ok($vistos === ['WP_Image_Editor_GD'], 'el editor que se usa es GD aunque otro filtro pida Imagick');
+ok(is_array($rg) && strpos((string) file_get_contents(at_en_dir_imagenes($id) . $rg[0]), 'GPS-PRUEBA-' . $marca) === false, 'foto chica (sin achicar): también sin GPS');
+$vistos = 'no tocar';
+ok(apply_filters('wp_image_editors', ['x']) === ['x'], 'el filtro de GD no queda enganchado después');
 
 // PNG
 en_png("$tmp/p.png", 300, 200);
@@ -54,6 +77,13 @@ $antes = count(glob(at_en_dir_imagenes($id) . '*'));
 $m = at_en_procesar_imagenes([en_archivo("$tmp/foto.jpg", 'foto.jpg'), en_archivo("$tmp/malo.jpg", 'malo.jpg')], $id);
 ok(is_wp_error($m) && $m->get_error_message() === 'La imagen 2 no es JPG ni PNG.', 'PHP como .jpg: «La imagen 2 no es JPG ni PNG.»');
 ok(count(glob(at_en_dir_imagenes($id) . '*')) === $antes, 'si una falla, no queda ninguna guardada');
+
+// Imagen que se puede medir pero no decodificar (cortada): error limpio y sin restos
+file_put_contents("$tmp/cortada.jpg", substr((string) file_get_contents("$tmp/foto.jpg"), 0, 400));
+$antes2 = count(glob(at_en_dir_imagenes($id) . '*'));
+$c = at_en_procesar_imagenes([en_archivo("$tmp/fuente.jpg", 'f.jpg'), en_archivo("$tmp/cortada.jpg", 'c.jpg')], $id);
+ok(is_wp_error($c) && $c->get_error_message() === 'La imagen 2 no se pudo procesar. Prueba con otra.', 'imagen ilegible: «no se pudo procesar»');
+ok(count(glob(at_en_dir_imagenes($id) . '*')) === $antes2, 'imagen ilegible: no queda ninguna guardada (ni la buena ni a medias)');
 
 // Más de 3
 $cuatro = array_fill(0, 4, en_archivo("$tmp/foto.jpg", 'f.jpg'));

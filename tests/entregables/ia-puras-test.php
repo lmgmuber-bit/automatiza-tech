@@ -74,4 +74,7 @@ ok(count(at_en_ia_prompt_respuesta($cr)[1]['content']) === 4, 'respuesta: máxim
 ok(at_en_ia_quitar_easypanel("Hola\nMíralo en https://x.easypanel.host/p\nChao\n") === "Hola\nChao", 'quita las líneas con easypanel');
 ok(at_en_ia_quitar_easypanel("  Texto limpio  \n\n") === 'Texto limpio', 'sin easypanel: solo recorta');
 ok(at_en_ia_quitar_easypanel("Uno\nEASYPANEL\n\nDos") === "Uno\n\nDos", 'easypanel sin importar mayúsculas');
+
+// Sin anglicismos (Luis, 06-oct: la prueba real escribió «feedback»)
+ok(strpos($m1[0]['content'], 'nunca «feedback»') !== false && strpos(at_en_ia_prompt_respuesta($cr)[0]['content'], 'nunca «feedback»') !== false, 'los dos prompts piden «comentarios» y no «feedback»');
 fin();

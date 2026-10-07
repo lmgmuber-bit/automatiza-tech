@@ -104,7 +104,7 @@ function at_en_ia_registrar_consumo(array $r, string $tipo): void {
 	$out = (int) ($r['tokens_out'] ?? 0);
 	$modelo = (string) ($r['modelo'] ?? '');
 	$fila = [
-		'user_id' => get_current_user_id(), 'client_identifier' => 'entregables', 'model_used' => $modelo,
+		'user_id' => get_current_user_id(), 'client_identifier' => 'entregables', 'model_used' => $modelo, 'model' => $modelo,
 		'prompt_tokens' => $in, 'completion_tokens' => $out, 'total_tokens' => $in + $out,
 		'cost_estimated' => at_en_ia_costo($modelo, $in, $out), 'costo_usd' => at_en_ia_costo($modelo, $in, $out),
 		'tokens_total' => $in + $out, 'tokens_input' => $in, 'tokens_output' => $out, 'request_endpoint' => 'chat/completions',

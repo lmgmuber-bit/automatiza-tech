@@ -171,6 +171,7 @@ ok(count($filas) === 2, 'consumo: dos filas nuevas en ai_usage_log');
 $f0 = $filas[0]; $f1 = $filas[1];
 ok($f0->client_identifier === 'entregables' && $f0->request_type === 'entregables_mensaje' && $f0->model_used === 'gpt-4o-mini' && (int) $f0->prompt_tokens === 1000000 && (int) $f0->total_tokens === 2000000 && $f0->request_endpoint === 'chat/completions' && (int) $f0->user_id === $admin, 'consumo: columnas del mensaje');
 ok(abs((float) $f0->cost_estimated - 0.75) < 0.0001 && abs((float) $f1->cost_estimated - 12.5) < 0.0001 && $f1->request_type === 'entregables_respuesta', 'consumo: costo gpt-4o-mini 0,15+0,60 y gpt-4o 2,50+10,00 por millón');
+ok(!property_exists($f0, 'model') || $f0->model === 'gpt-4o-mini', 'consumo: la columna model (la que tiene PROD) también lleva el modelo');
 ok($f0->created_at !== null && strlen((string) $f0->created_at) === 19, 'consumo: created_at con fecha');
 
 // ---- AJAX ----

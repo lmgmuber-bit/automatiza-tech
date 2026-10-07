@@ -35,6 +35,10 @@ Referencia: `C:\Users\luis_\Documents\Codex\AI-Memory-Vault\30-Agent-Protocols\a
 Guía única: `Docs/METODO_AT/PLAN-DE-TRABAJO.md`. Módulo `wp-content/themes/automatiza-tech/inc/plan-trabajo/` (cargado por `cargar.php`; `functions.php` no se toca). Al firmar un contrato de servicios se crea el plan; Luis lo edita y aprueba en la ficha del CRM y lo envía al cliente (correo con PDF o su WhatsApp, siempre con su clic). El cliente lo ve en `ver-plan.php?id=<código>` y agenda la llamada de seguimiento por `POST /wp-json/automatiza-tech/v1/plan-seguimiento` (reunión de seguimiento, nunca un lead). Pruebas en `tests/plan/`. Los correos al cliente nunca enlazan a `*.easypanel.host`.
 
 
+## Automatizatech — Entregables con notas y sugerencias con IA (EN PROD)
+
+Guía única: `Docs/METODO_AT/ENTREGABLES-NOTAS.md`. Módulo `wp-content/themes/automatiza-tech/inc/entregables/` (prefijo `at_en_`, cargado desde `inc/admin-proposals.php`; `functions.php` no se toca) y página pública `ver-entregable.php?id=<código>`. Las versiones van dentro del mismo entregable. El cliente ve solo las versiones ya enviadas. Las imágenes se reescriben con GD, sin EXIF, y se guardan en una carpeta privada. La IA (`ia.php`, OpenAI) solo sugiere texto y nunca envía. Pruebas: `bash tests/entregables/correr.sh`.
+
 ## graphify
 
 For any question about this repo's architecture, structure, components, or how to add/modify/find

@@ -1,6 +1,6 @@
 # Entregables con notas y versiones
 
-Estado: **construido y probado en local (rama `claude/entregables-notas`); sin desplegar a PROD.** Diseño: `Docs/superpowers/specs/2026-10-05-entregables-notas-design.md`. Plan: `Docs/superpowers/plans/2026-10-05-entregables-notas.md`.
+Estado: **EN PROD desde el 2026-10-06 y en `main`.** Notas y versiones: PR #76. Sugerencias con IA: PR #77. Las dos partes se probaron en PROD con un cliente de prueba, que después se borró con respaldo. El primer cliente real es Julio (Vitolio, CRM 3, entregable 3), activado el 06-oct. Diseño: `Docs/superpowers/specs/2026-10-05-entregables-notas-design.md`. Plan: `Docs/superpowers/plans/2026-10-05-entregables-notas.md`.
 
 ## Para qué sirve
 
@@ -37,12 +37,12 @@ Una página `ver-entregable.php?id=<código>` (código de 12 letras y números).
 
 ## Archivos y tablas
 
-- Código: `wp-content/themes/automatiza-tech/inc/entregables/` (`cargar.php`, `puras.php`, `plantillas.php`, `datos.php`, `imagenes.php`, `envio.php`, `vista.php`, `panel.php`).
+- Código: `wp-content/themes/automatiza-tech/inc/entregables/` (`cargar.php`, `puras.php`, `plantillas.php`, `datos.php`, `imagenes.php`, `envio.php`, `vista.php`, `panel.php`, `ia.php`).
 - Página pública: `ver-entregable.php` en la raíz del sitio.
 - Cableado: una línea en `wp-content/themes/automatiza-tech/inc/admin-proposals.php` (carga el módulo, igual que el plan de trabajo) y cuatro cambios pequeños en `wp-content/mu-plugins/crm-ai-completo.php` (botón y contenido de la pestaña, marca en la lista de clientes y resumen del portal). `functions.php` no se toca.
 - Tablas (con el prefijo de WordPress): `at_entregables`, `at_entregable_versiones`, `at_entregable_notas`. Opción de esquema: `at_en_db_version`.
 - Imágenes: `wp-content/uploads/at-entregables/<id>/`, con `.htaccess` que niega el acceso directo (`Require all denied`, o `Deny from all` en servidores antiguos) y un `index.php` vacío. Solo se sirven por `ver-entregable.php?id=<código>&img=<nombre>`.
-- Pruebas: `bash tests/entregables/correr.sh` (nueve archivos; necesitan el sitio local de pruebas indicado en `AT_WP_LOAD`). La constante `AT_EN_PRUEBAS` solo se define en `tests/entregables/wp-bootstrap.php` y `accion-run.php`: en CLI no hay subida HTTP y con ella un archivo local cuenta como subido; en PROD no existe y rige `is_uploaded_file()`.
+- Pruebas: `bash tests/entregables/correr.sh` (once archivos; necesitan el sitio local de pruebas indicado en `AT_WP_LOAD`). La constante `AT_EN_PRUEBAS` solo se define en `tests/entregables/wp-bootstrap.php` y `accion-run.php`: en CLI no hay subida HTTP y con ella un archivo local cuenta como subido; en PROD no existe y rige `is_uploaded_file()`.
 
 ## Despliegue a PROD (solo con autorización de Luis)
 
@@ -65,11 +65,12 @@ Dos botones en la pestaña «📦 Entregables» de la ficha del cliente, ambos s
 
 - **«✨ Sugerir mensaje»** (junto al mensaje de «Nueva versión» y de «Editar esta versión»): lee la página del enlace de la versión (texto plano, hasta 8.000 caracteres; si el enlace está vacío avisa «Pega primero el enlace de la versión.») y, desde la v2, las notas y respuestas de la versión anterior. Redacta de 4 a 8 líneas, en español de Chile y de «tú», sin saludo ni firma (los pone la plantilla), sin inventar precios, plazos ni funciones, y sin enlaces a easypanel (además se borra toda línea que mencione easypanel).
 - **«✨ Sugerir respuesta»** (bajo cada nota del cliente sin responder): propone la respuesta de Luis en 2 a 6 líneas, a partir de la nota, de las últimas 6 notas del entregable y, si la nota trae fotos (hasta 3), de las fotos.
-- **Modelos y costo aproximado** (precios por millón de tokens, entrada/salida, de https://developers.openai.com/api/docs/pricing consultados el 06-oct-2026): `gpt-4o-mini` (US$0,15 / US$0,60) para el mensaje y para respuestas sin fotos, ≈ **US$0,0006** por sugerencia; `gpt-4o` (US$2,50 / US$10,00) cuando la nota trae fotos (detalle «low»), ≈ **US$0,016**. Son estimaciones con ~2.500 tokens de entrada y ~370 de salida (mini) y ~5.000 y ~350 (gpt-4o); el consumo real queda registrado.
+- **Modelos y costo aproximado** (precios por millón de tokens, entrada/salida, de https://developers.openai.com/api/docs/pricing consultados el 06-oct-2026): `gpt-4o-mini` (US$0,15 / US$0,60) para el mensaje y para respuestas sin fotos, ≈ **US$0,0006** por sugerencia; `gpt-4o` (US$2,50 / US$10,00) cuando la nota trae fotos (detalle «low»), ≈ **US$0,016**. Son estimaciones con ~2.500 tokens de entrada y ~370 de salida (mini) y ~5.000 y ~350 (gpt-4o); el consumo real queda registrado. **Medido en PROD el 06-oct:** una respuesta sin fotos costó US$0,000068 (227 tokens de entrada y 57 de salida) y un mensaje de versión US$0,000194 (857 y 109).
 - **Privacidad:** el texto de la página, las notas del cliente y sus fotos viajan a OpenAI **solo cuando Luis pulsa el botón**; no hay envío automático ni en segundo plano. Las fotos salen de la carpeta privada del módulo y no se publican.
 - **Límite:** 30 sugerencias por hora por usuario (cuenta solo las logradas; transient `at_en_ia_<usuario>`). Al pasarlo avisa «Llegaste al límite de sugerencias por hora.».
-- **Consumo:** cada sugerencia lograda se anota en `wp_ai_usage_log` con `client_identifier = 'entregables'` y `request_type` `entregables_mensaje` o `entregables_respuesta` (modelo, tokens y costo estimado); aparece en el panel de consumo de IA del CRM.
-- **Clave:** la constante `OPENAI_API_KEY` (variable de entorno o `wp-config-secrets.php`, la misma de los otros módulos). Sin clave el botón avisa «La IA no está configurada.»; si OpenAI falla, «No se pudo sugerir: escribe el texto a mano.». La clave nunca se imprime ni viaja en un error.
+- **Consumo:** cada sugerencia lograda se anota en `wp_ai_usage_log` con `client_identifier = 'entregables'` y `request_type` `entregables_mensaje` o `entregables_respuesta` (el modelo en `model_used` y en `model`, que es la columna que tiene PROD, más tokens y costo estimado); aparece en el panel de consumo de IA del CRM.
+- **Tono:** español de Chile, de «tú» y sin anglicismos: escribe «comentarios», nunca «feedback» (Luis lo pidió tras la prueba real). Luis decidió no forzar la primera persona: puede escribir «hemos».
+- **Clave:** la constante `OPENAI_API_KEY`, la misma de los otros módulos. En PROD está definida en `wp-config.php`, porque `wp-config-secrets.php` no se carga allí. Sin clave el botón avisa «La IA no está configurada.»; si OpenAI falla, «No se pudo sugerir: escribe el texto a mano.». La clave nunca se imprime ni viaja en un error.
 - **Código:** `inc/entregables/ia.php` (llamada, consumo, AJAX `wp_ajax_at_en_sugerir`, solo con sesión) y los prompts puros en `inc/entregables/puras.php`. Pruebas: `tests/entregables/ia-puras-test.php` y `ia-wp-test.php` (todo el HTTP simulado: no gastan créditos).
 
 ## Reversa
@@ -83,14 +84,20 @@ Dos botones en la pestaña «📦 Entregables» de la ficha del cliente, ambos s
 
 - Enlace del portal: resuelto el 06-oct-2026 (los enlaces del portal van firmados con una clave del servidor; PR #75). Ya se pueden activar notas para clientes reales.
 
+## Probado en PROD (06-oct-2026)
+
+Las pruebas se hicieron con clientes de prueba que tenían el correo de Luis. Después se borraron con respaldo: `~/respaldos/entregables-prueba-20261006.json` y `entregables-prueba-ia-20261006.json`.
+
+- Subida y migración: las tres tablas son InnoDB y `at_en_db_version` vale 1.
+- Activar el entregable, enviar la v1 por correo (llegó) y que el cliente deje una nota desde el celular con 2 fotos. Las fotos se reescribieron a 1500×2000 y 1066×1600, sin EXIF ni GPS.
+- El aviso a Luis y su respuesta con «Avisar al cliente». Los tres eventos quedaron en el historial del CRM.
+- La carpeta de imágenes: el acceso directo da 403 (probado con un archivo de sondeo desechable). Por la página con su código da 200 y con otro código, 404.
+- «✨ Sugerir respuesta» sin fotos y «✨ Sugerir mensaje» con OpenAI real; los textos le sirvieron a Luis.
+
 ## Qué NO se ha probado todavía
 
-- Los botones «✨ Sugerir» nunca han llamado a OpenAI de verdad: las pruebas simulan todo el HTTP (no se gastaron créditos). La primera sugerencia real, con la clave de PROD, está por verse (calidad del texto, tiempos, y que `OPENAI_API_KEY` esté definida en PROD).
-- Nada se ha corrido en PROD real: ni la subida, ni la migración de tablas, ni la página con un código real.
-- Fotos reales de celulares (orientación y quitado de ubicación). Las pruebas usan imágenes generadas.
-- Que LiteSpeed en Hostinger respete el `.htaccess` que bloquea la carpeta de imágenes (se verifica en el paso 5 del despliegue).
-- La entrega real de los correos por SMTP: en local los correos se capturan y no salen. Tampoco se ha visto cómo los muestra Gmail o un celular.
-- El correo de prueba, el correo al cliente y el aviso a Luis con la configuración real de PROD.
+- «✨ Sugerir respuesta» con fotos, que usa gpt-4o: en PROD solo se probó sin fotos.
+- El uso con un cliente real. Julio (entregable 3) es el primero.
 - El resumen del portal y la marca de la lista de clientes dentro del portal real (se probaron las funciones y la pestaña en el sitio local).
 - Los fallos de GitHub Actions: el repositorio no ejecuta los checks (facturación); todas las pruebas se corrieron en local.
 

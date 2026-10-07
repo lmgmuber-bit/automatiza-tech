@@ -30,6 +30,6 @@ ok(strpos($l['html'], 'sobre la versión 2') !== false && strpos($l['html'], '2 
 
 $r = at_en_correo_respuesta(['nombre' => 'Orly', 'titulo' => 'Propuestas de diseño', 'numero' => 2, 'texto' => str_repeat('a', 450), 'url_pagina' => $pag, 'logo' => $logo]);
 ok($r['asunto'] === 'Respuesta a tu nota sobre Propuestas de diseño', 'asunto de la respuesta');
-ok(strpos($r['html'], 'Luis respondió tu nota sobre la versión 2') !== false && strpos($r['html'], str_repeat('a', 400) . '…') !== false && strpos($r['html'], str_repeat('a', 401)) === false, 'extracto de 400');
+ok(strpos($r['html'], 'El equipo de AutomatizaTech respondió tu nota sobre la versión 2') !== false && strpos($r['html'], str_repeat('a', 400) . '…') !== false && strpos($r['html'], str_repeat('a', 401)) === false, 'extracto de 400');
 ok(strpos($r['html'], '>Ver la conversación</a>') !== false && strpos($r['html'], 'href="' . $pag . '"') !== false, 'botón a la conversación');
 fin();

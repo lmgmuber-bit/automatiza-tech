@@ -95,5 +95,5 @@ ok(at_en_cliente($e)['titulo'] === 'Propuestas ' . $marca, 'título sin saltos d
 // WhatsApp
 $url = at_en_url_wa_version($e, 1);
 ok(strpos($url, 'https://wa.me/56911111111?text=') === 0 && strpos(rawurldecode($url), 'versión 1 de Propuestas ' . $marca) !== false, 'wa.me de la versión al teléfono de la ficha');
-ok(strpos(at_en_texto_wa_respuesta($e, 1), 'te respondí tu nota sobre la versión 1') !== false, 'texto de WhatsApp de la respuesta');
+ok(strpos(at_en_texto_wa_respuesta($e, 1), 'te respondimos tu nota sobre la versión 1') !== false, 'texto de WhatsApp de la respuesta');
 fin();

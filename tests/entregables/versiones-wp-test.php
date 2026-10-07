@@ -49,7 +49,7 @@ $r = en_correr('at_en_responder', $admin, 'at_en_' . $id, ['entregable_id' => $i
 $todas = at_en_notas($id);
 $resp = end($todas);
 ok(en_query($r['redirect'])['en_msg'] === 'respuesta_ok' && $resp->autor === 'at' && (int) $resp->version_numero === 1, 'la respuesta de AT queda sobre la versión 1');
-ok($resp->nombre === 'Luis', 'la respuesta se firma «Luis» aunque el usuario se llame distinto');
+ok($resp->nombre === 'Equipo AutomatizaTech', 'la respuesta se firma «Equipo AutomatizaTech» aunque el usuario se llame distinto');
 
 // Edición de v2 mientras no se envía
 $ok = at_en_editar_version($id, 2, 'https://example.com/v2b', "Segunda corregida\n- punto");

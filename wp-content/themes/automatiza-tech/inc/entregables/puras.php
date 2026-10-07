@@ -188,12 +188,12 @@ function at_en_extracto(string $t, int $max = 400): string {
 
 function at_en_texto_whatsapp_version(string $nombre, int $n, string $titulo, string $url): string {
 	$saludo = trim($nombre) !== '' ? 'Hola ' . trim($nombre) : 'Hola';
-	return $saludo . ', te escribe Luis de AutomatizaTech. Te envié la versión ' . $n . ' de ' . trim($titulo) . '. Puedes verla y dejarme tus notas aquí: ' . $url;
+	return $saludo . ', te escribimos del equipo de AutomatizaTech. Te enviamos la versión ' . $n . ' de ' . trim($titulo) . '. Puedes verla y dejarnos tus notas aquí: ' . $url;
 }
 
 function at_en_texto_whatsapp_respuesta(string $nombre, int $n, string $titulo, string $url): string {
 	$saludo = trim($nombre) !== '' ? 'Hola ' . trim($nombre) : 'Hola';
-	return $saludo . ', te respondí tu nota sobre la versión ' . $n . ' de ' . trim($titulo) . ': ' . $url;
+	return $saludo . ', te respondimos tu nota sobre la versión ' . $n . ' de ' . trim($titulo) . ': ' . $url;
 }
 
 /** wa.me al teléfono del cliente con el texto; '' sin teléfono válido. */
@@ -268,10 +268,11 @@ function at_en_ia_formato_conversacion(array $notas): string {
 
 /** messages de OpenAI para redactar el cuerpo del correo que acompaña la versión N. $ctx: titulo, empresa, numero, pagina, conversacion_anterior. */
 function at_en_ia_prompt_mensaje(array $ctx): array {
-	$sistema = "Eres Luis, de AutomatizaTech, una agencia chilena de automatización. Redactas el CUERPO del correo que acompaña una nueva versión de un entregable para un cliente.\n"
+	$sistema = "Escribes en nombre del equipo de AutomatizaTech, una agencia chilena de automatización. Redactas el CUERPO del correo que acompaña una nueva versión de un entregable para un cliente.\n"
 		. "Reglas:\n"
 		. "- Español de Chile, cercano y profesional, tratando de «tú».\n"
 		. "- Sin anglicismos: escribe «comentarios», nunca «feedback».\n"
+		. "- Habla siempre en plural, como equipo (por ejemplo «te enviamos», «hicimos», «revisaremos»); nunca en primera persona singular.\n"
 		. "- Entre 4 a 8 líneas en total.\n"
 		. "- Explica qué contiene esta versión y, si hay notas anteriores, qué cambió en respuesta a ellas.\n"
 		. "- NO pongas saludo con el nombre del cliente ni firma: la plantilla del correo ya los agrega.\n"
@@ -296,10 +297,11 @@ function at_en_ia_prompt_mensaje(array $ctx): array {
 
 /** messages de OpenAI para responder una nota del cliente. $ctx: titulo, numero, nota, conversacion (se usan las últimas 6), imagenes (data URLs, máx. 3). */
 function at_en_ia_prompt_respuesta(array $ctx): array {
-	$sistema = "Eres Luis, de AutomatizaTech, una agencia chilena de automatización. Respondes la nota que un cliente dejó sobre una versión de un entregable.\n"
+	$sistema = "Escribes en nombre del equipo de AutomatizaTech, una agencia chilena de automatización. Respondes la nota que un cliente dejó sobre una versión de un entregable.\n"
 		. "Reglas:\n"
 		. "- Español de Chile, cercano y profesional, tratando de «tú».\n"
 		. "- Sin anglicismos: escribe «comentarios», nunca «feedback».\n"
+		. "- Habla siempre en plural, como equipo (por ejemplo «te enviamos», «hicimos», «revisaremos»); nunca en primera persona singular.\n"
 		. "- Entre 2 a 6 líneas.\n"
 		. "- Reconoce lo que el cliente pidió y di concretamente qué se va a hacer; si falta información, haz una pregunta para aclarar.\n"
 		. "- No inventes compromisos de fechas ni precios, ni funciones que no estén en el contexto.\n"

@@ -82,9 +82,9 @@ ok(at_en_extracto(str_repeat('a', 500), 400) === str_repeat('a', 400) . '…' &&
 
 // WhatsApp
 $w = at_en_texto_whatsapp_version('Orly', 2, 'Propuestas de diseño', 'https://x.cl/ver-entregable.php?id=Ab3dE5fG7hJ9');
-ok($w === 'Hola Orly, te escribe Luis de AutomatizaTech. Te envié la versión 2 de Propuestas de diseño. Puedes verla y dejarme tus notas aquí: https://x.cl/ver-entregable.php?id=Ab3dE5fG7hJ9', 'WhatsApp de versión');
-ok(strpos(at_en_texto_whatsapp_version('', 1, 'X', 'u'), 'Hola, te escribe Luis') === 0, 'sin nombre: «Hola,»');
-ok(at_en_texto_whatsapp_respuesta('Orly', 2, 'Propuestas de diseño', 'https://x.cl/v') === 'Hola Orly, te respondí tu nota sobre la versión 2 de Propuestas de diseño: https://x.cl/v', 'WhatsApp de respuesta');
+ok($w === 'Hola Orly, te escribimos del equipo de AutomatizaTech. Te enviamos la versión 2 de Propuestas de diseño. Puedes verla y dejarnos tus notas aquí: https://x.cl/ver-entregable.php?id=Ab3dE5fG7hJ9', 'WhatsApp de versión');
+ok(strpos(at_en_texto_whatsapp_version('', 1, 'X', 'u'), 'Hola, te escribimos del equipo') === 0, 'sin nombre: «Hola,»');
+ok(at_en_texto_whatsapp_respuesta('Orly', 2, 'Propuestas de diseño', 'https://x.cl/v') === 'Hola Orly, te respondimos tu nota sobre la versión 2 de Propuestas de diseño: https://x.cl/v', 'WhatsApp de respuesta');
 ok(at_en_url_wa('+56 9 1111 1111', 'Hola Orly') === 'https://wa.me/56911111111?text=Hola%20Orly', 'wa.me con el teléfono del cliente');
 ok(at_en_url_wa('', 'Hola') === '', 'sin teléfono: sin enlace');
 

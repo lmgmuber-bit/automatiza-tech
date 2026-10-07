@@ -55,7 +55,7 @@ $cr = ['titulo' => 'Propuestas Orly', 'numero' => 3, 'nota' => 'Me gusta pero ca
 $r = at_en_ia_prompt_respuesta($cr);
 $rs = $r[0]['content'];
 ok($r[0]['role'] === 'system' && $r[1]['role'] === 'user' && is_string($r[1]['content']), 'respuesta: system y user de texto sin imágenes');
-ok(stripos($rs, 'Luis') !== false && stripos($rs, 'AutomatizaTech') !== false && stripos($rs, 'tú') !== false, 'respuesta: habla como Luis de AutomatizaTech, con «tú»');
+ok(stripos($rs, 'equipo de AutomatizaTech') !== false && stripos($rs, 'tú') !== false, 'respuesta: escribe en nombre del equipo de AutomatizaTech, con «tú»');
 ok(strpos($rs, '2 a 6 líneas') !== false && stripos($rs, 'firma') !== false && stripos($rs, 'pregunta') !== false, 'respuesta: 2 a 6 líneas, sin firma, pregunta si falta algo');
 ok(stripos($rs, 'no inventes') !== false && stripos($rs, 'fechas') !== false && stripos($rs, 'precios') !== false, 'respuesta: sin compromisos de fechas ni precios');
 $ru = $r[1]['content'];
@@ -77,4 +77,9 @@ ok(at_en_ia_quitar_easypanel("Uno\nEASYPANEL\n\nDos") === "Uno\n\nDos", 'easypan
 
 // Sin anglicismos (Luis, 06-oct: la prueba real escribió «feedback»)
 ok(strpos($m1[0]['content'], 'nunca «feedback»') !== false && strpos(at_en_ia_prompt_respuesta($cr)[0]['content'], 'nunca «feedback»') !== false, 'los dos prompts piden «comentarios» y no «feedback»');
+
+// Voz de equipo en plural (Luis, 06-oct): nada en singular ni «Eres Luis»
+foreach ([[$m1[0]['content'], 'mensaje'], [at_en_ia_prompt_respuesta($cr)[0]['content'], 'respuesta']] as [$sp, $quien]) {
+	ok(strpos($sp, 'Habla siempre en plural') !== false && strpos($sp, 'Eres Luis') === false && strpos($sp, 'en nombre del equipo de AutomatizaTech') !== false, 'prompt de ' . $quien . ': plural de equipo y sin «Eres Luis»');
+}
 fin();

@@ -61,7 +61,7 @@ function at_en_correo_respuesta(array $v): array {
 	$titulo = trim((string) ($v['titulo'] ?? ''));
 	$nombre = trim((string) ($v['nombre'] ?? ''));
 	$cuerpo = '<p>Hola <strong>' . at_en_h($nombre !== '' ? $nombre : 'cliente') . '</strong>:</p>'
-		. '<p>Luis respondió tu nota sobre la versión ' . (int) ($v['numero'] ?? 0) . ' de <strong>' . at_en_h($titulo) . '</strong>:</p>'
+		. '<p>El equipo de AutomatizaTech respondió tu nota sobre la versión ' . (int) ($v['numero'] ?? 0) . ' de <strong>' . at_en_h($titulo) . '</strong>:</p>'
 		. '<div style="background:#f0fdf4;border-left:4px solid #06d6a0;padding:14px 18px;border-radius:8px;margin:16px 0;">' . nl2br(at_en_h(at_en_extracto((string) ($v['texto'] ?? ''), 400))) . '</div>'
 		. '<p style="text-align:center;margin:22px 0;">' . at_en_boton((string) ($v['url_pagina'] ?? ''), 'Ver la conversación', '#1e3a8a') . '</p>'
 		. at_en_firma();

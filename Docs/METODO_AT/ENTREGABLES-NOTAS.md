@@ -57,7 +57,20 @@ Una página `ver-entregable.php?id=<código>` (código de 12 letras y números).
 5. `php -l` y md5 de cada archivo subido, purgar la caché de LiteSpeed y verificar por HTTP desde afuera: la página con un código malo (404 amable), con uno bueno de prueba, y que la carpeta de imágenes bloquee el acceso directo. Para eso se crea **un archivo de sondeo desechable** en `wp-content/uploads/at-entregables/` (un `.txt` con texto inocuo hecho para la prueba; **nunca una imagen real de un cliente**), se pide por HTTP, debe devolver 403, y se borra al terminar. Siempre que se pueda, se comprueba antes por SSH (el `.htaccess` existe con `Require all denied`, permisos de la carpeta) y no se sondean por el CDN archivos privados: un `HEAD` los deja en la caché del CDN.
 6. La primera prueba real se hace con un cliente y un entregable de prueba. El entregable 30 de Orly no se toca.
 
-Lista de subida para FTP (rutas relativas a la raíz del sitio, orden de arriba): `wp-content/themes/automatiza-tech/inc/entregables/*.php` (8 archivos, OBLIGATORIO) → `wp-content/themes/automatiza-tech/inc/admin-proposals.php` (OBLIGATORIO) → `ver-entregable.php` (OBLIGATORIO) → `wp-content/mu-plugins/crm-ai-completo.php` (OBLIGATORIO). No subir `tests/`, `Docs/` ni `.superpowers/`.
+Lista de subida para FTP (rutas relativas a la raíz del sitio, orden de arriba): `wp-content/themes/automatiza-tech/inc/entregables/*.php` (9 archivos, OBLIGATORIO; con `ia.php` y el `cargar.php` que lo incluye) → `wp-content/themes/automatiza-tech/inc/admin-proposals.php` (OBLIGATORIO) → `ver-entregable.php` (OBLIGATORIO) → `wp-content/mu-plugins/crm-ai-completo.php` (OBLIGATORIO). No subir `tests/`, `Docs/` ni `.superpowers/`.
+
+## Sugerencias con IA (botones «✨ Sugerir»)
+
+Dos botones en la pestaña «📦 Entregables» de la ficha del cliente, ambos solo en el panel (el cliente nunca los ve) y ambos **opcionales**: el texto sugerido se pone en el cuadro, Luis lo lee, lo corrige y recién entonces guarda o envía. Nada se envía solo.
+
+- **«✨ Sugerir mensaje»** (junto al mensaje de «Nueva versión» y de «Editar esta versión»): lee la página del enlace de la versión (texto plano, hasta 8.000 caracteres; si el enlace está vacío avisa «Pega primero el enlace de la versión.») y, desde la v2, las notas y respuestas de la versión anterior. Redacta de 4 a 8 líneas, en español de Chile y de «tú», sin saludo ni firma (los pone la plantilla), sin inventar precios, plazos ni funciones, y sin enlaces a easypanel (además se borra toda línea que mencione easypanel).
+- **«✨ Sugerir respuesta»** (bajo cada nota del cliente sin responder): propone la respuesta de Luis en 2 a 6 líneas, a partir de la nota, de las últimas 6 notas del entregable y, si la nota trae fotos (hasta 3), de las fotos.
+- **Modelos y costo aproximado** (precios por millón de tokens, entrada/salida, de https://developers.openai.com/api/docs/pricing consultados el 06-oct-2026): `gpt-4o-mini` (US$0,15 / US$0,60) para el mensaje y para respuestas sin fotos, ≈ **US$0,0006** por sugerencia; `gpt-4o` (US$2,50 / US$10,00) cuando la nota trae fotos (detalle «low»), ≈ **US$0,016**. Son estimaciones con ~2.500 tokens de entrada y ~370 de salida (mini) y ~5.000 y ~350 (gpt-4o); el consumo real queda registrado.
+- **Privacidad:** el texto de la página, las notas del cliente y sus fotos viajan a OpenAI **solo cuando Luis pulsa el botón**; no hay envío automático ni en segundo plano. Las fotos salen de la carpeta privada del módulo y no se publican.
+- **Límite:** 30 sugerencias por hora por usuario (cuenta solo las logradas; transient `at_en_ia_<usuario>`). Al pasarlo avisa «Llegaste al límite de sugerencias por hora.».
+- **Consumo:** cada sugerencia lograda se anota en `wp_ai_usage_log` con `client_identifier = 'entregables'` y `request_type` `entregables_mensaje` o `entregables_respuesta` (modelo, tokens y costo estimado); aparece en el panel de consumo de IA del CRM.
+- **Clave:** la constante `OPENAI_API_KEY` (variable de entorno o `wp-config-secrets.php`, la misma de los otros módulos). Sin clave el botón avisa «La IA no está configurada.»; si OpenAI falla, «No se pudo sugerir: escribe el texto a mano.». La clave nunca se imprime ni viaja en un error.
+- **Código:** `inc/entregables/ia.php` (llamada, consumo, AJAX `wp_ajax_at_en_sugerir`, solo con sesión) y los prompts puros en `inc/entregables/puras.php`. Pruebas: `tests/entregables/ia-puras-test.php` y `ia-wp-test.php` (todo el HTTP simulado: no gastan créditos).
 
 ## Reversa
 
@@ -72,6 +85,7 @@ Lista de subida para FTP (rutas relativas a la raíz del sitio, orden de arriba)
 
 ## Qué NO se ha probado todavía
 
+- Los botones «✨ Sugerir» nunca han llamado a OpenAI de verdad: las pruebas simulan todo el HTTP (no se gastaron créditos). La primera sugerencia real, con la clave de PROD, está por verse (calidad del texto, tiempos, y que `OPENAI_API_KEY` esté definida en PROD).
 - Nada se ha corrido en PROD real: ni la subida, ni la migración de tablas, ni la página con un código real.
 - Fotos reales de celulares (orientación y quitado de ubicación). Las pruebas usan imágenes generadas.
 - Que LiteSpeed en Hostinger respete el `.htaccess` que bloquea la carpeta de imágenes (se verifica en el paso 5 del despliegue).

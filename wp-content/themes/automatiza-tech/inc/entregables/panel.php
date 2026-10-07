@@ -66,6 +66,32 @@ function at_en_form(string $accion, int $ent_id, string $campos, string $boton, 
 		. '<button type="submit" class="button">' . esc_html($boton) . '</button></form>';
 }
 
+/** Botón «✨ Sugerir …» (type=button, dentro del formulario que rellena) y el lugar de su aviso. Todo dato va escapado en data-*. */
+function at_en_boton_ia(string $tipo, int $ent_id, string $campo, int $numero = 0, int $nota_id = 0): string {
+	return '<button type="button" class="button at-en-ia-btn" data-tipo="' . esc_attr($tipo) . '" data-ent="' . $ent_id . '" data-campo="' . esc_attr($campo) . '"'
+		. ' data-numero="' . $numero . '" data-nota="' . $nota_id . '" data-nonce="' . esc_attr(wp_create_nonce('at_en_' . $ent_id)) . '">'
+		. ($tipo === 'respuesta' ? '✨ Sugerir respuesta' : '✨ Sugerir mensaje') . '</button> <span class="at-en-ia-msg" role="status" style="color:#b91c1c;margin-left:6px"></span>';
+}
+
+/** Script de los botones de IA: código fijo, una sola vez por pestaña (escucha los clics del panel entero). */
+function at_en_script_ia(): string {
+	return '<script>(function(){var ajax=' . wp_json_encode(admin_url('admin-ajax.php')) . ';'
+		. 'document.addEventListener("click",function(ev){var b=ev.target.closest?ev.target.closest(".at-en-ia-btn"):null;if(!b){return;}ev.preventDefault();'
+		. 'var f=b.form||b.closest("form"),msg=b.parentNode.querySelector(".at-en-ia-msg"),campo=f?f.querySelector("textarea[name="+b.getAttribute("data-campo")+"]"):null;'
+		. 'if(!campo||b.disabled){return;}msg.textContent="";var d=new URLSearchParams();d.append("action","at_en_sugerir");d.append("_ajax_nonce",b.getAttribute("data-nonce"));'
+		. 'd.append("entregable_id",b.getAttribute("data-ent"));d.append("tipo",b.getAttribute("data-tipo"));'
+		. 'if(b.getAttribute("data-tipo")==="respuesta"){d.append("nota_id",b.getAttribute("data-nota"));}else{'
+		. 'var u=f.querySelector("input[name=url]"),url=u?u.value.trim():"";if(url===""){msg.textContent="Pega primero el enlace de la versión.";return;}'
+		. 'd.append("url",url);d.append("numero",b.getAttribute("data-numero"));}'
+		. 'if(campo.value.trim()!==""&&!window.confirm("¿Reemplazar el texto actual por la sugerencia de la IA?")){return;}'
+		. 'var et=b.textContent;b.disabled=true;b.textContent="Pensando…";'
+		. 'fetch(ajax,{method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/x-www-form-urlencoded"},body:d.toString()})'
+		. '.then(function(r){return r.json();}).then(function(j){if(j&&j.success&&j.data&&typeof j.data.texto==="string"){campo.value=j.data.texto;}'
+		. 'else{msg.textContent=(j&&j.data&&j.data.mensaje)?j.data.mensaje:"No se pudo sugerir: escribe el texto a mano.";}})'
+		. '.catch(function(){msg.textContent="No se pudo sugerir: escribe el texto a mano.";})'
+		. '.then(function(){b.disabled=false;b.textContent=et;});});})();</script>';
+}
+
 function at_en_render_pestana(array $cliente): void {
 	$crm = (int) ($cliente['id'] ?? 0);
 	$msg = sanitize_key(wp_unslash($_GET['en_msg'] ?? ''));
@@ -102,6 +128,10 @@ function at_en_render_pestana(array $cliente): void {
 		echo '<details' . ($abierto === $en_id ? ' open' : '') . '><summary>Línea de tiempo y acciones</summary>';
 		at_en_render_detalle($e, $crm);
 		echo '</details></div>';
+		$hay_activos = true;
+	}
+	if (!empty($hay_activos)) {
+		echo at_en_script_ia();
 	}
 }
 
@@ -133,6 +163,7 @@ function at_en_render_detalle(object $e, int $crm): void {
 				. wp_nonce_field('at_en_' . $id, '_wpnonce', true, false)
 				. '<textarea name="texto" rows="3" style="width:100%" maxlength="3000" required placeholder="Tu respuesta"></textarea>'
 				. '<input type="file" name="imagenes[]" accept="image/jpeg,image/png" multiple> '
+				. at_en_boton_ia('respuesta', $id, 'texto', 0, (int) $n->id)
 				. '<label><input type="checkbox" name="avisar" value="1" checked> Avisar al cliente por correo</label> '
 				. '<button class="button button-primary">Responder</button></form>';
 		}
@@ -173,7 +204,7 @@ function at_en_render_detalle(object $e, int $crm): void {
 				. '<form method="post" action="' . esc_url(admin_url('admin-post.php')) . '">'
 				. '<input type="hidden" name="action" value="at_en_version_editar"><input type="hidden" name="entregable_id" value="' . $id . '">' . $num . wp_nonce_field('at_en_' . $id, '_wpnonce', true, false)
 				. '<p><label>Enlace de la versión<br><input type="url" name="url" required style="width:100%" value="' . esc_attr((string) $vig->url) . '"></label></p>'
-				. '<p><label>Tu mensaje<br><textarea name="mensaje" rows="6" maxlength="6000" style="width:100%">' . esc_textarea((string) $vig->mensaje) . '</textarea></label></p>'
+				. '<p><label>Tu mensaje<br><textarea name="mensaje" rows="6" maxlength="6000" style="width:100%">' . esc_textarea((string) $vig->mensaje) . '</textarea></label><br>' . at_en_boton_ia('mensaje', $id, 'mensaje', (int) $vig->numero) . '</p>'
 				. '<button class="button">Guardar cambios de la versión ' . (int) $vig->numero . '</button></form>';
 		}
 	}
@@ -181,7 +212,7 @@ function at_en_render_detalle(object $e, int $crm): void {
 	echo '<h4>Nueva versión (' . ((int) $e->version_vigente + 1) . ')</h4><form method="post" action="' . esc_url(admin_url('admin-post.php')) . '">'
 		. '<input type="hidden" name="action" value="at_en_version_crear"><input type="hidden" name="entregable_id" value="' . $id . '">' . wp_nonce_field('at_en_' . $id, '_wpnonce', true, false)
 		. '<p><label>Enlace de la versión<br><input type="url" name="url" required style="width:100%" placeholder="https://"></label></p>'
-		. '<p><label>Tu mensaje (párrafos con línea en blanco; listas con «- »)<br><textarea name="mensaje" rows="6" maxlength="6000" style="width:100%"></textarea></label></p>'
+		. '<p><label>Tu mensaje (párrafos con línea en blanco; listas con «- »)<br><textarea name="mensaje" rows="6" maxlength="6000" style="width:100%"></textarea></label><br>' . at_en_boton_ia('mensaje', $id, 'mensaje', (int) $e->version_vigente + 1) . '</p>'
 		. '<button class="button button-primary">Crear versión y ver vista previa</button></form>';
 	echo '<p>' . ($e->estado === 'abierto'
 		? at_en_form('at_en_estado', $id, '<input type="hidden" name="estado" value="cerrado">', 'Cerrar el entregable')

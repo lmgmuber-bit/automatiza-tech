@@ -302,7 +302,7 @@ function at_en_accion_responder(): void {
 	if (!$nota || (int) $nota->entregable_id !== (int) $e->id || $nota->autor !== 'cliente') {
 		at_en_volver((int) $e->crm_id, (int) $e->id, 'nota_ajena');
 	}
-	$nombre = 'Luis'; // firma fija: lo que ve el cliente no depende del nombre del usuario de WordPress
+	$nombre = 'Equipo AutomatizaTech'; // firma fija de equipo: lo que ve el cliente no depende del nombre del usuario de WordPress
 	$texto = (string) wp_unslash($_POST['texto'] ?? '');
 	// Se valida el texto antes de reescribir imágenes: así una respuesta rechazada no deja archivos sueltos.
 	$v = at_en_validar_nota($nombre, $texto);

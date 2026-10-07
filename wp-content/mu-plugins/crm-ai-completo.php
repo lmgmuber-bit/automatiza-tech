@@ -1822,6 +1822,10 @@ class AutomatizaTech_CRM_AI {
             'conversion'        => 'legacy',
             'update'            => 'legacy',
         ];
+        // Tipos nuevos (entregables, WhatsApp, bienvenida…) con nombre propio en vez de «Sistema»: at-timeline-origen.php.
+        if (function_exists('at_tl_mapa_historial')) {
+            $legacy_type_map = at_tl_mapa_historial() + $legacy_type_map;
+        }
         foreach ($historia_legacy as $h) {
              $ts = strtotime($h['created_at']);
              $tipo = $h['tipo_evento'] ?? 'legacy';
@@ -1835,6 +1839,8 @@ class AutomatizaTech_CRM_AI {
                 'display_date' => $h['created_at'],
                 'timestamp' => $ts,
                 'source' => 'system',
+                'tipo_evento' => $tipo,
+                'usuario_id' => (int) ($h['usuario_id'] ?? 0),
                 'metadata' => $h['metadata']
             ];
         }
@@ -1874,6 +1880,9 @@ class AutomatizaTech_CRM_AI {
             'legacy' => ['label' => '🤖 Sistema', 'icon' => '⚙️', 'color' => '#64748b', 'bg' => '#f8fafc'],
             'separator' => ['label' => '🎉 Conversión', 'icon' => '🎉', 'color' => '#7c3aed', 'bg' => '#f5f3ff'] // Morado vibrante
         ];
+        if (function_exists('at_tl_tipos_extra')) {
+            $detail_types = at_tl_tipos_extra() + $detail_types;
+        }
 
         // Propuestas y demos como prospecto (por email)
         $tabla_propuestas = $wpdb->prefix . 'automatiza_propuestas';
@@ -2820,13 +2829,13 @@ class AutomatizaTech_CRM_AI {
                     if (in_array($dtype, ['reunion', 'llamada'])) {
                         $timeline_tabs['reuniones'][] = $item;
                     }
-                    if (in_array($dtype, ['nota', 'email'])) {
+                    if (in_array($dtype, ['nota', 'email', 'email_bienvenida', 'whatsapp', 'entregable_nota', 'entregable_respuesta'])) {
                         $timeline_tabs['notas'][] = $item;
                     }
                     if (in_array($dtype, ['pago', 'boleta', 'factura', 'cotizacion'])) {
                         $timeline_tabs['pagos'][] = $item;
                     }
-                    if (in_array($dtype, ['legacy', 'separator', 'item_proyecto', 'entregable'])) {
+                    if (in_array($dtype, ['legacy', 'separator', 'item_proyecto', 'entregable', 'entregable_version', 'conversion'])) {
                         $timeline_tabs['sistema'][] = $item;
                     }
                 }
@@ -2907,7 +2916,8 @@ class AutomatizaTech_CRM_AI {
                             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
                                 <div style="display:flex; align-items:center; gap:8px;">
                                     <span class="badge" style="background:<?php echo $config['color']; ?>; color: #fff; padding: 3px 8px; border-radius: 12px; font-size: 11px;"><?php echo $config['icon'] . ' ' . $config['label']; ?></span>
-                                    <?php 
+                                    <?php echo function_exists('at_tl_origen_html') ? at_tl_origen_html($h) : ''; ?>
+                                    <?php
                                     $is_notified = false;
                                     if (!empty($h['metadata'])) {
                                         $meta_check = json_decode($h['metadata'], true);
@@ -4700,6 +4710,9 @@ class AutomatizaTech_CRM_AI {
                 'conversion'        => 'legacy',
                 'update'            => 'legacy',
             ];
+            if (function_exists('at_tl_mapa_historial')) {
+                $legacy_type_map = at_tl_mapa_historial() + $legacy_type_map;
+            }
             $historia_legacy = $wpdb->get_results($wpdb->prepare("SELECT * FROM {$this->tabla_historial} WHERE cliente_id = %d ORDER BY created_at DESC", $cliente_id), ARRAY_A);
             foreach ($historia_legacy as $h) {
                 $ts = strtotime($h['created_at']);
@@ -4714,6 +4727,8 @@ class AutomatizaTech_CRM_AI {
                     'display_date' => $h['created_at'],
                     'timestamp' => $ts,
                     'source' => 'system',
+                    'tipo_evento' => $tipo,
+                    'usuario_id' => (int) ($h['usuario_id'] ?? 0),
                     'metadata' => $h['metadata']
                 ];
             }
@@ -4806,7 +4821,10 @@ class AutomatizaTech_CRM_AI {
                 'legacy' => ['label' => '🤖 Sistema', 'icon' => '⚙️', 'color' => '#64748b', 'bg' => '#f8fafc'],
                 'separator' => ['label' => '🎉 Conversión', 'icon' => '🎉', 'color' => '#7c3aed', 'bg' => '#f5f3ff'] // Morado vibrante
             ];
-            
+            if (function_exists('at_tl_tipos_extra')) {
+                $detail_types = at_tl_tipos_extra() + $detail_types;
+            }
+
             // Datos de identidad corporativa (desde la tabla)
             $logo_cliente = $cliente->logo_url;
             $color_p = $cliente->color_principal;
@@ -5191,13 +5209,13 @@ class AutomatizaTech_CRM_AI {
                         if (in_array($dtype, ['reunion', 'llamada'])) {
                             $timeline_tabs['reuniones'][] = $item;
                         }
-                        if (in_array($dtype, ['nota', 'email'])) {
+                        if (in_array($dtype, ['nota', 'email', 'email_bienvenida', 'whatsapp', 'entregable_nota', 'entregable_respuesta'])) {
                             $timeline_tabs['notas'][] = $item;
                         }
                         if (in_array($dtype, ['pago', 'boleta', 'factura', 'cotizacion'])) {
                             $timeline_tabs['pagos'][] = $item;
                         }
-                        if (in_array($dtype, ['legacy', 'separator', 'item_proyecto', 'entregable'])) {
+                        if (in_array($dtype, ['legacy', 'separator', 'item_proyecto', 'entregable', 'entregable_version', 'conversion'])) {
                             $timeline_tabs['sistema'][] = $item;
                         }
                     }
@@ -5267,7 +5285,7 @@ class AutomatizaTech_CRM_AI {
                             <div class="timeline-date"><?php echo date('d/m/Y H:i', $h['timestamp']); ?></div>
                             <div class="timeline-content" style="border-left: 4px solid <?php echo $config['color']; ?>; <?php echo $type === 'separator' ? 'background:#fdf2f8; border:2px dashed #7c3aed;' : ''; ?>">
                                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
-                                    <span class="badge" style="background:<?php echo $config['color']; ?>;"><?php echo $config['icon'] . ' ' . $config['label']; ?></span>
+                                    <span style="display:inline-flex; gap:6px; align-items:center; flex-wrap:wrap;"><span class="badge" style="background:<?php echo $config['color']; ?>;"><?php echo $config['icon'] . ' ' . $config['label']; ?></span><?php echo function_exists('at_tl_origen_html') ? at_tl_origen_html($h) : ''; ?></span>
                                     <?php echo $amount_display; ?>
                                 </div>
                                 <h3 style="margin-top:8px;"><?php echo esc_html($h['title'] ?? $h['titulo']); ?></h3>
@@ -6389,6 +6407,7 @@ class AutomatizaTech_CRM_AI {
             // tiempo pública del prospecto; misma lista que usa render_public_timeline() más arriba.
             $at_cc_tipos_internos = function_exists('at_cc_tipos_internos') ? at_cc_tipos_internos() : ['cierre_incompleto', 'aviso_operativo'];
             foreach ($details as $d) {
+                $d['source'] = 'prospect'; // para la etiqueta de origen (at-timeline-origen.php)
                 if (in_array($d['detail_type'] ?? '', $at_cc_tipos_internos, true)) {
                     continue;
                 }
@@ -6523,7 +6542,7 @@ class AutomatizaTech_CRM_AI {
                 <div class="timeline-date"><?php echo date('d/m/Y H:i', $h['timestamp']); ?></div>
                 <div class="timeline-content" style="border-left: 4px solid <?php echo $config['color']; ?>;">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
-                        <span class="badge" style="background:<?php echo $config['color']; ?>;"><?php echo $config['icon'] . ' ' . $config['label']; ?></span>
+                        <span style="display:inline-flex; gap:6px; align-items:center; flex-wrap:wrap;"><span class="badge" style="background:<?php echo $config['color']; ?>;"><?php echo $config['icon'] . ' ' . $config['label']; ?></span><?php echo function_exists('at_tl_origen_html') ? at_tl_origen_html($h) : ''; ?></span>
                         <?php echo $amount_display; ?>
                     </div>
                     <h3 style="margin-top:8px;"><?php echo esc_html($h['title'] ?? ''); ?></h3>

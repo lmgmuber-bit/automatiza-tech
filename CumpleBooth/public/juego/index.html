@@ -238,7 +238,8 @@
   'use strict';
 
   var params = new URLSearchParams(location.search);
-  var slug = (params.get('p') || '').toLowerCase().replace(/[^a-z0-9-]/g, '').slice(0, 60);
+  // 80 como el servidor (cb_valid_slug): con 60 un slug generado largo quedaba cortado y la fiesta no aparecía.
+  var slug = (params.get('p') || '').toLowerCase().replace(/[^a-z0-9-]/g, '').slice(0, 80);
   var enKiosco = params.get('kiosco') === '1';
 
   var $ = function (id) { return document.getElementById(id); };
@@ -257,11 +258,12 @@
     'festival': 'festival/',
     'impulso': 'impulso-aracnido/',
     'circuito': 'circuito/',
-    'aurora': 'aurora/'
+    'aurora': 'aurora/',
+    'volantin': 'volantin/'
   };
   var ICONOS = {
     'reino-hielo': '❄️', 'festival': '✨', 'aracnida': '🕸️', 'mision': '🦸',
-    'impulso': '🕷️', 'circuito': '🏎️', 'aurora': '🛷'
+    'impulso': '🕷️', 'circuito': '🏎️', 'aurora': '🛷', 'volantin': '🪁'
   };
   var PIES = {
     'reino-hielo': 'Explora el reino y ayuda a los amigos',
@@ -270,7 +272,8 @@
     'mision': 'Una misión para el equipo',
     'impulso': 'Recorre la ciudad con el equipo, de azotea en azotea',
     'circuito': 'Corran juntos por la ciudad, cada uno en su celular',
-    'aurora': 'Corre en trineo por el reino, solo o con tus amigos'
+    'aurora': 'Corre en trineo por el reino, solo o con tus amigos',
+    'volantin': 'Encumbra tu volantín de los cerros a la fonda'
   };
 
   function enlaceJuego(id, jugador) {
@@ -304,7 +307,8 @@
     // quien juega saludaba "¡Feliz cumpleaños, Gabriela!" en el cumpleaños de Samantha
     // (Luis, 2026-09-11). La línea que intentaba esto nunca se ejecutaba: la rama del
     // jugador iba antes y el menú siempre pide un jugador.
-    else if (id === 'aurora' || id === 'festival') {
+    // Chile en Volantín también: `nombre` es la fiesta ("Fiesta: X" en la portada) y `jugador` quien vuela y se anota.
+    else if (id === 'aurora' || id === 'festival' || id === 'volantin') {
       q += '&nombre=' + encodeURIComponent(fiestaNombre || '');
       // Y quien juega, aparte: el Festival lo saluda por su nombre y le da el primer turno;
       // Aurora lo usa para entrar a la sala de amigos. En los dos es el nombre de la tabla.

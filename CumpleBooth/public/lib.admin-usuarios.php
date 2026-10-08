@@ -23,6 +23,9 @@ const CB_ADMIN_MODULOS = [
     'album'     => ['nombre' => 'Álbum Recuerdo', 'detalle' => 'Recibir y curar los aportes de los papás'],
     'perfil'    => ['nombre' => 'Perfil del protagonista', 'detalle' => 'Editar el perfil del festejado'],
     'marketing' => ['nombre' => 'Contenido', 'detalle' => 'Organizar publicaciones y métricas'],
+    // Modo feria (2026-09-26): al final, para no mover a los demás. Con la fiesta de la feria asignada, el operador
+    // ve la galería de esa feria, busca y reimprime; crear o editar ferias es solo del superadministrador.
+    'ferias'    => ['nombre' => 'Ferias', 'detalle' => 'Galería de sus ferias: buscar, reimprimir y mostrar el QR'],
 ];
 /** Lo que se marca por defecto al crear un operador: lo que se usa durante la fiesta. */
 const CB_ADMIN_MODULOS_RECOMENDADOS = ['fotos', 'juegos', 'carteles', 'invitados'];

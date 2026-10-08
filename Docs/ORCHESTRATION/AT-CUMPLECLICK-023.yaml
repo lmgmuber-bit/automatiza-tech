@@ -1,0 +1,72 @@
+ticket_id: AT-CUMPLECLICK-023
+title: "Chile en Volantín: experiencia 3D inmersiva de Fiestas Patrias"
+origin: direct_luis
+portfolio: "AT"
+priority: P2
+status: READY
+
+governance:
+  professional_standard: "Docs/ENGINEERING_STANDARDS/PROFESSIONAL_ENGINEERING_STANDARD.md"
+  quality_gate: C2
+
+objective: >
+  Un mundo 3D inmersivo de Fiestas Patrias: el jugador encumbra un volantín y lo lleva por Valparaíso, la cordillera,
+  el valle central y la fonda del 18, con cóndores, copihues, rachas de viento, fuegos artificiales y, al cierre, un
+  volantín gigante con su foto de la cabina. Partidas de 60 a 90 s, todo público, con arte hecho con la API de
+  Higgsfield dentro del tope que apruebe Luis.
+owner: codex
+reviewer: claude
+active_orchestrator: claude
+
+ownership:
+  current_owner: codex
+  previous_owners: []
+  takeover_allowed: true
+  takeover_count: 0
+  takeover_reason: null
+  urgency: medium
+  resolution_status: pending
+  reassignment_authorized_by: "Luis Miguel (26-09-2026: 'una temática bien chilena […] debe apoyarse en Higgsfield con su API')"
+  handoff_ref: "CumpleBooth/docs/CODEX-HANDOFF-JUEGO-CHILE-VOLANTIN-2026-09-26.md"
+  handoff_quality: COMPLETE
+
+scope:
+  allowed_files:
+    - "C:/wamp64/www/cumpleclick-juego-chile-volantin/** (repositorio nuevo y local)"
+  forbidden_files:
+    - "C:/wamp64/www/automatiza-tech/** (lo integra Claude)"
+    - "C:/wamp64/www/tucumple-repo/**"
+    - "C:/wamp64/www/cumpleclick-juego-*/** (los otros juegos: solo lectura como referencia)"
+  locked_files: []
+  branch: "main (repo nuevo, sin push)"
+  base_commit: null
+  depends_on:
+    - "Reglas técnicas y de Higgsfield del ticket 022 (mismo brief, secciones 3 y 4.1)."
+
+routing:
+  complexity: C2
+  risk: medium
+  uncertainty: medium
+  reversibility: easy
+  selected_profile: strong_reasoner
+  selected_model: "codex (runtime)"
+  rationale: "Juego 3D nuevo con la pila de Aurora; riesgos: rendimiento en la Tab A7, gasto en Higgsfield y exactitud de los símbolos patrios."
+  independent_review: true
+  human_gate: true
+
+acceptance:
+  criteria:
+    - "Cuatro escenas (Valparaíso, cordillera, valle, fonda del 18) en 60 a 90 s, con volantín guiado por el dedo y el giroscopio, copihues, estrellas, rachas y cóndores."
+    - "Cierre con fuegos artificiales y volantín gigante con la foto de la cabina (o el nombre si no hay foto); puntaje por medallas."
+    - "Bandera de Chile dibujada en código, exacta y con respeto; nada de hilo curado ni marcas."
+    - "Parámetros p, nombre (fiesta), jugador, volver y kiosco; .htaccess con AddType .mjs; sin style inline."
+    - "P10 >= 30 fps a 1200 x 2000; peso <= 15 MB; prefers-reduced-motion sin destellos."
+    - "Registro de Higgsfield con cada request_id y total dentro del tope aprobado."
+  tests:
+    - "Pruebas del repo (node --test) y una corrida completa grabada o capturada a 1200 x 2000."
+    - "fps medidos (P10 y promedio)."
+
+delivery:
+  pr: "Commit en main del repo nuevo (sin push) con README, registro de Higgsfield, capturas, fps y lista FTP hacia app/juego/volantin/."
+  deploy: "No despliega Codex. Claude sube el repo privado, integra (cb_juegos, menú, modo feria) y despliega con el go de Luis."
+  credits: "Solo Higgsfield por su API y solo dentro del tope que Luis escriba en el prompt; sin tope, no genera."

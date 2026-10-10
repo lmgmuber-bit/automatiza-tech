@@ -23,7 +23,7 @@ una copia sola: cambiar las dos y comparar su sha256 (ignorando fin de línea).
 ## Reglas que mandan
 
 - **Generador propio, plantilla única** (regla de Luis, 2026-09-23): toda propuesta se arma con el
-  `propuesta-renderer`, la misma estructura y controles que la de Jeffer García (propuesta 42). No se
+  `propuesta-renderer`, la misma estructura y controles que la propuesta de referencia (cuál es: bóveda privada, nota de Propuestas v3). No se
   generan prompts de Gamma. Canva/Gamma quedan como respaldo **solo si Luis lo pide expresamente**.
 - **El nombre `at-gamma-proposal` es histórico** y se conserva por los disparadores. `at-propuesta` es
   un alias que remite aquí.
@@ -189,8 +189,8 @@ segunda reunión. 5. Ejecución del proyecto. 6. Conversión de prospecto a clie
 
 ## Referencias
 
-- Caso G&N MobileStore (primer caso completo, edit_id 22): `references/caso-gyn-mobilestore.md`
-  (solo en la copia de usuario; no está en el repo porque trae datos del cliente).
+- Caso de referencia completo: carpeta `references/` de la copia de usuario (no está en el repo
+  porque trae datos del cliente).
 - Logo AutomatizaTech: `https://automatizatech.cl/wp-content/themes/automatiza-tech/assets/images/logo-automatiza-tech+slogan.png`
 - En el panel, el campo histórico *URL Iframe Gamma* recibe
   `https://n8n-propuesta-renderer.kchiba.easypanel.host/p/<unique_id>/index.html`.

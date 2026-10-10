@@ -46,7 +46,7 @@ scope:
     - "Docs/METODO_AT/PROPUESTAS-PLANTILLA-UNICA.md (del PR #36, puesto al día con v3 y la clave de /render; sin el unique_id de un cliente: el repo es público)"
     - "Docs/ORCHESTRATION/current-handoff.yaml (lease a Claude) y este ticket"
   user_files_outside_git:
-    canonical: "C:/Users/luis_/.agents/skills/at-gamma-proposal/ (SKILL.md + references/caso-gyn-mobilestore.md)"
+    canonical: "C:/Users/luis_/.agents/skills/at-gamma-proposal/ (SKILL.md + references/ con el caso de referencia, fuera del repo)"
     junctions:
       - "C:/Users/luis_/.claude/skills/at-gamma-proposal"
       - "C:/Users/luis_/.codex/skills/at-gamma-proposal"
@@ -61,7 +61,7 @@ scope:
 acceptance:
   - id: A1
     criterion: "Las cuatro rutas de la skill tienen el mismo contenido (sha256 sin contar los fines de línea)"
-    evidence: "646c6627a200 en la canónica (era 89239da19f7c en 18ee22a; cambió por la corrección del refiner), en la copia de .github y por los enlaces de Claude, Codex y OpenCode"
+    evidence: "35070cb11dda en la canónica tras anonimizar (antes 646c6627a200 en a7a7bf8 y 89239da19f7c en 18ee22a), en la copia de .github y por los enlaces de Claude, Codex y OpenCode"
     result: PASS
   - id: A2
     criterion: "Frontmatter YAML válido, name=at-gamma-proposal"
@@ -81,7 +81,7 @@ acceptance:
     result: PASS
   - id: A6
     criterion: "No se agregan secretos ni datos de clientes al repo público"
-    evidence: "el diff no tiene tokens largos; se quitó el unique_id de la propuesta 42; el caso G&N queda solo en la copia de usuario"
+    evidence: "el diff no tiene tokens largos; sin unique_id, nombres ni identificadores de clientes (corregido tras la B de Codex del 2026-10-10); el caso de referencia queda solo en la copia de usuario"
     result: PASS
   - id: A7
     criterion: "Claude ve la skill nueva sin reiniciar"
@@ -94,7 +94,21 @@ acceptance:
 
 peer_review_B:
   reviewer: codex
-  status: PEER_REVIEW_PENDING
+  status: CHANGES_REQUESTED_FIXED_PENDING_REREVIEW
+  rounds:
+    - date: "2026-10-10"
+      actor: "Codex (gpt-6.1-sol según el app-server; Codex se declaró 'GPT-6, variante no expuesta')"
+      thread: "AT-INT-PROP-001 · Revisión B de Codex (PR #80) v2 (01a12662-fd11-7a02-9fde-37e53d53556a)"
+      commit: "a7a7bf8"
+      verdict: CHANGES_REQUESTED
+      findings:
+        - "Media: nombres e identificadores de clientes en archivos del repo público (skill .github, PLANTILLA-UNICA, AGENTS.md, CLAUDE.md). CORREGIDO por A en el commit siguiente"
+        - "Media: A8 sin acreditar (Codex ve la skill sin descripción). ACEPTADO: A8 sigue NOT_RUN"
+        - "Baja: el refiner de .github y copilot-instructions sin la excepción v3 en este PR. Se resuelve en el PR #81 (AT-INT-PROP-002), que apila sobre este"
+      tokens: "638.557 en Codex (556.672 en caché)"
+    - date: "2026-10-10"
+      note: "Primer intento (01a12660…) sin revisión: el sandbox 'elevated' de Codex no abre fuera de la app (CryptUnprotectData 0x8009000B). Se repitió con windows.sandbox='unelevated', que sigue siendo de solo lectura (probado)"
+      tokens: "197.048 en Codex"
   same_revision: "el commit de cierre de la rama claude/conciliar-skill-propuestas (ver PR)"
   checklist:
     - "Comparar la intención (relevo del 2026-10-10 y regla del 23-sep) con el resultado, no solo con este ticket"

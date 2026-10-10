@@ -1,8 +1,8 @@
 # Propuestas comerciales: una sola plantilla
 
 > Regla de Luis (2026-09-23): **toda propuesta de cliente se arma con la plantilla del
-> `propuesta-renderer`**, con la misma estructura y los mismos controles que la de Jeffer García
-> (propuesta 42). No se vuelve a Gamma ni se diseña una presentación nueva: por cliente cambian los
+> `propuesta-renderer`**, con la misma estructura y los mismos controles que la propuesta de
+> referencia (cuál es: bóveda privada, nota de Propuestas v3). No se vuelve a Gamma ni se diseña una presentación nueva: por cliente cambian los
 > textos, los precios y las fotos, nada más. Canva/Gamma quedan como respaldo solo si Luis lo pide.
 
 **Camino normal desde el 2026-09-24: el flujo automático v3** (Meet → «1 Borrador» → panel →
@@ -67,7 +67,7 @@ Código: carpeta `renderer/` (`src/template.js`, `src/schema.js`). Despliegue y 
    `/p/<unique_id>/img/` junto a la presentación y la reutiliza en renders siguientes si su
    descripción no cambió (`img/manifest.json`), así que una foto ya guardada no se vuelve a pagar.
    Lo que llegue en el campo `images` (`{ "cover": "https://…" }`) gana sobre lo generado. Ya no hace
-   falta bajar las fotos a mano: el problema del CDN de Higgsfield (en la de Jeffer, 1 de 7 ya no
+   falta bajar las fotos a mano: el problema del CDN de Higgsfield (en la propuesta de referencia, 1 de 7 ya no
    cargaba el 2026-09-23) quedó resuelto con este cambio.
 5. **Crear la propuesta.** `POST https://automatizatech.cl/api-save-proposal.php` con
    `client_email`, `transcript`, `gamma_prompt` (resumen del contenido; el nombre del campo es
@@ -80,7 +80,7 @@ Código: carpeta `renderer/` (`src/template.js`, `src/schema.js`). Despliegue y 
 7. **Completar en el panel.** `wp-admin → Propuestas → editar`: nombre, empresa, *URL Iframe Gamma* =
    `https://n8n-propuesta-renderer.kchiba.easypanel.host/p/<unique_id>/index.html`, y **Guardar**.
    El campo *URL Webhook n8n* aparece lleno aunque la base esté vacía: si no se guarda,
-   `ver-demo.php` muestra "Demo en Configuración" (pasó con Jeffer el 2026-08-31).
+   `ver-demo.php` muestra "Demo en Configuración" (pasó con una propuesta real el 2026-08-31).
 8. **Verificar desde afuera** `ver-presentacion.php?id=…` y `ver-demo.php?id=…` (el chat debe
    responder) antes de enviarla al cliente.
 

@@ -38,7 +38,7 @@ scope:
   repo: "C:/Users/luis_/Documents/Codex/AI-Memory-Vault"
   depends_on: ["AT-INT-PROP-001", "AT-INT-PROP-002"]
   files:
-    - "30-Agent-Protocols/Global-Skills/at-gamma-proposal/ (SKILL.md y references/caso-gyn-mobilestore.md copiados del runtime)"
+    - "30-Agent-Protocols/Global-Skills/at-gamma-proposal/ (SKILL.md y references/ con el caso de referencia, copiados del runtime)"
     - "30-Agent-Protocols/Global-Skills/at-proposal-refiner/ (SKILL.md del runtime; se borra references/ con el secreto vencido)"
     - "30-Agent-Protocols/Global-Skills/at-propuesta/ (alias)"
     - "20-Shared-Memory/Agent-Skills-Registry.md (tres secciones)"
@@ -46,7 +46,7 @@ scope:
     - "opcional: 20-Shared-Memory/2026-10-02-Limpieza-Skills-Claude.md"
 
 done_by_claude_before_handoff:
-  - "Copilot de usuario: ~/.copilot/skills/at-gamma-proposal y at-proposal-refiner eran copias de Gamma (instaladas con skillfish desde ycluis/dotfiles); la del refiner traía el secreto vencido. Ahora son enlaces (junction) al runtime. Respaldo redactado en C:/Users/luis_/respaldos/skills/2026-10-10-copilot/"
+  - "Copilot de usuario: ~/.copilot/skills/at-gamma-proposal y at-proposal-refiner eran copias de Gamma (instaladas con skillfish desde un repo externo de dotfiles; cuál, en el encargo privado de Shared-Tools); la del refiner traía el secreto vencido. Ahora son enlaces (junction) al runtime. Respaldo redactado en C:/Users/luis_/respaldos/skills/2026-10-10-copilot/"
 
 acceptance_A_for_codex:
   - "A1 sha256 sin contar fines de línea, runtime == bóveda: at-gamma-proposal 646c6627a200, at-proposal-refiner da0b345bd6da; alias igual a la copia de Claude"
@@ -61,7 +61,7 @@ peer_review_B:
 
 pending_outside_scope:
   - "Copias con el secreto vencido en AI-Memory-Vault-old-backup y en Documents/Codex/2026-10-08/.../vault-context: espera la decisión de Luis"
-  - "Repo externo ycluis/dotfiles (origen skillfish): puede tener versiones viejas; no se tocó"
+  - "Repo externo de dotfiles (origen skillfish; ver el encargo privado): puede tener versiones viejas; no se tocó"
   - "Variable de Windows AT_REST_SECRET_PROD vencida: espera la decisión de Luis"
 
 safety: {prod: false, credits: false, secrets: false, push: "solo con el ok de Luis", git_history_rewrite: false}

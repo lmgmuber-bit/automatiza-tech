@@ -3,8 +3,8 @@ title: "Conciliar la skill de propuestas (at-gamma-proposal) con el propuesta-re
 origin: direct_luis
 portfolio: "internal:automatizatech"
 priority: P2
-status: PEER_REVIEW_PENDING
-status_note: "A de Claude PASS el 2026-10-10. Falta la revisión B de Codex sobre la misma revisión (commit de la rama)."
+status: PEER_REVIEW_PASSED
+status_note: "A de Claude PASS. B de Codex: CHANGES_REQUESTED en a7a7bf8, corregido, y PASS en a7a7bf8..e2f151b (2026-10-10). Listo para merge con el ok de Luis."
 created_at: "2026-10-10"
 created_by: claude
 
@@ -94,7 +94,7 @@ acceptance:
 
 peer_review_B:
   reviewer: codex
-  status: CHANGES_REQUESTED_FIXED_PENDING_REREVIEW
+  status: PASS
   rounds:
     - date: "2026-10-10"
       actor: "Codex (gpt-6.1-sol según el app-server; Codex se declaró 'GPT-6, variante no expuesta')"
@@ -109,6 +109,13 @@ peer_review_B:
     - date: "2026-10-10"
       note: "Primer intento (01a12660…) sin revisión: el sandbox 'elevated' de Codex no abre fuera de la app (CryptUnprotectData 0x8009000B). Se repitió con windows.sandbox='unelevated', que sigue siendo de solo lectura (probado)"
       tokens: "197.048 en Codex"
+    - date: "2026-10-10"
+      actor: "Codex (gpt-6.1-sol según el app-server)"
+      thread: "AT-INT-PROP-001 · Revisión B2 acotada de Codex (PR #80) (01a126a1-2eb9-7aa3-97df-1a70e150ec1d)"
+      range: "a7a7bf8..e2f151b"
+      verdict: PASS
+      findings: ["ninguno"]
+      tokens: "166.448 en Codex (115.328 en caché)"
   same_revision: "el commit de cierre de la rama claude/conciliar-skill-propuestas (ver PR)"
   checklist:
     - "Comparar la intención (relevo del 2026-10-10 y regla del 23-sep) con el resultado, no solo con este ticket"

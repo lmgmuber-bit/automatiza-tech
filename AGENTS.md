@@ -91,7 +91,7 @@ Este proyecto tiene dos skills de ventas. Invocarlas cuando el usuario trabaje c
 ### Skill 2 — at-proposal-refiner
 **Cuándo:** propuesta ya guardada en el sistema (tiene edit_id).
 **Triggers:** "refinar propuesta", "mejorar prompt gamma", "actualizar prompts"
-**Flujo:** historial llamada + presentación del renderer (`ver-presentacion.php?id=`) → GET API → evalúa → refina (editar el JSON y re-renderizar con el mismo `unique_id`; el endpoint sigue para el `system_prompt`) → Output 3 diseño
+**Flujo:** historial llamada + presentación del renderer (`ver-presentacion.php?id=`) → GET API → evalúa → refina (v3: comentarios para «Pedir cambios» en el panel, porque `POST /prompts` responde 409; antiguas: `/prompts` y re-render con el mismo `unique_id`) → Output 3 diseño
 **Instrucciones:** `.github/skills/at-proposal-refiner/SKILL.md` (Copilot) o `C:\Users\luis_\.codex\skills\at-proposal-refiner\SKILL.md` (Codex)
 
 ### API del pipeline

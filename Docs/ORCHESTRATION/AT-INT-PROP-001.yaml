@@ -61,7 +61,7 @@ scope:
 acceptance:
   - id: A1
     criterion: "Las cuatro rutas de la skill tienen el mismo contenido (sha256 sin contar los fines de línea)"
-    evidence: "89239da19f7c en la canónica, en la copia de .github y por los enlaces de Claude, Codex y OpenCode"
+    evidence: "646c6627a200 en la canónica (era 89239da19f7c en 18ee22a; cambió por la corrección del refiner), en la copia de .github y por los enlaces de Claude, Codex y OpenCode"
     result: PASS
   - id: A2
     criterion: "Frontmatter YAML válido, name=at-gamma-proposal"

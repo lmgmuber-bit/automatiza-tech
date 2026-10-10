@@ -120,10 +120,11 @@ Antes de la salida 3, pedir el historial de la conversación y la presentación 
 | Desafío del cliente | la lámina 2 no refleja el dolor real |
 | Próximos pasos | plazos o pasos no corresponden |
 
-Si hay brechas, usar la skill `at-proposal-refiner` con el `edit_id` de la propuesta. Para la
-presentación, refinar es editar el JSON y volver a renderizar con el mismo `unique_id`; el endpoint de
-prompts sigue sirviendo para el `system_prompt`. No inventar datos: solo ajustar redacción, estructura
-o coherencia con lo que confirma el historial. Si aún no hay historial, seguir y recordar refinar después.
+Si hay brechas, usar la skill `at-proposal-refiner` con el `edit_id` de la propuesta. Esa skill elige
+el camino según el flujo: en las v3, comentarios para «Pedir cambios» en el panel (el `POST /prompts`
+responde 409); en las antiguas, el endpoint `/prompts` y un re-render con el mismo `unique_id`. No
+inventar datos: solo ajustar redacción, estructura o coherencia con lo que confirma el historial. Si aún
+no hay historial, seguir y recordar refinar después.
 
 ## Salida 3: prompt de diseño (opcional)
 

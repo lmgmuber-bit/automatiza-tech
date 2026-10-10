@@ -16,6 +16,7 @@ branch: "claude/conciliar-skill-propuestas"
 active_tickets:
   - "Docs/ORCHESTRATION/AT-INT-PROP-001.yaml"
   - "Docs/ORCHESTRATION/AT-INT-PROP-002.yaml"
+  - "Docs/ORCHESTRATION/AT-INT-PROP-003.yaml"
 history:
   - lease_id: AT-LEASE-20260713-CODEX
     holder: codex

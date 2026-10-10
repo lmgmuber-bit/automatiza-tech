@@ -1,0 +1,67 @@
+ticket_id: AT-INT-PROP-003
+title: "Bóveda al día: Global-Skills y registro de las skills de propuestas"
+origin: direct_luis
+portfolio: "internal:automatizatech"
+priority: P2
+status: READY_FOR_EXECUTION
+status_note: "Encargo entregado a Codex vía Luis el 2026-10-10. Codex ejecuta (A) en su rama de la bóveda; Claude revisa (B)."
+created_at: "2026-10-10"
+created_by: claude
+
+governance:
+  professional_standard: "Docs/ENGINEERING_STANDARDS/PROFESSIONAL_ENGINEERING_STANDARD.md"
+  quality_gate: C0
+  class: "documentación de la bóveda; sin PROD, créditos ni credenciales"
+
+objective: >
+  Que 30-Agent-Protocols/Global-Skills (fuente de autoría) quede idéntica al runtime ~/.agents/skills de
+  at-gamma-proposal y at-proposal-refiner, que at-propuesta quede como alias, que se elimine el deploy-prod.md
+  con el AT_REST_SECRET vencido y que Agent-Skills-Registry.md y automatizatech-pipeline.md dejen de
+  describir Gamma como vigente. Lo pidió Luis: «coordina la bóveda con Codex».
+owner: codex
+reviewer: claude
+active_orchestrator: claude
+
+ownership:
+  planner: claude
+  executor: codex
+  reviewer: claude
+  final_approver: "Luis Miguel"
+  current_owner: codex
+  reason_for_owner: "La rama de la bóveda chore/empresa-agentes-diagramas-at-2026-10-10 es de Codex y tiene trabajo sin commit (46 archivos), incluidas ediciones en los dos .md afectados"
+  takeover_allowed: true
+  reassignment_authorized_by: "Luis Miguel"
+  handoff_ref: "C:/Users/luis_/Documents/Codex/Shared-Tools/Encargo-Codex-AT-INT-PROP-003-Boveda.md"
+  handoff_quality: COMPLETE
+
+scope:
+  repo: "C:/Users/luis_/Documents/Codex/AI-Memory-Vault"
+  depends_on: ["AT-INT-PROP-001", "AT-INT-PROP-002"]
+  files:
+    - "30-Agent-Protocols/Global-Skills/at-gamma-proposal/ (SKILL.md y references/caso-gyn-mobilestore.md copiados del runtime)"
+    - "30-Agent-Protocols/Global-Skills/at-proposal-refiner/ (SKILL.md del runtime; se borra references/ con el secreto vencido)"
+    - "30-Agent-Protocols/Global-Skills/at-propuesta/ (alias)"
+    - "20-Shared-Memory/Agent-Skills-Registry.md (tres secciones)"
+    - "30-Agent-Protocols/automatizatech-pipeline.md"
+    - "opcional: 20-Shared-Memory/2026-10-02-Limpieza-Skills-Claude.md"
+
+done_by_claude_before_handoff:
+  - "Copilot de usuario: ~/.copilot/skills/at-gamma-proposal y at-proposal-refiner eran copias de Gamma (instaladas con skillfish desde ycluis/dotfiles); la del refiner traía el secreto vencido. Ahora son enlaces (junction) al runtime. Respaldo redactado en C:/Users/luis_/respaldos/skills/2026-10-10-copilot/"
+
+acceptance_A_for_codex:
+  - "A1 sha256 sin contar fines de línea, runtime == bóveda: at-gamma-proposal 646c6627a200, at-proposal-refiner da0b345bd6da; alias igual a la copia de Claude"
+  - "A2 0 tokens de 32 o más caracteres en Global-Skills/at-*propos* y at-propuesta"
+  - "A3 el commit toca solo los archivos de este encargo; lo ajeno se preserva"
+  - "A4 Gamma solo aparece como nombre histórico o como respaldo a pedido de Luis"
+  - "A5 plataforma, modelo y hash del commit registrados"
+
+peer_review_B:
+  reviewer: claude
+  status: WAITING_FOR_A
+
+pending_outside_scope:
+  - "Copias con el secreto vencido en AI-Memory-Vault-old-backup y en Documents/Codex/2026-10-08/.../vault-context: espera la decisión de Luis"
+  - "Repo externo ycluis/dotfiles (origen skillfish): puede tener versiones viejas; no se tocó"
+  - "Variable de Windows AT_REST_SECRET_PROD vencida: espera la decisión de Luis"
+
+safety: {prod: false, credits: false, secrets: false, push: "solo con el ok de Luis", git_history_rewrite: false}

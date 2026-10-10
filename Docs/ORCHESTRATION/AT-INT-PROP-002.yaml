@@ -50,6 +50,7 @@ security_note:
   event: "Durante la revisión, un grep de Claude imprimió en la sesión el AT_REST_SECRET que traía deploy-prod.md"
   verified: "403 en PROD con ese valor (GET /proposal/22/prompts, solo se registró el código HTTP): es anterior a la rotación del 2026-08-26 y no autentica"
   also_found: "Mismo valor vencido en tres archivos deploy-prod.md: la bóveda (Global-Skills), AI-Memory-Vault-old-backup y una carpeta de trabajo de Codex del 2026-10-08. No está en ninguna rama del repo público"
+  copilot: "Quinta ubicación hallada después: ~/.copilot/skills/at-proposal-refiner/references/deploy-prod.md (copia skillfish). Se resolvió el mismo día: respaldo redactado y junction al runtime (ver AT-INT-PROP-003)"
   env_var: "La variable de usuario de Windows AT_REST_SECRET_PROD también responde 403 (vencida)"
   action: "No hace falta rotar. Limpieza de esas copias y de la variable: decisión de Luis (fuera de este ticket)"
 

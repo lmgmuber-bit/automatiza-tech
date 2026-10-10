@@ -45,9 +45,12 @@ muestre las decisiones que esperan a Luis y que permita sumar colaboradores con 
   `colaborador_at` tiene las dos primeras; el administrador, todas menos `at_board_sync`.
 - **Entrada:** `tablero/index.php` carga WordPress. Sin sesión, redirige a `wp-login.php?redirect_to=…`; con
   sesión pero sin `at_board_ver`, responde 403 con un mensaje simple. Si todo está bien, entrega la interfaz.
-- **API:** autentica con la cookie de WordPress más un nonce `wp_rest` (cabecera `X-WP-Nonce`). El servicio
-  autentica con la contraseña de aplicación (Basic). Se retiran `AT_BOARD_TOKEN`, el CORS a localhost y el
-  Basic Auth de la carpeta.
+- **API:** ruta REST de WordPress `at-tablero/v1` (se llama como `?rest_route=/at-tablero/v1/...`), cargada por un
+  `mu-plugin` (`wp-content/mu-plugins/at-tablero.php`) para no tocar `functions.php`. WordPress resuelve la sesión
+  con la cookie más el nonce `wp_rest` (cabecera `X-WP-Nonce`), y el servicio entra con la contraseña de aplicación
+  (Basic), sin código de autenticación propio. Se retiran `AT_BOARD_TOKEN`, el CORS a localhost y el Basic Auth de
+  la carpeta; `api-tablero.php` queda como aviso 410. *(Ajuste técnico del 2026-10-10, al escribir el plan:
+  reemplaza la idea de autenticar dentro de `api-tablero.php`.)*
 - **Autorización en el servidor, siempre.** La interfaz solo oculta acciones por comodidad.
 - **Alta y baja de colaboradores:** WordPress → Usuarios → Añadir nuevo, rol «Colaborador AT». Quitar el rol
   revoca el acceso. Sin pantalla propia en esta versión.
@@ -91,7 +94,7 @@ Columnas nuevas en **ambas** tablas (migración idempotente, sin borrar columnas
    `decisiones_luis: [{id: D1, pregunta: "...", estado: pendiente|resuelta}]`. Cada decisión pendiente se
    publica como tarjeta ⚖️ asignada a Luis, y cuando queda resuelta su tarjeta pasa a `done`.
 5. **Archivado:** un ticket que ya no está en ninguna fuente → su tarjeta pasa a `archivada = 1`.
-6. **Envío:** `POST api-tablero.php?accion=sync` con el lote completo; la API hace upsert por `at_id` y responde
+6. **Envío:** `POST ?rest_route=/at-tablero/v1/sync` con el lote completo; la API hace upsert por `at_id` y responde
    cuántas creó, actualizó y archivó. Credencial: usuario `agentes-at` + contraseña de aplicación, leída por
    etiqueta del archivo de claves y pasada por variable de entorno. Nunca se imprime.
 7. **`--dry-run`:** muestra el diff sin enviar nada.
@@ -133,8 +136,9 @@ Columnas nuevas en **ambas** tablas (migración idempotente, sin borrar columnas
 
 Solo con el ok explícito de Luis, en este orden:
 1. Respaldo de las tres tablas y de los archivos actuales.
-2. Migración.
-3. `api-tablero.php`.
+2. `mu-plugin` `at-tablero` (todavía nadie lo usa).
+3. Migración (`tools/tablero-migrar-v9.php` por SSH).
+3b. `api-tablero.php` pasa a aviso 410.
 4. `tablero/index.php` y `tablero/api.js`.
 5. `tablero/index.html`.
 6. Retiro del Basic Auth y de `AT_BOARD_TOKEN`, al final.

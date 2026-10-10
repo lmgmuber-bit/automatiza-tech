@@ -1,17 +1,26 @@
 version: 2
-updated_at: "2026-08-18"
-lease_id: AT-LEASE-20260713-CODEX
-handoff_id: AT-HANDOFF-20260713-CLAUDE-CODEX
+updated_at: "2026-10-10"
+lease_id: AT-LEASE-20261010-CLAUDE
+handoff_id: AT-HANDOFF-20261010-CODEX-CLAUDE
 state: ACTIVE
 
-holder: codex
-previous_holder: claude
-previous_lease_id: AT-LEASE-20260710-CLAUDE
+holder: claude
+previous_holder: codex
+previous_lease_id: AT-LEASE-20260713-CODEX
 target_holder: null
 granted_by: "Luis Miguel"
-reason: "Luis ordeno a Codex tomar el mando de orquestacion el 2026-07-13 porque Claude estaba agotando su cuota semanal. Lease reconfirmado por Luis el 2026-08-03 durante la normalizacion del tablero: Codex sigue siendo el orquestador porque el cierre canonico del 2026-08-02 y el ticket 012 son suyos."
-base_commit: "9914bc4"
-branch: "codex/cumpleclick-site-frontend-fixes"
+claimed_at: "2026-10-10"
+reason: "Luis (Presidente) ordeno a Claude asumir el lease el 2026-10-10, tras el relevo de Codex (Shared-Tools/Relevo-Claude-Contexto-Completo-AT-2026-10-10.md), y abrir el ticket AT-INT-PROP-001. Este archivo seguia con el lease de Codex del 2026-07-13 (ultima edicion 2026-08-18) y no reflejaba quien orquestaba. Todo lo que sigue debajo de este encabezado es HISTORICO (estado de agosto): sirve de antecedente, no concede autoridad ni describe el estado actual."
+base_commit: "188ba45"
+branch: "claude/conciliar-skill-propuestas"
+active_tickets:
+  - "Docs/ORCHESTRATION/AT-INT-PROP-001.yaml"
+history:
+  - lease_id: AT-LEASE-20260713-CODEX
+    holder: codex
+    reason: "Luis ordeno a Codex tomar el mando de orquestacion el 2026-07-13 porque Claude estaba agotando su cuota semanal. Lease reconfirmado por Luis el 2026-08-03 durante la normalizacion del tablero: Codex sigue siendo el orquestador porque el cierre canonico del 2026-08-02 y el ticket 012 son suyos."
+    base_commit: "9914bc4"
+    branch: "codex/cumpleclick-site-frontend-fixes"
 
 # ---------------------------------------------------------------------------
 # FUENTES CANONICAS - leer en este orden antes de ejecutar cualquier cosa

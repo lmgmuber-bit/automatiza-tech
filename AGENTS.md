@@ -52,6 +52,8 @@ Las credenciales viven **fuera del repo**, en `C:\Users\luis_\OneDrive\Documento
 Para planificar, cotizar, ejecutar, entregar o retomar trabajo con clientes, leer `Docs/METODO_AT/README.md`. Las fuentes canónicas son `Docs/METODO_AT/APLICACION_DEL_METODO_AT.md` y `Docs/METODO_AT/SERVICIOS_Y_CASOS_DE_USO.md`. Para marketing, nichos y contenido de Instagram/Reels, usar `Docs/MARKETING/2026-07-22-AT-ESTUDIO-NICHOS-Y-ESTRATEGIA-REELS-INSTAGRAM.md`. Distinguir siempre capacidades actuales comprobadas de trabajo en curso y roadmap.
 
 Demos de prototipos para prospectos (desde el 2026-09-28, `https://automatizatech.cl/demos/<rubro>/`): método en `Docs/METODO_AT/PROTOTIPOS-Y-DEMOS.md` (404 propio en `.htaccess`, React local con `window.__resources`, arreglo móvil obligatorio, advertencia sanitaria en rubros con alcohol, video de recorrido). Antes de tocar precios o reaprobar una propuesta v3, leer «Precios, reaprobación y enlaces» en `Docs/METODO_AT/PROPUESTAS-FLUJO-V3.md`. Lo propio de cada cliente vive en la bóveda (`10-Projects/<Cliente>/README.md`), nunca en este repo público.
+
+**Propuestas comerciales: una sola plantilla (regla de Luis, 2026-09-23).** Toda propuesta de cliente se arma con la plantilla del `propuesta-renderer` (la misma estructura y controles que la propuesta de referencia; cuál es, en la bóveda privada): no se vuelve a Gamma ni se diseña una presentación nueva. Procedimiento, campos del JSON, fotos alojadas (no el CDN de Higgsfield) y el paso de **Guardar** en el panel para que el chatbot funcione: `Docs/METODO_AT/PROPUESTAS-PLANTILLA-UNICA.md`.
 <!-- AT-METHOD:END -->
 
 <!-- AT-VIDEO-RULES:START -->
@@ -82,14 +84,14 @@ Este proyecto tiene dos skills de ventas. Invocarlas cuando el usuario trabaje c
 
 ### Skill 1 — at-gamma-proposal
 **Cuándo:** datos de reunión con prospecto nuevo.
-**Triggers:** "generar propuesta gamma", "nueva propuesta cliente", "propuesta gamma"
-**Genera:** Gamma prompt (8 slides) + chatbot system prompt + prompt de diseño visual
-**Instrucciones:** `.github/skills/at-gamma-proposal/SKILL.md` (Copilot) o `C:\Users\luis_\.codex\skills\at-gamma-proposal\SKILL.md` (Codex)
+**Triggers:** "generar propuesta", "nueva propuesta cliente", "at propuesta" (`at-propuesta` es alias)
+**Genera:** JSON de la plantilla única del `propuesta-renderer` + chatbot system prompt (+ prompt de diseño si aplica). El nombre es histórico: **ya no genera prompts de Gamma**. El camino normal es el flujo automático v3 (`Docs/METODO_AT/PROPUESTAS-FLUJO-V3.md`); la skill sirve para armar o ajustar a mano.
+**Instrucciones:** una sola copia desde el 2026-10-10, `C:\Users\luis_\.agents\skills\at-gamma-proposal\SKILL.md`, enlazada desde Claude, Codex y OpenCode; `.github/skills/at-gamma-proposal/SKILL.md` es idéntica (Copilot). Cambiar las dos a la vez.
 
 ### Skill 2 — at-proposal-refiner
 **Cuándo:** propuesta ya guardada en el sistema (tiene edit_id).
 **Triggers:** "refinar propuesta", "mejorar prompt gamma", "actualizar prompts"
-**Flujo:** historial llamada + Gamma → GET API → evalúa → refina → POST → Output 3 diseño
+**Flujo:** historial llamada + presentación del renderer (`ver-presentacion.php?id=`) → GET API → evalúa → refina (v3: comentarios para «Pedir cambios» en el panel, porque `POST /prompts` responde 409; antiguas: `/prompts` y re-render con el mismo `unique_id`) → Output 3 diseño
 **Instrucciones:** `.github/skills/at-proposal-refiner/SKILL.md` (Copilot) o `C:\Users\luis_\.codex\skills\at-proposal-refiner\SKILL.md` (Codex)
 
 ### API del pipeline

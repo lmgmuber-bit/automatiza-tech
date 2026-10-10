@@ -49,7 +49,7 @@ done_by_claude_before_handoff:
   - "Copilot de usuario: ~/.copilot/skills/at-gamma-proposal y at-proposal-refiner eran copias de Gamma (instaladas con skillfish desde un repo externo de dotfiles; cuál, en el encargo privado de Shared-Tools); la del refiner traía el secreto vencido. Ahora son enlaces (junction) al runtime. Respaldo redactado en C:/Users/luis_/respaldos/skills/2026-10-10-copilot/"
 
 acceptance_A_for_codex:
-  - "A1 sha256 sin contar fines de línea, runtime == bóveda: at-gamma-proposal 646c6627a200, at-proposal-refiner da0b345bd6da; alias igual a la copia de Claude"
+  - "A1 sha256 sin contar fines de línea, runtime == bóveda: at-gamma-proposal 35070cb11dda, at-proposal-refiner da0b345bd6da; alias igual a la copia de Claude"
   - "A2 0 tokens de 32 o más caracteres en Global-Skills/at-*propos* y at-propuesta"
   - "A3 el commit toca solo los archivos de este encargo; lo ajeno se preserva"
   - "A4 Gamma solo aparece como nombre histórico o como respaldo a pedido de Luis"

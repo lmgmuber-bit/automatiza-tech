@@ -18,13 +18,14 @@ Triggers: "generar propuesta", "nueva propuesta cliente", "at propuesta"
 Genera: JSON de la plantilla única del `propuesta-renderer` + chatbot system prompt (+ prompt de diseño si aplica). **Ya no genera prompts de Gamma**: regla en `Docs/METODO_AT/PROPUESTAS-PLANTILLA-UNICA.md`.
 
 ### at-proposal-refiner → `.github/skills/at-proposal-refiner/SKILL.md`
-Triggers: "refinar propuesta", "mejorar prompt gamma"
-Flujo: historial + presentación del renderer → API → evalúa → refina (editar JSON y re-renderizar) → prompt de diseño
+Triggers: "refinar propuesta", "actualizar prompts propuesta"
+Flujo: historial + presentación del renderer → `GET …/proposal/{ID}/state` → evalúa → v3: comentarios para «Pedir cambios» en el panel (el `POST /prompts` responde 409); antiguas: `POST /prompts` + re-render → prompt de diseño de `at-gamma-proposal`
 
 ### API del pipeline
 ```
-GET/POST https://automatizatech.cl/?rest_route=/automatiza-tech/v1/proposal/{ID}/prompts
-X-AT-Secret: <secret>  (wp-config.php del servidor)
+GET      https://automatizatech.cl/?rest_route=/automatiza-tech/v1/proposal/{ID}/state    (payload, flujo, status)
+GET/POST https://automatizatech.cl/?rest_route=/automatiza-tech/v1/proposal/{ID}/prompts  (POST: solo propuestas antiguas)
+X-AT-Secret: <secret>  (AT_REST_SECRET del wp-config.php del servidor; leer por etiqueta, nunca escribirlo)
 ```
 
 Referencia: `C:\Users\luis_\Documents\Codex\AI-Memory-Vault\30-Agent-Protocols\automatizatech-pipeline.md`

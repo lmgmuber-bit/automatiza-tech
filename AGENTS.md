@@ -92,13 +92,15 @@ Este proyecto tiene dos skills de ventas. Invocarlas cuando el usuario trabaje c
 **Cuándo:** propuesta ya guardada en el sistema (tiene edit_id).
 **Triggers:** "refinar propuesta", "mejorar prompt gamma", "actualizar prompts"
 **Flujo:** historial llamada + presentación del renderer (`ver-presentacion.php?id=`) → GET API → evalúa → refina (v3: comentarios para «Pedir cambios» en el panel, porque `POST /prompts` responde 409; antiguas: `/prompts` y re-render con el mismo `unique_id`) → Output 3 diseño
-**Instrucciones:** `.github/skills/at-proposal-refiner/SKILL.md` (Copilot) o `C:\Users\luis_\.codex\skills\at-proposal-refiner\SKILL.md` (Codex)
+**Instrucciones:** una sola copia desde el 2026-10-10 (AT-INT-PROP-002), `C:\Users\luis_\.agents\skills\at-proposal-refiner\SKILL.md`, enlazada desde Claude, Codex y OpenCode; `.github/skills/at-proposal-refiner/SKILL.md` es idéntica (Copilot). Cambiar las dos a la vez. El secreto `X-AT-Secret` se lee por su etiqueta en el archivo de claves; la variable de Windows `AT_REST_SECRET_PROD` está vencida desde la rotación del 26-ago.
 
 ### API del pipeline
 ```
-GET/POST https://automatizatech.cl/?rest_route=/automatiza-tech/v1/proposal/{ID}/prompts
-Header: X-AT-Secret: <secret>  (wp-config.php del servidor — no exponer)
+GET      https://automatizatech.cl/?rest_route=/automatiza-tech/v1/proposal/{ID}/state    (payload, flujo, status)
+GET/POST https://automatizatech.cl/?rest_route=/automatiza-tech/v1/proposal/{ID}/prompts  (POST: solo propuestas antiguas; v3 = 409)
+Header: X-AT-Secret: <secret>  (AT_REST_SECRET del wp-config.php del servidor — leer por etiqueta, no exponer)
 ```
+La referencia de la bóveda (`automatizatech-pipeline.md`) y su carpeta `Global-Skills/` todavía describen Gamma (pendiente registrado el 2026-10-10); ante una diferencia, prevalecen las skills de `~/.agents/skills` y las guías `Docs/METODO_AT/PROPUESTAS-*.md`.
 
 ### Referencia completa
 `C:\Users\luis_\Documents\Codex\AI-Memory-Vault\30-Agent-Protocols\automatizatech-pipeline.md`

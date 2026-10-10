@@ -2,11 +2,17 @@
 
 > Regla de Luis (2026-09-23): **toda propuesta de cliente se arma con la plantilla del
 > `propuesta-renderer`**, con la misma estructura y los mismos controles que la de Jeffer García
-> (propuesta 42, `ver-presentacion.php?id=EY2U5YW7zRO6`). No se vuelve a Gamma ni se diseña una
-> presentación nueva: por cliente cambian los textos, los precios y las fotos, nada más.
+> (propuesta 42). No se vuelve a Gamma ni se diseña una presentación nueva: por cliente cambian los
+> textos, los precios y las fotos, nada más. Canva/Gamma quedan como respaldo solo si Luis lo pide.
 
-Aplica a Claude, Codex, OpenCode y Copilot. La skill `at-gamma-proposal` conserva su nombre por los
-disparadores, pero su salida es el JSON de esta guía, no un prompt para Gamma.
+**Camino normal desde el 2026-09-24: el flujo automático v3** (Meet → «1 Borrador» → panel →
+«3 Final» → envío desde el panel), en `Docs/METODO_AT/PROPUESTAS-FLUJO-V3.md`. Esta guía es el camino
+**manual**, para cuando ese flujo no aplica, y la referencia de los campos del JSON.
+
+Aplica a Claude, Codex, OpenCode y Copilot. La skill `at-gamma-proposal` conserva su nombre histórico
+por los disparadores (`at-propuesta` es su alias), pero su salida es el JSON de esta guía, no un prompt
+para Gamma. Desde el 2026-10-10 hay una sola copia de la skill: `C:\Users\luis_\.agents\skills\at-gamma-proposal`
+(enlazada desde Claude, Codex y OpenCode) y su gemela `.github/skills/at-gamma-proposal/SKILL.md`.
 
 ## Qué recibe el cliente
 
@@ -52,20 +58,25 @@ Código: carpeta `renderer/` (`src/template.js`, `src/schema.js`). Despliegue y 
    node -e "const fs=require('fs');const {renderProposalHtml}=require('./src/template');const {validatePayload}=require('./src/schema');const d=JSON.parse(fs.readFileSync(process.argv[1],'utf8'));console.log(validatePayload(d));fs.writeFileSync(process.argv[2],renderProposalHtml(d,{}))" payload.json preview.html
    ```
    Sacar capturas de cada lámina con Playwright a 1920×1080 y mostrárselas a Luis.
-3. **Fotos.** Una por lámina, sin texto, sin logos y sin rostros reconocibles (`image_briefs[]` con
-   `slide` = `cover`, `challenge`, `solution`, `benefits`, `how_it_works`, `extra_1`, `extra_2`,
-   `pricing`, `next_steps`). Modelo: Soul 2 por API (`scratchpad/higgsfield-api/hf_api.py`,
-   US$0,0032 por imagen de lista). **Mostrar el costo y esperar el "ok" de Luis** antes de `--si`.
-4. **Alojar las fotos.** No dejar las URL del CDN de Higgsfield dentro de la presentación: el renderer
-   las enlaza tal cual y se caen (en la de Jeffer, 1 de 7 ya no cargaba el 2026-09-23). Bajar cada
-   foto y publicarla en un lugar propio; pasarlas en el campo `images` (`{ "cover": "https://…" }`),
-   que el renderer usa sin regenerar.
+3. **Fotos.** Una por lámina, del rubro del cliente con personas en acción, sin texto, sin logos y
+   sin rostros reconocibles (`image_briefs[]` con `slide` = `cover`, `challenge`, `solution`,
+   `benefits`, `how_it_works`, `extra_1`, `extra_2`, `pricing`, `next_steps`). Reglas completas en
+   «Fotos por rubro» de `PROPUESTAS-FLUJO-V3.md`. Modelo: Soul 2 por API, ≈ US$0,0032 por foto.
+   **Mostrar el costo y esperar el "ok" de Luis** antes de mandar `image_briefs` al `/render`.
+4. **Alojamiento de las fotos (automático desde el 2026-09-24).** El renderer guarda cada foto en
+   `/p/<unique_id>/img/` junto a la presentación y la reutiliza en renders siguientes si su
+   descripción no cambió (`img/manifest.json`), así que una foto ya guardada no se vuelve a pagar.
+   Lo que llegue en el campo `images` (`{ "cover": "https://…" }`) gana sobre lo generado. Ya no hace
+   falta bajar las fotos a mano: el problema del CDN de Higgsfield (en la de Jeffer, 1 de 7 ya no
+   cargaba el 2026-09-23) quedó resuelto con este cambio.
 5. **Crear la propuesta.** `POST https://automatizatech.cl/api-save-proposal.php` con
    `client_email`, `transcript`, `gamma_prompt` (resumen del contenido; el nombre del campo es
    histórico) y `system_prompt` (el del chatbot). Devuelve `unique_id`. Es una escritura en PROD:
    con autorización de Luis.
 6. **Renderizar.** `POST https://n8n-propuesta-renderer.kchiba.easypanel.host/render` con el JSON y
-   `unique_id` igual al del paso 5. Tarda ~1 min sin fotos por generar.
+   `unique_id` igual al del paso 5. Desde el 2026-09-25 exige la cabecera `X-AT-Render-Key` (sin
+   ella responde 401). El valor vive solo en la credencial de n8n y en la variable `RENDER_KEY` de
+   Easypanel: nunca se escribe en un documento, un prompt ni el chat. Tarda ~1 min sin fotos por generar.
 7. **Completar en el panel.** `wp-admin → Propuestas → editar`: nombre, empresa, *URL Iframe Gamma* =
    `https://n8n-propuesta-renderer.kchiba.easypanel.host/p/<unique_id>/index.html`, y **Guardar**.
    El campo *URL Webhook n8n* aparece lleno aunque la base esté vacía: si no se guarda,
@@ -80,7 +91,8 @@ públicos) y reglas de derivación a un humano. El webhook es
 `https://n8n-n8n.kchiba.easypanel.host/webhook/demo-dinamico/chat` y busca el prompt por
 `sessionId` = `unique_id`.
 
-## Pendiente conocido
+## Precios y enlaces
 
-El renderer debería bajar las fotos a `/p/<unique_id>/` al generar, en vez de enlazar el CDN. Mientras
-no se haga, el paso 4 es obligatorio.
+Cómo presentar la inversión (tres bloques con su total), la tabla densa sobre 6 filas, las URL que el
+renderer vuelve enlace y por qué recargar el panel antes de Aprobar: sección «Precios, reaprobación y
+enlaces» de `PROPUESTAS-FLUJO-V3.md`.

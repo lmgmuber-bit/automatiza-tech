@@ -84,14 +84,14 @@ Este proyecto tiene dos skills de ventas. Invocarlas cuando el usuario trabaje c
 
 ### Skill 1 — at-gamma-proposal
 **Cuándo:** datos de reunión con prospecto nuevo.
-**Triggers:** "generar propuesta gamma", "nueva propuesta cliente", "propuesta gamma"
-**Genera:** Gamma prompt (8 slides) + chatbot system prompt + prompt de diseño visual
-**Instrucciones:** `.github/skills/at-gamma-proposal/SKILL.md` (Copilot) o `C:\Users\luis_\.codex\skills\at-gamma-proposal\SKILL.md` (Codex)
+**Triggers:** "generar propuesta", "nueva propuesta cliente", "at propuesta" (`at-propuesta` es alias)
+**Genera:** JSON de la plantilla única del `propuesta-renderer` + chatbot system prompt (+ prompt de diseño si aplica). El nombre es histórico: **ya no genera prompts de Gamma**. El camino normal es el flujo automático v3 (`Docs/METODO_AT/PROPUESTAS-FLUJO-V3.md`); la skill sirve para armar o ajustar a mano.
+**Instrucciones:** una sola copia desde el 2026-10-10, `C:\Users\luis_\.agents\skills\at-gamma-proposal\SKILL.md`, enlazada desde Claude, Codex y OpenCode; `.github/skills/at-gamma-proposal/SKILL.md` es idéntica (Copilot). Cambiar las dos a la vez.
 
 ### Skill 2 — at-proposal-refiner
 **Cuándo:** propuesta ya guardada en el sistema (tiene edit_id).
 **Triggers:** "refinar propuesta", "mejorar prompt gamma", "actualizar prompts"
-**Flujo:** historial llamada + Gamma → GET API → evalúa → refina → POST → Output 3 diseño
+**Flujo:** historial llamada + presentación del renderer (`ver-presentacion.php?id=`) → GET API → evalúa → refina (editar el JSON y re-renderizar con el mismo `unique_id`; el endpoint sigue para el `system_prompt`) → Output 3 diseño
 **Instrucciones:** `.github/skills/at-proposal-refiner/SKILL.md` (Copilot) o `C:\Users\luis_\.codex\skills\at-proposal-refiner\SKILL.md` (Codex)
 
 ### API del pipeline

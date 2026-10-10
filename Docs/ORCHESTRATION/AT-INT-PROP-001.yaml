@@ -1,0 +1,117 @@
+ticket_id: AT-INT-PROP-001
+title: "Conciliar la skill de propuestas (at-gamma-proposal) con el propuesta-renderer real"
+origin: direct_luis
+portfolio: "internal:automatizatech"
+priority: P2
+status: PEER_REVIEW_PENDING
+status_note: "A de Claude PASS el 2026-10-10. Falta la revisión B de Codex sobre la misma revisión (commit de la rama)."
+created_at: "2026-10-10"
+created_by: claude
+
+governance:
+  professional_standard: "Docs/ENGINEERING_STANDARDS/PROFESSIONAL_ENGINEERING_STANDARD.md"
+  quality_gate: C1
+  class: "documentación y configuración de agentes; sin código de producto, sin PROD, sin créditos, sin credenciales"
+  reversibility: "alta: respaldos con hash en C:/Users/luis_/respaldos/skills/2026-10-10-conciliar-propuestas/ y la rama no está mergeada"
+
+objective: >
+  Dejar una sola versión de la skill de propuestas, fiel al renderer de origin/main y al flujo v3,
+  para los cuatro hosts (Claude, Codex, OpenCode, Copilot). Conservar el nombre histórico
+  at-gamma-proposal (relevo del 2026-10-10), el generador propio como principal y Canva/Gamma solo
+  como respaldo pedido por Luis. Es además el primer ejercicio real de revisión A/B entre Claude y Codex.
+owner: claude
+reviewer: codex
+active_orchestrator: claude
+
+ownership:
+  planner: claude
+  executor: claude
+  reviewer: codex
+  final_approver: "Luis Miguel"
+  current_owner: claude
+  previous_owners: []
+  takeover_allowed: true
+  reassignment_authorized_by: "Luis Miguel"
+  handoff_ref: "C:/Users/luis_/Documents/Codex/Shared-Tools/Relevo-Claude-Contexto-Completo-AT-2026-10-10.md"
+
+scope:
+  branch: "claude/conciliar-skill-propuestas"
+  base_commit: "188ba45"
+  rescued: "commit d102077 del PR #36 (abierto desde el 2026-09-23, 401 commits atrás), recogido por cherry-pick"
+  repo_files:
+    - ".github/skills/at-gamma-proposal/SKILL.md (igual a la copia de usuario)"
+    - ".github/skills/at-proposal-refiner/SKILL.md (nota del PR #36)"
+    - ".github/copilot-instructions.md"
+    - "AGENTS.md, CLAUDE.md, Docs/AGENTS.md, Docs/METODO_AT/README.md (punteros)"
+    - "Docs/METODO_AT/PROPUESTAS-PLANTILLA-UNICA.md (del PR #36, puesto al día con v3 y la clave de /render; sin el unique_id de un cliente: el repo es público)"
+    - "Docs/ORCHESTRATION/current-handoff.yaml (lease a Claude) y este ticket"
+  user_files_outside_git:
+    canonical: "C:/Users/luis_/.agents/skills/at-gamma-proposal/ (SKILL.md + references/caso-gyn-mobilestore.md)"
+    junctions:
+      - "C:/Users/luis_/.claude/skills/at-gamma-proposal"
+      - "C:/Users/luis_/.codex/skills/at-gamma-proposal"
+      - "C:/Users/luis_/.config/opencode/skills/at-gamma-proposal (nuevo: antes OpenCode no tenía la skill)"
+    alias: "C:/Users/luis_/.claude/skills/at-propuesta/SKILL.md, reducida a un alias que remite a la canónica"
+    backup: "C:/Users/luis_/respaldos/skills/2026-10-10-conciliar-propuestas/ (tres copias originales + MANIFEST.sha256)"
+  out_of_scope:
+    - "Código del renderer, flujos n8n, WordPress y PROD"
+    - "at-proposal-refiner de usuario (Claude/Codex): queda pendiente aparte"
+    - "Cerrar el PR #36 (lo decide Luis cuando se mergee este)"
+
+acceptance:
+  - id: A1
+    criterion: "Las cuatro rutas de la skill tienen el mismo contenido (sha256 sin contar los fines de línea)"
+    evidence: "89239da19f7c en la canónica, en la copia de .github y por los enlaces de Claude, Codex y OpenCode"
+    result: PASS
+  - id: A2
+    criterion: "Frontmatter YAML válido, name=at-gamma-proposal"
+    evidence: "yaml.safe_load OK, 9 disparadores"
+    result: PASS
+  - id: A3
+    criterion: "Toda ruta del repo citada por la skill existe en la rama"
+    evidence: "PROPUESTAS-FLUJO-V3.md, PROPUESTAS-PLANTILLA-UNICA.md, renderer/src/schema.js, api-save-proposal.php, ver-presentacion.php, ver-demo.php: todas SI"
+    result: PASS
+  - id: A4
+    criterion: "Los campos obligatorios citados coinciden con renderer/src/schema.js"
+    evidence: "los 11 de REQUIRED_STRING_FIELDS y REQUIRED_ARRAY_FIELDS aparecen en la skill"
+    result: PASS
+  - id: A5
+    criterion: "El comando de vista previa gratuita de la guía funciona"
+    evidence: "con un JSON sintético, validatePayload da valid=true, el HTML pesa 34 KB y la URL sale como enlace (linkify)"
+    result: PASS
+  - id: A6
+    criterion: "No se agregan secretos ni datos de clientes al repo público"
+    evidence: "el diff no tiene tokens largos; se quitó el unique_id de la propuesta 42; el caso G&N queda solo en la copia de usuario"
+    result: PASS
+  - id: A7
+    criterion: "Claude ve la skill nueva sin reiniciar"
+    evidence: "el listado de skills de la sesión mostró la descripción nueva de at-gamma-proposal y del alias at-propuesta"
+    result: PASS
+  - id: A8
+    criterion: "Codex y OpenCode ven la skill por el enlace"
+    evidence: "NOT_RUN: hay que abrir una sesión nueva en cada host"
+    result: NOT_RUN
+
+peer_review_B:
+  reviewer: codex
+  status: PEER_REVIEW_PENDING
+  same_revision: "el commit de cierre de la rama claude/conciliar-skill-propuestas (ver PR)"
+  checklist:
+    - "Comparar la intención (relevo del 2026-10-10 y regla del 23-sep) con el resultado, no solo con este ticket"
+    - "Repetir A1 y A3 a A6 por cuenta propia"
+    - "Ver si la skill contradice PROPUESTAS-FLUJO-V3.md o el renderer de origin/main"
+    - "Confirmar el descubrimiento nativo en Codex con una sesión nueva (A8) y, si se puede, en OpenCode"
+    - "Revisar que el alias at-propuesta y los enlaces no rompen otro flujo de Codex (at-proposal-refiner remite a at-gamma-proposal)"
+    - "Registrar plataforma y modelo reales; dejar el dictamen en este ticket o en el PR"
+  rule: "Una revisión de Claude no reemplaza a la B. Si Codex no puede revisar, el estado sigue PEER_REVIEW_PENDING."
+
+routing:
+  model_executor: "Claude Code, claude-opus-5-5"
+  delegation: "ninguna: es una tarea de criterio, corta, y las revisiones de texto las hace el orquestador (regla de tope de subagentes)"
+
+safety:
+  prod: false
+  credits: false
+  secrets: false
+  external_messages: false
+  merge: "no sin el ok de Luis"

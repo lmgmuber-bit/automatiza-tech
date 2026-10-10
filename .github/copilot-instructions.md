@@ -14,7 +14,7 @@ Boveda maestra: `C:\Users\luis_\Documents\Codex\AI-Memory-Vault`
 Este repositorio tiene skills de propuestas en `.github/skills/`. Usarlas cuando el usuario trabaje en ventas o propuestas a clientes.
 
 ### at-gamma-proposal → `.github/skills/at-gamma-proposal/SKILL.md`
-Triggers: "generar propuesta gamma", "nueva propuesta cliente"
+Triggers: "generar propuesta", "nueva propuesta cliente", "at propuesta"
 Genera: JSON de la plantilla única del `propuesta-renderer` + chatbot system prompt (+ prompt de diseño si aplica). **Ya no genera prompts de Gamma**: regla en `Docs/METODO_AT/PROPUESTAS-PLANTILLA-UNICA.md`.
 
 ### at-proposal-refiner → `.github/skills/at-proposal-refiner/SKILL.md`

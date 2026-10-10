@@ -53,7 +53,7 @@ Para planificar, cotizar, ejecutar, entregar o retomar trabajo con clientes, lee
 
 Demos de prototipos para prospectos (desde el 2026-09-28, `https://automatizatech.cl/demos/<rubro>/`): método en `Docs/METODO_AT/PROTOTIPOS-Y-DEMOS.md` (404 propio en `.htaccess`, React local con `window.__resources`, arreglo móvil obligatorio, advertencia sanitaria en rubros con alcohol, video de recorrido). Antes de tocar precios o reaprobar una propuesta v3, leer «Precios, reaprobación y enlaces» en `Docs/METODO_AT/PROPUESTAS-FLUJO-V3.md`. Lo propio de cada cliente vive en la bóveda (`10-Projects/<Cliente>/README.md`), nunca en este repo público.
 
-**Propuestas comerciales: una sola plantilla (regla de Luis, 2026-09-23).** Toda propuesta de cliente se arma con la plantilla del `propuesta-renderer` (la misma estructura y controles que la de Jeffer, propuesta 42): no se vuelve a Gamma ni se diseña una presentación nueva. Procedimiento, campos del JSON, fotos alojadas (no el CDN de Higgsfield) y el paso de **Guardar** en el panel para que el chatbot funcione: `Docs/METODO_AT/PROPUESTAS-PLANTILLA-UNICA.md`.
+**Propuestas comerciales: una sola plantilla (regla de Luis, 2026-09-23).** Toda propuesta de cliente se arma con la plantilla del `propuesta-renderer` (la misma estructura y controles que la propuesta de referencia; cuál es, en la bóveda privada): no se vuelve a Gamma ni se diseña una presentación nueva. Procedimiento, campos del JSON, fotos alojadas (no el CDN de Higgsfield) y el paso de **Guardar** en el panel para que el chatbot funcione: `Docs/METODO_AT/PROPUESTAS-PLANTILLA-UNICA.md`.
 <!-- AT-METHOD:END -->
 
 <!-- AT-VIDEO-RULES:START -->

@@ -1310,8 +1310,9 @@ function cb_theme_asomate($bloque, string $base, string $dir, array $personajesT
         $limpio = [
             'clave'  => (string) $clave,
             'png'    => $base . $rel . '?v=' . cb_sello_archivo($dir . $rel),
-            'nombre' => (string) ($ficha['name'] ?? $clave),
-            'emoji'  => (string) ($ficha['emoji'] ?? ''),
+            // Sin personaje en la temática (las adultas no tienen ruleta), el nombre viene en el bloque.
+            'nombre' => (string) ($ficha['name'] ?? $geo['nombre'] ?? $clave),
+            'emoji'  => (string) ($ficha['emoji'] ?? $geo['emoji'] ?? ''),
         ];
         foreach ($campos as $campo) {
             $limpio[$campo] = (float) ($geo[$campo] ?? 0);

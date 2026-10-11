@@ -145,6 +145,9 @@ a_check(is_array($api['theme']['cabinaAdulto']) && count($api['theme']['cabinaAd
 a_check(in_array('🍆', $api['theme']['cabinaAdulto']['juego']['emojis'], true), 'el juego de atrapar trae sus emojis');
 $rev = $api['theme']['cabinaAdulto']['revista'] ?? null;
 a_check(is_array($rev) && str_ends_with($rev['fondo'], 'fondo-revista.jpg') && count($rev['titulares']) >= 4, 'llega la portada en pareja con su fondo y titulares');
+$aso = $api['theme']['asomate'] ?? null;
+a_check(is_array($aso) && count($aso['personajes']) === 14, 'Asómate adulto: catorce figuras con hueco');
+a_check(($aso['personajes'][0]['nombre'] ?? '') === 'Dama de rojo' && ($aso['personajes'][1]['nombre'] ?? '') === 'Galán de terno', 'los nombres vienen del bloque (la temática no tiene ruleta)');
 a_check($api['theme']['musica'] === '', 'sin pista en disco no se publica música');
 a_check(is_array($api['theme']['grupal']) && str_ends_with($api['theme']['grupal']['fondo'], 'fondo-grupal.jpg'), 'la foto grupal tiene su fondo');
 

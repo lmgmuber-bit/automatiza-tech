@@ -759,7 +759,13 @@ function BoothApp() {
             setAsomateFotos([])
             setAsomateHeroe(null)
             setTrasInvitados('asomate-elegir')
-            go('invitados')
+            // Un cumpleaños de adulto no tiene lista de niños: se elige la figura directo.
+            if (isAdulto) {
+              setInvitado('')
+              go('asomate-elegir')
+            } else {
+              go('invitados')
+            }
           }}
         />
       )}
@@ -2065,6 +2071,7 @@ function tituloAsomate(invitado, cuantos) {
   const quien = nombreEvento()
   // En un cumpleaños de adulto la foto de todos sigue la broma de la temática: «cómplices».
   if (cuantos > 1 && CABINA_ADULTO) return quien ? `Los cómplices de ${quien}` : '¡Los cómplices!'
+  if (CABINA_ADULTO) return CABINA_ADULTO.recuerdo
   if (cuantos > 1) return quien ? `El cumple de ${quien} y sus amigos` : '¡Amigos!'
   if (invitado && quien) return `${invitado} en el cumple de ${quien}`
   if (quien) return `¡Feliz cumple, ${quien}!`
@@ -2081,7 +2088,8 @@ function tituloAsomate(invitado, cuantos) {
  */
 function AsomateElegir({ onDone, onCancel }) {
   const disponibles = CONFIG.asomate?.personajes || []
-  const [cuantos, setCuantos] = useState(1)
+  // En un cumpleaños de adulto se asoma la pareja: parte en «Los dos».
+  const [cuantos, setCuantos] = useState(CABINA_ADULTO && disponibles.length > 1 ? 2 : 1)
   const [turno, setTurno] = useState(0)   // a que nino le toca elegir
   const [elegidos, setElegidos] = useState([disponibles[0], disponibles[1], disponibles[2]])
 
@@ -2121,7 +2129,7 @@ function AsomateElegir({ onDone, onCancel }) {
       <div className="asomate-turno">
         {cuantos > 1 && (
           <p className="asomate-turno__quien">
-            Niño {turno + 1} de {cuantos}
+            {CABINA_ADULTO ? 'Persona' : 'Niño'} {turno + 1} de {cuantos}
           </p>
         )}
         <div className="asomate-grid">
@@ -2150,7 +2158,7 @@ function AsomateElegir({ onDone, onCancel }) {
         </button>
         {turno + 1 < cuantos ? (
           <button className="cta" onClick={() => setTurno(turno + 1)} disabled={!elegidos[turno]}>
-            Siguiente niño →
+            {CABINA_ADULTO ? 'Siguiente persona →' : 'Siguiente niño →'}
           </button>
         ) : (
           <button className="cta" onClick={() => onDone(listos)} disabled={listos.length < cuantos}>

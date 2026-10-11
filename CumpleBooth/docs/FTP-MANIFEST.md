@@ -31,7 +31,7 @@ Orden de subida (destino `app/`, origen `dist/` después de `npx vite build`):
 
 | # | Local | Destino PROD | Clase |
 |---|---|---|---|
-| 1 | `dist/themes/adulto-coqueteria-pop/fondo-sala.jpg`, `fondo-banner.jpg`, `fondo-grupal.jpg`, `fondo-revista.jpg` | `app/themes/adulto-coqueteria-pop/` (carpeta nueva) | OBLIGATORIO |
+| 1 | `dist/themes/adulto-coqueteria-pop/fondo-sala.jpg`, `fondo-banner.jpg`, `fondo-grupal.jpg`, `fondo-revista.jpg` y la carpeta `asomate/` completa (15 archivos) | `app/themes/adulto-coqueteria-pop/` (carpeta nueva) | OBLIGATORIO |
 | 2 | `dist/lib.php` | `app/lib.php` | OBLIGATORIO, antes que los PHP de abajo (define `cb_party_event_type`) |
 | 3 | `dist/lib.invitations.php`, `dist/lib.predictions.php`, `dist/ver.php`, `dist/invitacion.php` | `app/` | OBLIGATORIO |
 | 4 | `dist/admin/index.php` | `app/admin/index.php` | OBLIGATORIO |

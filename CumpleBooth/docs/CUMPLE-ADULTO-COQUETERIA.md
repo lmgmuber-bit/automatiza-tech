@@ -56,6 +56,16 @@ Botón «📰 Portada en pareja» en la bienvenida: elegir titular → foto de l
 `cabinaAdulto.revista.titulo`), la edición, un sello con la edad en la esquina de la foto (lejos de las caras) y el
 titular. La foto entra en modo «cubrir», recortando más del techo que de los pies, como la foto grupal.
 
+## Asómate adulto
+
+Botón «🎭 Asómate y sé la estrella»: 14 figuras en 7 parejas (dama de rojo y galán de terno, pin-up y galán de
+telenovela, diva de cabaret y gánster, salsera y salsero, reina y rey de la fiesta, reina del verano y el forzudo,
+Súper Coqueta y Capitán Galán). Parte en «Los dos» y no pasa por la lista de invitados. Las figuras son ilustraciones
+genéricas generadas con Recraft v4.1 por la API de Higgsfield el 11-oct-2026 con el visto bueno de Luis: 18 imágenes,
+USD 0,63 de lista (cuatro rehechas porque la cara no servía para el hueco). El recorte y el hueco los hace
+`design/generadores/tematicas/asomate_adultos.py` sin IA; el óvalo de cada cara está puesto a ojo en `OVALOS` (la
+detección de piel falla con piel rosada y camisas claras). Fondo: la bienvenida de la temática.
+
 ## Juegos del animador
 
 Botón «🎲 Juegos de la fiesta» en la bienvenida (solo cumpleaños de adulto). Los 15 juegos del catálogo de Codex

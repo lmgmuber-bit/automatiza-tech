@@ -89,8 +89,9 @@ acceptance:
 
 decisions_for_luis:
   - "Go para desplegar a PROD (kiosco, PHP y temática) y para crear la fiesta del piloto con sus datos en el admin."
-  - "Juegos de animador (tarjetas, cronómetro, puntaje) propuestos por Codex: siguen como PROPUESTA; no se implementan sin su visto bueno."
   - "Música: sin pista hasta que la elija; la temática funciona muda."
 
 progress:
   - "2026-10-11: P0 cabina implementado y probado en local (commit 1452ae1)."
+  - "2026-10-11: invitación adulta y foto grupal «cómplices» (0cc11f0)."
+  - "2026-10-11: Luis aprobó «haz todas»: portada en pareja y los 15 juegos del animador (ba97e37); Asómate adulto con 14 figuras, USD 0,63 de lista con su visto bueno (a646a4f)."

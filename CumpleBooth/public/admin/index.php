@@ -315,9 +315,22 @@ if ($loggedIn && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '
             // existiera, y el menu de juegos funciona igual sin ella.
             $birthdayAge = trim((string) ($_POST['birthday_age'] ?? ''));
             // Un adulto cumple de 18 a 120; un niño de 1 a 17 (columna TINYINT, tope 127).
-            $edadAdulto = (string) ($_POST['event_type'] ?? '') === 'adult_birthday';
-            $birthdayAge = $birthdayAge === '' ? null
-                : ($edadAdulto ? max(18, min(120, (int) $birthdayAge)) : max(1, min(17, (int) $birthdayAge)));
+            // Fuera de rango se rechaza con mensaje y se conserva lo escrito (CX-17,
+            // AT-CUMPLECLICK-026): antes se corregía en silencio y un adulto de 15 quedaba en 18.
+            $edadAdulto = cb_party_event_type($_POST['event_type'] ?? '') === 'adult_birthday';
+            $birthdayAgeRaw = $birthdayAge;
+            $edadError = '';
+            if ($birthdayAge === '') {
+                $birthdayAge = null;
+            } elseif (!preg_match('/^\d{1,3}$/', $birthdayAge)
+                || !cb_party_age_valid($birthdayAge, $edadAdulto ? 'adult_birthday' : 'child_birthday')) {
+                $edadError = $edadAdulto
+                    ? 'La edad de un cumpleaños de adulto va de 18 a 120 años (o déjala vacía).'
+                    : 'La edad de un cumpleaños infantil va de 1 a 17 años (o déjala vacía).';
+                $birthdayAge = null;
+            } else {
+                $birthdayAge = (int) $birthdayAge;
+            }
             $tema = (string) ($_POST['tema'] ?? '');
             $fecha = trim((string) ($_POST['fecha'] ?? ''));
             $activa = isset($_POST['activa']);
@@ -347,6 +360,9 @@ if ($loggedIn && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '
             }
             if ($birthdayPersonName === '') {
                 $errs[] = 'El nombre del cumpleañero/a es obligatorio.';
+            }
+            if ($edadError !== '') {
+                $errs[] = $edadError;
             }
             if (!isset($themes[$tema])) {
                 $errs[] = 'Selecciona una temática válida.';
@@ -481,7 +497,9 @@ if ($loggedIn && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '
                 'public_slug' => $publicSlug,
                 'admin_label' => $adminLabel,
                 'birthday_person_name' => $birthdayPersonName,
-                'edad' => $birthdayAge,
+                // Lo que escribió el usuario, no lo saneado: si la edad estaba fuera de
+                // rango, el formulario la devuelve tal cual junto al mensaje (CX-17).
+                'edad' => $birthdayAgeRaw,
                 'event_type' => $eventType,
                 'tema' => $tema,
                 'fecha' => $fecha,
@@ -1225,7 +1243,13 @@ if ($formValues === null && $action === 'editar') {
           <div class="envio envio--confirmados">
             <h3 class="envio__titulo"><?= admin_icon('party') ?> Confirmados · enlace para la familia</h3>
             <p class="envio__estado">
-              <?php if ($rsvpResumen['familias'] > 0): ?>
+              <?php $rsvpAdulto = ($rsvpResumen['event_type'] ?? '') === 'adult_birthday'; ?>
+              <?php if ($rsvpResumen['familias'] > 0 && $rsvpAdulto): ?>
+                <?php /* Adulto (CX-13): el segundo campo trae acompañantes, no niños. */ ?>
+                <span class="envios__ok"><?= (int) $rsvpResumen['familias'] ?>
+                  confirmaci<?= $rsvpResumen['familias'] === 1 ? 'ón' : 'ones' ?>
+                  · <?= (int) $rsvpResumen['ninos'] ?> acompañante<?= $rsvpResumen['ninos'] === 1 ? '' : 's' ?></span>
+              <?php elseif ($rsvpResumen['familias'] > 0): ?>
                 <span class="envios__ok"><?= (int) $rsvpResumen['familias'] ?>
                   familia<?= $rsvpResumen['familias'] === 1 ? '' : 's' ?>
                   · <?= (int) $rsvpResumen['ninos'] ?> niño<?= $rsvpResumen['ninos'] === 1 ? '' : 's' ?></span>
@@ -1247,15 +1271,20 @@ if ($formValues === null && $action === 'editar') {
                         <span class="rsvp-lista__ninos"><?= h($f['ninos']) ?></span>
                         <span class="muted small">(<?= (int) $f['cuantos'] ?>)</span>
                       <?php else: ?>
-                        <span class="muted small">sin niños anotados</span>
+                        <span class="muted small"><?= $rsvpAdulto ? 'sin acompañantes anotados' : 'sin niños anotados' ?></span>
                       <?php endif; ?>
                       <span class="muted small rsvp-lista__cuando"><?= h($f['cuando']) ?></span>
                     </li>
                   <?php endforeach; ?>
                 </ul>
                 <p class="muted small" style="margin:8px 0 0">
+                  <?php if ($rsvpAdulto): ?>
+                  El conteo de acompañantes es aproximado: llegan como texto libre
+                  («con Jorge y Ana») y se cuentan por las comas y las «y».
+                  <?php else: ?>
                   El conteo de niños es aproximado: los nombres llegan como texto libre
                   («Emma y Lucas») y se cuentan por las comas y las «y».
+                  <?php endif; ?>
                 </p>
               </details>
             <?php endif; ?>

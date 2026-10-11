@@ -140,7 +140,7 @@
     const target = nextSection
       ? nextSection.getBoundingClientRect().top + window.scrollY
       : (heroSection ? heroSection.getBoundingClientRect().bottom + window.scrollY : window.scrollY + window.innerHeight);
-    window.scrollTo({ top: target, behavior: 'smooth' });
+    window.scrollTo({ top: target, behavior: reducedMotion.matches ? 'auto' : 'smooth' });
   };
   const maybeAutoAdvance = () => {
     if (!introNarrationEnded) return;
@@ -1049,8 +1049,23 @@
     let visible = false;
     let disparado = false;
     let temporizador = null;
+    // Un video de la lámina que se está viendo manda (CX-12, AT-CUMPLECLICK-026): la cuenta
+    // de 5 s no sabía del video y a los 7 s sacaba al invitado de un video de 24 s. Desde que
+    // el invitado le da play, la lámina ya no baja sola: avanza el `ended` del propio video
+    // (más abajo) o el invitado, si se pone a scrollear. Vale para todas las temáticas.
+    let videoTomado = false;
+    const videosLamina = Array.from(seccionArte.querySelectorAll('video'));
+    const videoSonando = () => videosLamina.some((v) => !v.paused && !v.ended);
+    const soltarCuenta = () => {
+      clearTimeout(temporizador);
+      temporizador = null;
+    };
+    videosLamina.forEach((v) => {
+      v.addEventListener('play', () => { videoTomado = true; soltarCuenta(); });
+      v.addEventListener('ended', () => { disparado = true; soltarCuenta(); });
+    });
     const armar = () => {
-      if (disparado || !visible) return;
+      if (disparado || !visible || videoTomado) return;
       clearTimeout(temporizador);
       temporizador = setTimeout(avisar, 5000);
     };
@@ -1061,6 +1076,11 @@
 
     const avisar = () => {
       if (disparado) return;
+      // Red por si el play llegó antes que el listener (autoplay, caché): sonando, no se baja.
+      if (videoTomado || videoSonando()) {
+        videoTomado = true;
+        return;
+      }
       disparado = true;
       const perfil = document.querySelector('[data-ep-open]');
       const extra = perfil && perfil.textContent.trim() !== ''
@@ -1082,8 +1102,7 @@
         if (visible) {
           armar();
         } else {
-          clearTimeout(temporizador);
-          temporizador = null;
+          soltarCuenta();
         }
       });
     }, { threshold: [0.55] });
@@ -1099,8 +1118,14 @@
     videoFinal.addEventListener('ended', () => {
       const seccion = videoFinal.closest('section');
       const siguiente = seccion ? seccion.nextElementSibling : null;
+      // Si el invitado ya se fue de la sección mientras el video corría, se respeta: bajar
+      // (o subir) a buscarlo sería arrastrarlo de donde eligió estar (CX-12).
+      const caja = seccion && typeof seccion.getBoundingClientRect === 'function'
+        ? seccion.getBoundingClientRect() : null;
+      const alto = window.innerHeight || document.documentElement.clientHeight || 0;
+      if (caja && alto > 0 && (caja.bottom <= 0 || caja.top >= alto)) return;
       if (siguiente && typeof siguiente.scrollIntoView === 'function') {
-        siguiente.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        siguiente.scrollIntoView({ behavior: reducedMotion.matches ? 'auto' : 'smooth', block: 'start' });
       }
     });
   }

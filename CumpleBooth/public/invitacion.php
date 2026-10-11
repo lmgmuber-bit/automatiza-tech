@@ -141,6 +141,10 @@ if (is_file($narrationPlaylistEndPath)) {
 
 if ($esAdulto) {
     // Las dos narraciones compartidas dicen «cumpleañero/a» con voz para niños.
+    // El inicio personalizado también es la voz de Alice: aunque haya uno aprobado
+    // (por ejemplo, de una invitación clonada), la invitación adulta solo suena
+    // con su video (CX-14, AT-CUMPLECLICK-026).
+    $narrationIntroUrl = '';
     $narrationOutroUrl = '';
     $narrationPlaylistEndUrl = '';
 }
@@ -1957,7 +1961,7 @@ $cssVer = static function (string $rel): string {
         <label class="inv-rsvp-campo">
           <span><?= $esc($esBabyShower || $esAdulto ? 'Tu nombre' : 'Nombre del apoderado o familia') ?></span>
           <input type="text" name="family_name" maxlength="120" required
-                 placeholder="<?= $esc($esBabyShower ? 'Ej: Carolina Díaz' : 'Ej: Familia Díaz / Carolina Díaz') ?>">
+                 placeholder="<?= $esc($esBabyShower || $esAdulto ? 'Ej: Carolina Díaz' : 'Ej: Familia Díaz / Carolina Díaz') ?>">
         </label>
         <?php if (!$esBabyShower): ?>
         <label class="inv-rsvp-campo">

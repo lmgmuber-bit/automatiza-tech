@@ -46,7 +46,7 @@ valores que imprime el script.
 
 Es el mismo `JuegoCopos` del baby shower («Atrapa los chupetes»), con 20 segundos y los emojis del bloque. Los de doble
 sentido (🍆🍑) son el pedido de Luis («atrapa algo asociado a la temática»). Se eligieron emojis y no dibujos explícitos
-porque funcionan en cualquier tablet, no cuestan nada y la foto se puede mostrar en la fiesta. El puntaje queda impreso
+porque no cuestan nada, la foto se puede mostrar en la fiesta y se vieron bien en Chrome de escritorio; falta confirmarlos en la tablet de la fiesta (modelo y versión por anotar). El puntaje queda impreso
 en la ficha.
 
 ## Portada en pareja (revista)
@@ -64,7 +64,11 @@ Súper Coqueta y Capitán Galán). Parte en «Los dos» y no pasa por la lista d
 genéricas generadas con Recraft v4.1 por la API de Higgsfield el 11-oct-2026 con el visto bueno de Luis: 18 imágenes,
 USD 0,63 de lista (cuatro rehechas porque la cara no servía para el hueco). El recorte y el hueco los hace
 `design/generadores/tematicas/asomate_adultos.py` sin IA; el óvalo de cada cara está puesto a ojo en `OVALOS` (la
-detección de piel falla con piel rosada y camisas claras). Fondo: la bienvenida de la temática.
+detección de piel falla con piel rosada y camisas claras). La revisión B de Codex encontró la diva con los ojos
+ilustrados a la vista y el hueco sobre la mano, y la dama de rojo y el forzudo con cortes fuera del rostro (CX-01/02):
+los 14 óvalos se rehicieron sobre la cabeza ampliada con cuadrícula al 5 % y se comprobaron sobre fondo azul de
+control (ningún ojo ni boca ilustrados a la vista). Fondo: uno propio sin texto (con la bienvenida, las figuras altas
+tapaban «¡SE BUSCA!»). El zoom del ajuste nunca baja de 0,25 (CX-03).
 
 ## Juegos del animador
 
@@ -79,7 +83,7 @@ Las preguntas del Tribunal no traen respuesta: la tiene la celebrada o el animad
 ## Cómo probarlo en local
 
 - `node --test tests/frontend/cumpleAdulto.test.mjs` (textos y temática genérica).
-- `php tests/backend/cumple-adulto-http.php` (36: admin, api del kiosco, invitación, fiesta infantil sin cambios y cruce
+- `php tests/backend/cumple-adulto-http.php` (53: admin, api del kiosco, invitación, asistencia, fiesta infantil sin cambios y cruce
   en la base). Tiene dos controles en rojo hechos: con el tope viejo de 17 falla la edad, y sin la guarda de la narración
   falla «sin la narración de Alice».
 - El recorrido del kiosco se probó con Chrome sin ventana y una cámara falsa (retrato ficticio), en una SQLite temporal.

@@ -833,7 +833,8 @@ function BoothApp() {
         <FraseAdulto
           onElegir={(frase) => {
             setFraseAdulto(frase)
-            go('capture')
+            // Cambiar la frase no obliga a repetir la foto (revisión B, CX-19).
+            go(photo ? 'preview-adulto' : 'capture')
           }}
           onCancel={reset}
         />
@@ -859,13 +860,14 @@ function BoothApp() {
           sinTexto="Solo la portada, sin titular"
           onElegir={(titular) => {
             setTitularRevista(titular)
-            go('revista-capturar')
+            go(photo ? 'revista-preview' : 'revista-capturar')
           }}
           onCancel={reset}
         />
       )}
       {screen === 'revista-capturar' && CABINA_ADULTO?.revista && (
         <Capture
+          onCancel={isAdulto ? reset : undefined}
           onCapture={(dataUrl) => {
             setPhoto(dataUrl)
             go('revista-preview')
@@ -880,10 +882,7 @@ function BoothApp() {
             setPhoto(null)
             go('revista-capturar')
           }}
-          onOtroTitular={() => {
-            setPhoto(null)
-            go('revista-titular')
-          }}
+          onOtroTitular={() => go('revista-titular')}
           onSave={(composed) => {
             setResult(composed)
             go('qr')
@@ -900,10 +899,7 @@ function BoothApp() {
             setPhoto(null)
             go('capture')
           }}
-          onOtraFrase={() => {
-            setPhoto(null)
-            go('frase-adulto')
-          }}
+          onOtraFrase={() => go('frase-adulto')}
           onSave={(composed) => {
             setResult(composed)
             go('qr')
@@ -941,6 +937,7 @@ function BoothApp() {
       )}
       {screen === 'capture' && (
         <Capture
+          onCancel={isAdulto ? reset : undefined}
           onCapture={(dataUrl) => {
             setPhoto(dataUrl)
             go(isBabyShower ? 'prediction-reveal' : isAdulto ? 'preview-adulto' : (REVELACION_VIDEO ? 'revelacion' : 'preview'))
@@ -1006,6 +1003,7 @@ function BoothApp() {
             </p>
           )}
           <Capture
+          onCancel={isAdulto ? reset : undefined}
             key={asomateFotos.length}
             guia={asomateElenco[asomateFotos.length]}
             onCapture={(dataUrl) => {
@@ -1029,6 +1027,7 @@ function BoothApp() {
         <>
           <AvisoAcostar />
           <Capture
+          onCancel={isAdulto ? reset : undefined}
             onCapture={(dataUrl) => {
               setGrupalFoto(dataUrl)
               go('grupal-preview')
@@ -2278,6 +2277,8 @@ function GrupalPreview({ foto, onRetry, onSave }) {
   )
 }
 
+const ZOOM_MINIMO = 0.25
+
 function AsomatePreview({ elenco, fotos, invitado, onRetry, onSave }) {
   const [compuesta, setCompuesta] = useState(null)
   const [ajustes, setAjustes] = useState(() => elenco.map(() => ({ zoom: 1, dx: 0, dy: 0 })))
@@ -2333,8 +2334,13 @@ function AsomatePreview({ elenco, fotos, invitado, onRetry, onSave }) {
     setCompuesta(componerAsomate(r.fondo, lista, tituloAsomate(invitado, elenco.length)))
   }, [ajustes, elenco, invitado])
 
-  const mover = (clave, valor) =>
-    setAjustes((a) => a.map((x, i) => (i === quien ? { ...x, [clave]: valor } : x)))
+  // El tamaño nunca baja de ZOOM_MINIMO: antes el mando recalculaba su mínimo desde el valor
+  // actual y, empujándolo varias veces, llegaba a cero o negativo (revisión B de Codex, CX-03).
+  const mover = (clave, valor) => {
+    if (!Number.isFinite(valor)) return
+    const v = clave === 'zoom' ? Math.max(ZOOM_MINIMO, valor) : valor
+    setAjustes((a) => a.map((x, i) => (i === quien ? { ...x, [clave]: v } : x)))
+  }
 
   /**
    * Guarda la foto y, con ella, la escena que va a llevar el diploma.
@@ -2370,7 +2376,7 @@ function AsomatePreview({ elenco, fotos, invitado, onRetry, onSave }) {
     const valor = ajustes[quien]?.[clave] ?? 0
     // El ajuste automático puede dejar el valor fuera del recorrido normal (una cara en la
     // esquina del cuadro se corre varios huecos): el mando se estira para incluirlo.
-    const desde = Math.min(min, valor - 0.5)
+    const desde = clave === 'zoom' ? Math.max(ZOOM_MINIMO, Math.min(min, valor - 0.5)) : Math.min(min, valor - 0.5)
     const hasta = Math.max(max, valor + 0.5)
     return (
       <label className="asomate-mando">
@@ -2760,7 +2766,7 @@ function Intro({ onStart, onAsomate, onGrupal, onRevista, onAnimador }) {
   }
   return (
     <section
-      className={`screen intro intro--${THEME_SLUG}`}
+      className={`screen intro intro--${THEME_SLUG}${CABINA_ADULTO ? ' intro--adulto' : ''}`}
       style={{ backgroundImage: `url(${CONFIG.images.bienvenida})` }}
       onClick={start}
     >
@@ -4354,7 +4360,7 @@ function GuiaAsomate({ personaje, caja }) {
   )
 }
 
-function Capture({ onCapture, guia }) {
+function Capture({ onCapture, guia, onCancel }) {
   const videoRef = useRef(null)
   const streamRef = useRef(null)
   const [error, setError] = useState(null)
@@ -4543,6 +4549,12 @@ function Capture({ onCapture, guia }) {
           <button className="cta ghost" onClick={() => location.reload()} style={{ marginTop: 12 }}>
             Recargar página
           </button>
+          {/* Cumpleaños de adulto: sin cámara igual se puede volver y jugar (revisión B, CX-10). */}
+          {onCancel && (
+            <button className="cta ghost" onClick={onCancel} style={{ marginTop: 12 }}>
+              🏠 Volver al inicio
+            </button>
+          )}
         </div>
       ) : (
         <>
@@ -5144,13 +5156,14 @@ function composeCabinaAdulto(bgImg, photoImg, frase, score) {
   if (cinta && textoDeCinta) {
     ajustar(textoDeCinta, Math.round(cinta.h * 0.72), cinta.w * 0.9)
     ctx.fillStyle = '#191218'
-    ctx.fillText(textoDeCinta, cinta.x + cinta.w / 2, cinta.y + cinta.h * 0.54)
+    ctx.fillText(textoDeCinta, cinta.x + cinta.w / 2, cinta.y + cinta.h * 0.54, cinta.w * 0.9)
   }
 
   // Panel crema: la frase elegida (o el recuerdo si no eligió), el lema y el puntaje.
   const panel = caja(CABINA_ADULTO?.panel)
   if (panel) {
-    const principal = frase || CABINA_ADULTO.recuerdo
+    // Frase vacía = el invitado eligió «Sin frase»: el panel lleva solo el lema (revisión B, CX-09).
+    const principal = frase
     const anchoUtil = panel.w * 0.88
     // Primero un renglón, achicando hasta un mínimo legible; si no cabe, dos renglones.
     // Con la letra máxima en dos renglones la frase tocaba el borde de arriba del panel.
@@ -5166,7 +5179,7 @@ function composeCabinaAdulto(bgImg, photoImg, frase, score) {
       }
       if (lineas) break
     }
-    lineas = lineas || [texto]
+    lineas = principal ? (lineas || [texto]) : []
     const altoLinea = px * 1.08
     const centroFrase = panel.y + panel.h * 0.37
     ctx.lineJoin = 'round'
@@ -5174,19 +5187,21 @@ function composeCabinaAdulto(bgImg, photoImg, frase, score) {
       const y = centroFrase + (i - (lineas.length - 1) / 2) * altoLinea
       ctx.lineWidth = Math.max(4, px * 0.09)
       ctx.strokeStyle = '#191218'
-      ctx.strokeText(linea, panel.x + panel.w / 2, y)
+      // maxWidth: una palabra sin espacios más ancha que el panel se comprime en vez de salirse (CX-16).
+      ctx.strokeText(linea, panel.x + panel.w / 2, y, anchoUtil)
       ctx.fillStyle = '#F90B78'
-      ctx.fillText(linea, panel.x + panel.w / 2, y)
+      ctx.fillText(linea, panel.x + panel.w / 2, y, anchoUtil)
     })
     // Anton no trae « »: el lema va como grito de cartel, igual que en la bienvenida.
     const lema = `¡${CABINA_ADULTO.lema.toLocaleUpperCase('es-CL')}!`
     ajustar(lema, Math.round(panel.h * 0.13), anchoUtil)
     ctx.fillStyle = '#191218'
-    ctx.fillText(lema, panel.x + panel.w / 2, panel.y + panel.h * (score > 0 ? 0.74 : 0.8))
+    const yLema = !principal ? (score > 0 ? 0.42 : 0.5) : (score > 0 ? 0.74 : 0.8)
+    ctx.fillText(lema, panel.x + panel.w / 2, panel.y + panel.h * yLema, anchoUtil)
     if (score > 0) {
       ctx.font = `800 ${Math.round(panel.h * 0.085)}px 'Baloo 2', system-ui, sans-serif`
       ctx.fillStyle = '#7A0039'
-      ctx.fillText(`${CABINA_ADULTO.juego.label.replace(/^¡|!$/g, '')}: ${score} ${score === 1 ? 'punto' : 'puntos'}`, panel.x + panel.w / 2, panel.y + panel.h * 0.9)
+      ctx.fillText(`${CABINA_ADULTO.juego.label.replace(/^¡|!$/g, '')}: ${score} ${score === 1 ? 'punto' : 'puntos'}`, panel.x + panel.w / 2, panel.y + panel.h * (principal ? 0.9 : 0.68), anchoUtil)
     }
   }
   drawBrandWatermark(ctx, W, H)
@@ -5229,10 +5244,10 @@ function composeRevista(fondoImg, fotoImg, titular) {
     if (borde) {
       ctx.lineWidth = Math.max(4, px * 0.09)
       ctx.strokeStyle = borde
-      ctx.strokeText(texto, x, y)
+      ctx.strokeText(texto, x, y, anchoMax)
     }
     ctx.fillStyle = relleno
-    ctx.fillText(texto, x, y)
+    ctx.fillText(texto, x, y, anchoMax)
     return px
   }
 
@@ -5273,10 +5288,13 @@ function composeRevista(fondoImg, fotoImg, titular) {
   // Panel: «EXCLUSIVA», el titular y de quién es la fiesta.
   const panel = caja(R.panel)
   const anchoTexto = panel.w * 0.88
-  ctx.font = `800 ${Math.round(panel.h * 0.13)}px 'Baloo 2', system-ui, sans-serif`
-  ctx.fillStyle = '#F90B78'
-  ctx.fillText('★ EXCLUSIVA ★', panel.x + panel.w / 2, panel.y + panel.h * 0.16)
-  const texto = (titular || CABINA_ADULTO.recuerdo).toLocaleUpperCase('es-CL')
+  // Titular vacío = «Solo la portada, sin titular»: sin EXCLUSIVA ni titular (revisión B, CX-09).
+  const texto = (titular || '').toLocaleUpperCase('es-CL')
+  if (texto) {
+    ctx.font = `800 ${Math.round(panel.h * 0.13)}px 'Baloo 2', system-ui, sans-serif`
+    ctx.fillStyle = '#F90B78'
+    ctx.fillText('★ EXCLUSIVA ★', panel.x + panel.w / 2, panel.y + panel.h * 0.16)
+  }
   const medir = (s) => ctx.measureText(s).width
   let px = 0
   let lineas = null
@@ -5288,21 +5306,21 @@ function composeRevista(fondoImg, fotoImg, titular) {
     }
     if (lineas) break
   }
-  lineas = lineas || [texto]
+  lineas = texto ? (lineas || [texto]) : []
   lineas.forEach((linea, i) => {
     const y = panel.y + panel.h * 0.52 + (i - (lineas.length - 1) / 2) * px * 1.06
     ctx.font = `400 ${px}px ${FUENTE_CARTEL}`
     ctx.lineWidth = Math.max(3, px * 0.08)
     ctx.strokeStyle = '#191218'
-    ctx.strokeText(linea, panel.x + panel.w / 2, y)
+    ctx.strokeText(linea, panel.x + panel.w / 2, y, anchoTexto)
     ctx.fillStyle = '#F90B78'
-    ctx.fillText(linea, panel.x + panel.w / 2, y)
+    ctx.fillText(linea, panel.x + panel.w / 2, y, anchoTexto)
   })
   const quien = nombreEvento()
   if (quien) {
     ctx.font = `700 ${Math.round(panel.h * 0.1)}px 'Baloo 2', system-ui, sans-serif`
     ctx.fillStyle = '#191218'
-    ctx.fillText(`En la fiesta de ${quien} · ${CABINA_ADULTO.lema}`, panel.x + panel.w / 2, panel.y + panel.h * 0.87, anchoTexto)
+    ctx.fillText(`En la fiesta de ${quien} · ${CABINA_ADULTO.lema}`, panel.x + panel.w / 2, panel.y + panel.h * (texto ? 0.87 : 0.5), anchoTexto)
   }
   drawBrandWatermark(ctx, W, H)
   return exportarFoto(c)
@@ -5334,8 +5352,13 @@ function PreviewRevista({ photo, titular, onRetry, onOtroTitular, onSave }) {
     return () => { vivo = false }
   }, [photo, titular])
 
+  // Un solo guardado aunque se toque dos veces (revisión B, CX-11): una descarga y un onSave.
+  const guardado = useRef(false)
+  const [guardando, setGuardando] = useState(false)
   const save = () => {
-    if (!composed) return
+    if (!composed || guardado.current) return
+    guardado.current = true
+    setGuardando(true)
     guardarEnLaTablet(composed, `portada-${nombreEvento() || 'fiesta'}`)
     playSound(CONFIG.audio.confetti)
     burstConfetti(confRef.current, { duration: 2600, count: 180 })
@@ -5352,7 +5375,7 @@ function PreviewRevista({ photo, titular, onRetry, onOtroTitular, onSave }) {
       <div className="preview-bar">
         <button className="cta ghost" onClick={onRetry}>🔄 Otra foto</button>
         <button className="cta ghost" onClick={onOtroTitular}>✏️ Otro titular</button>
-        <button className="cta" onClick={save} disabled={!composed}>💾 Guardar</button>
+        <button className="cta" onClick={save} disabled={!composed || guardando}>💾 Guardar</button>
       </div>
       <canvas ref={confRef} className="confetti-canvas" />
     </section>
@@ -5376,8 +5399,12 @@ function PreviewAdulto({ photo, bgRef, frase, score, onRetry, onOtraFrase, onSav
     return () => { cancelled = true }
   }, [photo, bgRef, frase, score])
 
+  const guardado = useRef(false)
+  const [guardando, setGuardando] = useState(false)
   const save = () => {
-    if (!composed) return
+    if (!composed || guardado.current) return
+    guardado.current = true
+    setGuardando(true)
     guardarEnLaTablet(composed, `foto-${nombreEvento() || 'fiesta'}`)
     playSound(CONFIG.audio.confetti)
     burstConfetti(confRef.current, { duration: 2600, count: 180 })
@@ -5394,7 +5421,7 @@ function PreviewAdulto({ photo, bgRef, frase, score, onRetry, onOtraFrase, onSav
       <div className="preview-bar">
         <button className="cta ghost" onClick={onRetry}>🔄 Otra foto</button>
         <button className="cta ghost" onClick={onOtraFrase}>✏️ Otra frase</button>
-        <button className="cta" onClick={save} disabled={!composed}>💾 Guardar</button>
+        <button className="cta" onClick={save} disabled={!composed || guardando}>💾 Guardar</button>
       </div>
       <canvas ref={confRef} className="confetti-canvas" />
     </section>

@@ -88,3 +88,14 @@ test('la guía en pantalla sigue al video con object-fit: cover', () => {
   cerca(ancha.ry, (720 / FOTO_POR_HUECO) * 1, 'escala 1 (1280/1280 > 480/720)')
   cerca(ancha.cy, 240, 'centrada en la caja aunque el cuadro sobresalga')
 })
+
+test('un zoom cero, negativo o no numérico no invierte ni anula la foto (CX-03)', () => {
+  const sitio = { hx: 100, hy: 100, rx: 20, ry: 30 }
+  const foto = { naturalWidth: 400, naturalHeight: 300 }
+  const normal = rectFotoEnLienzo(sitio, foto, { zoom: 1 })
+  for (const zoom of [0, -0.55, Number.NaN, undefined]) {
+    const r = rectFotoEnLienzo(sitio, foto, { zoom })
+    assert.ok(r.alto > 0 && r.ancho > 0, `zoom ${zoom}`)
+    assert.equal(r.alto, normal.alto)
+  }
+})

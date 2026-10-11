@@ -3,8 +3,9 @@
  *
  * Catálogo propuesto por Codex (paquete del piloto, 11-oct-2026) y aprobado por Luis («haz
  * todas»). Genérico: el nombre y la edad de quien cumple entran por `{nombre}` y `{edad}`.
- * Nada de datos personales: las preguntas del Tribunal se responden en la fiesta (la respuesta
- * la tiene el animador), nunca quedan escritas acá.
+ * Nada de datos personales: las respuestas del Tribunal se confirman antes de la fiesta y las
+ * tiene el animador (la tablet solo guarda que dijo «las tengo»), nunca quedan escritas acá.
+ * El texto es neutro: no supone el género de quien está de cumpleaños.
  *
  * Tono = nivel mínimo para que aparezca: coqueto < picante < sinverguenza.
  * Puntos: 'acierto' (1 por acierto), 'rubrica' (0 a 3: creatividad, consigna y gracia; nunca el
@@ -24,12 +25,20 @@ export const JUEGOS = [
     emoji: '⚖️',
     segundos: 20,
     puntos: 'acierto',
-    instrucciones: '¿Quién conoce mejor a {nombre}? Cada equipo tiene 20 segundos para responder; después la verdad la dice {nombre} o el animador. Un punto por acierto.',
+    instrucciones: '¿Quién conoce mejor los gustos de {nombre}? Cada equipo tiene 20 segundos para responder; después el animador revela la respuesta confirmada. Un punto por acierto.',
     premio: 'Cómplice que más sabe',
-    nota: 'La respuesta la tiene {nombre} o el animador: no está en la tablet.',
+    nota: 'Las respuestas las tiene el animador, confirmadas antes de la fiesta: no están en la tablet. Pregunta sin respuesta confirmada: «Paso esta».',
+    // Sin al menos seis respuestas confirmadas antes de la fiesta no se juega: se ofrece La coartada perfecta.
+    // La tablet solo guarda el sí del animador, nunca las respuestas.
+    preparacion: {
+      minimo: 6,
+      confirmar: 'Tengo las respuestas de {nombre} preparadas (mínimo 6)',
+      explicacion: 'Para el Tribunal, el animador necesita al menos seis respuestas confirmadas antes de la fiesta por quien está de cumpleaños o por quien organiza. Las respuestas no se escriben en la tablet.',
+      alternativa: 'coartada',
+    },
     cartas: [
       c('tr1', 'coqueto', '¿Salsa o merengue?'),
-      c('tr2', 'coqueto', '¿Qué canción la lleva primero a la pista?'),
+      c('tr2', 'coqueto', '¿Qué canción hace que {nombre} salte primero a la pista?'),
       c('tr3', 'coqueto', '¿Qué frase dice cuando está de broma?'),
       c('tr4', 'coqueto', '¿Qué accesorio no falta cuando sale?'),
       c('tr5', 'coqueto', '¿Qué comida elegiría para celebrar?'),
@@ -71,7 +80,7 @@ export const JUEGOS = [
       c('ds03', 'picante', 'Entro seco, salgo mojado y dejo la taza perfumada.', 'La bolsita de té'),
       c('ds04', 'picante', 'Me aprietas por la mitad y me sale la pasta por la punta.', 'El tubo de pasta de dientes'),
       c('ds05', 'picante', 'Me agitas, me destapas y puedo mojar a todos.', 'Una bebida con gas'),
-      c('ds06', 'coqueto', 'Tengo dientes, paso por tu cabeza y te dejo arreglada.', 'El peine'),
+      c('ds06', 'coqueto', 'Tengo dientes, paso por tu cabeza y dejo tu pelo impecable.', 'El peine'),
       c('ds07', 'picante', 'Subo y bajo entre tus manos para que nada se escape.', 'El cierre de una bolsa'),
       c('ds08', 'coqueto', 'Me soplas, me pongo grande y aparezco en todas las fiestas.', 'El globo'),
       c('ds09', 'picante', 'Me estiras para que llegue y luego vuelvo a enrollarme.', 'La huincha de medir'),
@@ -87,7 +96,7 @@ export const JUEGOS = [
     segundos: 20,
     puntos: 'rubrica',
     instrucciones: 'Música del DJ y 20 segundos por turno, solos, en dúo o en equipo. Se puede bailar sentado: brazos, hombros y cara. Se puntúa ritmo, creatividad y consigna, nunca el cuerpo.',
-    premio: 'Dueña del swing · Rey del merengue',
+    premio: 'Dueña o dueño del swing · Rey o reina del merengue',
     cartas: [
       c('sw1', 'coqueto', 'Baila como si acabaras de conquistar la pista.'),
       c('sw2', 'coqueto', 'Salsa con cara de «yo no fui».'),
@@ -153,7 +162,7 @@ export const JUEGOS = [
     segundos: 15,
     puntos: 'rubrica',
     instrucciones: 'Para quien quiera participar (pensado para ellas, abierto a todos). Desfile de 15 segundos con una frase de teatro, o entrada de diva sentada con manos y cara. No es concurso de belleza.',
-    premio: 'Culpable y encantada',
+    premio: 'Culpable y con encanto',
     cartas: [
       c('di1', 'picante', 'Llegaste tarde, pero se nota que la fiesta te esperaba.'),
       c('di2', 'coqueto', 'Di «yo no fui» como protagonista de telenovela.'),
@@ -202,10 +211,10 @@ export const JUEGOS = [
     instrucciones: 'Sin hablar, 30 segundos. Solo quien actúa mira la frase (mantén apretado «Ver la frase»). Vale adivinar la idea, no la frase exacta.',
     premio: 'Mímica de oro',
     cartas: [
-      c('mi1', 'picante', 'Me hago la difícil'), c('mi2', 'coqueto', 'Amor a primera vista'),
+      c('mi1', 'picante', 'Me hago de rogar'), c('mi2', 'coqueto', 'Amor a primera vista'),
       c('mi3', 'picante', 'Se me subió la coquetería'), c('mi4', 'coqueto', 'Yo no fui'),
       c('mi5', 'picante', 'Me dejó con ganas de bailar'), c('mi6', 'coqueto', '{edad} y todavía doy guerra'),
-      c('mi7', 'coqueto', 'Vine por la torta'), c('mi8', 'picante', 'Culpable y encantada'),
+      c('mi7', 'coqueto', 'Vine por la torta'), c('mi8', 'picante', 'Culpable, pero con encanto'),
     ],
   },
   {
@@ -234,11 +243,11 @@ export const JUEGOS = [
   },
   {
     id: 'expediente',
-    nombre: 'Expediente de la más buscada',
+    nombre: 'Expediente «Se busca»',
     emoji: '📁',
     segundos: 60,
     puntos: 'ninguno',
-    instrucciones: 'Cierre. Cada equipo inventa un cargo divertido para {nombre} y una recompensa. Se leen tres o cuatro y {nombre} elige el ganador. Después, foto de todos los cómplices.',
+    instrucciones: 'Cierre. Cada equipo inventa un cargo divertido y una recompensa para el expediente de {nombre}. Se leen tres o cuatro y quien está de cumpleaños elige el ganador. Después, foto de todos los cómplices.',
     premio: 'Cómplice de honor',
     cartas: [
       c('ex1', 'coqueto', 'Se busca por robarse la pista. Recompensa: el primer baile.'),
@@ -261,7 +270,7 @@ JUEGOS.push({
     c('at01', 'sinverguenza', '¿Qué conquista más: una mirada descarada o un baile bien pegado, si los dos quieren?'),
     c('at02', 'sinverguenza', '¿Beso inolvidable o conversación hasta el amanecer?'),
     c('at03', 'sinverguenza', '¿Piropo fino o indirecta que se entienda desde la otra mesa?'),
-    c('at04', 'sinverguenza', '¿Qué es más sospechoso: «yo casi no bailo» o «yo soy muy tímido»?'),
+    c('at04', 'sinverguenza', '¿Qué es más sospechoso: «yo casi no bailo» o «a mí me da vergüenza»?'),
     c('at05', 'sinverguenza', 'Inventa el nombre de tu perfume para causar problemas esta noche.'),
     c('at06', 'sinverguenza', '¿Qué excusa usaría un galán de telenovela para pedir un segundo baile?'),
     c('at07', 'sinverguenza', 'Completa: «A esta edad yo ya no persigo; yo…».'),

@@ -3210,3 +3210,19 @@ body {
 .anim-tabla { list-style: none; margin: 0; padding: 0; width: min(100%, 520px); display: grid; gap: 6px; }
 .anim-tabla li { display: flex; justify-content: space-between; padding: 8px 14px; background: #FFF0D4; border: 3px solid #191218; font: 800 clamp(16px, 4cqw, 22px) 'Baloo 2', system-ui, sans-serif; }
 .anim :is(button, select, input):focus-visible { outline: 4px solid #FFE9A6; outline-offset: 2px; }
+
+/* Bienvenida adulta en pantallas bajas (tablet acostada: el kiosco conserva su cuadro vertical y
+   queda de unos 540 px de alto). Con cuatro botones apilados no cabían bajo el titular y se
+   pisaban (revisión B de Codex, CX-15). Versión compacta medida en alto, no en orientación.
+   Solo la bienvenida de cumpleaños de adulto; la infantil no cambia. */
+@media (max-height: 760px) {
+  .intro--adulto .intro-adulto { top: 25.5%; gap: 4px; }
+  .intro--adulto .intro-title--adulto { font-size: clamp(15px, 3.2vh, 30px); -webkit-text-stroke-width: 2px; text-shadow: 3px 3px 0 #191218; }
+  .intro--adulto .intro-cinta-adulto { font-size: clamp(13px, 2.8vh, 26px); padding: 0.15em 0.8em; box-shadow: 4px 4px 0 #191218; }
+  .intro--adulto .intro-lema-adulto { font-size: clamp(12px, 2.3vh, 20px); }
+  .intro--adulto .intro-bottom { gap: 7px; bottom: 1.5%; }
+  .intro--adulto .intro-bottom .cta { margin-top: 0; font-size: clamp(13px, 2.5vh, 19px); padding: 7px 16px; }
+  .intro--adulto .intro-bottom .hint { display: none; }
+}
+/* Mímica: mantener apretado no abre el menú de copiar/compartir de iOS (CX-05). */
+.anim-carta--privada { -webkit-touch-callout: none; }

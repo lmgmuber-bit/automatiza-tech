@@ -46,20 +46,22 @@ FIGURAS = {
 # Óvalo de la cara puesto a ojo sobre la hoja de revisión (fracciones del recorte: cx, cy, rx, ry).
 # La detección automática de piel falla con piel rosada y camisas claras; estas medidas mandan.
 OVALOS = {
-    "a1-vestido-rojo": (0.54, 0.30, 0.18, 0.105),
-    "a2-terno": (0.44, 0.28, 0.195, 0.12),
-    "b1-pinup": (0.51, 0.285, 0.285, 0.147),
-    "b2-galan": (0.50, 0.258, 0.34, 0.142),
-    "c1-diva": (0.445, 0.247, 0.153, 0.074),
-    "c2-ganster": (0.51, 0.234, 0.24, 0.099),
-    "d1-salsera": (0.51, 0.226, 0.153, 0.104),
-    "d2-salsero": (0.516, 0.139, 0.107, 0.067),
-    "e1-reina": (0.477, 0.227, 0.16, 0.089),
-    "e2-rey": (0.502, 0.22, 0.117, 0.088),
-    "f1-playa": (0.463, 0.241, 0.15, 0.08),
-    "f2-forzudo": (0.48, 0.147, 0.117, 0.082),
-    "g1-superheroina": (0.50, 0.214, 0.214, 0.092),
-    "g2-superheroe": (0.484, 0.22, 0.206, 0.112),
+    # Revisados el 11-oct sobre la cabeza ampliada con cuadrícula al 5 % (revisión B de Codex, CX-01/CX-02):
+    # cada óvalo va de la frente al mentón y entre las mejillas, sin dejar ojos ni boca ilustrados a la vista.
+    "a1-vestido-rojo": (0.515, 0.287, 0.228, 0.108),
+    "a2-terno": (0.447, 0.30, 0.22, 0.10),
+    "b1-pinup": (0.512, 0.268, 0.335, 0.124),
+    "b2-galan": (0.50, 0.259, 0.34, 0.141),
+    "c1-diva": (0.529, 0.198, 0.165, 0.078),
+    "c2-ganster": (0.505, 0.232, 0.238, 0.099),
+    "d1-salsera": (0.517, 0.234, 0.15, 0.092),
+    "d2-salsero": (0.519, 0.148, 0.118, 0.07),
+    "e1-reina": (0.476, 0.225, 0.155, 0.0875),
+    "e2-rey": (0.517, 0.225, 0.136, 0.085),
+    "f1-playa": (0.46, 0.249, 0.148, 0.083),
+    "f2-forzudo": (0.488, 0.14, 0.102, 0.075),
+    "g1-superheroina": (0.50, 0.196, 0.248, 0.116),
+    "g2-superheroe": (0.488, 0.205, 0.242, 0.112),
 }
 AJUSTES = {}
 
@@ -149,8 +151,21 @@ def main():
             hoja.save(carpeta / f"huecos-{n + 1}.jpg", quality=85)
         print("hojas:", carpeta / "huecos-1.jpg", carpeta / "huecos-2.jpg")
         return
-    # El fondo de Asómate es la bienvenida de la temática: «¡SE BUSCA!» arriba y el centro libre.
-    Image.open(TEMA / "fondo-banner.jpg").save(TEMA / "asomate" / "fondo.jpg", quality=90)
+    # Fondo propio, SIN texto: con la bienvenida («¡SE BUSCA!» arriba) las figuras altas tapaban el
+    # titular (revisión B de Codex). Misma trama de la temática, generada con el mismo código.
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    import coqueteria_pop as cp
+    fondo = Image.new("RGB", (cp.W, cp.H))
+    cp.rayos(fondo, (cp.W // 2, 700))
+    cp.semitono(fondo, (0, 0))
+    cp.semitono(fondo, (cp.W, cp.H), alcance=520)
+    cp.confeti_dorado(fondo, (0, 0), semilla=31)
+    cp.confeti_dorado(fondo, (cp.W, cp.H), cuantos=18, semilla=37)
+    cp.corazon(fondo, 130, 300, 36)
+    cp.estrella(fondo, 950, 260, 42)
+    cp.corazon(fondo, 950, 1500, 30)
+    cp.estrella(fondo, 120, 1560, 38, color=cp.DORADO_CLARO)
+    fondo.save(TEMA / "asomate" / "fondo.jpg", quality=90)
     ruta = CB / "public/data/themes.json"
     raw = ruta.read_bytes().decode("utf-8")
     datos = json.loads(raw)

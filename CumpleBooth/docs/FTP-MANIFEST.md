@@ -32,18 +32,36 @@ Orden de subida (destino `app/`, origen `dist/` después de `npx vite build`):
 | # | Local | Destino PROD | Clase |
 |---|---|---|---|
 | 1 | `dist/themes/adulto-coqueteria-pop/fondo-sala.jpg`, `fondo-banner.jpg`, `fondo-grupal.jpg`, `fondo-revista.jpg` y la carpeta `asomate/` completa (15 archivos) | `app/themes/adulto-coqueteria-pop/` (carpeta nueva) | OBLIGATORIO |
-| 2 | `dist/lib.php` | `app/lib.php` | OBLIGATORIO, antes que los PHP de abajo (define `cb_party_event_type`) |
-| 3 | `dist/lib.invitations.php`, `dist/lib.predictions.php`, `dist/ver.php`, `dist/invitacion.php` | `app/` | OBLIGATORIO |
+| 2 | `dist/lib.php` | `app/lib.php` | OBLIGATORIO, antes que los PHP de abajo (define `cb_party_event_type`, `cb_party_age_valid`, `cb_theme_is_adult`, `cb_theme_cabina_adulto`) |
+| 3 | `dist/lib.invitations.php`, `dist/lib.predictions.php`, `dist/lib.rsvp.php`, `dist/ver.php`, `dist/invitacion.php`, `dist/asistencia-papas.php` | `app/` | OBLIGATORIO |
 | 4 | `dist/admin/index.php` | `app/admin/index.php` | OBLIGATORIO |
 | 5 | `dist/data/themes.json` | `app/data/themes.json` | OBLIGATORIO |
-| 6 | `dist/assets/` que referencia el `index.html` nuevo y no estén en PROD (al 11-oct: `main-*.js`, `main-*.css`, `anton-latin-400-normal-*.woff2`; cotejar el resto por nombre) | `app/assets/` | OBLIGATORIO |
-| 7 | `dist/index.html` | `app/index.html` | OBLIGATORIO, al final |
+| 6 | `dist/assets/invitation.js` | `app/assets/invitation.js` | OBLIGATORIO (independiente; se refresca por `filemtime`) |
+| 7 | `dist/assets/` que referencia el `index.html` nuevo y no estén en PROD (cotejar por nombre; al menos `main-*.js`, `main-*.css` y `anton-latin-400-normal-*.woff2`) | `app/assets/` | OBLIGATORIO |
+| 8 | `dist/index.html` | `app/index.html` | OBLIGATORIO, al final |
 
 No subir: `design/generadores/`, `tests/`, `docs/`, ni el paquete privado del piloto. Las fotos y el video del piloto
 se suben **por el admin** (Invitaciones → imagen y video aprobados), que los guarda en el almacén privado fuera de
 `public_html`.
 
-Respaldo previo: `app/lib.php`, `app/invitacion.php`, `app/admin/index.php`, `app/data/themes.json` y `app/index.html`.
+**Respaldo previo obligatorio, con sha256** (los 11 archivos que se reemplazan; la revisión B de Codex, CX-04, encontró
+que la lista anterior omitía tres consumidores de `lib.php` y un rollback así dejaba `cb_party_event_type()` sin
+definir): `app/lib.php`, `app/lib.invitations.php`, `app/lib.predictions.php`, `app/lib.rsvp.php`, `app/ver.php`,
+`app/invitacion.php`, `app/asistencia-papas.php`, `app/admin/index.php`, `app/assets/invitation.js`,
+`app/data/themes.json` y `app/index.html`.
+
+**Rollback, en este orden:**
+1. Desactivar las fiestas adultas creadas después del cambio (`UPDATE cc_parties SET active=0 WHERE event_type='adult_birthday'`):
+   el código anterior las trata como infantiles y no conoce su temática.
+2. Restaurar `index.html` (sin borrar todavía los assets nuevos).
+3. Restaurar todos los consumidores: `admin/index.php`, `lib.invitations.php`, `lib.predictions.php`, `lib.rsvp.php`,
+   `ver.php`, `invitacion.php`, `asistencia-papas.php`, `assets/invitation.js` y `data/themes.json`.
+4. Recién al final, `lib.php`. Al revés quedan llamadas a funciones que la versión anterior no tiene.
+5. Opcional: retirar `themes/adulto-coqueteria-pop/` y los bundles nuevos.
+6. Verificar una fiesta infantil, un baby shower (predicciones), `ver.php`, una invitación y `asistencia-papas`.
+
+El ensayo del rollback está NOT_RUN.
+
 Verificación desde afuera: `api.php?p=<fiesta infantil existente>` sin `edad` ni `cabinaAdulto` y con sus personajes;
 una fiesta adulta de prueba con `event_type: adult_birthday`.
 

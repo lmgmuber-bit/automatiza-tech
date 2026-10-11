@@ -9,7 +9,10 @@
  *  - api.php entrega al kiosco la modalidad, la edad y el bloque `cabinaAdulto`, sin
  *    personajes y sin música (la temática todavía no tiene pista);
  *  - una fiesta infantil sigue igual: sin edad en el payload, sin `cabinaAdulto`, con música;
- *  - una base editada a mano con la temática cruzada no abre el kiosco (409).
+ *  - una base editada a mano con la temática cruzada no abre el kiosco (409);
+ *  - revisión B de Codex: una edad fuera del rango de la modalidad se rechaza con mensaje
+ *    (CX-17), la invitación adulta no emite un inicio de narración aprobado (CX-14) y la lista
+ *    de confirmados de un adulto habla de acompañantes, no de niños (CX-13).
  *
  * Datos ficticios. Nunca toca una base real: la SQLite vive en una carpeta temporal.
  */
@@ -127,6 +130,17 @@ $r = $luis->pedir('POST', '/admin/index.php', $ficha(['event_type' => 'adult_bir
 a_check($r['estado'] === 200 && str_contains($r['html'], 'necesita una temática para adultos'), 'cumpleaños de adulto con temática infantil: rechazado con aviso');
 a_check(count(cb_load_parties()['parties']) === 0, 'ninguno de los dos cruces se guardó');
 
+// CX-17: una edad fuera del rango de la modalidad se rechaza con mensaje y se conserva lo
+// escrito. Antes el servidor la corregía en silencio (un adulto de 15 quedaba en 18).
+$r = $luis->pedir('POST', '/admin/index.php', $ficha(['event_type' => 'adult_birthday', 'tema' => 'adulto-coqueteria-pop', 'birthday_age' => '15']));
+a_check($r['estado'] === 200 && str_contains($r['html'], 'va de 18 a 120 años'), 'adulto de 15: rechazado con mensaje visible');
+a_check(str_contains($r['html'], 'name="birthday_age" min="1" max="120" value="15"'), 'el formulario devuelve el 15 tal como se escribió');
+$r = $luis->pedir('POST', '/admin/index.php', $ficha(['event_type' => 'adult_birthday', 'tema' => 'adulto-coqueteria-pop', 'birthday_age' => 'veinte']));
+a_check($r['estado'] === 200 && str_contains($r['html'], 'va de 18 a 120 años'), 'edad no numérica: rechazada, no convertida a 18');
+$r = $luis->pedir('POST', '/admin/index.php', $ficha(['event_type' => 'child_birthday', 'tema' => 'spidey', 'birthday_age' => '69']));
+a_check($r['estado'] === 200 && str_contains($r['html'], 'va de 1 a 17 años'), 'niño de 69: rechazado con mensaje visible');
+a_check(count(cb_load_parties()['parties']) === 0, 'ninguna edad fuera de rango se guardó');
+
 // La fiesta buena, con la edad real.
 $r = $luis->pedir('POST', '/admin/index.php', $ficha(['event_type' => 'adult_birthday', 'tema' => 'adulto-coqueteria-pop', 'birthday_age' => '61']));
 a_check($r['estado'] === 302 && str_contains($r['destino'], 'ok=creada'), 'la fiesta adulta se crea');
@@ -177,6 +191,32 @@ a_check(!str_contains($r['html'], 'narracion-final') && !str_contains($r['html']
 a_check(preg_match('#<video class="inv-art-video"[^>]*poster="[^"]+"[^>]*controls#', $r['html']) === 1, 'el video del evento se inicia a mano y muestra la tarjeta como póster');
 a_check(!str_contains($r['html'], 'Nombre de los niños') && !str_contains($r['html'], 'apoderado'), 'la asistencia no pregunta por niños ni apoderados');
 a_check(str_contains($r['html'], 'Los peques a soñar; los grandes a celebrar.'), 'el mensaje del anfitrión se muestra');
+a_check(!str_contains($r['html'], 'Familia Díaz'), 'el ejemplo del nombre es de una persona, no de una familia');
+
+// CX-14: aunque exista un inicio de narración aprobado (p. ej. de una invitación clonada), la
+// invitación adulta no lo emite: solo suena su video.
+$keyIntro = cb_invitation_storage_key($slug, 'narracion-intro', 1, 'mp3');
+@mkdir(dirname($dirInv . '/' . $keyIntro), 0770, true);
+file_put_contents($dirInv . '/' . $keyIntro, str_repeat("\0", 64));
+cb_save_invitation_output($invId, ['output_type' => 'personalized_narration_intro', 'asset_key' => 'narracion-intro',
+    'file_storage_key' => $keyIntro, 'status' => 'approved', 'file_mime' => 'audio/mpeg',
+    'file_byte_size' => 64, 'file_sha256' => hash_file('sha256', $dirInv . '/' . $keyIntro)]);
+a_check(count(cb_invitation_approved_outputs($invId, 'personalized_narration_intro')) === 1, 'el inicio de narración quedó aprobado en la base');
+$r = $luis->pedir('GET', '/invitacion.php?t=' . $tokenInv);
+a_check($r['estado'] === 200 && !str_contains($r['html'], 'data-inv-narration-intro'), 'adulto: el inicio de narración aprobado no se emite');
+a_check(!str_contains($r['html'], 'data-inv-audio-activate'), 'adulto: tampoco aparece el botón «Activar música y voz»');
+
+// CX-13: la lista de confirmados de un adulto habla de acompañantes, no de niños.
+require_once $raiz . '/public/lib.rsvp.php';
+cb_rsvp_save(cb_party_db_id($slug), 'Rosa Ficticia', 'con Jorge Prueba');
+cb_rsvp_save(cb_party_db_id($slug), 'Pedro Ficticio', '');
+$r = $luis->pedir('GET', '/asistencia-papas.php?p=' . rawurlencode($slug) . '&f=' . cb_rsvp_firma_papas($slug));
+a_check($r['estado'] === 200 && str_contains($r['html'], 'Rosa Ficticia') && str_contains($r['html'], 'Pedro Ficticio'), 'la lista adulta abre con las dos confirmaciones');
+a_check(!preg_match('/\bniños?\b/u', strip_tags($r['html'])), 'la lista adulta no dice «niño» en ninguna parte');
+a_check(str_contains($r['html'], '1 acompañante') && str_contains($r['html'], 'Sin acompañantes anotados'), 'cuenta acompañantes y avisa a quien viene sin acompañante');
+$r = $luis->pedir('GET', '/admin/index.php?action=editar&slug=' . rawurlencode($slug));
+a_check($r['estado'] === 200 && str_contains($r['html'], 'acompañante') && !str_contains($r['html'], 'sin niños anotados')
+    && !str_contains($r['html'], 'El conteo de niños'), 'la ficha del admin también habla de acompañantes');
 
 // La infantil no cambia.
 cb_save_parties(['parties' => array_merge(cb_load_parties()['parties'], ['tomas-infantil' => [
@@ -189,6 +229,12 @@ a_check(!array_key_exists('edad', $api['party']), 'la edad de un niño no se pub
 a_check(!array_key_exists('cabinaAdulto', $api['theme']), 'una temática infantil no recibe ninguna broma adulta');
 a_check(count($api['theme']['personajes']) === 6, 'spidey conserva sus seis personajes');
 a_check(str_ends_with((string) $api['theme']['musica'], 'musica-fondo.mp3'), 'spidey conserva su música');
+// La lista de confirmados infantil sigue contando niños (CX-13 no la toca).
+cb_rsvp_save(cb_party_db_id('tomas-infantil'), 'Familia Ficticia', 'Emma y Lucas');
+cb_rsvp_save(cb_party_db_id('tomas-infantil'), 'Familia Sola', '');
+$r = $luis->pedir('GET', '/asistencia-papas.php?p=tomas-infantil&f=' . cb_rsvp_firma_papas('tomas-infantil'));
+a_check($r['estado'] === 200 && str_contains($r['html'], '2 niños') && str_contains($r['html'], 'Sin niños anotados')
+    && !str_contains($r['html'], 'acompañante'), 'la lista infantil sigue hablando de niños');
 
 // Base editada a mano: temática adulta en una fiesta infantil.
 cb_pdo()->prepare("UPDATE cc_parties SET theme_slug = 'adulto-coqueteria-pop' WHERE public_slug = 'tomas-infantil'")->execute();

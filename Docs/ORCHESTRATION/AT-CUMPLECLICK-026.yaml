@@ -43,6 +43,11 @@ scope:
     - "CumpleBooth/public/admin/index.php"
     - "CumpleBooth/src/App.jsx"
     - "CumpleBooth/src/cumpleAdulto.js"
+    - "CumpleBooth/src/asomateGuia.js"
+    - "CumpleBooth/src/animador/**"
+    - "CumpleBooth/public/asistencia-papas.php"
+    - "CumpleBooth/public/lib.rsvp.php"
+    - "CumpleBooth/public/assets/invitation.js"
     - "CumpleBooth/src/styles.css"
     - "CumpleBooth/design/generadores/tematicas/**"
     - "CumpleBooth/tests/**"
@@ -61,7 +66,7 @@ scope:
     adulto` solo dentro del modo feria; al integrarlas, themes.json y la guarda cb_theme_is_adult deben conciliarse
     (las temáticas de feria no son de fiesta privada). Sin migración: event_type es VARCHAR(40) y birthday_age TINYINT.
     Tipografía nueva @fontsource/anton 5.3.0 (OFL-1.1), evaluada: aporta el cartel condensado de la invitación aprobada,
-    sin solaparse con Baloo 2 (que sigue siendo la del producto). Sin créditos ni IA: los fondos se dibujan con código.
+    sin solaparse con Baloo 2 (que sigue siendo la del producto). Los fondos de la temática se dibujan con código, sin IA. Las 14 figuras de Asómate sí se generaron con IA (Recraft v4.1 por la API de Higgsfield, 18 imágenes, USD 0,63 de lista) con el visto bueno de Luis del 11-oct.
 
 routing:
   complexity: C2
@@ -83,6 +88,12 @@ acceptance:
     - "Recorrido local completo: bienvenida, juego de atrapar, frase, foto en el marco, QR (e2e con cámara falsa, sin errores de página)."
     - "Ningún dato del evento piloto en archivos versionados (barrido del diff antes de cada commit)."
     - "Suite frontend completa y suites backend en verde; build de Vite sin errores."
+    - "Portada en pareja: titular elegido o ninguno, foto 4:5 sin texto sobre caras, QR (e2e)."
+    - "Juegos del animador: nivel como techo, mazo sin repetir (también al volver a un juego), «Paso esta» sin castigo, un punto por equipo y ronda, Tribunal solo con preparación confirmada, mímica privada (tests del motor + recorrido en navegador)."
+    - "Asómate adulto: 14 figuras cuyo hueco cubre ojos y boca ilustrados sin abrirse fuera del rostro (revisión visual con fondo de control); zoom siempre positivo."
+    - "Invitación adulta silenciosa (sin narraciones de Alice, ni la de inicio), video con póster que no se interrumpe por el avance automático, asistencia sin vocabulario infantil."
+    - "Rollback documentado con TODOS los PHP que se reemplazan y su orden."
+    - "Revisión B por cargos del homólogo Codex (Forja, Lienzo, Centinela, Vigía, Contralor) sobre la misma revisión, con segundo ciclo tras las correcciones."
   pending_physical:
     - "Tablet real con cámara y personas reales (grupos, alturas, gafas)."
     - "Impresión si se usa (Selphy): medidas reales; los carteles de 33x48 cm no son plantilla del kiosco."

@@ -20,6 +20,7 @@ import { guiaEnPantalla, rectFotoEnLienzo } from './asomateGuia.js'
 import { prepararVideo, urlDeVideo } from './videoListo.js'
 import { ajusteParaCara } from './caraAuto.js'
 import { detectarCara, prepararDetector } from './detectorCara.js'
+import { cabinaAdulto, partirEnLineas, textoCinta } from './cumpleAdulto.js'
 import { PREDICTION_OPTIONS, createPredictionSubmissionToken, predictionLabels, predictionSummary, validPrediction } from './predictions.js'
 
 /* ============================================================
@@ -75,6 +76,8 @@ let DIPLOMA = '' // theme.diploma — título honorífico del diploma (ej "Pilot
 let THEME_LABEL = '' // theme.franquicia (ej "Cars") con fallback a theme.nombre — rótulo sobre el marco
 let INVITADOS_DEFAULT = []
 let MUSIC_ENABLED = true
+// Cumpleaños de adulto: textos de la cabina ya llenos con nombre y edad (src/cumpleAdulto.js).
+let CABINA_ADULTO = null
 let GRUPO_IMG = null
 let CONFETTI_COLORS = ['#e8000d', '#ffb800', '#1a1a1a', '#c0c0c0', '#ffffff', '#ffd166'] // fallback antes de runtime
 
@@ -177,7 +180,9 @@ function buildRuntime(party, theme, slug) {
       confetti: BASE + 'audio/confetti.mp3', // opcional, genérico (no por temática)
       nota: BASE + 'audio/nota.mp3', // opcional, genérico: al atrapar en el juego de copos
       error: BASE + 'audio/error.mp3', // opcional, genérico: al tocar una trampa en el juego de copos
-      musica: ver(BASE + theme.musica), // música de fondo en loop
+      // Música de fondo en loop. Una temática sin pista todavía (la adulta del piloto) no la
+      // publica, y entonces no suena nada en vez de pedir un archivo que no existe.
+      musica: theme.musica ? ver(BASE + theme.musica) : null,
       // Música exclusiva de la pantalla de juegos (Luis, 2026-07-26: en los
       // juegos suena "Y si hacemos un muñeco", en el resto "Libre soy").
       // Sin este archivo el juego conserva la música de fondo normal.
@@ -219,9 +224,14 @@ function buildRuntime(party, theme, slug) {
     // Música de fondo habilitada por el admin (default true si no viene del API)
     musicaHabilitada: party.musica !== false,
     servicePlan: party.service_plan === 'full' ? 'full' : 'booth',
-    eventType: party.event_type === 'baby_shower' ? 'baby_shower' : 'child_birthday',
+    eventType: ['baby_shower', 'adult_birthday'].includes(party.event_type) ? party.event_type : 'child_birthday',
+    // La edad de la celebrada. El servidor solo la manda en un cumpleaños de adulto.
+    edad: Number.isInteger(party.edad) ? party.edad : null,
   }
-  MUSIC_ENABLED = CONFIG.musicaHabilitada
+  MUSIC_ENABLED = CONFIG.musicaHabilitada && Boolean(CONFIG.audio.musica)
+  CABINA_ADULTO = CONFIG.eventType === 'adult_birthday'
+    ? cabinaAdulto(theme.cabinaAdulto, { nombre: nombreEvento(), edad: CONFIG.edad })
+    : null
   CONFETTI_COLORS = Array.isArray(theme.confetti) && theme.confetti.length ? theme.confetti : CONFETTI_COLORS
   DIPLOMA = theme.diploma || ''
   THEME_LABEL = (theme.franquicia || theme.nombre || '').toUpperCase()
@@ -514,6 +524,10 @@ function ErrorScreen({ code, onRetry }) {
 
 function BoothApp() {
   const isBabyShower = CONFIG.eventType === 'baby_shower'
+  // Cumpleaños de adulto: sin ruleta ni personajes. Juego de atrapar (se puede saltar),
+  // frase elegida, foto en el marco «Se busca» y QR.
+  const isAdulto = CONFIG.eventType === 'adult_birthday'
+  const [fraseAdulto, setFraseAdulto] = useState('')
   const [screen, setScreen] = useState('intro')
   const [invitado, setInvitado] = useState(null)
   const [personaje, setPersonaje] = useState(null)
@@ -642,6 +656,7 @@ function BoothApp() {
     setAsomateHeroe(null)
     setPrediction(null)
     setGameScore(null)
+    setFraseAdulto('')
     setScreen('intro')
   }
 
@@ -657,7 +672,7 @@ function BoothApp() {
 
   // Dónde se puede volver atrás: del recorrido de la ruleta (no de Asómate, que ya tiene su
   // propio Atrás, ni del baby shower, que no pasa por la ruleta).
-  const conVolver = !isBabyShower && trasInvitados === 'spinner'
+  const conVolver = !isBabyShower && !isAdulto && trasInvitados === 'spinner'
     && ['invitados', 'spinner', 'photo-session', 'video-personaje', 'juego', 'transition'].includes(screen)
   const volverA = (destino) => {
     setVolverAbierto(false)
@@ -714,7 +729,8 @@ function BoothApp() {
           onStart={() => {
             startMusic()
             setTrasInvitados('spinner')
-            go(isBabyShower ? 'prediccion' : 'invitados')
+            if (isAdulto) setInvitado('')
+            go(isBabyShower ? 'prediccion' : isAdulto ? 'juego' : 'invitados')
           }}
           onGrupal={() => {
             // Sin lista de invitados y sin detector de caras: la foto es de todos y el
@@ -786,7 +802,47 @@ function BoothApp() {
           onDone={() => go(THEME_FLOW.afterCharacter(personaje.name))}
         />
       )}
-      {screen === 'juego' && (
+      {screen === 'juego' && isAdulto && (
+        <JuegoCopos
+          config={{ kind: 'copos', seconds: 20, label: CABINA_ADULTO.juego.label, emojis: CABINA_ADULTO.juego.emojis }}
+          invitado=""
+          personaje={null}
+          onDone={(score) => {
+            setGameScore(Number.isFinite(score) ? score : 0)
+            go('frase-adulto')
+          }}
+        />
+      )}
+      {screen === 'frase-adulto' && isAdulto && (
+        <FraseAdulto
+          onElegir={(frase) => {
+            setFraseAdulto(frase)
+            go('capture')
+          }}
+          onCancel={reset}
+        />
+      )}
+      {screen === 'preview-adulto' && isAdulto && photo && (
+        <PreviewAdulto
+          photo={photo}
+          bgRef={bgRef}
+          frase={fraseAdulto}
+          score={gameScore}
+          onRetry={() => {
+            setPhoto(null)
+            go('capture')
+          }}
+          onOtraFrase={() => {
+            setPhoto(null)
+            go('frase-adulto')
+          }}
+          onSave={(composed) => {
+            setResult(composed)
+            go('qr')
+          }}
+        />
+      )}
+      {screen === 'juego' && !isAdulto && (
         isBabyShower ? (
           <JuegoCopos
             config={{ kind: 'copos', seconds: 15, label: '¡Atrapa los chupetes!', emojis: ['🍼'] }}
@@ -819,7 +875,7 @@ function BoothApp() {
         <Capture
           onCapture={(dataUrl) => {
             setPhoto(dataUrl)
-            go(isBabyShower ? 'prediction-reveal' : (REVELACION_VIDEO ? 'revelacion' : 'preview'))
+            go(isBabyShower ? 'prediction-reveal' : isAdulto ? 'preview-adulto' : (REVELACION_VIDEO ? 'revelacion' : 'preview'))
           }}
         />
       )}
@@ -925,7 +981,8 @@ function BoothApp() {
           invitado={invitado}
           archivarComo={grupalFoto ? 'grupal-' + (nombreEvento() || 'fiesta') : null}
           isBabyShower={isBabyShower}
-          onDiploma={() => go('diploma')}
+          // En un cumpleaños de adulto no hay diploma: el recuerdo ya va impreso en la foto.
+          onDiploma={isAdulto ? null : () => go('diploma')}
           onDone={() => go('farewell')}
         />
       )}
@@ -2657,6 +2714,16 @@ function Intro({ onStart, onAsomate, onGrupal }) {
         </button>
       )}
       <div className="intro-content">
+        {CABINA_ADULTO ? (
+          // El «¡SE BUSCA!» ya viene pintado en el fondo: el titular lo continúa.
+          <div className="intro-adulto">
+            <h1 className="intro-title intro-title--adulto">{CABINA_ADULTO.titulo}</h1>
+            {textoCinta({ nombre: nombreEvento() }) && (
+              <p className="intro-cinta-adulto">{textoCinta({ nombre: nombreEvento() })}</p>
+            )}
+            <p className="intro-lema-adulto">¡{CABINA_ADULTO.lema}!</p>
+          </div>
+        ) : (
         <h1 className="intro-title">
           {/* Un baby shower no es "la fiesta de Valentina": Valentina todavia
               no nacio. La bienvenida cambia de forma segun la modalidad. */}
@@ -2670,12 +2737,15 @@ function Intro({ onStart, onAsomate, onGrupal }) {
                 ? <>¡Bienvenidos a la<br />fiesta de<br />{nombreEvento()}!</>
                 : <>¡Bienvenidos a<br />la fiesta!</>)}
         </h1>
+        )}
+        {!CABINA_ADULTO && (
         <div className="intro-party-decoration" aria-hidden="true">
           <div className="intro-party-flags">
             <i /><i /><i /><i /><i />
           </div>
           <span>¡A celebrar!</span>
         </div>
+        )}
         {/* La etiqueta con el nombre sobre la torta se quitó (Luis, 2026-09-09): el nombre
             ya está en el titular de arriba, y en Spidey la etiqueta caía sobre el texto del
             botón de entrar. El CSS .intro-cake-name se deja por si se quiere recuperar. */}
@@ -2687,9 +2757,11 @@ function Intro({ onStart, onAsomate, onGrupal }) {
               start()
             }}
           >
-            🎉 Toca para entrar
+            {CABINA_ADULTO ? '📸 Tomarme una foto' : '🎉 Toca para entrar'}
           </button>
-          <p className="hint">Te tomaremos una foto de recuerdo 📸</p>
+          <p className="hint">{CABINA_ADULTO
+            ? `Antes, un juego cortito: ${CABINA_ADULTO.juego.label.replace(/^¡|!$/g, '').toLowerCase()} 😏`
+            : 'Te tomaremos una foto de recuerdo 📸'}</p>
           {TEMAS_JUEGO_3D.includes(THEME_SLUG) && (
             <button
               className="cta cta--juego3d"
@@ -4899,6 +4971,169 @@ function Preview({ photo, bgRef, invitado, personaje, onRetry, onSave }) {
 }
 
 /* ============================================================
+   Cumpleaños de adulto — elegir la frase y componer la foto «Se busca»
+   ============================================================ */
+function FraseAdulto({ onElegir, onCancel }) {
+  return (
+    <section className="screen frase-adulto">
+      <h2 className="frase-adulto__titulo">Elige tu frase</h2>
+      <p className="frase-adulto__sub">Va impresa bajo tu foto. Es broma: nadie queda fichado.</p>
+      <div className="frase-adulto__lista">
+        {CABINA_ADULTO.frases.map((frase) => (
+          <button key={frase} type="button" className="frase-adulto__opcion" onClick={() => onElegir(frase)}>
+            {frase}
+          </button>
+        ))}
+        <button type="button" className="frase-adulto__opcion frase-adulto__opcion--sola" onClick={() => onElegir('')}>
+          Sin frase, solo la foto
+        </button>
+      </div>
+      <button type="button" className="cta ghost" onClick={onCancel}>🏠 Volver al inicio</button>
+    </section>
+  )
+}
+
+const FUENTE_CARTEL = "'Anton', 'Baloo 2', Impact, sans-serif"
+
+// Anton solo la usa la cabina adulta: se pide aquí y no al abrir el kiosco, así una fiesta
+// infantil no baja una fuente que no va a dibujar.
+function cargarFuenteCartel() {
+  if (typeof document === 'undefined' || !document.fonts) return Promise.resolve(false)
+  return document.fonts.load("400 60px 'Anton'").then(() => document.fonts.check("400 60px 'Anton'")).catch(() => false)
+}
+
+function composeCabinaAdulto(bgImg, photoImg, frase, score) {
+  // Mismo criterio que la foto grupal: el CDN le entrega a Android una copia de 800 px, así
+  // que el lienzo se fija en 1080 de ancho y todo se mide en proporción.
+  const W = Math.max(1080, bgImg?.naturalWidth || 1080)
+  const H = bgImg?.naturalWidth ? Math.round((W * bgImg.naturalHeight) / bgImg.naturalWidth) : Math.round((W * 16) / 9)
+  const canvas = document.createElement('canvas')
+  canvas.width = W
+  canvas.height = H
+  const ctx = canvas.getContext('2d')
+  if (bgImg) ctx.drawImage(bgImg, 0, 0, W, H)
+  else { ctx.fillStyle = '#F90B78'; ctx.fillRect(0, 0, W, H) }
+
+  // La foto, entera y sin retoque, en el cuadrado interior del marco dorado.
+  const g = getSquarePhotoGeometry(CONFIG.frameBox, W, H)
+  const lado = Math.min(photoImg.width, photoImg.height)
+  ctx.drawImage(photoImg, (photoImg.width - lado) / 2, (photoImg.height - lado) / 2, lado, lado,
+    g.photoLeft, g.photoTop, g.photoSide, g.photoSide)
+  ctx.lineWidth = Math.max(3, W * 0.005)
+  ctx.strokeStyle = '#191218'
+  ctx.strokeRect(g.photoLeft, g.photoTop, g.photoSide, g.photoSide)
+
+  const caja = (c) => c && { x: c.x * W, y: c.y * H, w: c.w * W, h: c.h * H }
+  const ajustar = (texto, maxPx, anchoMax) => {
+    let px = maxPx
+    ctx.font = `400 ${px}px ${FUENTE_CARTEL}`
+    while (ctx.measureText(texto).width > anchoMax && px > 18) {
+      px -= 2
+      ctx.font = `400 ${px}px ${FUENTE_CARTEL}`
+    }
+    return px
+  }
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+
+  // Cinta dorada: el nombre de la celebrada (la edad va en el lema, debajo).
+  const cinta = caja(CABINA_ADULTO?.cinta)
+  const textoDeCinta = textoCinta({ nombre: nombreEvento() })
+  if (cinta && textoDeCinta) {
+    ajustar(textoDeCinta, Math.round(cinta.h * 0.72), cinta.w * 0.9)
+    ctx.fillStyle = '#191218'
+    ctx.fillText(textoDeCinta, cinta.x + cinta.w / 2, cinta.y + cinta.h * 0.54)
+  }
+
+  // Panel crema: la frase elegida (o el recuerdo si no eligió), el lema y el puntaje.
+  const panel = caja(CABINA_ADULTO?.panel)
+  if (panel) {
+    const principal = frase || CABINA_ADULTO.recuerdo
+    const anchoUtil = panel.w * 0.88
+    // Primero un renglón, achicando hasta un mínimo legible; si no cabe, dos renglones.
+    // Con la letra máxima en dos renglones la frase tocaba el borde de arriba del panel.
+    const medir = (s) => ctx.measureText(s).width
+    const texto = principal.toLocaleUpperCase('es-CL')
+    let px = 0
+    let lineas = null
+    for (const [desde, hasta, renglones] of [[0.27, 0.19, 1], [0.21, 0.1, 2]]) {
+      for (px = Math.round(panel.h * desde); px >= Math.round(panel.h * hasta); px -= 2) {
+        ctx.font = `400 ${px}px ${FUENTE_CARTEL}`
+        lineas = partirEnLineas(texto, anchoUtil, medir, renglones)
+        if (lineas) break
+      }
+      if (lineas) break
+    }
+    lineas = lineas || [texto]
+    const altoLinea = px * 1.08
+    const centroFrase = panel.y + panel.h * 0.37
+    ctx.lineJoin = 'round'
+    lineas.forEach((linea, i) => {
+      const y = centroFrase + (i - (lineas.length - 1) / 2) * altoLinea
+      ctx.lineWidth = Math.max(4, px * 0.09)
+      ctx.strokeStyle = '#191218'
+      ctx.strokeText(linea, panel.x + panel.w / 2, y)
+      ctx.fillStyle = '#F90B78'
+      ctx.fillText(linea, panel.x + panel.w / 2, y)
+    })
+    // Anton no trae « »: el lema va como grito de cartel, igual que en la bienvenida.
+    const lema = `¡${CABINA_ADULTO.lema.toLocaleUpperCase('es-CL')}!`
+    ajustar(lema, Math.round(panel.h * 0.13), anchoUtil)
+    ctx.fillStyle = '#191218'
+    ctx.fillText(lema, panel.x + panel.w / 2, panel.y + panel.h * (score > 0 ? 0.74 : 0.8))
+    if (score > 0) {
+      ctx.font = `800 ${Math.round(panel.h * 0.085)}px 'Baloo 2', system-ui, sans-serif`
+      ctx.fillStyle = '#7A0039'
+      ctx.fillText(`${CABINA_ADULTO.juego.label.replace(/^¡|!$/g, '')}: ${score} ${score === 1 ? 'punto' : 'puntos'}`, panel.x + panel.w / 2, panel.y + panel.h * 0.9)
+    }
+  }
+  drawBrandWatermark(ctx, W, H)
+  return exportarFoto(canvas)
+}
+
+function PreviewAdulto({ photo, bgRef, frase, score, onRetry, onOtraFrase, onSave }) {
+  const [composed, setComposed] = useState(null)
+  const confRef = useRef(null)
+
+  useEffect(() => {
+    if (!photo) return undefined
+    let cancelled = false
+    const p = new Image()
+    p.onload = async () => {
+      if (cancelled) return
+      await Promise.all([ensureCanvasFonts(), cargarFuenteCartel(), preloadBrandLogo()])
+      if (!cancelled) setComposed(composeCabinaAdulto(bgRef.current, p, frase, score))
+    }
+    p.src = photo
+    return () => { cancelled = true }
+  }, [photo, bgRef, frase, score])
+
+  const save = () => {
+    if (!composed) return
+    guardarEnLaTablet(composed, `foto-${nombreEvento() || 'fiesta'}`)
+    playSound(CONFIG.audio.confetti)
+    burstConfetti(confRef.current, { duration: 2600, count: 180 })
+    setTimeout(() => onSave(composed), REDUCE_MOTION ? 300 : 1600)
+  }
+
+  return (
+    <section className="screen preview">
+      {composed ? (
+        <img className="preview-img" src={composed} alt="Tu ficha de la fiesta" />
+      ) : (
+        <div className="loading">Preparando tu ficha…</div>
+      )}
+      <div className="preview-bar">
+        <button className="cta ghost" onClick={onRetry}>🔄 Otra foto</button>
+        <button className="cta ghost" onClick={onOtraFrase}>✏️ Otra frase</button>
+        <button className="cta" onClick={save} disabled={!composed}>💾 Guardar</button>
+      </div>
+      <canvas ref={confRef} className="confetti-canvas" />
+    </section>
+  )
+}
+
+/* ============================================================
    QR Screen — genera QR code para descargar la foto en el celular
    ============================================================ */
 async function uploadPhoto(imageDataUrl, invitado) {
@@ -5011,9 +5246,11 @@ function QRScreen({ imageDataUrl, invitado, archivarComo = null, isBabyShower = 
           )}
         </div>
         <div className="qr-actions">
-          <button className="cta" onClick={onDiploma}>
-            {isBabyShower ? 'Ver mi recuerdito' : '🎓 Ver diploma'}
-          </button>
+          {onDiploma && (
+            <button className="cta" onClick={onDiploma}>
+              {isBabyShower ? 'Ver mi recuerdito' : '🎓 Ver diploma'}
+            </button>
+          )}
           <button className="cta ghost" onClick={onDone}>
             ✨ Siguiente invitado
           </button>

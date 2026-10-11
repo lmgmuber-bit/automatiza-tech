@@ -2118,6 +2118,88 @@
       },
       "musicaHint": "Cuna con cuerdas suaves",
       "transition": "none"
+    },
+    "adulto-coqueteria-pop": {
+      "nombre": "Coquetería Pop",
+      "franquicia": null,
+      "publico": "adulto",
+      "audiencia": "adulto",
+      "modalidad": "adult_birthday",
+      "diploma": "Cómplice oficial de {nombre}",
+      "colors": {
+        "accent": "#F90B78",
+        "accentSoft": "#FFE3EF",
+        "yellow": "#D8AA43",
+        "ink": "#191218",
+        "bgLight1": "#FFF0D4",
+        "bgLight2": "#FFD3E6",
+        "dark1": "#191218",
+        "dark2": "#7A0039",
+        "dark3": "#FF559A"
+      },
+      "confetti": [
+        "#F90B78",
+        "#FF559A",
+        "#D8AA43",
+        "#FFE9A6",
+        "#FFF0D4",
+        "#191218"
+      ],
+      "personajes": [],
+      "frameBox": {
+        "x": 0.1204,
+        "y": 0.1719,
+        "w": 0.7593,
+        "h": 0.4271
+      },
+      "grupal": {
+        "fondo": "fondo-grupal.jpg",
+        "frameBox": {
+          "x": 0.0833,
+          "y": 0.2448,
+          "w": 0.8333,
+          "h": 0.3516
+        },
+        "titulo": "¡Cómplices de la fiesta!"
+      },
+      "cabinaAdulto": {
+        "titulo": "gente con ganas de pasarlo bien",
+        "lema": "{edad} y todavía doy guerra",
+        "recuerdo": "Cómplice oficial de {nombre}",
+        "cinta": {
+          "x": 0.0833,
+          "y": 0.6229,
+          "w": 0.8333,
+          "h": 0.0521
+        },
+        "panel": {
+          "x": 0.0741,
+          "y": 0.6979,
+          "w": 0.8519,
+          "h": 0.1875
+        },
+        "frases": [
+          "Culpable de coquetería",
+          "Yo no fui… ¡pero pude haber sido!",
+          "La más buscada de la fiesta",
+          "El más buscado de la fiesta",
+          "Cómplice de {nombre}",
+          "Vine por la torta… y me quedé por el baile",
+          "Con permiso: hoy doy guerra"
+        ],
+        "juego": {
+          "label": "¡Atrapa la coquetería!",
+          "emojis": [
+            "🍆",
+            "🍑",
+            "💋",
+            "🍒",
+            "🌶️"
+          ]
+        }
+      },
+      "musicaHint": "Salsa o merengue, a elección de la celebrada (sin pista todavía)",
+      "transition": "none"
     }
   }
 }

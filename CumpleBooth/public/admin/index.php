@@ -314,11 +314,14 @@ if ($loggedIn && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '
             // Edad que cumple. Vacio es valido: hay fiestas cargadas antes de que este campo
             // existiera, y el menu de juegos funciona igual sin ella.
             $birthdayAge = trim((string) ($_POST['birthday_age'] ?? ''));
-            $birthdayAge = $birthdayAge === '' ? null : max(1, min(17, (int) $birthdayAge));
+            // Un adulto cumple de 18 a 120; un niño de 1 a 17 (columna TINYINT, tope 127).
+            $edadAdulto = (string) ($_POST['event_type'] ?? '') === 'adult_birthday';
+            $birthdayAge = $birthdayAge === '' ? null
+                : ($edadAdulto ? max(18, min(120, (int) $birthdayAge)) : max(1, min(17, (int) $birthdayAge)));
             $tema = (string) ($_POST['tema'] ?? '');
             $fecha = trim((string) ($_POST['fecha'] ?? ''));
             $activa = isset($_POST['activa']);
-            $eventType = (string) ($_POST['event_type'] ?? '') === 'baby_shower' ? 'baby_shower' : 'child_birthday';
+            $eventType = cb_party_event_type($_POST['event_type'] ?? '');
             $servicePlan = in_array((string) ($_POST['service_plan'] ?? ''), ['booth', 'full'], true) ? (string) $_POST['service_plan'] : 'booth';
             $galleryEnabled = isset($_POST['gallery_enabled']);
             // Juegos habilitados para esta fiesta. `juegos_definidos` distingue
@@ -347,6 +350,10 @@ if ($loggedIn && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '
             }
             if (!isset($themes[$tema])) {
                 $errs[] = 'Selecciona una temática válida.';
+            } elseif (cb_theme_is_adult($themes[$tema]) !== ($eventType === 'adult_birthday')) {
+                $errs[] = $eventType === 'adult_birthday'
+                    ? 'Un cumpleaños de adulto necesita una temática para adultos.'
+                    : 'Esa temática es para adultos: elige la modalidad «Cumpleaños de adulto».';
             }
             if ($fecha !== '' && !cb_fecha_valida($fecha)) {
                 $errs[] = 'La fecha debe ser un día real con formato AAAA-MM-DD.';
@@ -728,7 +735,7 @@ if ($formValues === null && $action === 'editar') {
             'admin_label' => $p['admin_label'] ?? '',
             'birthday_person_name' => $p['birthday_person_name'] ?? '',
             'edad' => $p['edad'] ?? '',
-            'event_type' => (string) ($p['event_type'] ?? '') === 'baby_shower' ? 'baby_shower' : 'child_birthday',
+            'event_type' => cb_party_event_type($p['event_type'] ?? ''),
             'tema' => $p['tema'] ?? '',
             'fecha' => $p['fecha'] ?? '',
             'activa' => !empty($p['activa']),
@@ -851,7 +858,7 @@ if ($formValues === null && $action === 'editar') {
           <div class="field">
             <label for="f-birthday-age">Cuántos años cumple <span class="muted small">(opcional)</span></label>
             <?php // "5" a secas se lee como un valor guardado cuando el campo esta vacio. ?>
-            <input type="number" id="f-birthday-age" name="birthday_age" min="1" max="17" value="<?= h($formValues['edad'] ?? '') ?>" placeholder="Ej: 5">
+            <input type="number" id="f-birthday-age" name="birthday_age" min="1" max="120" value="<?= h($formValues['edad'] ?? '') ?>" placeholder="Ej: 5">
             <small class="muted">Aparece en el menú de juegos y en el saludo. Si lo dejas vacío, no se muestra la edad.</small>
           </div>
 
@@ -860,6 +867,7 @@ if ($formValues === null && $action === 'editar') {
             <select id="f-event-type" name="event_type" required>
               <option value="child_birthday" <?= ($formValues['event_type'] ?? 'child_birthday') === 'child_birthday' ? 'selected' : '' ?>>Cumpleaños infantil</option>
               <option value="baby_shower" <?= ($formValues['event_type'] ?? '') === 'baby_shower' ? 'selected' : '' ?>>Baby shower</option>
+              <option value="adult_birthday" <?= ($formValues['event_type'] ?? '') === 'adult_birthday' ? 'selected' : '' ?>>Cumpleaños de adulto</option>
             </select>
             <small>La modalidad controla el recorrido y el vocabulario. Los eventos actuales permanecen como cumpleaños infantil.</small>
           </div>

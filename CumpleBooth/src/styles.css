@@ -1,3 +1,12 @@
+/* Anton (OFL-1.1): solo la cabina de cumpleaños de adulto la dibuja; el navegador la
+   baja la primera vez que se usa, no al abrir el kiosco. */
+@font-face {
+  font-family: 'Anton';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 400;
+  src: url('@fontsource/anton/files/anton-latin-400-normal.woff2') format('woff2');
+}
 @font-face {
   font-family: 'Baloo 2';
   font-style: normal;
@@ -3114,3 +3123,47 @@ body {
   font-size: clamp(22px, 6cqw, 32px);
 }
 .volver-hoja .cta { width: min(88cqw, 420px); min-height: 56px; }
+
+/* ---------- CUMPLEAÑOS DE ADULTO (AT-CUMPLECLICK-026) ----------
+   La bienvenida continúa el «¡SE BUSCA!» que ya viene pintado arriba en fondo-banner.jpg
+   (termina en el 25 % del alto). Paleta de la temática: fucsia, crema, dorado y negro. */
+.intro-adulto {
+  position: absolute; top: 29%; left: 6%; right: 6%;
+  display: flex; flex-direction: column; align-items: center; gap: 1.6cqh;
+}
+.intro-title--adulto {
+  position: static; transform: none; width: auto;
+  font-family: 'Anton', 'Baloo 2', Impact, sans-serif; font-weight: 400;
+  font-size: clamp(26px, 9cqw, 64px); line-height: 1.02; text-transform: uppercase;
+  color: #FFF0D4; -webkit-text-stroke: 3px #191218; text-shadow: 5px 5px 0 #191218;
+}
+.intro-cinta-adulto {
+  margin: 0; padding: 0.35em 1.1em;
+  font-family: 'Anton', 'Baloo 2', Impact, sans-serif; font-size: clamp(20px, 7cqw, 48px);
+  color: #191218; letter-spacing: 0.02em;
+  background: linear-gradient(180deg, #966C1C 0%, #FFE9A6 28%, #D8AA43 55%, #966C1C 100%);
+  border: 4px solid #191218; box-shadow: 6px 6px 0 #191218;
+}
+.intro-lema-adulto {
+  margin: 0; font-family: 'Anton', 'Baloo 2', Impact, sans-serif; font-size: clamp(18px, 6cqw, 40px);
+  color: #FFF0D4; -webkit-text-stroke: 2px #191218; paint-order: stroke fill; text-transform: uppercase;
+}
+.frase-adulto {
+  background: #F90B78 repeating-conic-gradient(from 0deg at 50% 40%, #FF559A 0deg 5deg, #F90B78 5deg 10deg);
+  justify-content: flex-start; gap: 2cqh; padding: 6cqh 6% 4cqh; overflow-y: auto;
+}
+.frase-adulto__titulo {
+  margin: 0; font-family: 'Anton', 'Baloo 2', Impact, sans-serif; font-weight: 400;
+  font-size: clamp(30px, 10cqw, 70px); text-transform: uppercase;
+  color: #FFF0D4; -webkit-text-stroke: 3px #191218; text-shadow: 5px 5px 0 #191218;
+}
+.frase-adulto__sub { margin: 0; color: #fff; font-weight: 700; font-size: clamp(15px, 3.8cqw, 22px); text-shadow: 0 2px 6px rgba(0,0,0,.45); }
+.frase-adulto__lista { display: flex; flex-direction: column; gap: 1.4cqh; width: 100%; max-width: 640px; }
+.frase-adulto__opcion {
+  font: 400 clamp(19px, 5.4cqw, 34px)/1.15 'Anton', 'Baloo 2', Impact, sans-serif; text-transform: uppercase;
+  color: #F90B78; background: #FFF0D4; border: 4px solid #191218; border-radius: 6px;
+  box-shadow: 6px 6px 0 #191218; padding: 0.55em 0.8em; cursor: pointer;
+}
+.frase-adulto__opcion:active { transform: translate(3px, 3px); box-shadow: 3px 3px 0 #191218; }
+.frase-adulto__opcion:focus-visible { outline: 4px solid #FFE9A6; outline-offset: 3px; }
+.frase-adulto__opcion--sola { color: #191218; background: #D8AA43; }

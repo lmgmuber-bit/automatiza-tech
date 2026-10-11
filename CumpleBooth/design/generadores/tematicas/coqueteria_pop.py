@@ -6,6 +6,7 @@ Genera, con código y sin IA, los tres fondos 1080x1920 de la temática:
   fondo-sala.jpg    cabina: «¡SE BUSCA!» + marco dorado + panel crema donde el kiosco escribe la frase
   fondo-banner.jpg  bienvenida del kiosco: rayos, «¡SE BUSCA!» arriba y el centro libre para los botones
   fondo-grupal.jpg  foto de todos: marco dorado apaisado
+  fondo-revista.jpg portada de revista para tomarse en pareja (foto 4:5 y panel de titulares)
 
 Es GENÉRICA a propósito: ni nombre, ni edad, ni fotos de nadie. El nombre y la edad de la
 celebrada los escribe el kiosco encima, en tiempo de ejecución (src/coqueteria.js).
@@ -284,6 +285,29 @@ def fondo_grupal():
     return im, frame_box(x0, y0, x1, y1)
 
 
+def fondo_revista():
+    """Portada de revista para la pareja: el kiosco escribe el nombre de la revista, la edición,
+    el titular y el sello con la edad; aquí solo van la trama, el hueco de la foto y el panel."""
+    im = Image.new("RGB", (W, H))
+    rayos(im, (W // 2, 300), n=44)
+    semitono(im, (W, 0), alcance=380)
+    semitono(im, (0, H), alcance=460)
+    confeti_dorado(im, (W, H), cuantos=16, semilla=21)
+    d = ImageDraw.Draw(im)
+    # Hueco 4:5 de la foto, con filo crema y contorno negro como una portada impresa.
+    x0, x1 = 90, W - 90
+    y0 = 300
+    y1 = y0 + round((x1 - x0) * 5 / 4)
+    d.rectangle([x0 + 14, y0 + 14, x1 + 14, y1 + 14], fill=NEGRO)
+    d.rectangle([x0 - 10, y0 - 10, x1 + 10, y1 + 10], fill=CREMA, outline=NEGRO, width=6)
+    d.rectangle([x0, y0, x1, y1], fill=(60, 40, 60))
+    panel = (70, y1 + 40, W - 70, H - 125)  # la marca de agua del kiosco va debajo
+    panel_crema(im, *panel)
+    corazon(im, 1010, 1505, 30)
+    estrella(im, 62, 250, 32, color=DORADO_CLARO)
+    return im, frame_box(x0, y0, x1, y1), frame_box(*panel)
+
+
 def main():
     SALIDA.mkdir(parents=True, exist_ok=True)
     sala, caja_sala, extra = fondo_sala()
@@ -294,6 +318,9 @@ def main():
     print("frameBox sala  ", caja_sala)
     print("cinta / panel  ", extra)
     print("frameBox grupal", caja_grupal)
+    revista, caja_revista, panel_revista = fondo_revista()
+    revista.save(SALIDA / "fondo-revista.jpg", quality=90, optimize=True)
+    print("revista foto / panel", caja_revista, panel_revista)
 
 
 if __name__ == "__main__":

@@ -143,6 +143,8 @@ a_check($api['party']['event_type'] === 'adult_birthday' && $api['party']['edad'
 a_check($api['theme']['personajes'] === [], 'sin ruleta de personajes');
 a_check(is_array($api['theme']['cabinaAdulto']) && count($api['theme']['cabinaAdulto']['frases']) === 7, 'llegan las siete frases de la cabina');
 a_check(in_array('🍆', $api['theme']['cabinaAdulto']['juego']['emojis'], true), 'el juego de atrapar trae sus emojis');
+$rev = $api['theme']['cabinaAdulto']['revista'] ?? null;
+a_check(is_array($rev) && str_ends_with($rev['fondo'], 'fondo-revista.jpg') && count($rev['titulares']) >= 4, 'llega la portada en pareja con su fondo y titulares');
 a_check($api['theme']['musica'] === '', 'sin pista en disco no se publica música');
 a_check(is_array($api['theme']['grupal']) && str_ends_with($api['theme']['grupal']['fondo'], 'fondo-grupal.jpg'), 'la foto grupal tiene su fondo');
 

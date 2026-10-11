@@ -3167,3 +3167,46 @@ body {
 .frase-adulto__opcion:active { transform: translate(3px, 3px); box-shadow: 3px 3px 0 #191218; }
 .frase-adulto__opcion:focus-visible { outline: 4px solid #FFE9A6; outline-offset: 3px; }
 .frase-adulto__opcion--sola { color: #191218; background: #D8AA43; }
+.cta--revista { margin-top: 14px; font-size: clamp(16px, 3.8cqw, 22px); padding: 12px 26px; color: #191218; background: linear-gradient(180deg, #FFE9A6, #D8AA43); border: 3px solid #191218; box-shadow: 5px 5px 0 #191218; }
+
+/* ---------- JUEGOS DEL ANIMADOR (cumpleaños de adulto) ---------- */
+.cta--animador { margin-top: 12px; font-size: clamp(16px, 3.8cqw, 22px); padding: 12px 26px; color: #FFF0D4; background: #191218; border: 3px solid #FFF0D4; }
+.anim { background: #F90B78 repeating-conic-gradient(from 0deg at 50% 30%, #FF559A 0deg 5deg, #F90B78 5deg 10deg); justify-content: flex-start; gap: 1.6cqh; padding: 3cqh 5% 3cqh; overflow-y: auto; color: #191218; }
+.anim-titulo { margin: 0; font: 400 clamp(24px, 7cqw, 50px)/1.05 'Anton', 'Baloo 2', Impact, sans-serif; text-transform: uppercase; color: #FFF0D4; -webkit-text-stroke: 2px #191218; text-shadow: 4px 4px 0 #191218; }
+.anim-instr, .anim-nota, .anim-premio { margin: 0; max-width: 62ch; font-weight: 700; color: #fff; text-shadow: 0 2px 6px rgba(0,0,0,.45); font-size: clamp(14px, 3.4cqw, 20px); }
+.anim-nota { font-weight: 600; opacity: .95; }
+.anim-premio { color: #FFE9A6; }
+.anim-juegos { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(240px, 100%), 1fr)); gap: 12px; width: 100%; }
+.anim-juego, .anim-nivel { display: flex; align-items: center; gap: 10px; text-align: left; padding: 14px 16px; font: 400 clamp(17px, 4.4cqw, 26px)/1.1 'Anton', 'Baloo 2', Impact, sans-serif; text-transform: uppercase; color: #191218; background: #FFF0D4; border: 4px solid #191218; box-shadow: 5px 5px 0 #191218; cursor: pointer; }
+.anim-juego__emoji { font-size: 1.4em; }
+.anim-niveles { display: grid; gap: 10px; width: 100%; max-width: 640px; }
+.anim-nivel { flex-direction: column; align-items: flex-start; }
+.anim-nivel small { font: 700 clamp(13px, 3.2cqw, 17px) 'Baloo 2', system-ui, sans-serif; text-transform: none; }
+.anim-nivel.is-on, .anim-chip.is-on { background: #D8AA43; }
+.anim-equipos { display: flex; align-items: center; gap: 10px; color: #fff; font-weight: 800; font-size: clamp(16px, 4cqw, 22px); }
+.anim-input { width: min(100%, 520px); padding: 10px 14px; font: 700 clamp(16px, 4cqw, 22px) 'Baloo 2', system-ui, sans-serif; border: 3px solid #191218; background: #fff; }
+.anim-chip { padding: 10px 16px; min-height: 44px; font: 800 clamp(15px, 3.8cqw, 20px) 'Baloo 2', system-ui, sans-serif; color: #191218; background: #FFF0D4; border: 3px solid #191218; box-shadow: 3px 3px 0 #191218; cursor: pointer; }
+.anim-chip:disabled { opacity: .45; cursor: default; }
+.anim-chip--deshacer { background: #fff; }
+.anim-cabecera { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px; width: 100%; }
+.anim-marcador { display: flex; flex-wrap: wrap; gap: 8px; }
+.anim-marca { display: flex; flex-direction: column; align-items: center; min-width: 84px; padding: 4px 10px; background: #191218; color: #FFF0D4; border: 2px solid #D8AA43; }
+.anim-marca small { font-size: 12px; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.anim-marca b { font: 400 26px 'Anton', Impact, sans-serif; color: #FFE9A6; }
+.anim-nivel-sel { color: #fff; font-weight: 800; }
+.anim-nivel-sel select { font: 800 16px 'Baloo 2', system-ui, sans-serif; padding: 6px; border: 2px solid #191218; }
+.anim-carta { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; width: 100%; min-height: 22cqh; padding: 20px; background: #FFF0D4; border: 5px solid #191218; box-shadow: 8px 8px 0 #191218; }
+.anim-carta__texto { margin: 0; font: 400 clamp(24px, 7cqw, 52px)/1.12 'Anton', 'Baloo 2', Impact, sans-serif; color: #F90B78; -webkit-text-stroke: 1px #191218; }
+.anim-carta__resp { margin: 0; font: 800 clamp(20px, 5.4cqw, 34px) 'Baloo 2', system-ui, sans-serif; color: #191218; background: #D8AA43; padding: 4px 14px; }
+.anim-carta--privada, .anim-carta--fisico { font: 800 clamp(18px, 4.6cqw, 28px) 'Baloo 2', system-ui, sans-serif; color: #191218; cursor: pointer; user-select: none; -webkit-user-select: none; touch-action: none; }
+.anim-crono { display: flex; align-items: center; gap: 10px; }
+.anim-crono__num { min-width: 4.5ch; font: 400 clamp(26px, 7cqw, 46px) 'Anton', Impact, sans-serif; color: #FFF0D4; -webkit-text-stroke: 2px #191218; }
+.anim-crono.is-fin .anim-crono__num { color: #FFE9A6; }
+.anim-puntos { display: flex; flex-direction: column; gap: 8px; width: 100%; max-width: 640px; }
+.anim-puntos__fila { display: flex; align-items: center; gap: 8px; }
+.anim-puntos__fila span { flex: 1; text-align: left; color: #fff; font-weight: 800; text-shadow: 0 2px 4px rgba(0,0,0,.4); }
+.anim-pie { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; width: 100%; }
+.anim-ganador { margin: 0; font: 400 clamp(26px, 8cqw, 54px) 'Anton', Impact, sans-serif; color: #FFE9A6; -webkit-text-stroke: 2px #191218; }
+.anim-tabla { list-style: none; margin: 0; padding: 0; width: min(100%, 520px); display: grid; gap: 6px; }
+.anim-tabla li { display: flex; justify-content: space-between; padding: 8px 14px; background: #FFF0D4; border: 3px solid #191218; font: 800 clamp(16px, 4cqw, 22px) 'Baloo 2', system-ui, sans-serif; }
+.anim :is(button, select, input):focus-visible { outline: 4px solid #FFE9A6; outline-offset: 2px; }

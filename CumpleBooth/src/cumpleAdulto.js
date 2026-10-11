@@ -56,6 +56,22 @@ export function cabinaAdulto(bloque, datos) {
     cinta: b.cinta || null,
     panel: b.panel || null,
     juego,
+    revista: revistaPareja(b.revista, datos),
+  }
+}
+
+/** Portada de revista en pareja: titulares llenos con el nombre; null si la temática no la trae. */
+export function revistaPareja(r, datos) {
+  if (!r || typeof r !== 'object' || !r.fondo || !Array.isArray(r.titulares) || !r.titulares.length) return null
+  const titulares = [...new Set(r.titulares.map((t) => rellenar(t, datos)).filter(Boolean))]
+  if (!titulares.length) return null
+  return {
+    fondo: r.fondo,
+    titulo: limpiar(r.titulo) || 'CLICK',
+    edicion: limpiar(r.edicion),
+    foto: r.foto || null,
+    panel: r.panel || null,
+    titulares,
   }
 }
 

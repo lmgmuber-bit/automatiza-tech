@@ -1115,7 +1115,7 @@ function cb_build_theme_payload(
     // Cabina de cumpleaños de adulto (frases, cinta, panel y juego). Solo la lleva una
     // temática adulta: el kiosco infantil no recibe ni la clave, ni una de esas bromas.
     if (cb_theme_is_adult($themeData)) {
-        $payload['cabinaAdulto'] = cb_theme_cabina_adulto($themeData['cabinaAdulto'] ?? null);
+        $payload['cabinaAdulto'] = cb_theme_cabina_adulto($themeData['cabinaAdulto'] ?? null, $base, $themeDiskDir);
     }
     return $payload;
 }
@@ -1128,7 +1128,7 @@ function cb_build_theme_payload(
  * datos de la fiesta: la temática no lleva el nombre de nadie.
  * Devuelve null si falta algo esencial; el kiosco entonces usa sus textos por defecto.
  */
-function cb_theme_cabina_adulto($bloque): ?array
+function cb_theme_cabina_adulto($bloque, string $base = '', string $dir = ''): ?array
 {
     if (!is_array($bloque)) {
         return null;
@@ -1173,7 +1173,33 @@ function cb_theme_cabina_adulto($bloque): ?array
     if (!$frases || !$cinta || !$panel) {
         return null;
     }
+    // Portada de revista en pareja: solo si el fondo está en disco, como la foto grupal.
+    $revista = null;
+    $r = is_array($bloque['revista'] ?? null) ? $bloque['revista'] : null;
+    $fondoRevista = $r ? (string) ($r['fondo'] ?? '') : '';
+    if ($r && preg_match('/\A[a-z0-9][a-z0-9._-]*\.(?:jpe?g|png|webp)\z/i', $fondoRevista) && $dir !== '' && is_file($dir . $fondoRevista)) {
+        $titulares = [];
+        foreach ((array) ($r['titulares'] ?? []) as $t) {
+            $t = $texto($t, 60);
+            if ($t !== '' && count($titulares) < 8) {
+                $titulares[] = $t;
+            }
+        }
+        $fotoRevista = $caja($r['foto'] ?? null);
+        $panelRevista = $caja($r['panel'] ?? null);
+        if ($titulares && $fotoRevista && $panelRevista) {
+            $revista = [
+                'fondo'     => $base . $fondoRevista,
+                'titulo'    => $texto($r['titulo'] ?? '', 14) ?: 'CLICK',
+                'edicion'   => $texto($r['edicion'] ?? '', 40),
+                'foto'      => $fotoRevista,
+                'panel'     => $panelRevista,
+                'titulares' => $titulares,
+            ];
+        }
+    }
     return [
+        'revista'  => $revista,
         'titulo'   => $texto($bloque['titulo'] ?? '', 60),
         'lema'     => $texto($bloque['lema'] ?? '', 60),
         'recuerdo' => $texto($bloque['recuerdo'] ?? '', 60),

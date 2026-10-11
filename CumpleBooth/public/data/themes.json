@@ -2187,6 +2187,30 @@
           "Vine por la torta… y me quedé por el baile",
           "Con permiso: hoy doy guerra"
         ],
+        "revista": {
+          "fondo": "fondo-revista.jpg",
+          "titulo": "COQUETA",
+          "edicion": "Edición especial de cumpleaños",
+          "foto": {
+            "x": 0.0833,
+            "y": 0.1562,
+            "w": 0.8333,
+            "h": 0.5859
+          },
+          "panel": {
+            "x": 0.0648,
+            "y": 0.763,
+            "w": 0.8704,
+            "h": 0.1719
+          },
+          "titulares": [
+            "La pareja más buscada de la fiesta",
+            "Pillados en la pista de baile",
+            "Vinieron por la torta y se quedaron por el baile",
+            "Exclusiva: así se celebra a {nombre}",
+            "Confiesan: culpables de coquetería"
+          ]
+        },
         "juego": {
           "label": "¡Atrapa la coquetería!",
           "emojis": [

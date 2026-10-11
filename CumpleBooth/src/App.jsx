@@ -21,6 +21,7 @@ import { prepararVideo, urlDeVideo } from './videoListo.js'
 import { ajusteParaCara } from './caraAuto.js'
 import { detectarCara, prepararDetector } from './detectorCara.js'
 import { cabinaAdulto, partirEnLineas, textoCinta } from './cumpleAdulto.js'
+import Animador from './animador/Animador.jsx'
 import { PREDICTION_OPTIONS, createPredictionSubmissionToken, predictionLabels, predictionSummary, validPrediction } from './predictions.js'
 
 /* ============================================================
@@ -232,6 +233,7 @@ function buildRuntime(party, theme, slug) {
   CABINA_ADULTO = CONFIG.eventType === 'adult_birthday'
     ? cabinaAdulto(theme.cabinaAdulto, { nombre: nombreEvento(), edad: CONFIG.edad })
     : null
+  if (CABINA_ADULTO?.revista) CABINA_ADULTO.revista.fondo = ver(BASE + CABINA_ADULTO.revista.fondo)
   CONFETTI_COLORS = Array.isArray(theme.confetti) && theme.confetti.length ? theme.confetti : CONFETTI_COLORS
   DIPLOMA = theme.diploma || ''
   THEME_LABEL = (theme.franquicia || theme.nombre || '').toUpperCase()
@@ -528,6 +530,7 @@ function BoothApp() {
   // frase elegida, foto en el marco «Se busca» y QR.
   const isAdulto = CONFIG.eventType === 'adult_birthday'
   const [fraseAdulto, setFraseAdulto] = useState('')
+  const [titularRevista, setTitularRevista] = useState('')
   const [screen, setScreen] = useState('intro')
   const [invitado, setInvitado] = useState(null)
   const [personaje, setPersonaje] = useState(null)
@@ -657,6 +660,7 @@ function BoothApp() {
     setPrediction(null)
     setGameScore(null)
     setFraseAdulto('')
+    setTitularRevista('')
     setScreen('intro')
   }
 
@@ -731,6 +735,12 @@ function BoothApp() {
             setTrasInvitados('spinner')
             if (isAdulto) setInvitado('')
             go(isBabyShower ? 'prediccion' : isAdulto ? 'juego' : 'invitados')
+          }}
+          onAnimador={() => go('animador')}
+          onRevista={() => {
+            startMusic()
+            setInvitado('')
+            go('revista-titular')
           }}
           onGrupal={() => {
             // Sin lista de invitados y sin detector de caras: la foto es de todos y el
@@ -820,6 +830,58 @@ function BoothApp() {
             go('capture')
           }}
           onCancel={reset}
+        />
+      )}
+      {screen === 'animador' && CABINA_ADULTO && (
+        <Animador
+          nombre={nombreEvento()}
+          edad={CONFIG.edad}
+          clave={STORAGE_KEY + '_animador'}
+          onSalir={reset}
+          onFotoGrupal={CONFIG.grupal ? () => {
+            setInvitado('')
+            setGrupalFoto(null)
+            go('grupal-capturar')
+          } : null}
+        />
+      )}
+      {screen === 'revista-titular' && CABINA_ADULTO?.revista && (
+        <FraseAdulto
+          titulo="Elige el titular"
+          sub="Va en la portada, debajo de la foto de los dos."
+          opciones={CABINA_ADULTO.revista.titulares}
+          sinTexto="Solo la portada, sin titular"
+          onElegir={(titular) => {
+            setTitularRevista(titular)
+            go('revista-capturar')
+          }}
+          onCancel={reset}
+        />
+      )}
+      {screen === 'revista-capturar' && CABINA_ADULTO?.revista && (
+        <Capture
+          onCapture={(dataUrl) => {
+            setPhoto(dataUrl)
+            go('revista-preview')
+          }}
+        />
+      )}
+      {screen === 'revista-preview' && CABINA_ADULTO?.revista && photo && (
+        <PreviewRevista
+          photo={photo}
+          titular={titularRevista}
+          onRetry={() => {
+            setPhoto(null)
+            go('revista-capturar')
+          }}
+          onOtroTitular={() => {
+            setPhoto(null)
+            go('revista-titular')
+          }}
+          onSave={(composed) => {
+            setResult(composed)
+            go('qr')
+          }}
         />
       )}
       {screen === 'preview-adulto' && isAdulto && photo && (
@@ -2676,7 +2738,7 @@ function PantallaCompleta() {
 /* ============================================================
    1) INTRO — gate de toque (desbloquea audio/autoplay)
    ============================================================ */
-function Intro({ onStart, onAsomate, onGrupal }) {
+function Intro({ onStart, onAsomate, onGrupal, onRevista, onAnimador }) {
   const start = () => {
     // desbloquea audio con un sonido silencioso dentro del gesto
     try {
@@ -2764,6 +2826,29 @@ function Intro({ onStart, onAsomate, onGrupal }) {
           <p className="hint">{CABINA_ADULTO
             ? `Antes, un juego cortito: ${CABINA_ADULTO.juego.label.replace(/^¡|!$/g, '').toLowerCase()} 😏`
             : 'Te tomaremos una foto de recuerdo 📸'}</p>
+          {CABINA_ADULTO && (
+            <button
+              className="cta cta--animador"
+              onClick={(event) => {
+                event.stopPropagation()
+                onAnimador()
+              }}
+            >
+              🎲 Juegos de la fiesta
+            </button>
+          )}
+          {CABINA_ADULTO?.revista && (
+            <button
+              className="cta cta--revista"
+              onClick={(event) => {
+                event.stopPropagation()
+                entrarPantallaCompleta()
+                onRevista()
+              }}
+            >
+              📰 Portada en pareja
+            </button>
+          )}
           {TEMAS_JUEGO_3D.includes(THEME_SLUG) && (
             <button
               className="cta cta--juego3d"
@@ -4975,19 +5060,26 @@ function Preview({ photo, bgRef, invitado, personaje, onRetry, onSave }) {
 /* ============================================================
    Cumpleaños de adulto — elegir la frase y componer la foto «Se busca»
    ============================================================ */
-function FraseAdulto({ onElegir, onCancel }) {
+function FraseAdulto({
+  onElegir,
+  onCancel,
+  titulo = 'Elige tu frase',
+  sub = 'Va impresa bajo tu foto. Es broma: nadie queda fichado.',
+  opciones = CABINA_ADULTO.frases,
+  sinTexto = 'Sin frase, solo la foto',
+}) {
   return (
     <section className="screen frase-adulto">
-      <h2 className="frase-adulto__titulo">Elige tu frase</h2>
-      <p className="frase-adulto__sub">Va impresa bajo tu foto. Es broma: nadie queda fichado.</p>
+      <h2 className="frase-adulto__titulo">{titulo}</h2>
+      <p className="frase-adulto__sub">{sub}</p>
       <div className="frase-adulto__lista">
-        {CABINA_ADULTO.frases.map((frase) => (
+        {opciones.map((frase) => (
           <button key={frase} type="button" className="frase-adulto__opcion" onClick={() => onElegir(frase)}>
             {frase}
           </button>
         ))}
         <button type="button" className="frase-adulto__opcion frase-adulto__opcion--sola" onClick={() => onElegir('')}>
-          Sin frase, solo la foto
+          {sinTexto}
         </button>
       </div>
       <button type="button" className="cta ghost" onClick={onCancel}>🏠 Volver al inicio</button>
@@ -5091,6 +5183,172 @@ function composeCabinaAdulto(bgImg, photoImg, frase, score) {
   }
   drawBrandWatermark(ctx, W, H)
   return exportarFoto(canvas)
+}
+
+/**
+ * Portada de revista para una pareja. La foto entra en modo «cubrir» en el hueco 4:5 (sin
+ * franjas, recortando más del techo que de los pies, como la foto grupal); arriba el nombre de
+ * la revista, encima de la foto solo un sello chico en la esquina con la edad (las caras van al
+ * centro) y abajo el titular. Ningún texto va delante de una cara.
+ */
+function composeRevista(fondoImg, fotoImg, titular) {
+  const R = CABINA_ADULTO.revista
+  const W = Math.max(1080, fondoImg?.naturalWidth || 1080)
+  const H = fondoImg?.naturalWidth ? Math.round((W * fondoImg.naturalHeight) / fondoImg.naturalWidth) : Math.round((W * 16) / 9)
+  const c = document.createElement('canvas')
+  c.width = W
+  c.height = H
+  const ctx = c.getContext('2d')
+  if (fondoImg) ctx.drawImage(fondoImg, 0, 0, W, H)
+  else { ctx.fillStyle = '#F90B78'; ctx.fillRect(0, 0, W, H) }
+  const caja = (b) => ({ x: b.x * W, y: b.y * H, w: b.w * W, h: b.h * H })
+  const hueco = caja(R.foto)
+  const k = Math.max(hueco.w / fotoImg.naturalWidth, hueco.h / fotoImg.naturalHeight)
+  const anchoUtil = hueco.w / k
+  const altoUtil = hueco.h / k
+  ctx.drawImage(fotoImg, (fotoImg.naturalWidth - anchoUtil) / 2, (fotoImg.naturalHeight - altoUtil) * 0.3, anchoUtil, altoUtil,
+    hueco.x, hueco.y, hueco.w, hueco.h)
+
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+  ctx.lineJoin = 'round'
+  const cartel = (texto, px, x, y, anchoMax, relleno, borde) => {
+    ctx.font = `400 ${px}px ${FUENTE_CARTEL}`
+    while (ctx.measureText(texto).width > anchoMax && px > 16) {
+      px -= 2
+      ctx.font = `400 ${px}px ${FUENTE_CARTEL}`
+    }
+    if (borde) {
+      ctx.lineWidth = Math.max(4, px * 0.09)
+      ctx.strokeStyle = borde
+      ctx.strokeText(texto, x, y)
+    }
+    ctx.fillStyle = relleno
+    ctx.fillText(texto, x, y)
+    return px
+  }
+
+  // Cabecera: nombre de la revista y la edición.
+  const altoCabecera = hueco.y
+  if (R.edicion) {
+    ctx.font = `800 ${Math.round(W * 0.026)}px 'Baloo 2', system-ui, sans-serif`
+    ctx.fillStyle = '#FFF0D4'
+    ctx.fillText(R.edicion.toLocaleUpperCase('es-CL'), W / 2, altoCabecera * 0.1)
+  }
+  ctx.save()
+  ctx.shadowColor = '#191218'
+  ctx.shadowOffsetX = W * 0.008
+  ctx.shadowOffsetY = W * 0.008
+  cartel(R.titulo.toLocaleUpperCase('es-CL'), Math.round(altoCabecera * 0.64), W / 2, altoCabecera * 0.6, W * 0.86, '#FFF0D4', '#191218')
+  ctx.restore()
+
+  // Sello con la edad de la celebrada, en la esquina de arriba a la derecha de la foto.
+  if (Number.isInteger(CONFIG.edad)) {
+    const r = W * 0.085
+    const cx = hueco.x + hueco.w - r * 0.75
+    const cy = hueco.y + r * 0.75
+    ctx.beginPath()
+    for (let i = 0; i < 24; i++) {
+      const a = (Math.PI * 2 * i) / 24 - Math.PI / 2
+      const rr = i % 2 ? r * 0.8 : r
+      ctx.lineTo(cx + rr * Math.cos(a), cy + rr * Math.sin(a))
+    }
+    ctx.closePath()
+    ctx.fillStyle = '#D8AA43'
+    ctx.fill()
+    ctx.lineWidth = Math.max(3, W * 0.004)
+    ctx.strokeStyle = '#191218'
+    ctx.stroke()
+    cartel(String(CONFIG.edad), Math.round(r * 0.9), cx, cy + r * 0.03, r * 1.3, '#191218', null)
+  }
+
+  // Panel: «EXCLUSIVA», el titular y de quién es la fiesta.
+  const panel = caja(R.panel)
+  const anchoTexto = panel.w * 0.88
+  ctx.font = `800 ${Math.round(panel.h * 0.13)}px 'Baloo 2', system-ui, sans-serif`
+  ctx.fillStyle = '#F90B78'
+  ctx.fillText('★ EXCLUSIVA ★', panel.x + panel.w / 2, panel.y + panel.h * 0.16)
+  const texto = (titular || CABINA_ADULTO.recuerdo).toLocaleUpperCase('es-CL')
+  const medir = (s) => ctx.measureText(s).width
+  let px = 0
+  let lineas = null
+  for (const [desde, hasta, renglones] of [[0.3, 0.2, 1], [0.24, 0.12, 2]]) {
+    for (px = Math.round(panel.h * desde); px >= Math.round(panel.h * hasta); px -= 2) {
+      ctx.font = `400 ${px}px ${FUENTE_CARTEL}`
+      lineas = partirEnLineas(texto, anchoTexto, medir, renglones)
+      if (lineas) break
+    }
+    if (lineas) break
+  }
+  lineas = lineas || [texto]
+  lineas.forEach((linea, i) => {
+    const y = panel.y + panel.h * 0.52 + (i - (lineas.length - 1) / 2) * px * 1.06
+    ctx.font = `400 ${px}px ${FUENTE_CARTEL}`
+    ctx.lineWidth = Math.max(3, px * 0.08)
+    ctx.strokeStyle = '#191218'
+    ctx.strokeText(linea, panel.x + panel.w / 2, y)
+    ctx.fillStyle = '#F90B78'
+    ctx.fillText(linea, panel.x + panel.w / 2, y)
+  })
+  const quien = nombreEvento()
+  if (quien) {
+    ctx.font = `700 ${Math.round(panel.h * 0.1)}px 'Baloo 2', system-ui, sans-serif`
+    ctx.fillStyle = '#191218'
+    ctx.fillText(`En la fiesta de ${quien} · ${CABINA_ADULTO.lema}`, panel.x + panel.w / 2, panel.y + panel.h * 0.87, anchoTexto)
+  }
+  drawBrandWatermark(ctx, W, H)
+  return exportarFoto(c)
+}
+
+function PreviewRevista({ photo, titular, onRetry, onOtroTitular, onSave }) {
+  const [composed, setComposed] = useState(null)
+  const confRef = useRef(null)
+
+  useEffect(() => {
+    let vivo = true
+    const cargar = (src) => new Promise((ok) => {
+      const i = new Image()
+      i.onload = () => ok(i)
+      i.onerror = () => ok(null)
+      i.src = src
+    })
+    Promise.all([cargar(CABINA_ADULTO.revista.fondo), cargar(photo), ensureCanvasFonts(), cargarFuenteCartel(), preloadBrandLogo()])
+      .then(([fondo, img]) => {
+        if (!vivo) return
+        try {
+          setComposed(img ? composeRevista(fondo, img, titular) : photo)
+        } catch (e) {
+          // Si componer falla, la foto sigue siendo la foto: se muestra sin portada y se guarda.
+          console.error('no se pudo componer la portada', e)
+          setComposed(photo)
+        }
+      })
+    return () => { vivo = false }
+  }, [photo, titular])
+
+  const save = () => {
+    if (!composed) return
+    guardarEnLaTablet(composed, `portada-${nombreEvento() || 'fiesta'}`)
+    playSound(CONFIG.audio.confetti)
+    burstConfetti(confRef.current, { duration: 2600, count: 180 })
+    setTimeout(() => onSave(composed), REDUCE_MOTION ? 300 : 1600)
+  }
+
+  return (
+    <section className="screen preview">
+      {composed ? (
+        <img className="preview-img" src={composed} alt="Su portada de revista" />
+      ) : (
+        <div className="loading">Imprimiendo la portada…</div>
+      )}
+      <div className="preview-bar">
+        <button className="cta ghost" onClick={onRetry}>🔄 Otra foto</button>
+        <button className="cta ghost" onClick={onOtroTitular}>✏️ Otro titular</button>
+        <button className="cta" onClick={save} disabled={!composed}>💾 Guardar</button>
+      </div>
+      <canvas ref={confRef} className="confetti-canvas" />
+    </section>
+  )
 }
 
 function PreviewAdulto({ photo, bgRef, frase, score, onRetry, onOtraFrase, onSave }) {

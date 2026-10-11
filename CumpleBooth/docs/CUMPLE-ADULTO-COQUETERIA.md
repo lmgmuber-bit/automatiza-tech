@@ -49,11 +49,22 @@ sentido (🍆🍑) son el pedido de Luis («atrapa algo asociado a la temática�
 porque funcionan en cualquier tablet, no cuestan nada y la foto se puede mostrar en la fiesta. El puntaje queda impreso
 en la ficha.
 
-## Lo que sigue siendo propuesta (no implementado)
+## Portada en pareja (revista)
 
-El paquete de Codex propone un modo animador con tarjetas, cronómetro y puntaje por equipos (Tribunal de la coquetería,
-Piropos bajo arresto, Doble sentido, Dueña del swing…). Luis no lo aprobó: no se programó. El guion y las tarjetas del
-paquete sirven impresos o en el celular del animador.
+Botón «📰 Portada en pareja» en la bienvenida: elegir titular → foto de los dos → portada → QR. Fondo
+`fondo-revista.jpg` (hueco 4:5 y panel vacío); el kiosco escribe el nombre de la revista («COQUETA», editable en
+`cabinaAdulto.revista.titulo`), la edición, un sello con la edad en la esquina de la foto (lejos de las caras) y el
+titular. La foto entra en modo «cubrir», recortando más del techo que de los pies, como la foto grupal.
+
+## Juegos del animador
+
+Botón «🎲 Juegos de la fiesta» en la bienvenida (solo cumpleaños de adulto). Los 15 juegos del catálogo de Codex
+(`src/animador/mazos.js`), aprobados por Luis el 11-oct («haz todas»), sobre un motor sin DOM (`src/animador/motor.js`):
+nivel como techo (Coqueto / Picante / Sinvergüenza; se filtra antes de barajar y nunca sube solo), mazo sin repetir que
+se rebaraja solo a pedido, «Paso esta» sin castigo, un punto por equipo y ronda aunque se toque dos veces, deshacer el
+último, cronómetro por juego, respuesta oculta hasta «Revelar», frase de mímica visible solo manteniendo apretado,
+marcador que sobrevive a un recargón (sessionStorage; nunca respuestas) y cierre con ganador y foto de los cómplices.
+Las preguntas del Tribunal no traen respuesta: la tiene la celebrada o el animador.
 
 ## Cómo probarlo en local
 

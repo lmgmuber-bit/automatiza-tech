@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
-import { rellenar, cabinaAdulto, textoCinta, partirEnLineas } from '../../src/cumpleAdulto.js'
+import { rellenar, cabinaAdulto, textoCinta, partirEnLineas, revistaPareja } from '../../src/cumpleAdulto.js'
 
 // Datos ficticios: el repositorio es público y no lleva datos de fiestas reales.
 const fiesta = { nombre: 'Marta Prueba', edad: 61 }
@@ -58,4 +58,12 @@ test('la temática genérica no trae el nombre ni datos de nadie', () => {
   assert.match(texto, /\{edad\}/)
   // El nombre y la edad entran solo por marcador: ningún texto los trae escritos.
   for (const f of t.cabinaAdulto.frases) assert.doesNotMatch(f, /\d/, `sin cifras fijas: ${f}`)
+})
+
+test('la portada en pareja llena el titular y desaparece sin fondo', () => {
+  const r = revistaPareja({ fondo: 'themes/x/fondo-revista.jpg', titulo: 'COQUETA', titulares: ['Así se celebra a {nombre}', ''] }, fiesta)
+  assert.deepEqual(r.titulares, ['Así se celebra a Marta Prueba'])
+  assert.equal(r.titulo, 'COQUETA')
+  assert.equal(revistaPareja({ titulares: ['x'] }, fiesta), null, 'sin fondo en disco no hay portada')
+  assert.equal(cabinaAdulto(null, fiesta).revista, null)
 })

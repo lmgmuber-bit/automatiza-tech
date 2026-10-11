@@ -146,6 +146,33 @@ a_check(in_array('🍆', $api['theme']['cabinaAdulto']['juego']['emojis'], true)
 a_check($api['theme']['musica'] === '', 'sin pista en disco no se publica música');
 a_check(is_array($api['theme']['grupal']) && str_ends_with($api['theme']['grupal']['fondo'], 'fondo-grupal.jpg'), 'la foto grupal tiene su fondo');
 
+// La invitación de un cumpleaños de adulto: tarjeta + video del evento (subidos y aprobados),
+// sin la voz de Alice (le habla a un niño) y con un formulario de asistencia para adultos.
+$tokenInv = cb_opaque_token(16);
+$ahora = gmdate('Y-m-d H:i:s');
+cb_pdo()->prepare('INSERT INTO cc_invitations (public_token_hash,party_id,theme_slug,admin_label,birthday_person_name,
+    birthday_person_gender,event_type,event_date,event_time,address,message,language,channel,status,
+    visual_version,created_at,updated_at,created_by,published_at,published_by) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)')
+    ->execute([cb_hash_token($tokenInv), cb_party_db_id($slug), 'adulto-coqueteria-pop', 'Prueba adulta', 'Marta Prueba', 'f',
+        'adult_birthday', '2026-12-04', '19:00', 'Calle Ficticia 123', 'Los peques a soñar; los grandes a celebrar.',
+        'es', 'link', 'published', 1, $ahora, $ahora, 'test', $ahora, 'test']);
+$invId = (int) cb_pdo()->lastInsertId();
+$dirInv = (string) cb_config('invitation_dir');
+$lienzo = imagecreatetruecolor(90, 160);
+foreach ([['personalized_image', 'lamina', 'jpg', 'image/jpeg'], ['personalized_video', 'video', 'mp4', 'video/mp4']] as [$tipo, $clave, $ext, $mime]) {
+    $key = cb_invitation_storage_key($slug, $clave, 1, $ext);
+    @mkdir(dirname($dirInv . '/' . $key), 0770, true);
+    $ext === 'jpg' ? imagejpeg($lienzo, $dirInv . '/' . $key) : file_put_contents($dirInv . '/' . $key, str_repeat("\0", 64));
+    cb_save_invitation_output($invId, ['output_type' => $tipo, 'asset_key' => $clave, 'file_storage_key' => $key, 'status' => 'approved',
+        'file_mime' => $mime, 'file_byte_size' => filesize($dirInv . '/' . $key), 'file_sha256' => hash_file('sha256', $dirInv . '/' . $key)]);
+}
+$r = $luis->pedir('GET', '/invitacion.php?t=' . $tokenInv);
+a_check($r['estado'] === 200 && str_contains($r['html'], 'Marta Prueba'), 'la invitación adulta abre');
+a_check(!str_contains($r['html'], 'narracion-final') && !str_contains($r['html'], 'narracion-playlist-final'), 'sin la narración de Alice para niños');
+a_check(preg_match('#<video class="inv-art-video"[^>]*poster="[^"]+"[^>]*controls#', $r['html']) === 1, 'el video del evento se inicia a mano y muestra la tarjeta como póster');
+a_check(!str_contains($r['html'], 'Nombre de los niños') && !str_contains($r['html'], 'apoderado'), 'la asistencia no pregunta por niños ni apoderados');
+a_check(str_contains($r['html'], 'Los peques a soñar; los grandes a celebrar.'), 'el mensaje del anfitrión se muestra');
+
 // La infantil no cambia.
 cb_save_parties(['parties' => array_merge(cb_load_parties()['parties'], ['tomas-infantil' => [
     'nombre' => 'Tomás', 'tema' => 'spidey', 'edad' => 6, 'fecha' => '2026-12-05', 'activa' => true,

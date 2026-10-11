@@ -21,6 +21,32 @@ grep -o 'assets/[a-zA-Z0-9._-]*' dist/index.html   # lo que index.html pide
 Sube **todos** los de `dist/assets/` junto con `dist/index.html` en la misma
 tanda. Los que sobren del build anterior se pueden borrar después.
 
+## PENDIENTE 2026-10-11 — cumpleaños de adulto y temática Coquetería Pop (AT-CUMPLECLICK-026, LOCAL)
+
+Nada de esto está en PROD. Rama `claude/cumple-adulto-coqueteria` sobre `origin/main`. Detalle en
+`docs/CUMPLE-ADULTO-COQUETERIA.md`. **Sin migración** (`event_type` es VARCHAR(40) y `birthday_age` TINYINT).
+Requiere el go de Luis.
+
+Orden de subida (destino `app/`, origen `dist/` después de `npx vite build`):
+
+| # | Local | Destino PROD | Clase |
+|---|---|---|---|
+| 1 | `dist/themes/adulto-coqueteria-pop/fondo-sala.jpg`, `fondo-banner.jpg`, `fondo-grupal.jpg` | `app/themes/adulto-coqueteria-pop/` (carpeta nueva) | OBLIGATORIO |
+| 2 | `dist/lib.php` | `app/lib.php` | OBLIGATORIO, antes que los PHP de abajo (define `cb_party_event_type`) |
+| 3 | `dist/lib.invitations.php`, `dist/lib.predictions.php`, `dist/ver.php`, `dist/invitacion.php` | `app/` | OBLIGATORIO |
+| 4 | `dist/admin/index.php` | `app/admin/index.php` | OBLIGATORIO |
+| 5 | `dist/data/themes.json` | `app/data/themes.json` | OBLIGATORIO |
+| 6 | `dist/assets/` que referencia el `index.html` nuevo y no estén en PROD (al 11-oct: `main-*.js`, `main-*.css`, `anton-latin-400-normal-*.woff2`; cotejar el resto por nombre) | `app/assets/` | OBLIGATORIO |
+| 7 | `dist/index.html` | `app/index.html` | OBLIGATORIO, al final |
+
+No subir: `design/generadores/`, `tests/`, `docs/`, ni el paquete privado del piloto. Las fotos y el video del piloto
+se suben **por el admin** (Invitaciones → imagen y video aprobados), que los guarda en el almacén privado fuera de
+`public_html`.
+
+Respaldo previo: `app/lib.php`, `app/invitacion.php`, `app/admin/index.php`, `app/data/themes.json` y `app/index.html`.
+Verificación desde afuera: `api.php?p=<fiesta infantil existente>` sin `edad` ni `cabinaAdulto` y con sus personajes;
+una fiesta adulta de prueba con `event_type: adult_birthday`.
+
 ## DESPLEGADO 2026-09-13 (07:05) — usuarios del backoffice: superadministrador y operadores por fiesta
 
 Luis pidió, la madrugada de las dos fiestas, poder delegar el admin de una fiesta a una persona:

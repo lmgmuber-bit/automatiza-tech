@@ -1,0 +1,96 @@
+ticket_id: AT-CUMPLECLICK-026
+title: "Cumpleaños de adulto: modalidad adult_birthday y temática genérica Coquetería Pop (cabina, juego de atrapar e invitación)"
+origin: direct_luis
+portfolio: "AT"
+priority: P1
+status: IN_PROGRESS
+
+governance:
+  professional_standard: "Docs/ENGINEERING_STANDARDS/PROFESSIONAL_ENGINEERING_STANDARD.md"
+  quality_gate: C2
+
+objective: >
+  Llevar a CumpleClick la temática de un cumpleaños de adulto con humor de doble sentido («Se busca por exceso de
+  coquetería / N y todavía doy guerra»), con un evento privado como piloto (viernes 16-oct-2026). La temática es
+  GENÉRICA y reutilizable: no lleva nombre, edad, fotos ni dirección de nadie; el nombre y la edad los llena el kiosco
+  con los datos de la fiesta. Los datos y medios del piloto viven solo en el almacenamiento privado del evento en PROD,
+  nunca en este repositorio (es público).
+owner: claude
+reviewer: luis
+active_orchestrator: claude
+
+ownership:
+  current_owner: claude
+  previous_owners: []
+  takeover_allowed: false
+  takeover_count: 0
+  takeover_reason: null
+  urgency: high
+  resolution_status: pending
+  reassignment_authorized_by: null
+  handoff_ref: "Paquete privado de Codex (11-oct-2026), fuera del repositorio: contexto-cumpleclick-adultos-<piloto>"
+  handoff_quality: COMPLETE
+
+scope:
+  allowed_files:
+    - "CumpleBooth/public/themes/adulto-coqueteria-pop/**"
+    - "CumpleBooth/public/data/themes.json"
+    - "CumpleBooth/public/lib.php"
+    - "CumpleBooth/public/lib.invitations.php"
+    - "CumpleBooth/public/lib.predictions.php"
+    - "CumpleBooth/public/invitacion.php"
+    - "CumpleBooth/public/ver.php"
+    - "CumpleBooth/public/admin/index.php"
+    - "CumpleBooth/src/App.jsx"
+    - "CumpleBooth/src/cumpleAdulto.js"
+    - "CumpleBooth/src/styles.css"
+    - "CumpleBooth/design/generadores/tematicas/**"
+    - "CumpleBooth/tests/**"
+    - "CumpleBooth/docs/**"
+    - "CumpleBooth/package.json"
+    - "CumpleBooth/package-lock.json"
+  forbidden_files:
+    - "Datos, fotos, video o dirección del evento piloto en cualquier archivo versionado"
+  locked_files: []
+  branch: "claude/cumple-adulto-coqueteria"
+  base_commit: "188ba45"
+  depends_on: []
+  notes: >
+    Parte de origin/main (= PROD del kiosco) y no de la cadena de feria sin mergear (#58 → #72 → claude/cumpleclick-sdd),
+    para poder desplegarse sola antes del 16-oct. La cadena de feria trae sus propias temáticas adultas con `audiencia:
+    adulto` solo dentro del modo feria; al integrarlas, themes.json y la guarda cb_theme_is_adult deben conciliarse
+    (las temáticas de feria no son de fiesta privada). Sin migración: event_type es VARCHAR(40) y birthday_age TINYINT.
+    Tipografía nueva @fontsource/anton 5.3.0 (OFL-1.1), evaluada: aporta el cartel condensado de la invitación aprobada,
+    sin solaparse con Baloo 2 (que sigue siendo la del producto). Sin créditos ni IA: los fondos se dibujan con código.
+
+routing:
+  complexity: C2
+  risk: medium
+  uncertainty: medium
+  reversibility: easy
+  selected_profile: orchestrator
+  selected_model: "claude"
+  rationale: "Toca el contrato kiosco/servidor (modalidad nueva) y la privacidad de un evento real; lo hace quien conoce las trampas del kiosco (edad recortada, CDN, inset del marco, guardas de nombre vacío)."
+  independent_review: true
+  human_gate: true
+
+acceptance:
+  criteria:
+    - "Una fiesta adult_birthday con la temática adulta abre el kiosco sin ruleta ni personajes (cumple-adulto-http.php)."
+    - "El admin rechaza con aviso temática adulta en fiesta infantil y viceversa; api.php responde 409 ante el cruce en la base."
+    - "La edad de un adulto se guarda entera (control en rojo: con el tope viejo de 17 la prueba falla)."
+    - "Una fiesta infantil no recibe edad ni cabinaAdulto y conserva personajes y música."
+    - "Recorrido local completo: bienvenida, juego de atrapar, frase, foto en el marco, QR (e2e con cámara falsa, sin errores de página)."
+    - "Ningún dato del evento piloto en archivos versionados (barrido del diff antes de cada commit)."
+    - "Suite frontend completa y suites backend en verde; build de Vite sin errores."
+  pending_physical:
+    - "Tablet real con cámara y personas reales (grupos, alturas, gafas)."
+    - "Impresión si se usa (Selphy): medidas reales; los carteles de 33x48 cm no son plantilla del kiosco."
+
+decisions_for_luis:
+  - "Go para desplegar a PROD (kiosco, PHP y temática) y para crear la fiesta del piloto con sus datos en el admin."
+  - "Juegos de animador (tarjetas, cronómetro, puntaje) propuestos por Codex: siguen como PROPUESTA; no se implementan sin su visto bueno."
+  - "Música: sin pista hasta que la elija; la temática funciona muda."
+
+progress:
+  - "2026-10-11: P0 cabina implementado y probado en local (commit 1452ae1)."

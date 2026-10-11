@@ -274,7 +274,8 @@ def fondo_grupal():
     alto = round((x1 - x0) * 3 / 4)
     y0 = 470
     y1 = y0 + alto
-    borde = 34
+    # Moldura delgada: el kiosco escribe el título del grupo 26 px bajo el hueco (componerGrupal).
+    borde = 22
     marco_dorado(im, x0 - borde, y0 - borde, x1 + borde, y1 + borde, borde)
     cinta_esquina(im, x0 - 4, y0 - 4, 40)
     cinta_esquina(im, x1 + 4, y0 - 4, -40)

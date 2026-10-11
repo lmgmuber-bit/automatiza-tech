@@ -2001,6 +2001,8 @@ function componerGrupal(fondoImg, fotoImg, caja, titulo, opciones = {}) {
 /** El texto del pie. En grupo saluda a todos; solo, al invitado. */
 function tituloAsomate(invitado, cuantos) {
   const quien = nombreEvento()
+  // En un cumpleaños de adulto la foto de todos sigue la broma de la temática: «cómplices».
+  if (cuantos > 1 && CABINA_ADULTO) return quien ? `Los cómplices de ${quien}` : '¡Los cómplices!'
   if (cuantos > 1) return quien ? `El cumple de ${quien} y sus amigos` : '¡Amigos!'
   if (invitado && quien) return `${invitado} en el cumple de ${quien}`
   if (quien) return `¡Feliz cumple, ${quien}!`

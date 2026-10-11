@@ -1,0 +1,69 @@
+# Cumpleaños de adulto y temática «Coquetería Pop» (AT-CUMPLECLICK-026)
+
+Estado al 2026-10-11: **LOCAL, sin desplegar**. Rama `claude/cumple-adulto-coqueteria`, base `origin/main` (`188ba45`).
+Ticket: `Docs/ORCHESTRATION/AT-CUMPLECLICK-026.yaml`.
+
+El piloto es un cumpleaños privado. Sus datos, fotos, video y dirección **no están ni deben estar** en este repositorio
+(es público): viven en el paquete privado de Codex y, al desplegar, en la base y el almacén privado de PROD.
+
+## Qué es
+
+Una tercera modalidad de evento, `adult_birthday`, junto a `child_birthday` y `baby_shower`, y una temática genérica
+para ella. La temática no lleva nombre, edad ni fotos: el kiosco escribe el nombre y la edad de la fiesta encima.
+
+| Pieza | Dónde | Qué hace |
+|---|---|---|
+| Modalidad | `public/lib.php` `cb_party_event_type()` | Reemplaza los nueve `=== 'baby_shower' ? … : 'child_birthday'` que había repartidos. Lo desconocido cae a infantil. |
+| Guarda de temática | `cb_theme_is_adult()` + admin + `cb_resolve_party()` | Temática adulta solo con cumpleaños de adulto y al revés. El admin avisa; `api.php` responde 409 si la base trae el cruce. |
+| Edad | `cb_party_age_valid()` | Niño 1–17, adulto 18–120. **Antes se recortaba a 17 al guardar y «69» se perdía sin aviso.** |
+| Temática | `public/data/themes.json` → `adulto-coqueteria-pop` | `audiencia: adulto`, sin personajes, `frameBox`, `grupal` y el bloque `cabinaAdulto` (frases, lema, recuerdo, cinta, panel, juego). |
+| Fondos | `public/themes/adulto-coqueteria-pop/` | `fondo-sala.jpg` (marco «¡Se busca!»), `fondo-banner.jpg` (bienvenida), `fondo-grupal.jpg`. Hechos con código, sin IA: `design/generadores/tematicas/coqueteria_pop.py`. |
+| Kiosco | `src/App.jsx`, `src/cumpleAdulto.js` | Bienvenida → «¡Atrapa la coquetería!» (se puede saltar) → elegir frase → cámara → ficha → QR. Sin ruleta, sin diploma, sin música si no hay pista. |
+| Invitación | `public/invitacion.php` | Sin la voz de Alice (le habla a un niño), sin capítulos, video del evento con póster y controles, asistencia para adultos. |
+
+## Contrato de `cabinaAdulto` (themes.json)
+
+```json
+"cabinaAdulto": {
+  "titulo": "gente con ganas de pasarlo bien",
+  "lema": "{edad} y todavía doy guerra",
+  "recuerdo": "Cómplice oficial de {nombre}",
+  "cinta": {"x": 0.0833, "y": 0.6229, "w": 0.8333, "h": 0.0521},
+  "panel": {"x": 0.0741, "y": 0.6979, "w": 0.8519, "h": 0.1875},
+  "frases": ["…hasta 12, de hasta 48 letras; {nombre} permitido…"],
+  "juego": {"label": "¡Atrapa la coquetería!", "emojis": ["🍆", "🍑", "💋", "🍒", "🌶️"]}
+}
+```
+
+`cb_theme_cabina_adulto()` lo copia campo por campo. Una cinta o un panel fuera del lienzo invalidan el bloque. Solo una
+temática adulta lo publica; el kiosco infantil no recibe ni la clave. Sin `{edad}` en la fiesta, el lema cambia entero
+(«Y todavía doy guerra»), y sin nombre «Cómplice oficial de la fiesta»: nunca queda un hueco.
+
+`cinta` y `panel` son las cajas que el generador pinta vacías en `fondo-sala.jpg`; si se rehace el fondo, se copian los
+valores que imprime el script.
+
+## Juego de atrapar
+
+Es el mismo `JuegoCopos` del baby shower («Atrapa los chupetes»), con 20 segundos y los emojis del bloque. Los de doble
+sentido (🍆🍑) son el pedido de Luis («atrapa algo asociado a la temática»). Se eligieron emojis y no dibujos explícitos
+porque funcionan en cualquier tablet, no cuestan nada y la foto se puede mostrar en la fiesta. El puntaje queda impreso
+en la ficha.
+
+## Lo que sigue siendo propuesta (no implementado)
+
+El paquete de Codex propone un modo animador con tarjetas, cronómetro y puntaje por equipos (Tribunal de la coquetería,
+Piropos bajo arresto, Doble sentido, Dueña del swing…). Luis no lo aprobó: no se programó. El guion y las tarjetas del
+paquete sirven impresos o en el celular del animador.
+
+## Cómo probarlo en local
+
+- `node --test tests/frontend/cumpleAdulto.test.mjs` (textos y temática genérica).
+- `php tests/backend/cumple-adulto-http.php` (36: admin, api del kiosco, invitación, fiesta infantil sin cambios y cruce
+  en la base). Tiene dos controles en rojo hechos: con el tope viejo de 17 falla la edad, y sin la guarda de la narración
+  falla «sin la narración de Alice».
+- El recorrido del kiosco se probó con Chrome sin ventana y una cámara falsa (retrato ficticio), en una SQLite temporal.
+
+## No probado
+
+Tablet real, cámara real con personas (grupos, alturas, gafas), impresión, la invitación en un teléfono real, el video
+verdadero del evento (el local usó uno de 2 s hecho con el fondo).

@@ -108,3 +108,4 @@ progress:
   - "2026-10-11: Luis aprobó «haz todas»: portada en pareja y los 15 juegos del animador (ba97e37); Asómate adulto con 14 figuras, USD 0,63 de lista con su visto bueno (a646a4f)."
   - "2026-10-11: revisión B encargada a Codex sobre 91083bf (PEER_REVIEW_PENDING). Encargo: Documents/Codex/Shared-Tools/Revision-Codex-AT-CUMPLECLICK-026.md; respuesta esperada en Revision-B-Codex-AT-CUMPLECLICK-026.md."
   - "2026-10-11: cargos at-agent-company (piloto CumpleClick). Autor: Claude como un solo actor cubriendo Forja y Lienzo; sin cargos nativos convocados en la implementación (subagentes Explore genéricos para mapear, no son revisión). Revisión B pedida por cargo a Codex: Forja, Lienzo, Centinela, Vigía y Contralor."
+  - "2026-10-12: revisión B de Codex sobre 91083bf: NO APTO, 23 CX (2 ALTA). Corregidos en 0dbeeff por cargos (Forja-Claude, Lienzo-Claude, orquestador). Segundo ciclo B pedido a Codex en el mismo encargo."

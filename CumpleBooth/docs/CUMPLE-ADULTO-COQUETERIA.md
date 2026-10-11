@@ -67,7 +67,10 @@ USD 0,63 de lista (cuatro rehechas porque la cara no servía para el hueco). El 
 detección de piel falla con piel rosada y camisas claras). La revisión B de Codex encontró la diva con los ojos
 ilustrados a la vista y el hueco sobre la mano, y la dama de rojo y el forzudo con cortes fuera del rostro (CX-01/02):
 los 14 óvalos se rehicieron sobre la cabeza ampliada con cuadrícula al 5 % y se comprobaron sobre fondo azul de
-control (ningún ojo ni boca ilustrados a la vista). Fondo: uno propio sin texto (con la bienvenida, las figuras altas
+control. La revisión B2 encontró que aún fallaban tres: la reina del verano (f1) dejaba ver un ojo y el salsero (d2) y
+el capitán (g2) cortaban la mejilla; se rehicieron con cuadrícula al 1 % y hoy los 14 dan 0 píxeles de hueco fuera de
+la figura con la medida de Codex. Es una revisión sobre la ilustración: con caras reales (lentes, pelo, alturas) no
+se ha probado. Fondo: uno propio sin texto (con la bienvenida, las figuras altas
 tapaban «¡SE BUSCA!»). El zoom del ajuste nunca baja de 0,25 (CX-03).
 
 ## Juegos del animador

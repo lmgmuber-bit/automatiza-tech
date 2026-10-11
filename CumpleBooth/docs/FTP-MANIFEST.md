@@ -31,6 +31,7 @@ Orden de subida (destino `app/`, origen `dist/` después de `npx vite build`):
 
 | # | Local | Destino PROD | Clase |
 |---|---|---|---|
+| 0 | `database/rollback-adultos.php` | `domains/cumpleclick.com/database/rollback-adultos.php` (privado, fuera de `public_html`; carga `../public/lib.php`, que allí es el enlace a `public_html/app`) | OBLIGATORIO, antes que todo: sin él no hay rollback sin pérdida. Solo CLI, nunca dentro de `app/` |
 | 1 | `dist/themes/adulto-coqueteria-pop/fondo-sala.jpg`, `fondo-banner.jpg`, `fondo-grupal.jpg`, `fondo-revista.jpg` y la carpeta `asomate/` completa (15 archivos) | `app/themes/adulto-coqueteria-pop/` (carpeta nueva) | OBLIGATORIO |
 | 2 | `dist/lib.php` | `app/lib.php` | OBLIGATORIO, antes que los PHP de abajo (define `cb_party_event_type`, `cb_party_age_valid`, `cb_theme_is_adult`, `cb_theme_cabina_adulto`) |
 | 3 | `dist/lib.invitations.php`, `dist/lib.predictions.php`, `dist/lib.rsvp.php`, `dist/ver.php`, `dist/invitacion.php`, `dist/asistencia-papas.php` | `app/` | OBLIGATORIO |
@@ -40,7 +41,7 @@ Orden de subida (destino `app/`, origen `dist/` después de `npx vite build`):
 | 7 | `dist/assets/` que referencia el `index.html` nuevo y no estén en PROD (cotejar por nombre; al menos `main-*.js`, `main-*.css` y `anton-latin-400-normal-*.woff2`) | `app/assets/` | OBLIGATORIO |
 | 8 | `dist/index.html` | `app/index.html` | OBLIGATORIO, al final |
 
-No subir: `design/generadores/`, `tests/`, `docs/`, ni el paquete privado del piloto. Las fotos y el video del piloto
+No subir: `design/generadores/`, `tests/`, `docs/`, ni el paquete privado del piloto; `database/rollback-adultos.php` va solo a `domains/cumpleclick.com/database/`. Las fotos y el video del piloto
 se suben **por el admin** (Invitaciones → imagen y video aprobados), que los guarda en el almacén privado fuera de
 `public_html`.
 
@@ -48,19 +49,58 @@ se suben **por el admin** (Invitaciones → imagen y video aprobados), que los g
 que la lista anterior omitía tres consumidores de `lib.php` y un rollback así dejaba `cb_party_event_type()` sin
 definir): `app/lib.php`, `app/lib.invitations.php`, `app/lib.predictions.php`, `app/lib.rsvp.php`, `app/ver.php`,
 `app/invitacion.php`, `app/asistencia-papas.php`, `app/admin/index.php`, `app/assets/invitation.js`,
-`app/data/themes.json` y `app/index.html`.
+`app/data/themes.json` y `app/index.html`. **Y el volcado completo de la base** con el procedimiento de siempre
+(`mysqldump` desde la consola SSH, `scratchpad/alinear-0915/respaldo-db.py` del checkout principal; ver
+`docs/MAPA-PROD-Y-REPOSITORIOS.md`, re-cotejo del 2026-09-15). El volcado es la red de último recurso: el rollback
+normal no lo usa.
 
-**Rollback, en este orden:**
-1. Desactivar las fiestas adultas creadas después del cambio (`UPDATE cc_parties SET active=0 WHERE event_type='adult_birthday'`):
-   el código anterior las trata como infantiles y no conoce su temática.
+**Por qué el rollback no es solo bajar archivos** (revisión B2 de Codex, CX-04). El código anterior (188ba45) no
+conoce `adult_birthday`: su `cb_load_parties()` lee al adulto como infantil (`lib.php:422`) y su `cb_save_parties()`,
+que reescribe **todas** las fiestas cada vez que el admin guarda cualquiera (basta apagar los juegos de otra fiesta),
+lo deja como `child_birthday` con edad nula, porque el tope era 17 (`lib.php:577-584`), y arrastra a su invitación
+(`lib.php:614`). Además `active=0` no apaga la invitación: las páginas públicas solo miran `status='published'`, y el
+código anterior la mostraría con «Nombre del apoderado o familia» y «Nombre de los niños». Por eso se respalda y se
+suspende antes, y se restaura exacto después. No se borra ninguna fila.
+
+**Rollback, en este orden** (por SSH, en `domains/cumpleclick.com/database/`; `F` es el archivo de respaldo, p. ej.
+`~/respaldos/rollback-adultos-AAAAMMDD-HHMM.json`):
+1. Con el código nuevo todavía arriba: `mkdir -p ~/respaldos && php rollback-adultos.php exportar F`. Guarda
+   modalidad, edad, estado y temática de cada fiesta adulta y el estado de publicación de sus invitaciones (archivo
+   0600 con suma sha256) y recién entonces las suspende: fiesta `active=0`, invitación `archived`. Debe terminar con
+   código 0 y `adultas_activas_fuera_del_respaldo: 0`. Se niega si `F` ya existe, si queda dentro de `public_html` o si
+   el `lib.php` cargado ya es el anterior.
 2. Restaurar `index.html` (sin borrar todavía los assets nuevos).
 3. Restaurar todos los consumidores: `admin/index.php`, `lib.invitations.php`, `lib.predictions.php`, `lib.rsvp.php`,
    `ver.php`, `invitacion.php`, `asistencia-papas.php`, `assets/invitation.js` y `data/themes.json`.
 4. Recién al final, `lib.php`. Al revés quedan llamadas a funciones que la versión anterior no tiene.
 5. Opcional: retirar `themes/adulto-coqueteria-pop/` y los bundles nuevos.
-6. Verificar una fiesta infantil, un baby shower (predicciones), `ver.php`, una invitación y `asistencia-papas`.
+6. Verificar una fiesta infantil, un baby shower (predicciones), `ver.php`, una invitación infantil y `asistencia-papas`;
+   y que la invitación adulta responde 404 («todavía no está disponible»), no la página con textos infantiles.
+7. Mientras dure: no editar, publicar ni desarchivar fiestas o invitaciones adultas en el admin. Guardar otras fiestas sí
+   se puede; el código anterior reescribirá al adulto como infantil y eso lo deshace la vuelta.
+   `php rollback-adultos.php comprobar F` muestra en cualquier momento qué difiere; con el código anterior arriba sale 1
+   y lista modalidad, edad, estado y publicación, que es lo esperado.
 
-El ensayo del rollback está NOT_RUN.
+**Vuelta a la versión nueva, en este orden:**
+1. Subir otra vez la versión nueva con el orden de la tabla (`lib.php` antes que sus consumidores, `index.html` al final).
+2. Enseguida: `php rollback-adultos.php restaurar F`. Devuelve exactamente lo guardado (modalidad, edad, estado y
+   temática de la fiesta; estado, fecha y autor de publicación y modalidad de la invitación), todo o nada, y lo
+   comprueba. Lo editado a mano en otros campos durante el rollback (nombre, fecha, invitados, otras fiestas) se
+   conserva. Se niega con el código anterior arriba, con un respaldo alterado o si falta alguna fila; en ese caso no
+   escribe nada y se recurre al volcado. Es idempotente. Debe terminar con código 0 e `igual_al_respaldo: true`.
+   Entre subir el código y restaurar, la fiesta adulta sigue inactiva y no abre: un hueco de minutos, sin datos perdidos.
+3. Verificar `api.php?p=<fiesta adulta>` con `event_type: adult_birthday` y su edad, la invitación adulta con
+   «¿Vienes con alguien?», y que `php rollback-adultos.php comprobar F` sale 0.
+4. `F` se queda en `~/respaldos/`: trae los slugs de fiestas reales y no se copia al repositorio.
+
+**Ensayado en local el 2026-10-11** (Forja-Claude, PHP 8.2.29, SQLite y fiestas ficticias; código de 188ba45 extraído
+fuera del repositorio y operado de verdad, el admin anterior por HTTP): 36 de 36 pasos PASS. Con el código anterior la
+invitación adulta da 404 sin textos infantiles, `rsvp-api.php` y `descargar-invitacion.php` la rechazan, y el admin
+anterior reescribe al adulto como se esperaba; tras la vuelta, el adulto queda `adult_birthday`, 61, activo, con su
+temática e invitación publicada con la misma fecha y autor, y la infantil y el baby shower intactos, con lo editado
+durante el rollback conservado. Prueba permanente con el código actual: `tests/backend/rollback-adultos.php`.
+**NOT_RUN:** la subida y bajada física por FTP/SSH, la base MySQL de PROD (el ensayo usa SQLite), los estados
+intermedios con archivos a medio subir, el volcado real y el tiempo real del hueco entre subir y restaurar.
 
 Verificación desde afuera: `api.php?p=<fiesta infantil existente>` sin `edad` ni `cabinaAdulto` y con sus personajes;
 una fiesta adulta de prueba con `event_type: adult_birthday`.

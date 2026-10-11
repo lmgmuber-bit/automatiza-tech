@@ -21,6 +21,7 @@ import { prepararVideo, urlDeVideo } from './videoListo.js'
 import { ajusteParaCara } from './caraAuto.js'
 import { detectarCara, prepararDetector } from './detectorCara.js'
 import { cabinaAdulto, partirEnLineas, textoCinta } from './cumpleAdulto.js'
+import { crearGuardadoUnaVez } from './guardarUnaVez.js'
 import Animador from './animador/Animador.jsx'
 import { PREDICTION_OPTIONS, createPredictionSubmissionToken, predictionLabels, predictionSummary, validPrediction } from './predictions.js'
 
@@ -5326,6 +5327,25 @@ function composeRevista(fondoImg, fotoImg, titular) {
   return exportarFoto(c)
 }
 
+// Guardar una sola vez y cancelar el paso al QR si la vista se va antes (revisión B2, CX-24).
+// Mientras guarda, la vista no ofrece otra foto ni otro texto: la foto ya bajó y lo que
+// sigue es el QR. `libre(fn)` envuelve esos botones con la misma guarda.
+function useGuardarUnaVez() {
+  const ref = useRef(null)
+  if (!ref.current) ref.current = crearGuardadoUnaVez()
+  const [guardando, setGuardando] = useState(false)
+  useEffect(() => {
+    const g = ref.current
+    g.armar()
+    return () => g.soltar()
+  }, [])
+  const guardar = useCallback((ahora, despues) => {
+    if (ref.current.guardar(ahora, despues, REDUCE_MOTION ? 300 : 1600)) setGuardando(true)
+  }, [])
+  const libre = useCallback((fn) => () => { if (!ref.current.usado) fn() }, [])
+  return { guardando, guardar, libre }
+}
+
 function PreviewRevista({ photo, titular, onRetry, onOtroTitular, onSave }) {
   const [composed, setComposed] = useState(null)
   const confRef = useRef(null)
@@ -5353,16 +5373,14 @@ function PreviewRevista({ photo, titular, onRetry, onOtroTitular, onSave }) {
   }, [photo, titular])
 
   // Un solo guardado aunque se toque dos veces (revisión B, CX-11): una descarga y un onSave.
-  const guardado = useRef(false)
-  const [guardando, setGuardando] = useState(false)
+  const { guardando, guardar, libre } = useGuardarUnaVez()
   const save = () => {
-    if (!composed || guardado.current) return
-    guardado.current = true
-    setGuardando(true)
-    guardarEnLaTablet(composed, `portada-${nombreEvento() || 'fiesta'}`)
-    playSound(CONFIG.audio.confetti)
-    burstConfetti(confRef.current, { duration: 2600, count: 180 })
-    setTimeout(() => onSave(composed), REDUCE_MOTION ? 300 : 1600)
+    if (!composed) return
+    guardar(() => {
+      guardarEnLaTablet(composed, `portada-${nombreEvento() || 'fiesta'}`)
+      playSound(CONFIG.audio.confetti)
+      burstConfetti(confRef.current, { duration: 2600, count: 180 })
+    }, () => onSave(composed))
   }
 
   return (
@@ -5373,8 +5391,8 @@ function PreviewRevista({ photo, titular, onRetry, onOtroTitular, onSave }) {
         <div className="loading">Imprimiendo la portada…</div>
       )}
       <div className="preview-bar">
-        <button className="cta ghost" onClick={onRetry}>🔄 Otra foto</button>
-        <button className="cta ghost" onClick={onOtroTitular}>✏️ Otro titular</button>
+        <button className="cta ghost" onClick={libre(onRetry)} disabled={guardando}>🔄 Otra foto</button>
+        <button className="cta ghost" onClick={libre(onOtroTitular)} disabled={guardando}>✏️ Otro titular</button>
         <button className="cta" onClick={save} disabled={!composed || guardando}>💾 Guardar</button>
       </div>
       <canvas ref={confRef} className="confetti-canvas" />
@@ -5399,16 +5417,14 @@ function PreviewAdulto({ photo, bgRef, frase, score, onRetry, onOtraFrase, onSav
     return () => { cancelled = true }
   }, [photo, bgRef, frase, score])
 
-  const guardado = useRef(false)
-  const [guardando, setGuardando] = useState(false)
+  const { guardando, guardar, libre } = useGuardarUnaVez()
   const save = () => {
-    if (!composed || guardado.current) return
-    guardado.current = true
-    setGuardando(true)
-    guardarEnLaTablet(composed, `foto-${nombreEvento() || 'fiesta'}`)
-    playSound(CONFIG.audio.confetti)
-    burstConfetti(confRef.current, { duration: 2600, count: 180 })
-    setTimeout(() => onSave(composed), REDUCE_MOTION ? 300 : 1600)
+    if (!composed) return
+    guardar(() => {
+      guardarEnLaTablet(composed, `foto-${nombreEvento() || 'fiesta'}`)
+      playSound(CONFIG.audio.confetti)
+      burstConfetti(confRef.current, { duration: 2600, count: 180 })
+    }, () => onSave(composed))
   }
 
   return (
@@ -5419,8 +5435,8 @@ function PreviewAdulto({ photo, bgRef, frase, score, onRetry, onOtraFrase, onSav
         <div className="loading">Preparando tu ficha…</div>
       )}
       <div className="preview-bar">
-        <button className="cta ghost" onClick={onRetry}>🔄 Otra foto</button>
-        <button className="cta ghost" onClick={onOtraFrase}>✏️ Otra frase</button>
+        <button className="cta ghost" onClick={libre(onRetry)} disabled={guardando}>🔄 Otra foto</button>
+        <button className="cta ghost" onClick={libre(onOtraFrase)} disabled={guardando}>✏️ Otra frase</button>
         <button className="cta" onClick={save} disabled={!composed || guardando}>💾 Guardar</button>
       </div>
       <canvas ref={confRef} className="confetti-canvas" />

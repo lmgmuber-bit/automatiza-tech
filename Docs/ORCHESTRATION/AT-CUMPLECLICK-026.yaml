@@ -92,7 +92,7 @@ acceptance:
     - "Juegos del animador: nivel como techo, mazo sin repetir (también al volver a un juego), «Paso esta» sin castigo, un punto por equipo y ronda, Tribunal solo con preparación confirmada, mímica privada (tests del motor + recorrido en navegador)."
     - "Asómate adulto: 14 figuras cuyo hueco cubre ojos y boca ilustrados sin abrirse fuera del rostro (revisión visual con fondo de control); zoom siempre positivo."
     - "Invitación adulta silenciosa (sin narraciones de Alice, ni la de inicio), video con póster que no se interrumpe por el avance automático, asistencia sin vocabulario infantil."
-    - "Rollback documentado con TODOS los PHP que se reemplazan y su orden."
+    - "Rollback documentado con TODOS los PHP que se reemplazan y su orden, sin perder la modalidad ni la edad de las fiestas adultas y sin dejar su invitación publicada con el código anterior (ensayo con el código de 188ba45)."
     - "Revisión B por cargos del homólogo Codex (Forja, Lienzo, Centinela, Vigía, Contralor) sobre la misma revisión, con segundo ciclo tras las correcciones."
   pending_physical:
     - "Tablet real con cámara y personas reales (grupos, alturas, gafas)."
@@ -108,4 +108,5 @@ progress:
   - "2026-10-11: Luis aprobó «haz todas»: portada en pareja y los 15 juegos del animador (ba97e37); Asómate adulto con 14 figuras, USD 0,63 de lista con su visto bueno (a646a4f)."
   - "2026-10-11: revisión B encargada a Codex sobre 91083bf (PEER_REVIEW_PENDING). Encargo: Documents/Codex/Shared-Tools/Revision-Codex-AT-CUMPLECLICK-026.md; respuesta esperada en Revision-B-Codex-AT-CUMPLECLICK-026.md."
   - "2026-10-11: cargos at-agent-company (piloto CumpleClick). Autor: Claude como un solo actor cubriendo Forja y Lienzo; sin cargos nativos convocados en la implementación (subagentes Explore genéricos para mapear, no son revisión). Revisión B pedida por cargo a Codex: Forja, Lienzo, Centinela, Vigía y Contralor."
-  - "2026-10-12: revisión B de Codex sobre 91083bf: NO APTO, 23 CX (2 ALTA). Corregidos en 0dbeeff por cargos (Forja-Claude, Lienzo-Claude, orquestador). Segundo ciclo B pedido a Codex en el mismo encargo."
+  - "2026-10-11: revisión B de Codex sobre 91083bf: NO APTO, 23 CX (2 ALTA). Corregidos en 0dbeeff por cargos: Forja-Claude (CX-12, 13, 14, 17 e insumos de CX-04), Lienzo-Claude (CX-05, 06, 07, 08, 18, 23) y el orquestador Claude (el resto e integración). Segundo ciclo B pedido a Codex en el mismo encargo. (Antes figuraba con fecha 12-oct por error: fue el 11-oct.)"
+  - "2026-10-11: revisión B2 de Codex sobre 0dbeeff: NO APTO; 21 de 23 CX cerrados, CX-02 (MEDIA) y CX-04 (ALTA) parciales y CX-24 nuevo (MEDIA). Informe: Documents/Codex/Shared-Tools/Revision-B2-Codex-AT-CUMPLECLICK-026.md. Corregidos en el commit siguiente por cargos: Forja-Claude CX-04 (database/rollback-adultos.php exportar/comprobar/restaurar, ensayo con el código de 188ba45 36/36, prueba de 34), Lienzo-Claude CX-24 (guardarUnaVez.js, 5 pruebas, E2E 4 casos), orquestador CX-02 (óvalos d2, f1 y g2; la medida de Codex da 0 en las 14) e integración. Tercer ciclo B pedido a Codex; PEER_REVIEW_PENDING."

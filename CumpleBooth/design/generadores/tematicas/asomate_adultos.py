@@ -48,6 +48,8 @@ FIGURAS = {
 OVALOS = {
     # Revisados el 11-oct sobre la cabeza ampliada con cuadrícula al 5 % (revisión B de Codex, CX-01/CX-02):
     # cada óvalo va de la frente al mentón y entre las mejillas, sin dejar ojos ni boca ilustrados a la vista.
+    # d2, f1 y g2 se rehicieron en la revisión B2 (CX-02): f1 dejaba ver un ojo y d2/g2 cortaban el contorno
+    # de la mejilla; ahora quedan dentro de la cara con la cuadrícula al 1 %.
     "a1-vestido-rojo": (0.515, 0.287, 0.228, 0.108),
     "a2-terno": (0.447, 0.30, 0.22, 0.10),
     "b1-pinup": (0.512, 0.268, 0.335, 0.124),
@@ -55,13 +57,13 @@ OVALOS = {
     "c1-diva": (0.529, 0.198, 0.165, 0.078),
     "c2-ganster": (0.505, 0.232, 0.238, 0.099),
     "d1-salsera": (0.517, 0.234, 0.15, 0.092),
-    "d2-salsero": (0.519, 0.148, 0.118, 0.07),
+    "d2-salsero": (0.526, 0.146, 0.099, 0.065),
     "e1-reina": (0.476, 0.225, 0.155, 0.0875),
     "e2-rey": (0.517, 0.225, 0.136, 0.085),
-    "f1-playa": (0.46, 0.249, 0.148, 0.083),
+    "f1-playa": (0.495, 0.243, 0.14, 0.068),
     "f2-forzudo": (0.488, 0.14, 0.102, 0.075),
     "g1-superheroina": (0.50, 0.196, 0.248, 0.116),
-    "g2-superheroe": (0.488, 0.205, 0.242, 0.112),
+    "g2-superheroe": (0.494, 0.18, 0.165, 0.105),
 }
 AJUSTES = {}
 

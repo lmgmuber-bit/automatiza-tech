@@ -787,7 +787,9 @@ if ($formValues === null && $action === 'editar') {
         'invitados_text' => '',
         'galeriaPin' => '',
         'pin_configured' => false,
-        'frameBox' => ['x' => 0.32, 'y' => 0.30, 'w' => 0.36, 'h' => 0.28],
+        // Sin marco propio: el formulario muestra el de la temática ($formBox). Un valor fijo
+        // aquí se guardaba como marco de la fiesta y la foto salía chica en otras temáticas.
+        'frameBox' => null,
         'contactos' => [['name' => '', 'email' => '', 'phone' => '', 'relationship' => 'madre', 'is_primary' => true]],
         'cobro' => ['price_total' => '', 'discount_amount' => '', 'discount_percent' => '',
                     'discount_label' => '',
@@ -848,9 +850,10 @@ if ($formValues === null && $action === 'editar') {
       <?php
       $isEdit = $formValues['modo'] === 'editar';
       $selectedTheme = $themes[$formValues['tema']] ?? [];
+      $genericFrameBox = ['x' => 0.32, 'y' => 0.30, 'w' => 0.36, 'h' => 0.28];
       $formBox = cb_normalize_frame_box($formValues['frameBox'] ?? null)
           ?? cb_normalize_frame_box($selectedTheme['frameBox'] ?? null)
-          ?? ['x' => 0.32, 'y' => 0.30, 'w' => 0.36, 'h' => 0.28];
+          ?? $genericFrameBox;
       ?>
       <section class="card form-card">
         <h2><?= $isEdit ? 'Editar fiesta' : 'Nueva fiesta' ?></h2>
@@ -908,8 +911,10 @@ if ($formValues === null && $action === 'editar') {
                 <?php
                 $franq = trim((string) ($tdata['franquicia'] ?? ''));
                 $optLabel = $franq !== '' ? $franq . ' (' . ($tdata['nombre'] ?? $tslug) . ')' : ($tdata['nombre'] ?? $tslug);
+                // Marco de la temática para el calibrador: al cambiarla, el script carga estos valores.
+                $optBox = cb_normalize_frame_box($tdata['frameBox'] ?? null) ?? $genericFrameBox;
                 ?>
-                <option value="<?= h($tslug) ?>" <?= $formValues['tema'] === $tslug ? 'selected' : '' ?>>
+                <option value="<?= h($tslug) ?>" data-frame-box="<?= h((string) json_encode($optBox)) ?>" <?= $formValues['tema'] === $tslug ? 'selected' : '' ?>>
                   <?= h($optLabel) ?> — <?= $st['ready'] ? 'Lista' : ('Faltan ' . count($st['missing']) . ' archivos') ?>
                 </option>
               <?php endforeach; ?>
@@ -1879,7 +1884,22 @@ if ($formValues === null && $action === 'editar') {
   }
   Array.prototype.forEach.call(frameInputs, function (input) { input.addEventListener('input', updateFramePreview); });
   var themeSelect = document.getElementById('f-tema');
-  if (themeSelect && framePreview) { themeSelect.addEventListener('change', function () { framePreview.style.backgroundImage = "url('../themes/" + encodeURIComponent(themeSelect.value) + "/fondo-sala.jpg')"; }); }
+  // Al cambiar de temática cambia el fondo, y la calibración anterior era para el otro
+  // fondo: se cargan los números de la nueva (o el genérico si no trae) para no guardarlos mal.
+  function themeFrameBox(option) {
+    var box = null;
+    try { box = JSON.parse((option && option.getAttribute('data-frame-box')) || 'null'); } catch (e) { box = null; }
+    var ok = box && ['x', 'y', 'w', 'h'].every(function (k) { return typeof box[k] === 'number'; });
+    return ok ? box : { x: 0.32, y: 0.30, w: 0.36, h: 0.28 };
+  }
+  if (themeSelect && framePreview) {
+    themeSelect.addEventListener('change', function () {
+      framePreview.style.backgroundImage = "url('../themes/" + encodeURIComponent(themeSelect.value) + "/fondo-sala.jpg')";
+      var box = themeFrameBox(themeSelect.options[themeSelect.selectedIndex]);
+      Array.prototype.forEach.call(frameInputs, function (input) { input.value = String(box[input.getAttribute('data-frame')]); });
+      updateFramePreview();
+    });
+  }
   updateFramePreview();
 
   // --- Copiar URL al portapapeles (con fallback) ---

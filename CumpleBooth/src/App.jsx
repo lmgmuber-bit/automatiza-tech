@@ -5050,12 +5050,16 @@ function Preview({ photo, bgRef, invitado, personaje, onRetry, onSave }) {
     }
   }, [photo, bgRef, invitado, personaje])
 
+  // Igual que en las vistas adultas (revisión B2, CX-24): una descarga, un paso al QR y, mientras
+  // guarda, «Otra foto» bloqueado; si la vista se va antes, el paso al QR se cancela.
+  const { guardando, guardar, libre } = useGuardarUnaVez()
   const save = () => {
     if (!composed) return
-    guardarEnLaTablet(composed, `foto-${invitado || 'invitado'}`)
-    playSound(CONFIG.audio.confetti)
-    burstConfetti(confRef.current, { duration: 2600, count: 180 })
-    setTimeout(() => onSave(composed), REDUCE_MOTION ? 300 : 1600)
+    guardar(() => {
+      guardarEnLaTablet(composed, `foto-${invitado || 'invitado'}`)
+      playSound(CONFIG.audio.confetti)
+      burstConfetti(confRef.current, { duration: 2600, count: 180 })
+    }, () => onSave(composed))
   }
 
   return (
@@ -5066,10 +5070,10 @@ function Preview({ photo, bgRef, invitado, personaje, onRetry, onSave }) {
         <div className="loading">Preparando tu foto…</div>
       )}
       <div className="preview-bar">
-        <button className="cta ghost" onClick={onRetry}>
+        <button className="cta ghost" onClick={libre(onRetry)} disabled={guardando}>
           🔄 Otra foto
         </button>
-        <button className="cta" onClick={save} disabled={!composed}>
+        <button className="cta" onClick={save} disabled={!composed || guardando}>
           💾 Guardar
         </button>
       </div>
@@ -5328,6 +5332,7 @@ function composeRevista(fondoImg, fotoImg, titular) {
 }
 
 // Guardar una sola vez y cancelar el paso al QR si la vista se va antes (revisión B2, CX-24).
+// Lo usan las vistas previas adultas y, desde el tercer ciclo, la infantil.
 // Mientras guarda, la vista no ofrece otra foto ni otro texto: la foto ya bajó y lo que
 // sigue es el QR. `libre(fn)` envuelve esos botones con la misma guarda.
 function useGuardarUnaVez() {

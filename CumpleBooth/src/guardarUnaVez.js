@@ -1,5 +1,5 @@
 /**
- * Guardar una sola vez en las vistas previas adultas (revisión B2, CX-24).
+ * Guardar una sola vez en las vistas previas del kiosco, adultas e infantil (revisión B2, CX-24).
  *
  * Al tocar Guardar la foto se descarga en el acto y el paso al QR espera a que termine el
  * confeti. Antes ese temporizador no se cancelaba: si en esa espera se tocaba «Otra foto»,

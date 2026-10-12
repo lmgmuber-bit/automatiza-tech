@@ -14,7 +14,13 @@
  *    B3, CX-25): ni en CumpleBooth, ni en una hermana como Docs/, ni en la raíz Git, ni con `.git`
  *    como archivo (worktree), ni a través de un enlace; cada rechazo ocurre sin crear el archivo y
  *    sin suspender filas, y un destino privado fuera de todo repositorio se acepta. Tampoco pisa
- *    un respaldo existente.
+ *    un respaldo existente;
+ *  - revisión B4 (Vigía-Claude): ningún webroot de la cuenta (`public_html`, `www`, `htdocs`, en
+ *    cualquier dominio) aunque no tenga `.git`, mientras `~/respaldos` y
+ *    `domains/cumpleclick.com/database/` siguen aceptados (CX-26); con open_basedir, exportar
+ *    se niega sin leer ni escribir y una carpeta padre que no se deja revisar es rechazo (CX-27);
+ *    un respaldo de otro entorno, uno cuya invitación hoy pertenece a otra fiesta y uno del
+ *    formato /1 no restauran nada (CX-28); y la carpeta temporal no queda (CX-29).
  *
  * El ensayo con el código de 188ba45 de verdad (admin viejo por HTTP) vive fuera del repositorio;
  * esta prueba simula su efecto en la base con las mismas sentencias que ese código ejecuta.
@@ -22,15 +28,56 @@
  */
 if (PHP_SAPI !== 'cli') { exit(2); }
 $raiz = dirname(__DIR__, 2);
-$tmp = sys_get_temp_dir() . '/cumpleclick-rollback-adultos-' . bin2hex(random_bytes(4));
+
+// ── Carpeta temporal (revisión B4, CX-29) ───────────────────────────────────
+// cb_pdo() guarda la conexión en una variable estática de lib.php que la prueba no puede cerrar,
+// y en Windows un SQLite abierto no se puede borrar: cada corrida dejaba su carpeta en %TEMP%.
+// Por eso este proceso no abre la base: crea la carpeta, corre la prueba en un proceso hijo y,
+// cuando el hijo terminó (y con él su conexión), la borra, también si la prueba falló. Solo
+// borra la carpeta que creó en esta corrida; las uniones y enlaces se sueltan sin entrar en ellos.
+$tmpHijo = getenv('CB_RBA_PRUEBA_TMP');
+if ($tmpHijo === false || $tmpHijo === '') {
+    $tmp = realpath(sys_get_temp_dir()) . DIRECTORY_SEPARATOR . 'cumpleclick-rollback-adultos-' . bin2hex(random_bytes(4));
+    if (!mkdir($tmp, 0700)) {
+        fwrite(STDERR, "FAIL: no se pudo crear la carpeta temporal\n");
+        exit(1);
+    }
+    $borrar = static function (string $ruta) use (&$borrar): void {
+        $real = realpath($ruta);
+        $padre = realpath(dirname($ruta));
+        if (is_link($ruta) || ($real !== false && $padre !== false && $real !== rtrim($padre, '/\\') . DIRECTORY_SEPARATOR . basename($ruta))) {
+            if (!@rmdir($ruta)) { @unlink($ruta); }   // unión (en Windows is_dir() la da por falsa) o enlace
+            return;
+        }
+        if (is_dir($ruta)) {
+            foreach (scandir($ruta) ?: [] as $nombre) {
+                if ($nombre !== '.' && $nombre !== '..') {
+                    $borrar($ruta . DIRECTORY_SEPARATOR . $nombre);
+                }
+            }
+            @rmdir($ruta);
+        } elseif (!@unlink($ruta)) {
+            @rmdir($ruta);   // una unión cuyo destino ya no existe
+        }
+    };
+    register_shutdown_function(static function () use ($tmp, $borrar): void {
+        if (is_dir($tmp)) { $borrar($tmp); }
+    });
+    $hijo = proc_open([PHP_BINARY, __FILE__], [1 => STDOUT, 2 => STDERR], $pipes, null, array_merge(getenv(), ['CB_RBA_PRUEBA_TMP' => $tmp]));
+    $codigo = $hijo === false ? 1 : proc_close($hijo);
+    $borrar($tmp);
+    clearstatcache();
+    if (file_exists($tmp)) {
+        fwrite(STDERR, "FAIL: la carpeta temporal $tmp quedó después de la corrida\n");
+        exit(1);
+    }
+    echo 'rollback-adultos: carpeta temporal borrada al salir (la prueba ' . ($codigo === 0 ? 'pasó' : "falló con salida $codigo") . ")\n";
+    exit($codigo);
+}
+$tmp = $tmpHijo;
 mkdir($tmp . '/state', 0770, true);
 mkdir($tmp . '/photos', 0770, true);
 mkdir($tmp . '/invitations', 0770, true);
-register_shutdown_function(static function () use ($tmp): void {
-    $it = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($tmp, FilesystemIterator::SKIP_DOTS), RecursiveIteratorIterator::CHILD_FIRST);
-    foreach ($it as $file) { $file->isDir() ? @rmdir($file->getPathname()) : @unlink($file->getPathname()); }
-    @rmdir($tmp);
-});
 $env = array_merge(getenv(), [
     'CC_STORAGE_MODE' => 'db', 'CC_PDO_DSN' => 'sqlite:' . $tmp . '/test.sqlite',
     'CC_APP_HMAC_KEY' => str_repeat('f', 64), 'CC_PUBLIC_BASE_URL' => 'https://example.test/cumpleclick',
@@ -45,13 +92,21 @@ cb_test_migrar_todo(cb_pdo());
 $tests = 0;
 function r_check(bool $cond, string $msg): void { global $tests; $tests++; if (!$cond) { throw new RuntimeException('FAIL: ' . $msg); } }
 
-/** Corre el script como lo correría Luis por SSH; $script permite correr la copia de una réplica. */
-function r_script(string $modo, string $archivo, ?string $script = null): array
+/**
+ * Corre el script como lo correría Luis por SSH; $script permite correr la copia de una réplica,
+ * $ini agrega opciones `-d` de PHP y $otroEnv cambia variables de entorno (otro entorno).
+ */
+function r_script(string $modo, string $archivo, ?string $script = null, array $ini = [], array $otroEnv = []): array
 {
     global $raiz, $env;
     $script ??= $raiz . '/database/rollback-adultos.php';
-    $proc = proc_open([PHP_BINARY, $script, $modo, $archivo],
-        [1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $pipes, dirname($script, 2), $env);
+    $cmd = [PHP_BINARY];
+    foreach ($ini as $clave => $valor) {
+        $cmd[] = '-d';
+        $cmd[] = $clave . '=' . $valor;
+    }
+    array_push($cmd, $script, $modo, $archivo);
+    $proc = proc_open($cmd, [1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $pipes, dirname($script, 2), array_merge($env, $otroEnv));
     $out = stream_get_contents($pipes[1]);
     $err = stream_get_contents($pipes[2]);
     fclose($pipes[1]); fclose($pipes[2]);
@@ -129,10 +184,10 @@ function r_replica(string $nombre, bool $gitComoArchivo): string
 }
 
 /** Un exportar rechazado: sale con error, por la regla esperada, sin crear el archivo ni suspender filas. */
-function r_rechazado(string $destino, string $caso, string $motivo, ?string $script = null): void
+function r_rechazado(string $destino, string $caso, string $motivo, ?string $script = null, array $ini = []): void
 {
     global $idAdulto, $invAdulto;
-    $r = r_script('exportar', $destino, $script);
+    $r = r_script('exportar', $destino, $script, $ini);
     $creado = is_file($destino);
     if ($creado) {
         @unlink($destino);   // si la guarda fallara, que el archivo no quede (y menos en un repositorio)
@@ -173,18 +228,60 @@ if (@symlink($repo . '/Docs/apuntado.json', $nombreEnlace)) {
     @unlink($nombreEnlace);
 }
 
+// Webroots de la misma cuenta sin `.git` (revisión B4, CX-26). Réplica de la cuenta de Hostinger:
+// `~` = $tmp/home, con el webroot de preproducción y los dos destinos legítimos de PROD.
+$home = $tmp . '/home';
+foreach (['/respaldos', '/domains/cumpleclick.com/database', '/domains/cumpleclick.com/public_html/app',
+    '/domains/automatizatech.cl/public_html/cumpleclick', '/domains/otro.test/WWW', '/domains/otro.test/HtDocs/sub'] as $sub) {
+    mkdir($home . $sub, 0770, true);
+}
+r_rechazado($home . '/domains/automatizatech.cl/public_html/respaldo-ficticio.json', 'public_html de otro dominio de la cuenta (preproducción)', 'webroot');
+r_rechazado($home . '/domains/automatizatech.cl/public_html/cumpleclick/respaldo-ficticio.json', 'subcarpeta del public_html de otro dominio', 'webroot');
+r_rechazado($home . '/domains/cumpleclick.com/public_html/app/respaldo-ficticio.json', 'public_html de cumpleclick.com en la réplica', 'webroot');
+r_rechazado($home . '/domains/otro.test/WWW/respaldo-ficticio.json', 'carpeta WWW en mayúsculas', 'webroot');
+r_rechazado($home . '/domains/otro.test/HtDocs/sub/respaldo-ficticio.json', 'debajo de HtDocs', 'webroot');
+
+// open_basedir (revisión B4, CX-27): con él activo, exportar se niega antes de leer o escribir.
+// El destino es el válido de la réplica y el open_basedir deja leer la base y el código, así que
+// sin la guarda el exportar pasaría: la búsqueda de `.git` en los padres fallaría abierta.
+// Entre comillas y con `/`: `-d` se lee como INI, donde `;` abre un comentario y la lista
+// quedaría solo con su primera carpeta.
+$baseDir = '"' . str_replace('\\', '/', $tmp . PATH_SEPARATOR . $raiz) . '"';
+r_rechazado($home . '/respaldos/respaldo-con-open-basedir.json', 'exportar con open_basedir activo', 'No se leyó ni se escribió nada', null, ['open_basedir' => $baseDir]);
+// Y si aun así una carpeta padre no se deja revisar, es rechazo y no «no hay .git». Se prueba la
+// función de la guarda sola, con su texto exacto, porque el script entero ya se negó arriba.
+$fuente = (string) file_get_contents($raiz . '/database/rollback-adultos.php');
+r_check(preg_match('/^function cb_rba_validar_ruta\(.*?^}\R/ms', $fuente, $m) === 1, 'se extrae la función de la guarda del script');
+mkdir($tmp . '/guarda', 0770);
+file_put_contents($tmp . '/guarda/guarda.php', "<?php\nfunction cb_rba_salir(string \$mensaje, int \$codigo = 1): void { fwrite(STDERR, \$mensaje . \"\\n\"); exit(\$codigo); }\n"
+    . $m[0] . "echo cb_rba_validar_ruta(\$argv[1]);\n");
+$guarda = static function (array $ini) use ($tmp, $home): array {
+    $cmd = [PHP_BINARY];
+    foreach ($ini as $clave => $valor) { array_push($cmd, '-d', $clave . '=' . $valor); }
+    array_push($cmd, $tmp . '/guarda/guarda.php', $home . '/respaldos/solo-guarda.json');
+    $p = proc_open($cmd, [1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $pipes, $tmp);
+    $out = stream_get_contents($pipes[1]); $err = stream_get_contents($pipes[2]);
+    fclose($pipes[1]); fclose($pipes[2]);
+    return ['codigo' => proc_close($p), 'out' => (string) $out, 'err' => (string) $err];
+};
+$g = $guarda([]);
+r_check($g['codigo'] === 0 && str_ends_with(str_replace('\\', '/', $g['out']), '/home/respaldos/solo-guarda.json'), 'control: sin open_basedir la guarda sola acepta ~/respaldos. ' . $g['err']);
+$g = $guarda(['open_basedir' => $tmp]);
+r_check($g['codigo'] !== 0 && str_contains($g['err'], 'No se pudo revisar la carpeta'), 'una carpeta padre que no se deja revisar es rechazo. Salida ' . $g['codigo'] . ': ' . $g['err']);
+r_check(!file_exists($home . '/respaldos/solo-guarda.json'), 'la guarda sola no escribe nada');
+
 $r = r_script('borrar', $tmp . '/x.json');
 r_check($r['codigo'] === 2, 'un modo desconocido no hace nada');
 
-// ── Exportar y suspender: destino privado válido, fuera de todo repositorio Git ─
+// ── Exportar y suspender: `~/respaldos` de la réplica, fuera de todo repositorio Git ─
 $sinGit = true;
-for ($c = (string) realpath($tmp . '/privado'); ; $c = $padre) {
+for ($c = (string) realpath($home . '/respaldos'); ; $c = $padre) {
     $sinGit = $sinGit && !file_exists($c . '/.git');
     $padre = dirname($c);
     if ($padre === $c) { break; }
 }
-r_check($sinGit, 'la carpeta temporal privada no está dentro de ningún repositorio Git (requisito del caso válido)');
-$snap = $tmp . '/privado/respaldo-adultos.json';
+r_check($sinGit, 'la carpeta ~/respaldos de la réplica no está dentro de ningún repositorio Git (requisito del caso válido)');
+$snap = $home . '/respaldos/respaldo-adultos.json';
 $r = r_script('exportar', $snap);
 r_check($r['codigo'] === 0, 'exportar termina bien: ' . $r['err']);
 r_check(($r['json']['fiestas'] ?? null) === ['adulto-prueba'] && ($r['json']['invitaciones'] ?? null) === 1, 'el respaldo cubre solo la fiesta adulta y su invitación');
@@ -219,6 +316,45 @@ $r = r_script('restaurar', $alterado);
 r_check($r['codigo'] !== 0 && str_contains($r['err'], 'suma'), 'un respaldo alterado a mano se rechaza');
 r_check(r_fila('cc_parties', $idAdulto)['birthday_age'] === null, 'y no escribe nada');
 
+// ── Respaldos que no son de esta base (revisión B4, CX-28) ──────────────────
+/** Un restaurar o comprobar rechazado: sale con error, por el motivo esperado, sin escribir en la base. */
+$sinEscribir = static function (array $r, string $caso, string $motivo) use ($idAdulto, $invAdulto): void {
+    r_check($r['codigo'] !== 0 && str_contains($r['err'], $motivo), "$caso: se rechaza ($motivo). Salida {$r['codigo']}: {$r['err']}");
+    $f = r_fila('cc_parties', $idAdulto);
+    $i = r_fila('cc_invitations', $invAdulto);
+    r_check($f['event_type'] === 'child_birthday' && $f['birthday_age'] === null && (int) $f['active'] === 0 && $i['status'] === 'archived',
+        "$caso: no escribe nada (la fiesta y su invitación siguen como las dejó el rollback)");
+};
+r_check(is_string($datos['entorno'] ?? null) && strlen($datos['entorno']) === 64, 'el respaldo guarda una huella del entorno de 64 hex');
+$crudo = (string) file_get_contents($snap);
+r_check(!str_contains($crudo, 'sqlite:') && !str_contains($crudo, 'test.sqlite') && !str_contains($crudo, 'example.test'),
+    'el respaldo no trae el DSN, la ruta de la base ni la URL en claro');
+$otraUrl = ['CC_PUBLIC_BASE_URL' => 'https://otro-entorno.example.test/cumpleclick'];
+$sinEscribir(r_script('restaurar', $snap, null, [], $otraUrl), 'restaurar con otra URL pública (otro entorno)', 'otro entorno');
+$sinEscribir(r_script('comprobar', $snap, null, [], $otraUrl), 'comprobar en otro entorno', 'otro entorno');
+// Otra base con las mismas filas (una copia): el respaldo válido de esta no se aplica en aquella.
+$otraBase = $tmp . '/otra-base.sqlite';
+r_check(copy($tmp . '/test.sqlite', $otraBase), 'se copia la base a otro archivo');
+$r = r_script('restaurar', $snap, null, [], ['CC_PDO_DSN' => 'sqlite:' . $otraBase]);
+r_check($r['codigo'] !== 0 && str_contains($r['err'], 'otro entorno'), 'restaurar sobre otra base con las mismas filas se rechaza: ' . $r['err']);
+$otraPdo = new PDO('sqlite:' . $otraBase);
+r_check($otraPdo->query("SELECT birthday_age FROM cc_parties WHERE id = $idAdulto")->fetchColumn() === null, 'y la otra base no se tocó');
+$otraPdo = null;
+// La misma base, pero la invitación del respaldo hoy es de otra fiesta: no se publica ni se mueve.
+cb_pdo()->prepare('UPDATE cc_invitations SET party_id = ? WHERE id = ?')->execute([$idNino, $invAdulto]);
+$sinEscribir(r_script('restaurar', $snap), 'la invitación del respaldo pertenece hoy a otra fiesta', 'pertenece en esta base a otra fiesta');
+r_check((int) r_fila('cc_invitations', $invAdulto)['party_id'] === $idNino, 'y no la mueve de fiesta');
+cb_pdo()->prepare('UPDATE cc_invitations SET party_id = ? WHERE id = ?')->execute([$idAdulto, $invAdulto]);
+// Un respaldo del formato /1 (sin huella), con su suma correcta: ya no se acepta, con un mensaje claro.
+$v1 = $tmp . '/respaldo-formato-1.json';
+$copia = $datos;
+unset($copia['entorno']);
+$copia['formato'] = 'cumpleclick-rollback-adultos/1';
+$copia['suma'] = hash('sha256', json_encode(['fiestas' => $copia['fiestas'], 'invitaciones' => $copia['invitaciones']], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+file_put_contents($v1, json_encode($copia));
+$sinEscribir(r_script('restaurar', $v1), 'respaldo del formato /1', 'formato anterior');
+$sinEscribir(r_script('comprobar', $v1), 'comprobar un respaldo del formato /1', 'formato anterior');
+
 $r = r_script('restaurar', $snap);
 r_check($r['codigo'] === 0 && ($r['json']['igual_al_respaldo'] ?? false) === true, 'restaurar termina igual al respaldo: ' . $r['err']);
 $adulto = r_fila('cc_parties', $idAdulto);
@@ -238,12 +374,21 @@ r_check((cb_resolve_party('adulto-prueba')['ok'] ?? false) === true, 'el kiosco 
 $r = r_script('restaurar', $snap);
 r_check($r['codigo'] === 0, 'restaurar dos veces da lo mismo');
 
+// El otro destino legítimo de PROD, junto al script (revisión B4, CX-26): no se rechaza por error.
+$snap2 = $home . '/domains/cumpleclick.com/database/respaldo-adultos-2.json';
+$r = r_script('exportar', $snap2);
+r_check($r['codigo'] === 0 && is_file($snap2), 'exportar a domains/cumpleclick.com/database/ se acepta: ' . $r['err']);
+r_check((int) r_fila('cc_parties', $idAdulto)['active'] === 0, 'y suspende como siempre');
+$r = r_script('restaurar', $snap2);
+r_check($r['codigo'] === 0 && ($r['json']['igual_al_respaldo'] ?? false) === true, 'y ese respaldo restaura: ' . $r['err']);
+r_check((int) r_fila('cc_parties', $idAdulto)['active'] === 1 && r_fila('cc_invitations', $invAdulto)['status'] === 'published', 'el adulto vuelve activo y publicado');
+
 // ── Todo o nada: si falta una fila, no se escribe ninguna ───────────────────
 $pdo->prepare("UPDATE cc_parties SET event_type='child_birthday', birthday_age=NULL WHERE id=?")->execute([$idAdulto]);
 $sinInv = $tmp . '/sin-invitacion.json';
 $copia = $datos;
 $copia['invitaciones'][0]['id'] = 999999;
-$copia['suma'] = hash('sha256', json_encode(['fiestas' => $copia['fiestas'], 'invitaciones' => $copia['invitaciones']], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+$copia['suma'] = hash('sha256', json_encode(['entorno' => $copia['entorno'], 'fiestas' => $copia['fiestas'], 'invitaciones' => $copia['invitaciones']], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
 file_put_contents($sinInv, json_encode($copia));
 $r = r_script('restaurar', $sinInv);
 r_check($r['codigo'] !== 0 && str_contains($r['err'], 'No se restauró nada'), 'una invitación que ya no existe detiene la restauración');
@@ -253,5 +398,6 @@ r_check(r_fila('cc_parties', $idAdulto)['event_type'] === 'child_birthday', 'y l
 if (in_array('carpeta', $enlaces, true)) {
     PHP_OS_FAMILY === 'Windows' ? @rmdir($carpetaEnlace) : @unlink($carpetaEnlace);
 }
+$pdo = null;   // la conexión estática de cb_pdo() se cierra al terminar este proceso hijo (CX-29)
 $sinEnlaces = array_diff(['carpeta', 'archivo'], $enlaces);
 echo "rollback-adultos: $tests checks OK" . ($sinEnlaces ? ' (NOT_RUN por el sistema: enlace de ' . implode(' y ', $sinEnlaces) . ')' : '') . "\n";

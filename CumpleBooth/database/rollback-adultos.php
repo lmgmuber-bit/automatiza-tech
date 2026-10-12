@@ -22,14 +22,22 @@
  *
  * Lo que el admin cambie a mano durante el rollback en otros campos (nombre, fecha, invitados)
  * se conserva: solo se restauran los campos que el código anterior corrompe o que este script
- * suspende. No borra filas. El archivo de respaldo no puede quedar dentro de la carpeta servida
- * ni dentro de ningún repositorio Git (ver cb_rba_validar_ruta); se crea nuevo, nunca se pisa.
+ * suspende. No borra filas. El archivo de respaldo no puede quedar dentro de la carpeta servida,
+ * de ningún webroot ni de ningún repositorio Git (ver cb_rba_validar_ruta); se crea nuevo, nunca
+ * se pisa.
+ *
+ * Formato /2 (revisión B4, CX-28): el respaldo lleva la huella del entorno donde se exportó y
+ * comprobar y restaurar se niegan en otro entorno; restaurar exige además que cada fiesta conserve
+ * su slug y cada invitación su fiesta. Un respaldo /1 ya no se acepta: no trae huella.
+ * La suma sha256 del archivo es de integridad (detecta un archivo dañado o editado sin cuidado),
+ * no una firma: quien puede escribir el archivo puede recalcularla.
  */
 if (PHP_SAPI !== 'cli') {
     exit(2);
 }
 
-const CB_RBA_FORMATO = 'cumpleclick-rollback-adultos/1';
+const CB_RBA_FORMATO = 'cumpleclick-rollback-adultos/2';
+const CB_RBA_FORMATO_ANTERIOR = 'cumpleclick-rollback-adultos/1';
 const CB_RBA_CAMPOS_FIESTA = ['event_type', 'birthday_age', 'active', 'theme_slug'];
 const CB_RBA_CAMPOS_INVITACION = ['party_id', 'event_type', 'status', 'published_at', 'published_by', 'revoked_at', 'revoked_by'];
 
@@ -43,6 +51,13 @@ $modo = (string) ($argv[1] ?? '');
 $archivo = (string) ($argv[2] ?? '');
 if (!in_array($modo, ['exportar', 'comprobar', 'restaurar'], true) || $archivo === '') {
     cb_rba_salir("Uso: php rollback-adultos.php exportar|comprobar|restaurar <archivo.json>", 2);
+}
+// Con open_basedir, PHP no deja mirar fuera de las carpetas permitidas y la búsqueda de `.git`
+// en los padres daría «no hay» sin serlo: la guarda fallaría abierta (revisión B4, CX-27). En
+// la consola no debería estar activo; si lo está, exportar se niega antes de leer o escribir.
+if ($modo === 'exportar' && (string) ini_get('open_basedir') !== '') {
+    cb_rba_salir('open_basedir está activo en este PHP y no deja revisar las carpetas padre del respaldo. '
+        . 'No se leyó ni se escribió nada. Correr: php -d open_basedir= rollback-adultos.php exportar <archivo.json>');
 }
 
 require __DIR__ . '/../public/lib.php';
@@ -62,7 +77,12 @@ if ($modo !== 'comprobar' && !$codigoNuevo) {
  * antes de escribir nada y antes de suspender filas, si la carpeta destino:
  *   1. está dentro de la carpeta servida: el padre real de `../public` (en PROD `public_html`,
  *      porque `public` es el enlace a `public_html/app`; en local, `CumpleBooth/`);
- *   2. está dentro de cualquier repositorio Git: ella o alguno de sus padres tiene `.git`, sea
+ *   2. está dentro de cualquier webroot: algún tramo de su ruta real se llama `public_html`, `www`
+ *      o `htdocs`, sin distinguir mayúsculas (revisión B4, CX-26). La cuenta de Hostinger sirve
+ *      también `domains/automatizatech.cl/public_html/` (preproducción), que el punto 1 no conoce.
+ *      Los destinos legítimos de PROD, `~/respaldos` y `domains/cumpleclick.com/database/`, no
+ *      tienen ninguno de esos tramos;
+ *   3. está dentro de cualquier repositorio Git: ella o alguno de sus padres tiene `.git`, sea
  *      carpeta (checkout normal) o archivo (worktree o submódulo). Así queda fuera la raíz Git
  *      entera, `Docs/` incluida, y no solo el subproyecto. Un .gitignore no basta: no impide
  *      versionar el archivo ni le da privacidad.
@@ -70,7 +90,10 @@ if ($modo !== 'comprobar' && !$codigoNuevo) {
  * tramos) y se escribe en esa ruta real; el nombre final no puede ser un enlace, ni siquiera roto,
  * porque la escritura lo seguiría hacia otra carpeta. Tampoco puede existir ya.
  * Si al subir por los padres no aparece `.git` (PROD no tiene), la búsqueda termina en la raíz
- * del sistema sin error. Devuelve la ruta real del archivo a crear.
+ * del sistema sin error. Pero cada carpeta del camino tiene que dejarse revisar (revisión B4,
+ * CX-27): si PHP no puede entrar a una, «no hay .git» no se puede afirmar y se rechaza. Se exige
+ * poder entrar (lo que pide buscar `.git` dentro), no listar: en un hosting `/home` suele no
+ * dejarse listar y aun así no esconde nada. Devuelve la ruta real del archivo a crear.
  */
 function cb_rba_validar_ruta(string $archivo): string
 {
@@ -88,8 +111,17 @@ function cb_rba_validar_ruta(string $archivo): string
     if ($servida !== false && str_starts_with($comparable($dir), $comparable($servida))) {
         cb_rba_salir('El respaldo no puede quedar dentro de la carpeta servida ' . $servida . ': usar una carpeta privada (p. ej. ~/respaldos).');
     }
+    foreach (preg_split('#[/\\\\]+#', $dir, -1, PREG_SPLIT_NO_EMPTY) as $tramo) {
+        if (in_array(strtolower($tramo), ['public_html', 'www', 'htdocs'], true)) {
+            cb_rba_salir('El respaldo no puede quedar dentro de un webroot (' . $tramo . ' en ' . $dir . '): usar una carpeta privada (p. ej. ~/respaldos).');
+        }
+    }
+    $dentro = static fn(string $carpeta, string $nombre): string => rtrim($carpeta, '/\\') . DIRECTORY_SEPARATOR . $nombre;
     for ($carpeta = $dir; ; $carpeta = $padre) {
-        $git = $carpeta . DIRECTORY_SEPARATOR . '.git';
+        if (!@is_dir($dentro($carpeta, '.'))) {
+            cb_rba_salir('No se pudo revisar la carpeta ' . $carpeta . ' (¿permisos u open_basedir?): no se puede asegurar que el respaldo quede fuera de un repositorio Git. Usar una carpeta privada (p. ej. ~/respaldos).');
+        }
+        $git = $dentro($carpeta, '.git');
         if (file_exists($git) || is_link($git)) {
             cb_rba_salir('El respaldo no puede quedar dentro del repositorio Git de ' . $carpeta
                 . ': usar una carpeta privada fuera de todo repositorio (p. ej. ~/respaldos).');
@@ -136,9 +168,39 @@ function cb_rba_normalizar_invitacion(array $i): array
     ];
 }
 
-function cb_rba_suma(array $fiestas, array $invitaciones): string
+/** Suma de integridad (no es una firma: no lleva clave). Cubre también la huella del entorno. */
+function cb_rba_suma(array $fiestas, array $invitaciones, string $entorno): string
 {
-    return hash('sha256', json_encode(['fiestas' => $fiestas, 'invitaciones' => $invitaciones], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+    return hash('sha256', json_encode(['entorno' => $entorno, 'fiestas' => $fiestas, 'invitaciones' => $invitaciones], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+}
+
+/**
+ * Huella del entorno (revisión B4, CX-28): sha256 del motor, del nombre de la base que informa el
+ * propio servidor (en SQLite, la ruta del archivo) y de la URL pública configurada. La URL separa
+ * dos entornos cuya base se llame igual (local y PROD). Nunca entra el DSN, el usuario ni la
+ * contraseña, y en el respaldo solo queda el hash. Solo usa cb_pdo() y cb_config(), que también
+ * existen en el código anterior: comprobar tiene que seguir funcionando con él arriba.
+ */
+function cb_rba_entorno(PDO $pdo): string
+{
+    $motor = (string) $pdo->getAttribute(PDO::ATTR_DRIVER_NAME);
+    $base = '';
+    if ($motor === 'mysql') {
+        $base = (string) $pdo->query('SELECT DATABASE()')->fetchColumn();
+    } elseif ($motor === 'pgsql') {
+        $base = (string) $pdo->query('SELECT current_database()')->fetchColumn();
+    } elseif ($motor === 'sqlite') {
+        foreach ($pdo->query('PRAGMA database_list')->fetchAll(PDO::FETCH_ASSOC) as $fila) {
+            if (($fila['name'] ?? '') === 'main') {
+                $ruta = (string) ($fila['file'] ?? '');
+                $real = $ruta !== '' ? realpath($ruta) : false;
+                $base = str_replace('\\', '/', $real !== false ? $real : $ruta);
+                $base = PHP_OS_FAMILY === 'Windows' ? strtolower($base) : $base;
+            }
+        }
+    }
+    $url = rtrim((string) cb_config('public_base_url'), '/');
+    return hash('sha256', json_encode(['motor' => $motor, 'base' => $base, 'url' => $url], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
 }
 
 function cb_rba_fiesta_actual(PDO $pdo, int $id): ?array
@@ -157,15 +219,23 @@ function cb_rba_invitacion_actual(PDO $pdo, int $id): ?array
     return $fila ? cb_rba_normalizar_invitacion($fila) : null;
 }
 
-function cb_rba_leer(string $archivo): array
+/** Lee y valida el respaldo antes de mirar la base: formato, suma de integridad y entorno. */
+function cb_rba_leer(string $archivo, PDO $pdo): array
 {
     $datos = is_file($archivo) ? json_decode((string) file_get_contents($archivo), true) : null;
-    if (!is_array($datos) || ($datos['formato'] ?? '') !== CB_RBA_FORMATO
+    if (is_array($datos) && ($datos['formato'] ?? '') === CB_RBA_FORMATO_ANTERIOR) {
+        cb_rba_salir('El respaldo es del formato anterior (' . CB_RBA_FORMATO_ANTERIOR . '), sin huella del entorno, y ya no se acepta. '
+            . 'No se toca la base. Exportar de nuevo con esta versión del script (o recurrir al volcado de la base).');
+    }
+    if (!is_array($datos) || ($datos['formato'] ?? '') !== CB_RBA_FORMATO || !is_string($datos['entorno'] ?? null)
         || !is_array($datos['fiestas'] ?? null) || !is_array($datos['invitaciones'] ?? null)) {
         cb_rba_salir('El archivo no es un respaldo de rollback-adultos válido.');
     }
-    if (!hash_equals(cb_rba_suma($datos['fiestas'], $datos['invitaciones']), (string) ($datos['suma'] ?? ''))) {
-        cb_rba_salir('La suma del respaldo no coincide: el archivo fue modificado. No se toca la base.');
+    if (!hash_equals(cb_rba_suma($datos['fiestas'], $datos['invitaciones'], $datos['entorno']), (string) ($datos['suma'] ?? ''))) {
+        cb_rba_salir('La suma de integridad del respaldo no coincide: el archivo se dañó o fue modificado. No se toca la base.');
+    }
+    if (!hash_equals(cb_rba_entorno($pdo), $datos['entorno'])) {
+        cb_rba_salir('El respaldo es de otro entorno (otra base u otra URL pública): no corresponde a esta base. No se toca la base.');
     }
     return $datos;
 }
@@ -217,28 +287,40 @@ if ($modo === 'exportar') {
         $sql .= ' OR party_id IN (' . implode(',', array_map('intval', $ids)) . ')';
     }
     $invitaciones = array_map('cb_rba_normalizar_invitacion', $pdo->query($sql . ' ORDER BY id')->fetchAll(PDO::FETCH_ASSOC));
+    $entorno = cb_rba_entorno($pdo);
     $datos = [
         'formato' => CB_RBA_FORMATO,
         'creado' => $ahora,
+        'entorno' => $entorno,
         'fiestas' => $fiestas,
         'invitaciones' => $invitaciones,
-        'suma' => cb_rba_suma($fiestas, $invitaciones),
+        'suma' => cb_rba_suma($fiestas, $invitaciones, $entorno),
     ];
     // Primero el archivo (con 0600 y releído), después la suspensión: si el respaldo no quedó,
     // la base no se toca. `x` lo crea solo si no existe y no sigue un enlace puesto entre la
-    // validación y la escritura; el 0600 va antes del contenido.
+    // validación y la escritura; el 0600 va antes del contenido. El umask hace que nazca ya sin
+    // permisos para grupo y otros, aunque el chmod fallara (nota de la revisión B4).
     $json = json_encode($datos, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    umask(0077);
     $fh = @fopen($archivo, 'xb');
     if ($fh === false) {
         cb_rba_salir('No se pudo crear el respaldo (¿apareció otro archivo con ese nombre?). La base no se tocó.');
     }
     @chmod($archivo, 0600);
+    // En POSIX se comprueba sobre el archivo abierto (no por su nombre) que nadie más lo pueda
+    // leer. En Windows los bits de grupo y otros no existen y se omite.
+    $modoArchivo = fstat($fh)['mode'] ?? 0777;
+    if (PHP_OS_FAMILY !== 'Windows' && ($modoArchivo & 0077) !== 0) {
+        fclose($fh);
+        @unlink($archivo);   // vacío y recién creado por este script
+        cb_rba_salir(sprintf('El respaldo quedaría legible por grupo u otros (permisos %o). No se escribió y la base no se tocó.', $modoArchivo & 0777));
+    }
     $escritos = fwrite($fh, $json);
     $cerrado = fclose($fh);
     if ($escritos !== strlen($json) || !$cerrado) {
         cb_rba_salir('No se pudo escribir el respaldo. La base no se tocó.');
     }
-    cb_rba_leer($archivo);
+    cb_rba_leer($archivo, $pdo);
     try {
         $pdo->beginTransaction();
         $apagarFiesta = $pdo->prepare('UPDATE cc_parties SET active = 0, updated_at = ? WHERE id = ?');
@@ -270,13 +352,16 @@ if ($modo === 'exportar') {
     exit($nuevas === 0 ? 0 : 1);
 }
 
-$datos = cb_rba_leer($archivo);
+$datos = cb_rba_leer($archivo, $pdo);
 
 if ($modo === 'restaurar') {
     try {
         $pdo->beginTransaction();
-        // Antes de escribir nada: todas las filas del respaldo tienen que seguir ahí. Si el admin
-        // borró una durante el rollback, se restaura desde el respaldo completo de la base.
+        // Antes de escribir nada: todas las filas del respaldo tienen que seguir ahí y ser las
+        // mismas. Una fiesta se reconoce por id y slug; una invitación, por id y por la fiesta a
+        // la que pertenece (revisión B4, CX-28: con solo el id, un respaldo de otra base publicó
+        // la invitación de otra fiesta). El código anterior no cambia party_id, así que en un
+        // rollback normal siempre calza. Si algo falta o no calza, no se escribe nada.
         foreach ($datos['fiestas'] as $f) {
             $actual = cb_rba_fiesta_actual($pdo, (int) $f['id']);
             if ($actual === null || $actual['public_slug'] !== $f['public_slug']) {
@@ -284,8 +369,14 @@ if ($modo === 'restaurar') {
             }
         }
         foreach ($datos['invitaciones'] as $i) {
-            if (cb_rba_invitacion_actual($pdo, (int) $i['id']) === null) {
+            $actual = cb_rba_invitacion_actual($pdo, (int) $i['id']);
+            if ($actual === null) {
                 throw new RuntimeException('Falta la invitación ' . $i['id'] . '.');
+            }
+            $partyRespaldo = $i['party_id'] === null ? null : (int) $i['party_id'];
+            if ($actual['party_id'] !== $partyRespaldo) {
+                throw new RuntimeException('La invitación ' . $i['id'] . ' pertenece en esta base a otra fiesta (party_id '
+                    . var_export($actual['party_id'], true) . ' y no ' . var_export($partyRespaldo, true) . '): el respaldo no es de esta base.');
             }
         }
         $fiesta = $pdo->prepare('UPDATE cc_parties SET event_type = ?, birthday_age = ?, active = ?, theme_slug = ?, updated_at = ? WHERE id = ? AND public_slug = ?');

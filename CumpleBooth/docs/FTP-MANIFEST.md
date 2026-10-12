@@ -66,12 +66,17 @@ suspende antes, y se restaura exacto después. No se borra ninguna fila.
 `~/respaldos/rollback-adultos-AAAAMMDD-HHMM.json`):
 1. Con el código nuevo todavía arriba: `mkdir -p ~/respaldos && php rollback-adultos.php exportar F`. Guarda
    modalidad, edad, estado y temática de cada fiesta adulta y el estado de publicación de sus invitaciones (archivo
-   0600 con suma sha256) y recién entonces las suspende: fiesta `active=0`, invitación `archived`. Debe terminar con
-   código 0 y `adultas_activas_fuera_del_respaldo: 0`. Se niega, antes de escribir el respaldo o suspender nada,
-   si `F` ya existe o es un enlace, si su carpeta (por ruta real, con los enlaces resueltos) queda dentro de
-   `public_html` o dentro de cualquier repositorio Git (`.git` como carpeta o como archivo de worktree en ella o en
-   un padre: así queda fuera la raíz entera del repositorio público, `Docs/` incluida; en PROD no hay `.git` y
-   `~/respaldos` se acepta), o si el `lib.php` cargado ya es el anterior.
+   0600, nacido con umask 077, con suma sha256 de integridad, que no es una firma, y formato
+   `cumpleclick-rollback-adultos/2` con la huella del entorno: un hash del motor, del nombre de la base y de la URL
+   pública, nunca el DSN ni credenciales) y recién entonces las suspende: fiesta `active=0`, invitación `archived`.
+   Debe terminar con código 0 y `adultas_activas_fuera_del_respaldo: 0`. Se niega, antes de escribir el respaldo o
+   suspender nada, si `F` ya existe o es un enlace, si su carpeta (por ruta real, con los enlaces resueltos) queda
+   dentro de `public_html`, de cualquier webroot de la cuenta (un tramo `public_html`, `www` o `htdocs`, también
+   `domains/automatizatech.cl/public_html/`) o de cualquier repositorio Git (`.git` como carpeta o como archivo de
+   worktree en ella o en un padre: así queda fuera la raíz entera del repositorio público, `Docs/` incluida; en PROD
+   no hay `.git` y `~/respaldos` y `domains/cumpleclick.com/database/` se aceptan), si alguna carpeta padre no se
+   deja revisar, o si el `lib.php` cargado ya es el anterior. Si el PHP de consola tiene `open_basedir`, exportar
+   se niega sin leer ni escribir nada: correr `php -d open_basedir= rollback-adultos.php exportar F`.
 2. Restaurar `index.html` (sin borrar todavía los assets nuevos).
 3. Restaurar todos los consumidores: `admin/index.php`, `lib.invitations.php`, `lib.predictions.php`, `lib.rsvp.php`,
    `ver.php`, `invitacion.php`, `asistencia-papas.php`, `assets/invitation.js` y `data/themes.json`.
@@ -89,8 +94,10 @@ suspende antes, y se restaura exacto después. No se borra ninguna fila.
 2. Enseguida: `php rollback-adultos.php restaurar F`. Devuelve exactamente lo guardado (modalidad, edad, estado y
    temática de la fiesta; estado, fecha y autor de publicación y modalidad de la invitación), todo o nada, y lo
    comprueba. Lo editado a mano en otros campos durante el rollback (nombre, fecha, invitados, otras fiestas) se
-   conserva. Se niega con el código anterior arriba, con un respaldo alterado o si falta alguna fila; en ese caso no
-   escribe nada y se recurre al volcado. Es idempotente. Debe terminar con código 0 e `igual_al_respaldo: true`.
+   conserva. Se niega con el código anterior arriba, con un respaldo alterado, con uno de otro entorno (otra base u
+   otra URL pública), con uno del formato `/1`, si falta alguna fila o si alguna fiesta cambió de slug o alguna
+   invitación pertenece hoy a otra fiesta; en ese caso no escribe nada y se recurre al volcado. `comprobar` también
+   se niega con un respaldo de otro entorno o del formato `/1`. Es idempotente. Debe terminar con código 0 e `igual_al_respaldo: true`.
    Entre subir el código y restaurar, la fiesta adulta sigue inactiva y no abre: un hueco de minutos, sin datos perdidos.
 3. Verificar `api.php?p=<fiesta adulta>` con `event_type: adult_birthday` y su edad, la invitación adulta con
    «¿Vienes con alguien?», y que `php rollback-adultos.php comprobar F` sale 0.
@@ -102,6 +109,8 @@ invitación adulta da 404 sin textos infantiles, `rsvp-api.php` y `descargar-inv
 anterior reescribe al adulto como se esperaba; tras la vuelta, el adulto queda `adult_birthday`, 61, activo, con su
 temática e invitación publicada con la misma fecha y autor, y la infantil y el baby shower intactos, con lo editado
 durante el rollback conservado. Prueba permanente con el código actual: `tests/backend/rollback-adultos.php`.
+Repetido el mismo día con el formato `/2` de la revisión B4 (CX-26 a CX-29): 36 de 36 pasos PASS, y el script
+nuevo junto al `lib.php` anterior sigue pudiendo `comprobar`.
 **NOT_RUN:** la subida y bajada física por FTP/SSH, la base MySQL de PROD (el ensayo usa SQLite), los estados
 intermedios con archivos a medio subir, el volcado real y el tiempo real del hueco entre subir y restaurar.
 

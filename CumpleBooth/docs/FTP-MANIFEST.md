@@ -67,8 +67,11 @@ suspende antes, y se restaura exacto después. No se borra ninguna fila.
 1. Con el código nuevo todavía arriba: `mkdir -p ~/respaldos && php rollback-adultos.php exportar F`. Guarda
    modalidad, edad, estado y temática de cada fiesta adulta y el estado de publicación de sus invitaciones (archivo
    0600 con suma sha256) y recién entonces las suspende: fiesta `active=0`, invitación `archived`. Debe terminar con
-   código 0 y `adultas_activas_fuera_del_respaldo: 0`. Se niega si `F` ya existe, si queda dentro de `public_html` o si
-   el `lib.php` cargado ya es el anterior.
+   código 0 y `adultas_activas_fuera_del_respaldo: 0`. Se niega, antes de escribir el respaldo o suspender nada,
+   si `F` ya existe o es un enlace, si su carpeta (por ruta real, con los enlaces resueltos) queda dentro de
+   `public_html` o dentro de cualquier repositorio Git (`.git` como carpeta o como archivo de worktree en ella o en
+   un padre: así queda fuera la raíz entera del repositorio público, `Docs/` incluida; en PROD no hay `.git` y
+   `~/respaldos` se acepta), o si el `lib.php` cargado ya es el anterior.
 2. Restaurar `index.html` (sin borrar todavía los assets nuevos).
 3. Restaurar todos los consumidores: `admin/index.php`, `lib.invitations.php`, `lib.predictions.php`, `lib.rsvp.php`,
    `ver.php`, `invitacion.php`, `asistencia-papas.php`, `assets/invitation.js` y `data/themes.json`.

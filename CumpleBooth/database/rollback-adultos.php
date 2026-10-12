@@ -22,7 +22,8 @@
  *
  * Lo que el admin cambie a mano durante el rollback en otros campos (nombre, fecha, invitados)
  * se conserva: solo se restauran los campos que el código anterior corrompe o que este script
- * suspende. No borra filas. El archivo de respaldo no puede quedar dentro de la web.
+ * suspende. No borra filas. El archivo de respaldo no puede quedar dentro de la carpeta servida
+ * ni dentro de ningún repositorio Git (ver cb_rba_validar_ruta); se crea nuevo, nunca se pisa.
  */
 if (PHP_SAPI !== 'cli') {
     exit(2);
@@ -56,22 +57,56 @@ if ($modo !== 'comprobar' && !$codigoNuevo) {
     cb_rba_salir("El lib.php cargado es el anterior (no conoce adult_birthday). '$modo' se corre con el código nuevo arriba.");
 }
 
-/** El respaldo no puede quedar donde la web lo sirva ni en el repositorio (que es público). */
-function cb_rba_validar_ruta(string $archivo): void
+/**
+ * El respaldo trae slugs y estados de fiestas reales (revisión B3 de Codex, CX-25). Se niega,
+ * antes de escribir nada y antes de suspender filas, si la carpeta destino:
+ *   1. está dentro de la carpeta servida: el padre real de `../public` (en PROD `public_html`,
+ *      porque `public` es el enlace a `public_html/app`; en local, `CumpleBooth/`);
+ *   2. está dentro de cualquier repositorio Git: ella o alguno de sus padres tiene `.git`, sea
+ *      carpeta (checkout normal) o archivo (worktree o submódulo). Así queda fuera la raíz Git
+ *      entera, `Docs/` incluida, y no solo el subproyecto. Un .gitignore no basta: no impide
+ *      versionar el archivo ni le da privacidad.
+ * Enlaces: la carpeta se compara por su ruta real (realpath resuelve los enlaces de todos sus
+ * tramos) y se escribe en esa ruta real; el nombre final no puede ser un enlace, ni siquiera roto,
+ * porque la escritura lo seguiría hacia otra carpeta. Tampoco puede existir ya.
+ * Si al subir por los padres no aparece `.git` (PROD no tiene), la búsqueda termina en la raíz
+ * del sistema sin error. Devuelve la ruta real del archivo a crear.
+ */
+function cb_rba_validar_ruta(string $archivo): string
 {
     $dir = realpath(dirname($archivo));
     if ($dir === false || !is_dir($dir)) {
         cb_rba_salir('No existe la carpeta del archivo de respaldo.');
     }
+    $nombre = basename($archivo);
+    if ($nombre === '' || $nombre === '.' || $nombre === '..') {
+        cb_rba_salir('Falta el nombre del archivo de respaldo.');
+    }
+    $comparable = static fn(string $ruta): string => rtrim(str_replace('\\', '/', strtolower($ruta)), '/') . '/';
     $publico = realpath(__DIR__ . '/../public');
-    $prohibido = $publico !== false ? dirname($publico) : false;   // public_html en PROD; la carpeta del proyecto en local
-    if ($prohibido !== false) {
-        $a = rtrim(str_replace('\\', '/', strtolower($dir)), '/') . '/';
-        $b = rtrim(str_replace('\\', '/', strtolower($prohibido)), '/') . '/';
-        if (str_starts_with($a, $b)) {
-            cb_rba_salir('El respaldo no puede quedar dentro de ' . $prohibido . ': usar una carpeta privada (p. ej. ~/respaldos).');
+    $servida = $publico !== false ? dirname($publico) : false;   // public_html en PROD; la carpeta del proyecto en local
+    if ($servida !== false && str_starts_with($comparable($dir), $comparable($servida))) {
+        cb_rba_salir('El respaldo no puede quedar dentro de la carpeta servida ' . $servida . ': usar una carpeta privada (p. ej. ~/respaldos).');
+    }
+    for ($carpeta = $dir; ; $carpeta = $padre) {
+        $git = $carpeta . DIRECTORY_SEPARATOR . '.git';
+        if (file_exists($git) || is_link($git)) {
+            cb_rba_salir('El respaldo no puede quedar dentro del repositorio Git de ' . $carpeta
+                . ': usar una carpeta privada fuera de todo repositorio (p. ej. ~/respaldos).');
+        }
+        $padre = dirname($carpeta);
+        if ($padre === $carpeta) {
+            break;   // raíz del sistema: no hay repositorio arriba
         }
     }
+    $destino = $dir . DIRECTORY_SEPARATOR . $nombre;
+    if (is_link($destino)) {
+        cb_rba_salir('El archivo de respaldo es un enlace: la escritura lo seguiría a otra carpeta. Elegir otro nombre.');
+    }
+    if (file_exists($destino)) {
+        cb_rba_salir('El archivo ya existe: no se sobrescribe un respaldo. Elegir otro nombre.');
+    }
+    return $destino;
 }
 
 function cb_rba_normalizar_fiesta(array $f): array
@@ -171,10 +206,8 @@ $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 $ahora = gmdate('Y-m-d H:i:s');
 
 if ($modo === 'exportar') {
-    cb_rba_validar_ruta($archivo);
-    if (file_exists($archivo)) {
-        cb_rba_salir('El archivo ya existe: no se sobrescribe un respaldo. Elegir otro nombre.');
-    }
+    // La ruta se valida antes de leer, escribir o suspender cualquier cosa.
+    $archivo = cb_rba_validar_ruta($archivo);
     $fiestas = array_map('cb_rba_normalizar_fiesta', $pdo->query(
         "SELECT id, public_slug, event_type, birthday_age, active, theme_slug FROM cc_parties WHERE event_type = 'adult_birthday' ORDER BY id"
     )->fetchAll(PDO::FETCH_ASSOC));
@@ -192,12 +225,19 @@ if ($modo === 'exportar') {
         'suma' => cb_rba_suma($fiestas, $invitaciones),
     ];
     // Primero el archivo (con 0600 y releído), después la suspensión: si el respaldo no quedó,
-    // la base no se toca.
+    // la base no se toca. `x` lo crea solo si no existe y no sigue un enlace puesto entre la
+    // validación y la escritura; el 0600 va antes del contenido.
     $json = json_encode($datos, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-    if (file_put_contents($archivo, $json, LOCK_EX) !== strlen($json)) {
-        cb_rba_salir('No se pudo escribir el respaldo. La base no se tocó.');
+    $fh = @fopen($archivo, 'xb');
+    if ($fh === false) {
+        cb_rba_salir('No se pudo crear el respaldo (¿apareció otro archivo con ese nombre?). La base no se tocó.');
     }
     @chmod($archivo, 0600);
+    $escritos = fwrite($fh, $json);
+    $cerrado = fclose($fh);
+    if ($escritos !== strlen($json) || !$cerrado) {
+        cb_rba_salir('No se pudo escribir el respaldo. La base no se tocó.');
+    }
     cb_rba_leer($archivo);
     try {
         $pdo->beginTransaction();

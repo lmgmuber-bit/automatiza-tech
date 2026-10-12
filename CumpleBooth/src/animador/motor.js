@@ -13,7 +13,10 @@
  *  - abrir un juego siempre empieza una ronda nueva, aunque no tenga tarjetas (Beso al blanco):
  *    lo anotado en el juego anterior no bloquea el primer punto del siguiente;
  *  - un juego con `preparacion` (Tribunal) no se abre hasta que el animador confirme que la
- *    tiene lista; la confirmación es un sí/no, nunca las respuestas.
+ *    tiene lista; la confirmación es un sí/no, nunca las respuestas;
+ *  - un juego `conCategorias` (¿Quién es más venezolano?) sale «Todas mezcladas»: nunca dos
+ *    tarjetas seguidas de la misma categoría mientras queden de otras (van por turno), y la de
+ *    `cierre` (Canta conmigo) espera al final. El animador puede elegir una sola categoría; sin repetir igual.
  * Todo es estado plano y serializable. Lo que se guarda en sessionStorage pasa por
  * `serializarSesion` y vuelve por `restaurarSesion`, que descarta cualquier forma incompleta.
  */
@@ -78,24 +81,50 @@ export function nuevaSesion({ nivel = 'coqueto', equipos = [] } = {}) {
     agotado: false,
     usadas: {}, // { [juegoId]: ids ya mostrados en esta partida }
     preparados: [], // ids de juegos cuya preparación confirmó el animador
+    categorias: {}, // { [juegoId]: categoría elegida } en juegos con categorías; sin clave = «Todas»
+    categoria: null, // la categoría elegida del juego abierto (null = «Todas»)
+    categoriaAgotada: false, // la categoría elegida ya no tiene tarjetas, pero el mazo sí
+    catDe: null, // { [id]: categoría } del juego abierto, solo si tiene categorías
+    ordenCats: [], // desempate entre categorías, barajado al abrir el juego
   }
 }
 
 const usadasDe = (sesion, juegoId) => (sesion.usadas && sesion.usadas[juegoId]) || []
 
+/** Las categorías del juego con tarjetas en el nivel, en el orden del catálogo. */
+export function categoriasDelNivel(juego, nivel) {
+  if (!juego?.conCategorias) return []
+  return [...new Set(cartasDelNivel(juego, nivel).map((c) => c.categoria).filter(Boolean))]
+}
+
 /**
- * El orden del mazo. Un juego `porRondas` (¿Quién es más venezolano?) se baraja dentro de cada
- * categoría y las rondas quedan en el orden del catálogo; los demás se barajan enteros.
+ * El mazo barajado. En un juego con categorías se baraja también, y el orden en que salen lo decide
+ * `siguiente` tarjeta a tarjeta (así sigue mezclado aunque el animador elija una categoría un rato).
  */
 export function ordenarMazo(juego, cartas, rng = Math.random) {
-  if (!juego?.porRondas) return barajar(cartas.map((c) => c.id), rng)
-  const rondas = new Map()
-  for (const c of cartas) {
-    const k = c.categoria || ''
-    if (!rondas.has(k)) rondas.set(k, [])
-    rondas.get(k).push(c.id)
-  }
-  return [...rondas.values()].flatMap((ids) => barajar(ids, rng))
+  return barajar(cartas.map((c) => c.id), rng)
+}
+
+/**
+ * Qué tarjeta del mazo sale ahora, en un juego con categorías. Con una categoría elegida, la primera
+ * de esa categoría (-1 si ya no queda). En «Todas», por turno: la categoría que sigue a la de la
+ * tarjeta anterior en `ordenCats` (barajado al abrir) y que todavía tenga tarjetas. Así se pasa por
+ * todas antes de repetir, y nunca salen dos seguidas mientras queden de otras. La de cierre solo
+ * sale cuando no queda ninguna otra.
+ */
+function indiceSiguiente(sesion, cierre) {
+  const { mazo, catDe } = sesion
+  if (sesion.categoria) return mazo.findIndex((id) => catDe[id] === sesion.categoria)
+  const anterior = sesion.carta ? catDe[sesion.carta] : null
+  const quedan = new Set(mazo.map((id) => catDe[id]))
+  const orden = sesion.ordenCats || []
+  const desde = orden.indexOf(anterior) + 1
+  const turno = orden.map((_, i) => orden[(desde + i) % orden.length])
+  const k = turno.find((x) => quedan.has(x) && x !== anterior && x !== cierre)
+    ?? turno.find((x) => quedan.has(x) && x !== cierre)
+    ?? turno.find((x) => quedan.has(x))
+  const i = k === undefined ? 0 : mazo.findIndex((id) => catDe[id] === k)
+  return i < 0 ? 0 : i
 }
 
 /**
@@ -105,24 +134,71 @@ export function ordenarMazo(juego, cartas, rng = Math.random) {
  */
 export function abrirJuego(sesion, juego, rng = Math.random) {
   const usadas = new Set(usadasDe(sesion, juego.id))
-  const ids = ordenarMazo(juego, cartasDelNivel(juego, sesion.nivel).filter((c) => !usadas.has(c.id)), rng)
-  const base = { ...sesion, juego: juego.id, mazo: ids, carta: null, revelada: false, agotado: false, rondaInicio: sesion.ronda + 1 }
+  const delNivel = cartasDelNivel(juego, sesion.nivel)
+  const ids = ordenarMazo(juego, delNivel.filter((c) => !usadas.has(c.id)), rng)
+  const base = {
+    ...sesion, juego: juego.id, mazo: ids, carta: null, revelada: false, agotado: false, rondaInicio: sesion.ronda + 1,
+    categoria: null, categoriaAgotada: false, catDe: null, ordenCats: [], cierre: null,
+  }
+  if (juego.conCategorias) {
+    const cats = categoriasDelNivel(juego, sesion.nivel)
+    const guardada = sesion.categorias?.[juego.id]
+    base.catDe = Object.fromEntries(juego.cartas.map((c) => [c.id, c.categoria || '']))
+    base.ordenCats = barajar(cats, rng)
+    base.cierre = juego.cierre || null
+    base.categoria = cats.includes(guardada) ? guardada : null
+  }
   if (juego.sinCartas) return { ...base, ronda: sesion.ronda + 1 }
   const s = siguiente(base)
-  // Agotado al entrar: igual es una ronda nueva, para que los botones de puntos no hereden la anterior.
-  return s.agotado ? { ...s, ronda: sesion.ronda + 1 } : s
+  // Sin tarjeta al entrar (agotado): igual es una ronda nueva, para que los puntos no hereden la anterior.
+  return s.carta ? s : { ...s, ronda: sesion.ronda + 1 }
 }
 
 /** Siguiente tarjeta (o la primera). Una ronda nueva por tarjeta, para el control de puntos. */
 export function siguiente(sesion) {
   if (!sesion.mazo.length) {
-    return { ...sesion, carta: null, revelada: false, agotado: true }
+    return { ...sesion, carta: null, revelada: false, agotado: true, categoriaAgotada: false }
   }
-  const [carta, ...resto] = sesion.mazo
+  const i = sesion.catDe ? indiceSiguiente(sesion, sesion.cierre) : 0
+  if (i < 0) {
+    // La categoría elegida se acabó; quedan de otras. La tarjeta anterior ya salió.
+    return { ...sesion, carta: null, revelada: false, agotado: false, categoriaAgotada: true }
+  }
+  const carta = sesion.mazo[i]
+  const resto = sesion.mazo.filter((_, k) => k !== i)
   const usadas = sesion.juego
     ? { ...(sesion.usadas || {}), [sesion.juego]: [...usadasDe(sesion, sesion.juego), carta] }
     : sesion.usadas || {}
-  return { ...sesion, carta, mazo: resto, usadas, revelada: false, ronda: sesion.ronda + 1, agotado: false }
+  return { ...sesion, carta, mazo: resto, usadas, revelada: false, ronda: sesion.ronda + 1, agotado: false, categoriaAgotada: false }
+}
+
+/**
+ * El animador elige una categoría (o «Todas», con null). Si la tarjeta en pantalla no es de esa
+ * categoría, sale una que sí; la que estaba vuelve al mazo si nadie anotó puntos ni se reveló,
+ * para que cambiar de chip no gaste tarjetas.
+ */
+export function elegirCategoria(sesion, categoria) {
+  if (!sesion.catDe) return sesion
+  const cat = categoria || null
+  const categorias = { ...(sesion.categorias || {}) }
+  if (cat) categorias[sesion.juego] = cat
+  else delete categorias[sesion.juego]
+  let s = { ...sesion, categoria: cat, categorias }
+  const actual = s.carta ? s.catDe[s.carta] : null
+  if (s.carta && (!cat || actual === cat)) return { ...s, categoriaAgotada: false }
+  if (s.carta && !s.revelada && !s.puntos.some((p) => p.ronda === s.ronda)) {
+    const usadas = { ...(s.usadas || {}), [s.juego]: usadasDe(s, s.juego).filter((id) => id !== s.carta) }
+    s = { ...s, mazo: [...s.mazo, s.carta], usadas }
+  }
+  return siguiente(s)
+}
+
+/** Cuántas tarjetas quedan por categoría en el juego abierto. */
+export function pendientesPorCategoria(sesion) {
+  const cuenta = {}
+  if (!sesion.catDe) return cuenta
+  for (const id of sesion.mazo) cuenta[sesion.catDe[id]] = (cuenta[sesion.catDe[id]] || 0) + 1
+  return cuenta
 }
 
 /** Ronda nueva sin tarjeta (juegos físicos como Beso al blanco: cada lanzamiento es una ronda). */
@@ -142,8 +218,14 @@ export function reiniciarMazo(sesion, juego, rng = Math.random) {
 
 /** Bajar (o subir) el nivel: si la tarjeta en pantalla queda sobre el techo, se descarta. */
 export function cambiarNivel(sesion, nivel, juego) {
-  const s = { ...sesion, nivel: NIVELES.includes(nivel) ? nivel : sesion.nivel }
+  let s = { ...sesion, nivel: NIVELES.includes(nivel) ? nivel : sesion.nivel }
   if (!juego) return s
+  // Si la categoría elegida no tiene tarjetas en el nivel nuevo, se vuelve a «Todas».
+  if (s.categoria && !categoriasDelNivel(juego, s.nivel).includes(s.categoria)) {
+    const categorias = { ...(s.categorias || {}) }
+    delete categorias[juego.id]
+    s = { ...s, categoria: null, categorias, categoriaAgotada: false }
+  }
   const permitidas = new Set(cartasDelNivel(juego, s.nivel).map((c) => c.id))
   const mazo = s.mazo.filter((id) => permitidas.has(id))
   const actualFuera = s.carta && !permitidas.has(s.carta)
@@ -205,8 +287,8 @@ export function yaAnoto(sesion, equipo) {
  * Nunca lo que se dijo en la ronda ni respuestas.
  */
 export function serializarSesion(sesion) {
-  const { nivel, equipos, puntos, ronda, usadas = {}, preparados = [] } = sesion
-  return { v: VERSION_GUARDADO, nivel, equipos, puntos, ronda, usadas, preparados }
+  const { nivel, equipos, puntos, ronda, usadas = {}, preparados = [], categorias = {} } = sesion
+  return { v: VERSION_GUARDADO, nivel, equipos, puntos, ronda, usadas, preparados, categorias }
 }
 
 const entero = (n, min, max = Number.MAX_SAFE_INTEGER) => Number.isInteger(n) && n >= min && n <= max
@@ -220,7 +302,7 @@ const esObjetoPlano = (o) => o !== null && typeof o === 'object' && !Array.isArr
  */
 export function restaurarSesion(datos) {
   if (!esObjetoPlano(datos) || datos.v !== VERSION_GUARDADO) return null
-  const { nivel, equipos, puntos, ronda, usadas, preparados } = datos
+  const { nivel, equipos, puntos, ronda, usadas, preparados, categorias = {} } = datos
   if (!NIVELES.includes(nivel)) return null
   if (!Array.isArray(equipos) || equipos.length < 2 || equipos.length > 4) return null
   if (!equipos.every((e) => typeof e === 'string' && e.trim() && e.length <= 64)) return null
@@ -233,6 +315,9 @@ export function restaurarSesion(datos) {
   }
   if (!esObjetoPlano(usadas) || !Object.values(usadas).every(listaDeTextos)) return null
   if (!listaDeTextos(preparados)) return null
+  // La categoría elegida por juego (12-oct). Las partidas guardadas antes no la traen: vale {}.
+  if (!esObjetoPlano(categorias) || !Object.entries(categorias).every(([k, v]) =>
+    k.length <= 64 && typeof v === 'string' && v.length > 0 && v.length <= 64)) return null
   return {
     ...nuevaSesion({ nivel, equipos }),
     equipos: [...equipos],
@@ -241,5 +326,6 @@ export function restaurarSesion(datos) {
     rondaInicio: ronda,
     usadas: Object.fromEntries(Object.entries(usadas).map(([k, l]) => [k, [...l]])),
     preparados: [...preparados],
+    categorias: { ...categorias },
   }
 }

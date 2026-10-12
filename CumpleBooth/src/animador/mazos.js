@@ -295,15 +295,18 @@ export const JUEGOS = [
     ],
   },
   {
-    // Contenido del equipo (12-oct), sin preguntas de ningún programa. Las tarjetas van por rondas
-    // (`porRondas`): se barajan dentro de cada categoría y «Canta conmigo» queda al final.
+    // Contenido del equipo (12-oct), sin preguntas de ningún programa. Con categorías
+    // (`conCategorias`): salen «Todas mezcladas», sin dos seguidas de la misma categoría, y el
+    // animador puede elegir una sola con los chips. «Canta conmigo» es el cierre (`cierre`): en
+    // «Todas» sale al final, o cuando el animador toca su chip.
     // «Canta conmigo» solo nombra la canción: la tablet no muestra letras.
     id: 'mas-venezolano',
     nombre: '¿Quién es más venezolano?',
     emoji: '🫓', // una arepa: la bandera sale como «VE» en Windows
     segundos: 0,
     puntos: 'acierto',
-    porRondas: true,
+    conCategorias: true,
+    cierre: 'Canta conmigo',
     instrucciones: 'Concurso de cultura venezolana entre dos equipos. Lee la pregunta: el primer equipo que grita la respuesta correcta se lleva el punto. Si nadie sabe, toca «Revelar respuesta». En «Chile o Venezuela», el equipo dice cómo se dice en el otro país.',
     premio: 'El equipo más venezolano',
     nota: 'Las respuestas las ve solo quien conduce: aparecen al tocar «Revelar respuesta». En «Canta conmigo» la tablet solo nombra la canción.',
@@ -657,11 +660,12 @@ const GUIAS = {
       'Lee la pregunta en voz alta. La respuesta la ves solo tú, al tocar «Revelar respuesta».',
       'El primer equipo que grita la respuesta correcta se lleva el punto.',
       'Si nadie sabe, toca «Revelar respuesta» y pasa a la siguiente.',
-      'Las rondas van en orden: Comida, Palabras, Tele y reinas, Música, País, Chile o Venezuela y Retos.',
+      'Por defecto salen «Todas» mezcladas: cada tarjeta es de una categoría distinta a la anterior.',
+      'Con los botones de arriba de la tarjeta eliges una sola categoría (por ejemplo, «Chile o Venezuela»); «Todas» vuelve a mezclar. Ninguna tarjeta se repite, y si una categoría se acaba la tablet te avisa.',
       'En los RETO no hay respuesta: el punto lo decide el aplauso del público.',
       'En las tarjetas 🎵, pon el tema en el parlante o pídeselo al DJ: la app no trae audio.',
       'En las tarjetas con imagen, toca «Mostrar la imagen» para que todos la vean; otro toque la cierra.',
-      'Cierre «Canta conmigo»: nombras la canción, todos la cantan y gana el equipo que la cante más fuerte.',
+      'Cierre «Canta conmigo»: en «Todas» sale al final, o tócalo cuando quieras. Nombras la canción, todos la cantan y gana el equipo que la cante más fuerte.',
     ],
     duracion: '10 a 15 minutos.',
     jugadores: 'Todos, en dos equipos.',

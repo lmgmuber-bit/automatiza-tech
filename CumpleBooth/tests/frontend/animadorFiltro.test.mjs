@@ -6,6 +6,7 @@ import { readFile } from 'node:fs/promises'
 import {
   NIVELES, abrirJuego, alternativaDisponible, anotar, cartasDelNivel, juegosActivos, juegosDelNivel,
   nivelesDelJuego, nuevaSesion, ordenarMazo, pasar, restaurarSesion, serializarSesion, siguiente, marcador,
+  categoriasDelNivel, elegirCategoria, pendientesPorCategoria, cambiarNivel,
 } from '../../src/animador/motor.js'
 import { JUEGOS, PASO_ESTA } from '../../src/animador/mazos.js'
 import { rellenar } from '../../src/cumpleAdulto.js'
@@ -122,12 +123,13 @@ test('Yo nunca: 16 tarjetas, regla del sorbo con o sin alcohol y nadie obligado'
   assert.doesNotMatch(yn.instrucciones, /no hay que beber/)
 })
 
-test('¿Quién es más venezolano?: rondas en orden, respuestas ocultas, niveles y sin letras', () => {
+test('¿Quién es más venezolano?: categorías, respuestas ocultas, niveles y puntaje', () => {
   const ve = JUEGOS.find((j) => j.id === 'mas-venezolano')
   assert.equal(ve.puntos, 'acierto')
-  assert.equal(ve.porRondas, true)
+  assert.equal(ve.conCategorias, true)
+  assert.equal(ve.cierre, 'Canta conmigo')
   const orden = ['Comida', 'Palabras', 'Tele y reinas', 'Música', 'País', 'Chile o Venezuela', 'Retos', 'Canta conmigo']
-  assert.deepEqual([...new Set(ve.cartas.map((c) => c.categoria))], orden)
+  assert.deepEqual(categoriasDelNivel(ve, 'sinverguenza'), orden)
   // Todas las preguntas traen respuesta, salvo «Canta conmigo», los RETO y la imagen del personaje
   // (su respuesta la elige Luis junto con la imagen).
   for (const c of ve.cartas) {
@@ -145,20 +147,119 @@ test('¿Quién es más venezolano?: rondas en orden, respuestas ocultas, niveles
   assert.ok(!cartasDelNivel(ve, 'coqueto').includes(echale))
   assert.ok(!cartasDelNivel(ve, 'picante').includes(jala))
   assert.ok(cartasDelNivel(ve, 'sinverguenza').includes(jala))
-  // Rondas: barajado dentro de cada una, y en el orden del catálogo.
-  const mazo = ordenarMazo(ve, cartasDelNivel(ve, 'sinverguenza'), fijo)
-  const cats = mazo.map((id) => ve.cartas.find((c) => c.id === id).categoria)
-  const corridas = cats.filter((c, i) => i === 0 || c !== cats[i - 1])
-  assert.deepEqual(corridas, orden)
-  let s = abrirJuego(nuevaSesion({ nivel: 'coqueto', equipos: ['Los de allá', 'Los de acá'] }), ve, fijo)
-  assert.equal(ve.cartas.find((c) => c.id === s.carta).categoria, 'Comida')
   // Un punto por respuesta, uno por equipo y ronda; «Paso esta» no castiga.
+  let s = abrirJuego(nuevaSesion({ nivel: 'coqueto', equipos: ['Los de allá', 'Los de acá'] }), ve, fijo)
   s = anotar(anotar(s, 1, 1), 1, 1)
   s = pasar(s)
   assert.deepEqual(marcador(s), [0, 1])
-  // Los demás juegos siguen barajándose enteros, igual que antes.
+  // Los juegos sin categorías no tienen selector y siguen barajándose enteros.
   const swing = JUEGOS.find((j) => j.id === 'swing')
+  assert.deepEqual(categoriasDelNivel(swing, 'sinverguenza'), [])
   assert.equal(ordenarMazo(swing, swing.cartas, fijo).length, swing.cartas.length)
+  assert.deepEqual(categoriasDelNivel(JUEGOS.find((j) => j.id === 'venezolano-politica'), 'sinverguenza'), [])
+})
+
+// Generador fijo distinto por semilla, para probar varios barajados.
+const semilla = (n) => () => ((n = (n * 1103515245 + 12345) % 2147483648) / 2147483648)
+const catDe = (juego, id) => juego.cartas.find((c) => c.id === id).categoria
+
+test('«Todas»: nunca dos seguidas de la misma categoría mientras queden de otras, y Canta conmigo al cierre', () => {
+  const ve = JUEGOS.find((j) => j.id === 'mas-venezolano')
+  for (const nivel of NIVELES) {
+    for (let n = 1; n <= 12; n++) {
+      let s = abrirJuego(nuevaSesion({ nivel, equipos: ['A', 'B'] }), ve, semilla(n))
+      const salidas = []
+      while (s.carta) {
+        // Lo que quedaba en el mazo ANTES de esta tarjeta, para saber si había alternativa.
+        salidas.push(catDe(ve, s.carta))
+        s = n % 2 ? siguiente(s) : pasar(s)
+      }
+      const total = cartasDelNivel(ve, nivel).length
+      assert.equal(salidas.length, total, `${nivel}/${n}: todas salen una vez`)
+      assert.equal(s.agotado, true)
+      // Canta conmigo solo cuando ya no queda nada más.
+      const primeraCanta = salidas.indexOf('Canta conmigo')
+      assert.ok(salidas.slice(primeraCanta).every((c) => c === 'Canta conmigo'), `${nivel}/${n}: cierre al final`)
+      // Sin dos seguidas iguales mientras quedaban otras (fuera del cierre).
+      for (let i = 1; i < primeraCanta; i++) {
+        const quedaban = new Set(salidas.slice(i, primeraCanta))
+        if (quedaban.size > 1) assert.notEqual(salidas[i], salidas[i - 1], `${nivel}/${n}: posición ${i}`)
+      }
+      // Van por turno: las primeras tarjetas pasan por todas las categorías antes de repetir una.
+      const vuelta = categoriasDelNivel(ve, nivel).filter((c) => c !== 'Canta conmigo').length
+      assert.equal(new Set(salidas.slice(0, vuelta)).size, vuelta, `${nivel}/${n}: una vuelta completa`)
+      // Las primeras cinco ya cambian de categoría en cada tarjeta.
+      const cinco = salidas.slice(0, 5)
+      assert.ok(cinco.every((c, i) => i === 0 || c !== cinco[i - 1]), cinco.join(' > '))
+    }
+  }
+})
+
+test('elegir categoría: solo salen de esa, sin repetir; agotada avisa y «Todas» sigue', () => {
+  const ve = JUEGOS.find((j) => j.id === 'mas-venezolano')
+  let s = abrirJuego(nuevaSesion({ nivel: 'picante', equipos: ['A', 'B'] }), ve, semilla(7))
+  const primera = s.carta
+  s = elegirCategoria(s, 'Chile o Venezuela')
+  assert.equal(catDe(ve, s.carta), 'Chile o Venezuela')
+  // La tarjeta que estaba en pantalla, sin puntos ni revelar, vuelve al mazo: cambiar de chip no gasta.
+  assert.ok(s.mazo.includes(primera))
+  assert.ok(!s.usadas['mas-venezolano'].includes(primera))
+  const chile = cartasDelNivel(ve, 'picante').filter((c) => c.categoria === 'Chile o Venezuela').length
+  const vistas = [s.carta]
+  for (let i = 1; i < chile; i++) { s = siguiente(s); vistas.push(s.carta); assert.equal(catDe(ve, s.carta), 'Chile o Venezuela') }
+  assert.equal(new Set(vistas).size, chile)
+  assert.equal(pendientesPorCategoria(s)['Chile o Venezuela'] || 0, 0)
+  // Agotada: sin tarjeta, con aviso, sin dar por agotado el juego.
+  s = pasar(s)
+  assert.equal(s.carta, null)
+  assert.equal(s.categoriaAgotada, true)
+  assert.equal(s.agotado, false)
+  // Volver a «Todas» sigue con el resto, sin repetir ninguna de las ya vistas.
+  s = elegirCategoria(s, null)
+  assert.ok(s.carta && !vistas.includes(s.carta))
+  assert.equal(s.categoriaAgotada, false)
+  // Elegir otra con la tarjeta ya revelada: esa sí cuenta como usada.
+  s = elegirCategoria(revelarYDejar(s), 'Comida')
+  assert.equal(catDe(ve, s.carta), 'Comida')
+  const usadas = s.usadas['mas-venezolano']
+  assert.equal(new Set(usadas).size, usadas.length, 'ninguna tarjeta se usa dos veces')
+})
+const revelarYDejar = (s) => ({ ...s, revelada: true })
+
+test('la categoría elegida se guarda en la sesión y se valida al restaurar (CX-18)', () => {
+  const ve = JUEGOS.find((j) => j.id === 'mas-venezolano')
+  let s = abrirJuego(nuevaSesion({ nivel: 'coqueto', equipos: ['A', 'B'] }), ve, fijo)
+  s = elegirCategoria(s, 'Tele y reinas')
+  const datos = JSON.parse(JSON.stringify(serializarSesion(s)))
+  assert.deepEqual(datos.categorias, { 'mas-venezolano': 'Tele y reinas' })
+  const r = restaurarSesion(datos)
+  assert.deepEqual(r.categorias, { 'mas-venezolano': 'Tele y reinas' })
+  // Al volver a abrir el juego, sigue en esa categoría.
+  const otra = abrirJuego(r, ve, semilla(3))
+  assert.equal(otra.categoria, 'Tele y reinas')
+  assert.equal(catDe(ve, otra.carta), 'Tele y reinas')
+  // Partidas guardadas antes del 12-oct, sin la clave: valen.
+  const vieja = { ...datos }; delete vieja.categorias
+  assert.deepEqual(restaurarSesion(vieja).categorias, {})
+  // Formas raras: se descarta la partida entera, como el resto de CX-18.
+  for (const mala of [[], 'Comida', { 'mas-venezolano': 7 }, { 'mas-venezolano': '' }, { 'mas-venezolano': 'x'.repeat(65) }]) {
+    assert.equal(restaurarSesion({ ...datos, categorias: mala }), null, JSON.stringify(mala))
+  }
+  // Una categoría guardada que no existe en el nivel se ignora: «Todas».
+  const rara = restaurarSesion({ ...datos, categorias: { 'mas-venezolano': 'No existe' } })
+  assert.equal(abrirJuego(rara, ve, fijo).categoria, null)
+})
+
+test('cambiar de nivel a uno sin la categoría elegida vuelve a «Todas»', () => {
+  const ve = JUEGOS.find((j) => j.id === 'mas-venezolano')
+  // Una categoría que solo exista desde Picante no la hay; se prueba con una ficticia.
+  const juego = { ...ve, cartas: [...ve.cartas, { id: 'zz1', tono: 'sinverguenza', texto: 'x', respuesta: 'y', categoria: 'Solo atrevida' }] }
+  let s = abrirJuego(nuevaSesion({ nivel: 'sinverguenza', equipos: ['A', 'B'] }), juego, fijo)
+  s = elegirCategoria(s, 'Solo atrevida')
+  assert.equal(s.carta, 'zz1')
+  s = cambiarNivel(s, 'coqueto', juego)
+  assert.equal(s.categoria, null)
+  assert.ok(s.carta && s.carta !== 'zz1')
 })
 
 test('venezolano: dos RETO sin respuesta, Kino Táchira y la edición política aparte y apagable', () => {

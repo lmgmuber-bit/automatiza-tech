@@ -193,7 +193,8 @@ test('CX-07: Tribunal exige confirmar la preparación (mínimo 6) y ofrece La co
   // Lo guardado es solo el sí del animador: ids de juegos, nada de respuestas.
   const guardado = serializarSesion(s)
   assert.deepEqual(guardado.preparados, ['tribunal'])
-  assert.deepEqual(Object.keys(guardado).sort(), ['equipos', 'nivel', 'preparados', 'puntos', 'ronda', 'usadas', 'v'])
+  // `categorias` (12-oct): solo el nombre de la categoría elegida por juego, nunca respuestas.
+  assert.deepEqual(Object.keys(guardado).sort(), ['categorias', 'equipos', 'nivel', 'preparados', 'puntos', 'ronda', 'usadas', 'v'])
   assert.equal(necesitaPreparacion(restaurarSesion(JSON.parse(JSON.stringify(guardado))), tribunal), false)
 })
 

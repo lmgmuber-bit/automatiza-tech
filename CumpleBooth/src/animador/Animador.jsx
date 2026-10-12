@@ -2,7 +2,8 @@ import React, { useCallback, useEffect, useId, useMemo, useRef, useState } from 
 import { rellenar } from '../cumpleAdulto.js'
 import { EQUIPOS_SUGERIDOS, JUEGOS, NIVEL_TEXTO, PASO_ESTA } from './mazos.js'
 import {
-  NIVELES, abrirJuego, alternativaDisponible, anotar, cambiarNivel, cartasDelNivel, confirmarPreparacion,
+  NIVELES, abrirJuego, alternativaDisponible, anotar, cambiarNivel, cartasDelNivel, categoriasDelNivel, confirmarPreparacion,
+  elegirCategoria, pendientesPorCategoria,
   deshacer, ganadores, juegosActivos, juegosDelNivel, marcador, necesitaPreparacion, nivelesDelJuego, nuevaRonda,
   nuevaSesion, pasar, reiniciarMazo, restaurarSesion, revelar, serializarSesion, siguiente, yaAnoto,
 } from './motor.js'
@@ -439,6 +440,9 @@ function Ronda({ sesion, setSesion, juego, t, onVolver, onInfo, baseImagenes = '
     bloqueo.current = ahora
     fn()
   }
+  const categorias = categoriasDelNivel(juego, sesion.nivel)
+  const pendientes = pendientesPorCategoria(sesion)
+  const sinTarjeta = sesion.agotado || sesion.categoriaAgotada
   const valores = juego.puntos === 'rubrica' ? [1, 2, 3] : juego.puntos === 'lanzamiento' ? [1, 2, 3] : juego.puntos === 'acierto' ? [1] : []
   const ultimo = sesion.puntos[sesion.puntos.length - 1]
   return (
@@ -450,6 +454,20 @@ function Ronda({ sesion, setSesion, juego, t, onVolver, onInfo, baseImagenes = '
       </div>
       <p className="anim-instr">{t(juego.instrucciones)}</p>
       {juego.nota && <p className="anim-nota">{t(juego.nota)}</p>}
+      {categorias.length > 1 && (
+        // Elegir categoría (¿Quién es más venezolano?): «Todas» mezcla; una sola, hasta que se cambie.
+        <div className="anim-cats" role="group" aria-label="Categoría de las tarjetas">
+          {[null, ...categorias].map((k) => {
+            const activa = (sesion.categoria || null) === k
+            return (
+              <button key={k || 'todas'} type="button" className={`anim-chip anim-cat${activa ? ' is-on' : ''}`}
+                aria-pressed={activa} onClick={una(() => setSesion((s) => elegirCategoria(s, k)))}>
+                {k || 'Todas'}{k && <small className="anim-cat__n" aria-label={`quedan ${pendientes[k] || 0}`}>{pendientes[k] || 0}</small>}
+              </button>
+            )
+          })}
+        </div>
+      )}
 
       {juego.sinCartas ? (
         <div className="anim-carta anim-carta--fisico">Lanzamiento {sesion.ronda - (sesion.rondaInicio || sesion.ronda) + 1}</div>
@@ -457,6 +475,11 @@ function Ronda({ sesion, setSesion, juego, t, onVolver, onInfo, baseImagenes = '
         <div className="anim-carta">
           <p>Se acabaron las tarjetas de este nivel.</p>
           <button type="button" className="cta" onClick={una(() => setSesion((s) => reiniciarMazo(s, juego)))}>Barajar de nuevo</button>
+        </div>
+      ) : sesion.categoriaAgotada ? (
+        <div className="anim-carta" role="status">
+          <p className="anim-carta__agotada">Ya salieron todas las de {sesion.categoria}.</p>
+          <button type="button" className="cta" onClick={una(() => setSesion((s) => elegirCategoria(s, null)))}>Volver a «Todas»</button>
         </div>
       ) : carta && juego.privado ? (
         <CartaPrivada llave={`${carta.id}|${sesion.nivel}`} texto={t(carta.texto)} />
@@ -502,8 +525,8 @@ function Ronda({ sesion, setSesion, juego, t, onVolver, onInfo, baseImagenes = '
           <button type="button" className="cta" onClick={una(() => setSesion(nuevaRonda))}>Siguiente lanzamiento ➜</button>
         ) : (
           <>
-            <button type="button" className="cta" disabled={sesion.agotado} onClick={una(() => setSesion(siguiente))}>Siguiente ➜</button>
-            <button type="button" className="cta ghost" disabled={sesion.agotado} onClick={una(() => setSesion(pasar))}>🙅 Paso esta</button>
+            <button type="button" className="cta" disabled={sinTarjeta} onClick={una(() => setSesion(siguiente))}>Siguiente ➜</button>
+            <button type="button" className="cta ghost" disabled={sinTarjeta} onClick={una(() => setSesion(pasar))}>🙅 Paso esta</button>
           </>
         )}
         <button type="button" className="cta ghost" onClick={onVolver}>☰ Otros juegos</button>

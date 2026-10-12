@@ -3339,6 +3339,18 @@ body {
   border: 0; background: rgba(25, 18, 24, 0.94); cursor: zoom-out;
 }
 .anim-imagen-grande img { display: block; width: 100%; height: 100%; object-fit: contain; }
+/* Selector de categoría (¿Quién es más venezolano?): una fila con scroll horizontal propio, para
+   que en 375 px no empuje la tarjeta hacia abajo. Botones de 44 px como mínimo. */
+.anim-cats {
+  display: flex; flex-wrap: nowrap; gap: 8px;
+  width: 100%; max-width: 100%;
+  overflow-x: auto; overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch;
+  padding: 4px 6px 10px;
+  scrollbar-width: thin;
+}
+.anim-cat { flex: 0 0 auto; min-height: 44px; white-space: nowrap; display: inline-flex; align-items: center; gap: 6px; }
+.anim-cat__n { min-width: 1.6em; padding: 1px 6px; font-size: 0.8em; background: #191218; color: #FFF0D4; border-radius: 999px; }
+.anim-carta__agotada { margin: 0; font: 800 clamp(17px, 4.2cqw, 24px) 'Baloo 2', system-ui, sans-serif; color: #191218; }
 /* RETO del juego venezolano: va dentro de la tarjeta crema, así que no usa el blanco de las notas. */
 .anim-carta .anim-nota--reto { color: #7A0039; text-shadow: none; }
 

@@ -83,12 +83,22 @@ se rebaraja solo a pedido, «Paso esta» sin castigo, un punto por equipo y rond
 marcador que sobrevive a un recargón (sessionStorage; nunca respuestas) y cierre con ganador y foto de los cómplices.
 Las preguntas del Tribunal no traen respuesta: la tiene la celebrada o el animador.
 
+**Apagar juegos por fiesta (12-oct, pedido de Luis).** En la ficha de una fiesta de adulto, el admin muestra «Juegos
+del animador» con una casilla por juego (marcada = disponible; todas por defecto, y se puede guardar con todas
+apagadas). `api.php` publica los apagados en `party.animadorApagados` (solo en adulto; `[]` si no hay) y el kiosco los
+saca de la lista. Se guardan en la columna `cc_parties.animador_apagados` (migración 027, antes que el código), que el
+código anterior no toca. El catálogo del servidor es `cb_animador_juegos()` en `lib.php`, copia de `mazos.js`: al
+agregar o renombrar un juego hay que cambiar los dos, y `tests/backend/animador-apagados.php` falla si se separan.
+
 ## Cómo probarlo en local
 
 - `node --test tests/frontend/cumpleAdulto.test.mjs` (textos y temática genérica).
 - `php tests/backend/cumple-adulto-http.php` (53: admin, api del kiosco, invitación, asistencia, fiesta infantil sin cambios y cruce
   en la base). Tiene dos controles en rojo hechos: con el tope viejo de 17 falla la edad, y sin la guarda de la narración
   falla «sin la narración de Alice».
+- `php tests/backend/animador-apagados.php` (juegos del animador apagados: admin, api, infantil y baby shower sin la
+  clave, duplicar, todos apagados, paridad con `mazos.js`, migración 027 y el `lib.php` de 188ba45 sin tocar la
+  columna). Control en rojo: sin la línea que publica `animadorApagados` falla «api.php publica party.animadorApagados».
 - El recorrido del kiosco se probó con Chrome sin ventana y una cámara falsa (retrato ficticio), en una SQLite temporal.
 
 ## No probado

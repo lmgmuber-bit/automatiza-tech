@@ -22,6 +22,7 @@ import { ajusteParaCara } from './caraAuto.js'
 import { detectarCara, prepararDetector } from './detectorCara.js'
 import { cabinaAdulto, partirEnLineas, textoCinta } from './cumpleAdulto.js'
 import { crearGuardadoUnaVez } from './guardarUnaVez.js'
+import { navAdulto } from './navAdulto.js'
 import Animador from './animador/Animador.jsx'
 import { PREDICTION_OPTIONS, createPredictionSubmissionToken, predictionLabels, predictionSummary, validPrediction } from './predictions.js'
 
@@ -229,6 +230,10 @@ function buildRuntime(party, theme, slug) {
     eventType: ['baby_shower', 'adult_birthday'].includes(party.event_type) ? party.event_type : 'child_birthday',
     // La edad de la celebrada. El servidor solo la manda en un cumpleaños de adulto.
     edad: Number.isInteger(party.edad) ? party.edad : null,
+    // Juegos del animador apagados desde el admin (solo fiestas adultas). Sin la clave, ninguno.
+    animadorApagados: Array.isArray(party.animadorApagados)
+      ? party.animadorApagados.filter((id) => typeof id === 'string')
+      : [],
   }
   MUSIC_ENABLED = CONFIG.musicaHabilitada && Boolean(CONFIG.audio.musica)
   CABINA_ADULTO = CONFIG.eventType === 'adult_birthday'
@@ -539,6 +544,8 @@ function BoothApp() {
   const [trasInvitados, setTrasInvitados] = useState('spinner')
   // La foto grupal: una sola captura, sin ajustes ni dueño.
   const [grupalFoto, setGrupalFoto] = useState(null)
+  // Adulto: la foto de todos se abre desde la bienvenida o desde los juegos; «Volver» vuelve ahí.
+  const [grupalDesde, setGrupalDesde] = useState(null)
   const [asomateElenco, setAsomateElenco] = useState([])
   const [asomateFotos, setAsomateFotos] = useState([])
   // La escena de Asomate recompuesta para el diploma. Se arma al guardar, con los recursos
@@ -665,6 +672,22 @@ function BoothApp() {
     setScreen('intro')
   }
 
+  // Adulto: «🏠 Inicio» desde cualquier pantalla, sin recargar. Además de reset() olvida la foto
+  // grupal y Asómate; la cámara se libera sola al desmontarse Capture.
+  const inicio = () => {
+    reset()
+    setGrupalFoto(null)
+    setGrupalDesde(null)
+    setAsomateElenco([])
+    setAsomateFotos([])
+    setTrasInvitados('spinner')
+  }
+  const nav = isAdulto ? navAdulto(screen, { hayFoto: Boolean(photo), grupalDesde }) : null
+  const volverAdulto = (destino) => {
+    if (destino === 'asomate-elegir') setAsomateFotos([])
+    go(destino)
+  }
+
   // toque 4x esquina sup-DERECHA => gestión de invitados (oculto para niños)
   const cornerTapRight = () => {
     tapCornerR.current += 1
@@ -688,8 +711,16 @@ function BoothApp() {
   }
 
   return (
-    <div className={`app${conVolver ? ' app--con-volver' : ''}`}>
+    <div className={`app${conVolver ? ' app--con-volver' : ''}${nav ? ' app--nav-adulto' : ''}`}>
       <div className="corner-hit-right" onClick={cornerTapRight} aria-hidden />
+
+      {nav && !nav.propia && (
+        <NavAdulto
+          onInicio={inicio}
+          volver={nav.volver}
+          onVolver={nav.volver ? () => volverAdulto(nav.volver.destino) : null}
+        />
+      )}
 
       {conVolver && !volverAbierto && (
         <button className="volver-btn" type="button" onClick={() => setVolverAbierto(true)} aria-label="Volver atrás">
@@ -749,6 +780,7 @@ function BoothApp() {
             startMusic()
             setInvitado('')
             setGrupalFoto(null)
+            setGrupalDesde('intro')
             go('grupal-capturar')
           }}
           onAsomate={() => {
@@ -837,7 +869,7 @@ function BoothApp() {
             // Cambiar la frase no obliga a repetir la foto (revisión B, CX-19).
             go(photo ? 'preview-adulto' : 'capture')
           }}
-          onCancel={reset}
+          onCancel={inicio}
         />
       )}
       {screen === 'animador' && CABINA_ADULTO && (
@@ -845,10 +877,13 @@ function BoothApp() {
           nombre={nombreEvento()}
           edad={CONFIG.edad}
           clave={STORAGE_KEY + '_animador'}
-          onSalir={reset}
+          apagados={CONFIG.animadorApagados}
+          baseImagenes={BASE + 'themes/' + THEME_SLUG + '/animador/'}
+          onSalir={inicio}
           onFotoGrupal={CONFIG.grupal ? () => {
             setInvitado('')
             setGrupalFoto(null)
+            setGrupalDesde('animador')
             go('grupal-capturar')
           } : null}
         />
@@ -863,12 +898,12 @@ function BoothApp() {
             setTitularRevista(titular)
             go(photo ? 'revista-preview' : 'revista-capturar')
           }}
-          onCancel={reset}
+          onCancel={inicio}
         />
       )}
       {screen === 'revista-capturar' && CABINA_ADULTO?.revista && (
         <Capture
-          onCancel={isAdulto ? reset : undefined}
+          onCancel={isAdulto ? inicio : undefined}
           onCapture={(dataUrl) => {
             setPhoto(dataUrl)
             go('revista-preview')
@@ -884,6 +919,7 @@ function BoothApp() {
             go('revista-capturar')
           }}
           onOtroTitular={() => go('revista-titular')}
+          onInicio={inicio}
           onSave={(composed) => {
             setResult(composed)
             go('qr')
@@ -901,6 +937,7 @@ function BoothApp() {
             go('capture')
           }}
           onOtraFrase={() => go('frase-adulto')}
+          onInicio={inicio}
           onSave={(composed) => {
             setResult(composed)
             go('qr')
@@ -938,7 +975,7 @@ function BoothApp() {
       )}
       {screen === 'capture' && (
         <Capture
-          onCancel={isAdulto ? reset : undefined}
+          onCancel={isAdulto ? inicio : undefined}
           onCapture={(dataUrl) => {
             setPhoto(dataUrl)
             go(isBabyShower ? 'prediction-reveal' : isAdulto ? 'preview-adulto' : (REVELACION_VIDEO ? 'revelacion' : 'preview'))
@@ -988,7 +1025,7 @@ function BoothApp() {
             setAsomateFotos([])
             go('asomate-capturar')
           }}
-          onCancel={() => go('intro')}
+          onCancel={isAdulto ? inicio : () => go('intro')}
         />
       )}
       {screen === 'asomate-capturar' && asomateElenco.length > 0 && (
@@ -1004,7 +1041,7 @@ function BoothApp() {
             </p>
           )}
           <Capture
-          onCancel={isAdulto ? reset : undefined}
+          onCancel={isAdulto ? inicio : undefined}
             key={asomateFotos.length}
             guia={asomateElenco[asomateFotos.length]}
             onCapture={(dataUrl) => {
@@ -1028,7 +1065,7 @@ function BoothApp() {
         <>
           <AvisoAcostar />
           <Capture
-          onCancel={isAdulto ? reset : undefined}
+          onCancel={isAdulto ? inicio : undefined}
             onCapture={(dataUrl) => {
               setGrupalFoto(dataUrl)
               go('grupal-preview')
@@ -1071,7 +1108,7 @@ function BoothApp() {
           src={urlDeVideo(CONFIG.videos.despedida)}
           skipLabel="Terminar"
           finale
-          onDone={reset}
+          onDone={isAdulto ? inicio : reset}
         />
       )}
     </div>
@@ -4374,6 +4411,13 @@ function Capture({ onCapture, guia, onCancel }) {
   // la cámara ya entrega imagen y cada vez que la caja cambia (giro de la tablet, barra del
   // navegador que aparece o se esconde).
   const [cajaGuia, setCajaGuia] = useState(null)
+  // La cuenta regresiva en curso. Si la pantalla se desmonta a medias (Inicio o Volver en un
+  // cumpleaños de adulto), se cancela y no dispara una foto sobre la pantalla siguiente.
+  const cuentaRef = useRef(null)
+  useEffect(() => () => {
+    if (cuentaRef.current) clearInterval(cuentaRef.current)
+    cuentaRef.current = null
+  }, [])
 
   useEffect(() => {
     if (!guia || !ready) return undefined
@@ -4511,16 +4555,19 @@ function Capture({ onCapture, guia, onCancel }) {
   }
 
   const startCountdown = () => {
+    if (cuentaRef.current) return
     let n = 3
     setCount(n)
     const iv = setInterval(() => {
       n -= 1
       if (n <= 0) {
         clearInterval(iv)
+        cuentaRef.current = null
         setCount(null)
         doCapture()
       } else setCount(n)
     }, 800)
+    cuentaRef.current = iv
   }
 
   return (
@@ -5331,6 +5378,28 @@ function composeRevista(fondoImg, fotoImg, titular) {
   return exportarFoto(c)
 }
 
+/**
+ * Barra de navegación del cumpleaños de adulto: arriba a la izquierda, «← Volver» (si hay un paso
+ * anterior) y «🏠 Inicio». La bienvenida tiene ahí la pantalla completa, pero en ella no se dibuja.
+ * `bloqueada`: la vista previa está guardando y no se puede salir a medias (CX-24).
+ */
+function NavAdulto({ onInicio, volver = null, onVolver = null, bloqueada = false }) {
+  return (
+    <nav className="nav-adulto" aria-label="Navegación del kiosco">
+      {volver && onVolver && (
+        <button type="button" className="nav-adulto__btn" onClick={onVolver} disabled={bloqueada}
+          aria-label={volver.aria} title={volver.aria}>
+          <span aria-hidden="true">←</span> Volver
+        </button>
+      )}
+      <button type="button" className="nav-adulto__btn" onClick={onInicio} disabled={bloqueada}
+        aria-label="Volver al inicio" title="Volver al inicio">
+        <span aria-hidden="true">🏠</span> Inicio
+      </button>
+    </nav>
+  )
+}
+
 // Guardar una sola vez y cancelar el paso al QR si la vista se va antes (revisión B2, CX-24).
 // Lo usan las vistas previas adultas y, desde el tercer ciclo, la infantil.
 // Mientras guarda, la vista no ofrece otra foto ni otro texto: la foto ya bajó y lo que
@@ -5351,7 +5420,7 @@ function useGuardarUnaVez() {
   return { guardando, guardar, libre }
 }
 
-function PreviewRevista({ photo, titular, onRetry, onOtroTitular, onSave }) {
+function PreviewRevista({ photo, titular, onRetry, onOtroTitular, onInicio, onSave }) {
   const [composed, setComposed] = useState(null)
   const confRef = useRef(null)
 
@@ -5390,6 +5459,7 @@ function PreviewRevista({ photo, titular, onRetry, onOtroTitular, onSave }) {
 
   return (
     <section className="screen preview">
+      {onInicio && <NavAdulto onInicio={libre(onInicio)} bloqueada={guardando} />}
       {composed ? (
         <img className="preview-img" src={composed} alt="Su portada de revista" />
       ) : (
@@ -5405,7 +5475,7 @@ function PreviewRevista({ photo, titular, onRetry, onOtroTitular, onSave }) {
   )
 }
 
-function PreviewAdulto({ photo, bgRef, frase, score, onRetry, onOtraFrase, onSave }) {
+function PreviewAdulto({ photo, bgRef, frase, score, onRetry, onOtraFrase, onInicio, onSave }) {
   const [composed, setComposed] = useState(null)
   const confRef = useRef(null)
 
@@ -5434,6 +5504,7 @@ function PreviewAdulto({ photo, bgRef, frase, score, onRetry, onOtraFrase, onSav
 
   return (
     <section className="screen preview">
+      {onInicio && <NavAdulto onInicio={libre(onInicio)} bloqueada={guardando} />}
       {composed ? (
         <img className="preview-img" src={composed} alt="Tu ficha de la fiesta" />
       ) : (

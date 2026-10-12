@@ -880,6 +880,102 @@ function cb_sanitize_party_games($raw): ?array
 }
 
 /**
+ * Juegos del animador del cumpleaños de adulto: id => nombre, en el orden del kiosco.
+ *
+ * Copia de `src/animador/mazos.js` (ids y nombres), que manda. El servidor la usa para validar
+ * lo que llega del admin y para dibujar sus casillas; `tests/backend/animador-apagados.php`
+ * falla si las dos listas se separan.
+ */
+function cb_animador_juegos(): array
+{
+    return [
+        'tribunal'       => 'Tribunal de la coquetería',
+        'piropos'        => 'Piropos bajo arresto',
+        'doble-sentido'  => 'Doble sentido, respuesta inocente',
+        'swing'          => 'La dueña y el dueño del swing',
+        'yo-nunca'       => 'Yo nunca: edición cómplices',
+        'verdad-o-shot'  => 'Verdad o shot',
+        'coartada'       => 'La coartada perfecta',
+        'caballeros'     => 'Caballeros bajo sospecha',
+        'divas'          => 'Divas con prontuario',
+        'indirectas'     => 'Duelo de indirectas',
+        'bolso'          => 'El bolso del delito',
+        'mimica'         => 'Adivina la frase con mímica',
+        'beso-al-blanco' => 'Beso al blanco',
+        'globo'          => 'El globo cómplice',
+        'mas-venezolano' => '¿Quién es más venezolano?',
+        'venezolano-politica' => '¿Quién es más venezolano? Edición política',
+        'expediente'     => 'Expediente «Se busca»',
+        'atrevidas'      => 'Preguntas sin vergüenza',
+    ];
+}
+
+/** Deja solo ids conocidos, sin repetir y en el orden del catálogo. */
+function cb_sanitize_animador_apagados($raw): array
+{
+    $pedidos = [];
+    foreach ((array) $raw as $id) {
+        if (is_string($id) || is_int($id)) {
+            $pedidos[trim((string) $id)] = true;
+        }
+    }
+    $out = [];
+    foreach (array_keys(cb_animador_juegos()) as $id) {
+        if (isset($pedidos[$id])) {
+            $out[] = $id;
+        }
+    }
+    return $out;
+}
+
+/**
+ * Juegos del animador apagados en una fiesta. [] si no hay ninguno, si la fiesta no existe,
+ * en modo json o si falta la migración 027 (en ese caso el kiosco muestra todos).
+ * Se lee aparte y no en cb_load_parties(): así una base sin la columna no tumba la carga.
+ */
+function cb_party_animador_apagados(string $publicSlug): array
+{
+    try {
+        $partyId = cb_party_db_id($publicSlug);
+        if ($partyId === null) {
+            return [];
+        }
+        $stmt = cb_pdo()->prepare('SELECT animador_apagados FROM cc_parties WHERE id = ?');
+        $stmt->execute([$partyId]);
+        $crudo = $stmt->fetchColumn();
+    } catch (Throwable $e) {
+        error_log('CumpleClick animador_apagados (¿falta la migración 027?): ' . $e->getMessage());
+        return [];
+    }
+    $lista = is_string($crudo) && $crudo !== '' ? json_decode($crudo, true) : null;
+    return is_array($lista) ? cb_sanitize_animador_apagados($lista) : [];
+}
+
+/**
+ * Guarda los juegos del animador apagados. Columna propia, fuera de cb_save_parties(): el
+ * código anterior (188ba45) no la conoce y por eso no la borra al guardar (plan de rollback).
+ */
+function cb_save_party_animador_apagados(string $publicSlug, array $ids): array
+{
+    if (cb_storage_mode() !== 'db') {
+        return ['ok' => false, 'errors' => ['Los juegos del animador requieren storage_mode=db.']];
+    }
+    $partyId = cb_party_db_id($publicSlug);
+    if ($partyId === null) {
+        return ['ok' => false, 'errors' => ['La fiesta no existe.']];
+    }
+    $limpios = cb_sanitize_animador_apagados($ids);
+    try {
+        $stmt = cb_pdo()->prepare('UPDATE cc_parties SET animador_apagados = ?, updated_at = ? WHERE id = ?');
+        $stmt->execute([$limpios ? json_encode($limpios) : null, gmdate('Y-m-d H:i:s'), $partyId]);
+    } catch (Throwable $e) {
+        error_log('CumpleClick guardar animador_apagados: ' . $e->getMessage());
+        return ['ok' => false, 'errors' => ['No se pudieron guardar los juegos del animador: falta aplicar la migración 027.']];
+    }
+    return ['ok' => true];
+}
+
+/**
  * Versión de los assets de una temática: el mtime más nuevo de su carpeta.
  *
  * Existe por el fantasma del cache: los archivos de temática se reemplazan
@@ -1408,6 +1504,8 @@ function cb_resolve_party(string $slugRaw): array
     // («69 y todavía doy guerra»). En una fiesta infantil no se publica, como hasta hoy.
     if ($eventType === 'adult_birthday') {
         $partyPayload['edad'] = isset($party['edad']) && $party['edad'] !== null ? (int) $party['edad'] : null;
+        // Juegos del animador que el admin apagó: el kiosco los saca de «Juegos de la fiesta».
+        $partyPayload['animadorApagados'] = cb_party_animador_apagados($slug);
     }
 
     // Juegos habilitados para ESTA fiesta (los marca Luis en el admin según el

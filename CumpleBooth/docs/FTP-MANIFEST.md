@@ -24,14 +24,19 @@ tanda. Los que sobren del build anterior se pueden borrar después.
 ## PENDIENTE 2026-10-11 — cumpleaños de adulto y temática Coquetería Pop (AT-CUMPLECLICK-026, LOCAL)
 
 Nada de esto está en PROD. Rama `claude/cumple-adulto-coqueteria` sobre `origin/main`. Detalle en
-`docs/CUMPLE-ADULTO-COQUETERIA.md`. **Sin migración** (`event_type` es VARCHAR(40) y `birthday_age` TINYINT).
-Requiere el go de Luis.
+`docs/CUMPLE-ADULTO-COQUETERIA.md`. La modalidad y la edad no llevan migración (`event_type` es VARCHAR(40) y
+`birthday_age` TINYINT). **Sí la lleva, desde el 12-oct, el apagado de juegos del animador: migración
+`027_animador_apagados`** (columna `cc_parties.animador_apagados`, TEXT NULL; el número 026 ya lo usa
+`026_modo_feria` en otras ramas). Va **antes** de subir `lib.php` y `admin/index.php` (paso 0b). Si por error se
+subiera el código antes, el kiosco igual abre (publica `animadorApagados: []`) y el admin avisa «falta aplicar la
+migración 027» al guardar una fiesta de adulto; nada se pierde en silencio. Requiere el go de Luis.
 
 Orden de subida (destino `app/`, origen `dist/` después de `npx vite build`):
 
 | # | Local | Destino PROD | Clase |
 |---|---|---|---|
 | 0 | `database/rollback-adultos.php` | `domains/cumpleclick.com/database/rollback-adultos.php` (privado, fuera de `public_html`; carga `../public/lib.php`, que allí es el enlace a `public_html/app`) | OBLIGATORIO, antes que todo: sin él no hay rollback sin pérdida. Solo CLI, nunca dentro de `app/` |
+| 0b | `database/migrations/027_animador_apagados.php` y `database/aplicar-027.php` | `domains/cumpleclick.com/database/` (privado, junto a las demás migraciones); después, por SSH: `php aplicar-027.php` (debe decir `applied 027_animador_apagados` o `skip`, y `cc_parties con animador_apagados: 0`) | OBLIGATORIO, antes del paso 2 |
 | 1 | `dist/themes/adulto-coqueteria-pop/fondo-sala.jpg`, `fondo-banner.jpg`, `fondo-grupal.jpg`, `fondo-revista.jpg` y la carpeta `asomate/` completa (15 archivos) | `app/themes/adulto-coqueteria-pop/` (carpeta nueva) | OBLIGATORIO |
 | 2 | `dist/lib.php` | `app/lib.php` | OBLIGATORIO, antes que los PHP de abajo (define `cb_party_event_type`, `cb_party_age_valid`, `cb_theme_is_adult`, `cb_theme_cabina_adulto`) |
 | 3 | `dist/lib.invitations.php`, `dist/lib.predictions.php`, `dist/lib.rsvp.php`, `dist/ver.php`, `dist/invitacion.php`, `dist/asistencia-papas.php` | `app/` | OBLIGATORIO |
@@ -61,6 +66,13 @@ lo deja como `child_birthday` con edad nula, porque el tope era 17 (`lib.php:577
 (`lib.php:614`). Además `active=0` no apaga la invitación: las páginas públicas solo miran `status='published'`, y el
 código anterior la mostraría con «Nombre del apoderado o familia» y «Nombre de los niños». Por eso se respalda y se
 suspende antes, y se restaura exacto después. No se borra ninguna fila.
+
+**Los juegos del animador apagados no necesitan nada en el rollback.** Viven en su propia columna
+(`animador_apagados`, migración 027), que el código anterior no lee ni escribe: su `cb_save_parties()` nombra las
+columnas una por una en el `UPDATE` y el `INSERT`. Probado con el `lib.php` de 188ba45 operado de verdad sobre la
+misma base: guarda todas las fiestas y la columna queda igual en todas (`tests/backend/animador-apagados.php`). No
+hay que revertir la migración al bajar el código; `027_animador_apagados.down.php` existe solo si se quisiera quitar
+la columna, y borra la lista de cada fiesta.
 
 **Rollback, en este orden** (por SSH, en `domains/cumpleclick.com/database/`; `F` es el archivo de respaldo, p. ej.
 `~/respaldos/rollback-adultos-AAAAMMDD-HHMM.json`):

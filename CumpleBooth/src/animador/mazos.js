@@ -11,10 +11,21 @@
  * Puntos: 'acierto' (1 por acierto), 'rubrica' (0 a 3: creatividad, consigna y gracia; nunca el
  * cuerpo ni el atractivo), 'lanzamiento' (1 a 3 según la zona), 'ninguno'.
  * Ninguna prueba exige contacto, besos, alcohol, desnudez ni contar cosas íntimas, y «Paso esta»
- * siempre está a mano.
+ * siempre está a mano. En «Yo nunca» y «Verdad o shot» el sorbo o el shot es de lo que cada uno
+ * quiera (con o sin alcohol) y nadie está obligado a tomar.
  */
 
-const c = (id, tono, texto, respuesta = '') => ({ id, tono, texto, respuesta })
+// `categoria`: la ronda de la tarjeta, visible sobre ella (por ahora solo ¿Quién es más venezolano?).
+// `tipo: 'reto'`: una prueba sin respuesta; el punto lo decide el aplauso y no hay nada que revelar.
+// `tipo: 'musica'` (con `pista`): quien conduce pone el tema en el parlante o se lo pide al DJ. La app
+// no trae ni reproduce audio, por derechos de autor.
+// `tipo: 'imagen'` (con `imagen`): la tablet la muestra a pantalla completa. El archivo se carga al
+// jugar desde themes/<temática>/animador/ y no va al repositorio público (ver .gitignore); si falta,
+// la tarjeta pide mostrarla desde el celular.
+const musica = (id, tono, texto, respuesta, categoria, pista) => ({ ...c(id, tono, texto, respuesta, categoria, 'musica'), pista })
+const imagen = (id, tono, texto, respuesta, categoria, archivo) => ({ ...c(id, tono, texto, respuesta, categoria, 'imagen'), imagen: archivo })
+const c = (id, tono, texto, respuesta = '', categoria = '', tipo = '') =>
+  ({ id, tono, texto, respuesta, ...(categoria ? { categoria } : {}), ...(tipo ? { tipo } : {}) })
 
 export const PASO_ESTA = 'Tú decides: juega o pasa esta.'
 
@@ -112,7 +123,9 @@ export const JUEGOS = [
     emoji: '🙈',
     segundos: 0,
     puntos: 'ninguno',
-    instrucciones: 'Todos sentados. Levanta «Culpable» o «Inocente». No hay que contar nada, no hay que beber, y siempre se puede pasar. La tablet no guarda quién levantó qué.',
+    // Quien lo ha hecho toma un sorbo de lo suyo (con o sin alcohol) o levanta «Culpable». Nadie
+    // está obligado a tomar (Luis, 12-oct).
+    instrucciones: 'Todos sentados. Quien lo ha hecho toma un sorbo de lo que esté tomando, con o sin alcohol, o levanta «Culpable». Nadie está obligado a tomar ni a contar nada, y siempre se puede pasar. La tablet no guarda quién hizo qué.',
     premio: 'Aquí nadie es santo',
     cartas: [
       c('yn1', 'picante', 'Yo nunca he practicado una mirada coqueta frente al espejo.'),
@@ -123,6 +136,46 @@ export const JUEGOS = [
       c('yn6', 'sinverguenza', 'Yo nunca he usado «me equivoqué de chat» como excusa.'),
       c('yn7', 'coqueto', 'Yo nunca me he demorado más eligiendo ropa que llegando a la fiesta.'),
       c('yn8', 'coqueto', 'Yo nunca he dicho «una canción más» y me quedé otra hora.'),
+      c('yn9', 'picante', 'Yo nunca he dicho «solo un ratito» y me quedé hasta que prendieron las luces.'),
+      c('yn10', 'picante', 'Yo nunca he puesto una canción con segundas intenciones.'),
+      c('yn11', 'picante', 'Yo nunca he ensayado una indirecta antes de mandarla.'),
+      c('yn12', 'picante', 'Yo nunca he guiñado un ojo y me salió un parpadeo raro.'),
+      c('yn13', 'sinverguenza', 'Yo nunca he bailado más pegado de lo que tenía planeado.'),
+      c('yn14', 'sinverguenza', 'Yo nunca he mandado un mensaje coqueto y después culpé al autocorrector.'),
+      c('yn15', 'sinverguenza', 'Yo nunca he dicho «ya no estoy para estas cosas» y me fui al final de la fiesta.'),
+      c('yn16', 'sinverguenza', 'Yo nunca he pedido «la última y nos vamos» más de tres veces en la misma noche.'),
+    ],
+  },
+  {
+    id: 'verdad-o-shot',
+    nombre: 'Verdad o shot',
+    emoji: '🥃',
+    segundos: 20,
+    puntos: 'acierto',
+    instrucciones: 'Una pregunta directa a un voluntario o al equipo: responde con la verdad o toma un shot de lo que quiera, con o sin alcohol, agua o jugo. Un punto por responder de verdad; el shot no suma. Nadie está obligado a tomar y «Paso esta» no tiene castigo.',
+    premio: 'Sin filtro y con estilo',
+    nota: 'Las preguntas son sobre uno mismo, nunca sobre otra persona con nombre.',
+    // Preguntas sobre la propia persona: gustos, fiestas, citas y coqueteo. Nada de salud,
+    // parejas ajenas ni datos íntimos reales.
+    cartas: [
+      c('vs01', 'coqueto', '¿Qué canción te hace bailar aunque nadie más esté bailando?'),
+      c('vs02', 'coqueto', '¿Cuál fue tu peor look para salir de fiesta?'),
+      c('vs03', 'coqueto', '¿Qué es lo más ridículo que has hecho para impresionar en una fiesta?'),
+      c('vs04', 'coqueto', '¿Cuál es tu excusa favorita para irte temprano de un carrete?'),
+      c('vs05', 'coqueto', '¿Qué canción cantas en la ducha como si fuera un concierto?'),
+      c('vs06', 'coqueto', '¿Cuál ha sido tu peor paso de baile en público?'),
+      c('vs07', 'picante', '¿Cuál ha sido tu cita más desastrosa?'),
+      c('vs08', 'picante', '¿Qué frase para coquetear usaste alguna vez y no funcionó?'),
+      c('vs09', 'picante', '¿Alguna vez dejaste un mensaje en visto para hacerte de rogar?'),
+      c('vs10', 'picante', '¿Qué es lo primero que miras cuando alguien te gusta?'),
+      c('vs11', 'picante', '¿Hasta dónde has revisado las redes de alguien antes de una cita?'),
+      c('vs12', 'picante', '¿Cuál es el piropo más raro que te han dicho?'),
+      c('vs13', 'sinverguenza', '¿Qué es lo más atrevido que has hecho en una pista de baile?'),
+      c('vs14', 'sinverguenza', '¿Alguna vez mandaste un mensaje coqueto al chat equivocado?'),
+      c('vs15', 'sinverguenza', '¿Qué canción pondrías para una noche de conquista?'),
+      c('vs16', 'sinverguenza', '¿Cuál es tu arma secreta para coquetear?'),
+      c('vs17', 'sinverguenza', 'Del 1 al 10, ¿qué nota le pones a tus besos? Defiende tu nota.'),
+      c('vs18', 'sinverguenza', '¿Qué es lo más loco que has hecho por una cita?'),
     ],
   },
   {
@@ -242,6 +295,128 @@ export const JUEGOS = [
     ],
   },
   {
+    // Contenido del equipo (12-oct), sin preguntas de ningún programa. Las tarjetas van por rondas
+    // (`porRondas`): se barajan dentro de cada categoría y «Canta conmigo» queda al final.
+    // «Canta conmigo» solo nombra la canción: la tablet no muestra letras.
+    id: 'mas-venezolano',
+    nombre: '¿Quién es más venezolano?',
+    emoji: '🫓', // una arepa: la bandera sale como «VE» en Windows
+    segundos: 0,
+    puntos: 'acierto',
+    porRondas: true,
+    instrucciones: 'Concurso de cultura venezolana entre dos equipos. Lee la pregunta: el primer equipo que grita la respuesta correcta se lleva el punto. Si nadie sabe, toca «Revelar respuesta». En «Chile o Venezuela», el equipo dice cómo se dice en el otro país.',
+    premio: 'El equipo más venezolano',
+    nota: 'Las respuestas las ve solo quien conduce: aparecen al tocar «Revelar respuesta». En «Canta conmigo» la tablet solo nombra la canción.',
+    cartas: [
+      c('ve01', 'coqueto', 'Pan navideño relleno de jamón, tocineta, pasas y aceitunas.', 'Pan de jamón', 'Comida'),
+      c('ve02', 'coqueto', 'Plato de Navidad envuelto en hoja de plátano.', 'La hallaca', 'Comida'),
+      c('ve03', 'coqueto', 'Arroz blanco, caraotas negras, carne mechada y tajadas.', 'Pabellón criollo', 'Comida'),
+      c('ve04', 'coqueto', 'Arepa de pollo con aguacate, bautizada por una Miss Mundo.', 'Reina pepiada (por Susana Duijm, Miss Mundo 1955)', 'Comida'),
+      c('ve05', 'coqueto', 'Palitos de queso envueltos en masa: ¿de qué ciudad dicen que vienen?', 'Los Teques (tequeños)', 'Comida'),
+      c('ve06', 'coqueto', 'Bebida espesa de arroz, leche y canela.', 'Chicha', 'Comida'),
+      c('ve07', 'coqueto', 'Chocolate en bolita con una avellana adentro.', 'Toronto', 'Comida'),
+      c('ve08', 'coqueto', 'Galleta de coco en paquetito.', 'Cocosette', 'Comida'),
+      c('ve09', 'coqueto', 'Pan relleno de jamón que se come en el desayuno.', 'Cachito', 'Comida'),
+      c('ve10', 'coqueto', 'Sándwich gigante de carne en pan largo, de carrito en la calle.', 'Pepito', 'Comida'),
+      c('ve11', 'coqueto', 'Refresco rojo de sabor «colita».', 'Frescolita', 'Comida'),
+      c('ve12', 'coqueto', 'Postre navideño oscuro con frutas confitadas y licor.', 'Torta negra', 'Comida'),
+      c('ve13', 'coqueto', '¿Qué es un «chamo»?', 'Un muchacho, un amigo', 'Palabras'),
+      c('ve14', 'coqueto', '«Esa fiesta estuvo burda de buena»: ¿qué es «burda»?', 'Mucho, muy', 'Palabras'),
+      c('ve15', 'coqueto', '¿Qué significa «¡Qué ladilla!»?', 'Qué fastidio, qué aburrido', 'Palabras'),
+      c('ve16', 'coqueto', '¿Qué es un «coroto»?', 'Una cosa, un objeto cualquiera', 'Palabras'),
+      c('ve17', 'coqueto', '«Esa chama es sifrina»: ¿qué es «sifrina»?', 'Pretenciosa, creída', 'Palabras'),
+      c('ve18', 'coqueto', '¿Qué es un «guayoyo»?', 'Café negro aguado', 'Palabras'),
+      c('ve19', 'coqueto', '¿Y un «marrón»?', 'Café con leche', 'Palabras'),
+      c('ve71', 'coqueto', '¿Qué hortaliza se usaba para decirle a los dólares?', 'Lechugas', 'Palabras'),
+      c('ve20', 'coqueto', '¿Qué es amanecer con «ratón»?', 'Con resaca', 'Palabras'),
+      c('ve21', 'coqueto', '«Ando pelando bola»: ¿qué significa?', 'Sin plata', 'Palabras'),
+      c('ve22', 'coqueto', '«Le está echando los perros»: ¿qué significa?', 'La está coqueteando (o lo está coqueteando)', 'Palabras'),
+      c('ve23', 'coqueto', '¿Qué es una «cuaima»?', 'Pareja muy celosa y mandona', 'Palabras'),
+      c('ve24', 'coqueto', '¿Qué es alguien «pavoso»?', 'Que trae mala suerte', 'Palabras'),
+      c('ve25', 'picante', '¿Qué significa «échale bolas»?', 'Ponle empeño, esfuérzate', 'Palabras'),
+      c('ve26', 'sinverguenza', '¿Qué es un «jala bolas»?', 'Un adulador', 'Palabras'),
+      c('ve27', 'coqueto', 'Programa de variedades de los sábados que lleva más de 50 años al aire.', 'Sábado Sensacional', 'Tele y reinas'),
+      c('ve28', 'coqueto', 'Programa de humor de RCTV con sketches y chistes de la semana.', 'Radio Rochela', 'Tele y reinas'),
+      c('ve29', 'coqueto', 'Telenovela de 1985 de RCTV con Jeannette Rodríguez.', 'Cristal', 'Tele y reinas'),
+      c('ve30', 'coqueto', 'Telenovela de 1992 con Coraima Torres que dio la vuelta al mundo.', 'Kassandra', 'Tele y reinas'),
+      c('ve31', 'coqueto', 'Telenovela de 1992 sobre la vida en Caracas: «Por estas…».', 'Por estas calles', 'Tele y reinas'),
+      c('ve32', 'coqueto', 'Primera venezolana en ganar Miss Universo (1979).', 'Maritza Sayalero', 'Tele y reinas'),
+      c('ve33', 'coqueto', 'Miss Universo 1981 que después fue alcaldesa de Chacao.', 'Irene Sáez', 'Tele y reinas'),
+      c('ve34', 'coqueto', 'Dos Miss Universo venezolanas seguidas, 2008 y 2009.', 'Dayana Mendoza y Stefanía Fernández', 'Tele y reinas'),
+      c('ve35', 'coqueto', '¿A quién le decían el «zar de la belleza» del Miss Venezuela?', 'Osmel Sousa', 'Tele y reinas'),
+      c('ve36', 'coqueto', 'Programa de humor «Bienvenidos»: ¿con qué actor?', 'Miguel Ángel Landa', 'Tele y reinas'),
+      c('ve72', 'picante', 'En la telenovela «Las Juanas», las hermanas tenían una marca de nacimiento en forma de pescado. ¿Dónde?', 'En la nalga', 'Tele y reinas'),
+      c('ve73', 'coqueto', '«¿Vas a seguir, …?»: completa la frase de fastidio de la telenovela.', 'Abigail', 'Tele y reinas'),
+      c('ve74', 'coqueto', 'Di el nombre de un archienemigo del Chapulín Colorado.', 'Tripaseca, Cuajináis, Rascabuches o Alma Negra (vale cualquiera)', 'Tele y reinas'),
+      c('ve75', 'coqueto', '¿Quién conducía «¿Cuánto vale el show?» en Venezuela?', 'Guillermo «Fantástico» González', 'Tele y reinas'),
+      c('ve76', 'coqueto', 'La promoción de Inter que costaba 99 bolívares: ¿cómo se llamaba?', '«Cachi Chen» (por «casi cien»)', 'Tele y reinas'),
+      // La respuesta la elige Luis junto con la imagen: hasta entonces la tarjeta no trae respuesta.
+      imagen('ve77', 'coqueto', '¿Cómo se llama este personaje?', '', 'Tele y reinas', 'personaje-1.jpg'),
+      c('ve37', 'coqueto', 'Canción llamada el «segundo himno nacional».', 'Alma llanera', 'Música'),
+      c('ve38', 'coqueto', '¿Quién cantaba «Caballo viejo»?', 'Simón Díaz', 'Música'),
+      c('ve39', 'coqueto', 'Género navideño que nace en el Zulia.', 'La gaita', 'Música'),
+      c('ve40', 'coqueto', 'El grupo de gaitas más famoso: el «grupo de los…».', 'Guaco', 'Música'),
+      c('ve41', 'coqueto', '¿A quién le dicen «El Puma»?', 'José Luis Rodríguez', 'Música'),
+      c('ve42', 'coqueto', '¿Quién es «el sonero del mundo»?', "Oscar D'León", 'Música'),
+      c('ve43', 'coqueto', '¿Quién compuso «El burrito sabanero»?', 'Hugo Blanco', 'Música'),
+      musica('ve78', 'coqueto', '¿De qué telenovela es este tema?', 'Por estas calles', 'Música', 'el tema de la telenovela «Por estas calles»'),
+      musica('ve79', 'coqueto', '¿De qué telenovela es este tema?', 'Kassandra', 'Música', 'el tema de «Kassandra»'),
+      c('ve44', 'coqueto', 'La caída de agua más alta del mundo.', 'Salto Ángel (Kerepakupai Merú), 979 m', 'País'),
+      c('ve45', 'coqueto', 'La montaña más alta de Venezuela.', 'Pico Bolívar', 'País'),
+      c('ve46', 'coqueto', 'Relámpagos que caen casi todas las noches sobre un río del Zulia.', 'Relámpago del Catatumbo', 'País'),
+      c('ve47', 'coqueto', 'La montaña que mira a Caracas.', 'El Ávila (Waraira Repano)', 'País'),
+      c('ve48', 'coqueto', 'Árbol nacional, florece amarillo.', 'Araguaney', 'País'),
+      c('ve49', 'coqueto', 'El ave nacional.', 'Turpial', 'País'),
+      c('ve50', 'coqueto', 'La rivalidad del béisbol: Leones del Caracas contra…', 'Navegantes del Magallanes', 'País'),
+      c('ve68', 'coqueto', 'Kino Táchira: ¿desde cuántos aciertos empezabas a ganar algo?', '12 aciertos (cuarta categoría; las categorías eran de 15, 14, 13 y 12)', 'País'),
+      c('ve80', 'coqueto', 'Completa el pregón del estadio de béisbol: «¡Papita, maní…!».', '«¡…tostón!»', 'País'),
+      c('ve81', 'coqueto', '¿Qué grita la Llorona?', '«¡Ay, mis hijos!»', 'País'),
+      c('ve51', 'coqueto', '«Cotufas»: ¿cómo se dice en Chile?', 'Cabritas', 'Chile o Venezuela'),
+      c('ve52', 'coqueto', '«Pitillo»: ¿cómo se dice en Chile?', 'Bombilla', 'Chile o Venezuela'),
+      c('ve53', 'coqueto', '«Cambur»: ¿cómo se dice en Chile?', 'Plátano', 'Chile o Venezuela'),
+      c('ve54', 'coqueto', '«Patilla»: ¿cómo se dice en Chile?', 'Sandía', 'Chile o Venezuela'),
+      c('ve55', 'coqueto', '«Parchita»: ¿cómo se dice en Chile?', 'Maracuyá', 'Chile o Venezuela'),
+      c('ve56', 'coqueto', '«Lechosa»: ¿cómo se dice en Chile?', 'Papaya', 'Chile o Venezuela'),
+      c('ve57', 'coqueto', '«Caraotas»: ¿cómo se dice en Chile?', 'Porotos negros', 'Chile o Venezuela'),
+      c('ve58', 'coqueto', '«Tetero»: ¿cómo se dice en Chile?', 'Mamadera', 'Chile o Venezuela'),
+      c('ve59', 'coqueto', '«Chamo»: ¿cómo se dice en Chile?', 'Cabro', 'Chile o Venezuela'),
+      c('ve60', 'coqueto', '«Burda»: ¿cómo se dice en Chile?', 'Caleta', 'Chile o Venezuela'),
+      c('ve61', 'coqueto', '«Ratón»: ¿cómo se dice en Chile?', 'Caña', 'Chile o Venezuela'),
+      c('ve62', 'coqueto', '«Echar los perros»: ¿cómo se dice en Chile?', 'Tirar los cortes', 'Chile o Venezuela'),
+      c('ve69', 'coqueto', 'RETO: canta el jingle de la leche Parmalat. El público decide si vale el punto.', '', 'Retos', 'reto'),
+      c('ve70', 'coqueto', 'RETO: imita al Silbón, el silbido del espanto llanero. Gana el que más asuste.', '', 'Retos', 'reto'),
+      c('ve82', 'coqueto', 'RETO: imita a Charly Mata. El público decide si vale el punto.', '', 'Retos', 'reto'),
+      c('ve63', 'coqueto', 'Todos a cantar «Alma llanera».', '', 'Canta conmigo'),
+      c('ve64', 'coqueto', 'Todos a cantar «Caballo viejo».', '', 'Canta conmigo'),
+      c('ve65', 'coqueto', 'Todos a cantar «El burrito sabanero».', '', 'Canta conmigo'),
+      c('ve66', 'coqueto', 'Todos a cantar una gaita de Guaco.', '', 'Canta conmigo'),
+      c('ve67', 'coqueto', 'Todos a cantar «Me fui» (Reymar Perdomo).', '', 'Canta conmigo'),
+    ],
+  },
+  {
+    // Aparte para poder apagarlo desde el admin si en la fiesta hay gente de los dos lados.
+    // «¡Venga por mí!»: la frase original (julio de 2024) iba dirigida a otra persona; la pregunta
+    // dice solo que se usó para burlarse. No cambiar esa redacción.
+    id: 'venezolano-politica',
+    nombre: '¿Quién es más venezolano? Edición política',
+    emoji: '🗳️',
+    segundos: 0,
+    puntos: 'acierto',
+    instrucciones: 'Preguntas de la vida política venezolana, con humor. Mismo juego: el primer equipo que grita la respuesta correcta se lleva el punto; si nadie sabe, toca «Revelar respuesta». Si alguien se incomoda, se pasa a otro juego.',
+    premio: 'El equipo más venezolano',
+    nota: 'Úsalo solo si el ambiente lo permite. Se apaga desde el admin.',
+    cartas: [
+      c('vp1', 'coqueto', '¿Cómo se llamaba el celular «hecho en Venezuela» que lanzó Chávez en 2009?', 'El Vergatario'),
+      c('vp2', 'coqueto', '¿Dónde dijo María Gabriela Chávez, con ironía, que tenía guardada la plata?', '«En una lata de galletas»'),
+      c('vp3', 'coqueto', '¿Qué palabra repetía Tibisay Lucena al anunciar los resultados del CNE?', '«Irreversible» (tendencia irreversible)'),
+      c('vp4', 'coqueto', '¿Cómo se llamaba la empresa de las máquinas de votación?', 'Smartmatic'),
+      c('vp5', 'coqueto', '¿Qué frase de Maduro usó Trump para burlarse de él tras su captura en enero de 2026?', '«¡Venga por mí!»'),
+      c('vp6', 'coqueto', '¿Cómo se llamaba el caballo de Henrique Salas Römer?', 'Frijolillo'),
+      c('vp7', 'coqueto', '¿Cuáles eran las tres frases de Juan Guaidó?', 'Cese de la usurpación, gobierno de transición y elecciones libres'),
+      imagen('vp8', 'coqueto', '¿De quién es esta firma?', 'Hugo Chávez', '', 'firma.jpg'),
+    ],
+  },
+  {
     id: 'expediente',
     nombre: 'Expediente «Se busca»',
     emoji: '📁',
@@ -281,6 +456,260 @@ JUEGOS.push({
     c('at12', 'sinverguenza', 'Anuncia tu llegada a la pista como si fueras una celebridad buscada.'),
   ],
 })
+
+/**
+ * Guía de cada juego para quien conduce: se abre con el botón ℹ️ de la lista y de la ronda.
+ * Resumen, pasos, duración aproximada, quiénes juegan, cómo se puntúa y qué preparar. Los niveles
+ * en que aparece no se escriben: salen de las tarjetas (`nivelesDelJuego` en motor.js).
+ */
+const GUIAS = {
+  tribunal: {
+    resumen: 'Los equipos compiten por quién conoce mejor los gustos de {nombre}.',
+    pasos: [
+      'Antes de la fiesta, confirma al menos seis respuestas con quien está de cumpleaños o con quien organiza.',
+      'Lee la pregunta en voz alta.',
+      'Cada equipo tiene 20 segundos para dar su respuesta.',
+      'Di la respuesta confirmada y anota un punto a cada equipo que acertó.',
+      'Si una pregunta no tiene respuesta confirmada, toca «Paso esta».',
+    ],
+    duracion: '10 a 15 minutos.',
+    jugadores: 'Todos, en 2 a 4 equipos.',
+    puntaje: '1 punto por acierto, por equipo y por pregunta.',
+    preparar: 'Mínimo seis respuestas confirmadas antes de la fiesta. La tablet solo guarda que las tienes, nunca las respuestas. Sin ellas, se juega La coartada perfecta.',
+  },
+  piropos: {
+    resumen: 'Cada equipo inventa un piropo con las dos palabras de la tarjeta.',
+    pasos: [
+      'Lee las dos palabras en voz alta.',
+      'Cada equipo elige a quien lo va a decir.',
+      'Máximo 15 segundos, a quien quiera recibirlo o a un personaje imaginario.',
+      'El tribunal (el público o quien conduce) absuelve con 0 a 3 puntos.',
+    ],
+    duracion: 'Unos 10 minutos.',
+    jugadores: 'Un voluntario por equipo en cada ronda.',
+    puntaje: '0 a 3 puntos: creatividad, que use las dos palabras y gracia. Nunca se puntúa el cuerpo ni el atractivo.',
+    preparar: 'Nada.',
+  },
+  'doble-sentido': {
+    resumen: 'Adivinanzas que suenan atrevidas pero tienen una respuesta inocente.',
+    pasos: [
+      'Lee la adivinanza en voz alta.',
+      'Cada equipo tiene 20 segundos para dar una sola respuesta.',
+      'Toca «Revelar respuesta» y anota un punto a quien acertó.',
+      'Si otra respuesta también tiene sentido, la puedes aceptar.',
+    ],
+    duracion: 'Unos 10 minutos.',
+    jugadores: 'Todos, por equipos.',
+    puntaje: '1 punto por acierto.',
+    preparar: 'Nada: la respuesta está en la tablet, tapada hasta que la reveles.',
+  },
+  swing: {
+    resumen: 'Duelo de baile corto con una consigna divertida.',
+    pasos: [
+      'Pide al DJ salsa, merengue o cumbia.',
+      'Lee la consigna en voz alta.',
+      'Turnos de 20 segundos, solos, en dúo o en equipo.',
+      'Se puede bailar sentado: brazos, hombros y cara.',
+      'El público o quien conduce da 0 a 3 puntos.',
+    ],
+    duracion: '10 a 15 minutos.',
+    jugadores: 'Quien quiera, solo, en dúo o en equipo.',
+    puntaje: '0 a 3 puntos: ritmo, creatividad y que cumpla la consigna. Nunca el cuerpo.',
+    preparar: 'Coordina con el DJ que tenga a mano salsa, merengue y cumbia.',
+  },
+  'yo-nunca': {
+    resumen: 'Se lee una frase «Yo nunca…» y quien lo ha hecho lo reconoce.',
+    pasos: [
+      'Todos sentados, cada uno con lo que esté tomando.',
+      'Lee la frase en voz alta.',
+      'Quien lo ha hecho toma un sorbo, con o sin alcohol, o levanta «Culpable».',
+      'Nadie está obligado a tomar ni a explicar nada, y siempre se puede pasar.',
+      'Toca «Siguiente» para la próxima frase.',
+    ],
+    duracion: '5 a 10 minutos.',
+    jugadores: 'Todos a la vez, sin equipos.',
+    puntaje: 'No se puntúa. La tablet no guarda quién hizo qué.',
+    preparar: 'Opcional: carteles «Culpable» e «Inocente». Que haya agua y bebidas sin alcohol a la vista.',
+  },
+  'verdad-o-shot': {
+    resumen: 'Una pregunta directa: se responde con la verdad o se toma un shot.',
+    pasos: [
+      'Pide un voluntario, o que el equipo elija a quien responde.',
+      'Lee la pregunta en voz alta.',
+      'Tiene 20 segundos: responde con la verdad o toma un shot de lo que quiera (con o sin alcohol, agua o jugo).',
+      'Si respondió de verdad, anota un punto a su equipo; el shot no suma.',
+      'Nadie está obligado a tomar ni a responder: «Paso esta» no tiene castigo.',
+    ],
+    duracion: '10 a 15 minutos.',
+    jugadores: 'Un voluntario por equipo en cada pregunta.',
+    puntaje: '1 punto por responder de verdad. 0 por el shot o por pasar.',
+    preparar: 'Vasos chicos y opciones sin alcohol (agua o jugo) a la vista, para que nadie tenga que pedirlas.',
+  },
+  coartada: {
+    resumen: 'Cada equipo defiende una situación absurda como si fuera su abogado.',
+    pasos: [
+      'Lee la situación y los tres objetos.',
+      'Inicia el cronómetro: 30 segundos para preparar la defensa.',
+      'Otros 30 segundos para convencer al tribunal.',
+      'El tribunal da 0 a 3 puntos.',
+      'Todo es inventado: nada de hechos reales de nadie.',
+    ],
+    duracion: 'Unos 10 minutos.',
+    jugadores: 'Un vocero por equipo.',
+    puntaje: '0 a 3 puntos: creatividad, que use los tres objetos y gracia.',
+    preparar: 'Nada. Es la alternativa del Tribunal cuando no hay respuestas confirmadas.',
+  },
+  caballeros: {
+    resumen: 'Actuaciones cortas y teatrales, pensadas para ellos y abiertas a todos.',
+    pasos: [
+      'Pide un voluntario.',
+      'Lee la actuación en voz alta.',
+      'Tiene 20 segundos para hacerla.',
+      'El público o quien conduce da 0 a 3 puntos.',
+    ],
+    duracion: '5 a 10 minutos.',
+    jugadores: 'Voluntarios, de a uno.',
+    puntaje: '0 a 3 puntos por gracia y personaje.',
+    preparar: 'Nada. Sin desvestirse ni besar a nadie.',
+  },
+  divas: {
+    resumen: 'Desfile o entrada de diva con una frase de teatro, pensado para ellas y abierto a todos.',
+    pasos: [
+      'Pide un voluntario.',
+      'Lee la frase en voz alta.',
+      '15 segundos de desfile, o entrada de diva sentada con manos y cara.',
+      'El público o quien conduce da 0 a 3 puntos.',
+    ],
+    duracion: '5 a 10 minutos.',
+    jugadores: 'Voluntarios, de a uno.',
+    puntaje: '0 a 3 puntos por actitud y gracia. No es concurso de belleza.',
+    preparar: 'Opcional: un espacio despejado para desfilar.',
+  },
+  indirectas: {
+    resumen: 'Duelo de respuestas con doble sentido simpático entre dos equipos.',
+    pasos: [
+      'Lee la frase en voz alta.',
+      'Un equipo responde con doble sentido en 15 segundos.',
+      'El otro equipo replica.',
+      'Tres intercambios por ronda; después anota 0 a 3 puntos a cada equipo.',
+    ],
+    duracion: 'Unos 10 minutos.',
+    jugadores: 'Dos equipos frente a frente.',
+    puntaje: '0 a 3 puntos por equipo al final de la ronda.',
+    preparar: 'Nada. Picardía sí, ataques personales no.',
+  },
+  bolso: {
+    resumen: 'Carrera por mostrar primero el objeto que pide la tarjeta.',
+    pasos: [
+      'Lee el objeto en voz alta.',
+      'El primer equipo que lo muestra gana el punto.',
+      'Vale un objeto propio o uno de la mesa de accesorios.',
+      'No se revisan bolsos ajenos ni teléfonos.',
+    ],
+    duracion: 'Unos 5 minutos.',
+    jugadores: 'Todos, por equipos.',
+    puntaje: '1 punto para el primer equipo que lo muestra.',
+    preparar: 'Recomendado: una mesa de accesorios (labial, peine, espejo, abanico, monedas, dulces) para que nadie dependa de su bolso.',
+  },
+  mimica: {
+    resumen: 'Un voluntario actúa una frase sin hablar y su equipo la adivina.',
+    pasos: [
+      'Pasa la tablet a quien actúa.',
+      'Mantiene apretada la tarjeta para ver la frase; al soltar, se tapa.',
+      'Tiene 30 segundos, sin hablar.',
+      'Vale adivinar la idea, no la frase exacta.',
+    ],
+    duracion: 'Unos 10 minutos.',
+    jugadores: 'Un actor por equipo en cada ronda; su equipo adivina.',
+    puntaje: '1 punto si su equipo adivina a tiempo.',
+    preparar: 'Nada. Solo quien actúa mira la tablet.',
+  },
+  'beso-al-blanco': {
+    resumen: 'Puntería: lanzar fichas con forma de beso a una diana de corazones.',
+    pasos: [
+      'Marca una línea de lanzamiento.',
+      'Cada equipo lanza tres fichas con la mano.',
+      'Anota 1, 2 o 3 puntos según la zona donde cayó.',
+      'Toca «Siguiente lanzamiento» para el próximo.',
+    ],
+    duracion: 'Unos 10 minutos.',
+    jugadores: 'Un lanzador por equipo en cada turno.',
+    puntaje: '1 a 3 puntos por lanzamiento, según la zona.',
+    preparar: 'Una diana de cartón con corazones y fichas con forma de beso.',
+  },
+  globo: {
+    resumen: 'Duplas llevan un globo hasta una marca sin usar las manos.',
+    pasos: [
+      'Arma duplas.',
+      'Llevan el globo entre las espaldas hasta la marca, sin correr. El contacto es voluntario.',
+      'Versión sin contacto: llevar el globo con dos abanicos sobre la mesa.',
+      'Usa el cronómetro; gana el mejor tiempo.',
+    ],
+    duracion: '5 a 10 minutos.',
+    jugadores: 'Duplas, una por equipo.',
+    puntaje: '1 punto para la dupla con el mejor tiempo.',
+    preparar: 'Globos inflados, una marca en el suelo y dos abanicos para la versión sin contacto.',
+  },
+  'mas-venezolano': {
+    resumen: 'Concurso de cultura venezolana entre dos equipos, con una ronda de palabras Chile-Venezuela.',
+    pasos: [
+      'Arma dos equipos (por ejemplo, «Los de allá» y «Los de acá», o «Cuarentones» contra «Chamos»).',
+      'Lee la pregunta en voz alta. La respuesta la ves solo tú, al tocar «Revelar respuesta».',
+      'El primer equipo que grita la respuesta correcta se lleva el punto.',
+      'Si nadie sabe, toca «Revelar respuesta» y pasa a la siguiente.',
+      'Las rondas van en orden: Comida, Palabras, Tele y reinas, Música, País, Chile o Venezuela y Retos.',
+      'En los RETO no hay respuesta: el punto lo decide el aplauso del público.',
+      'En las tarjetas 🎵, pon el tema en el parlante o pídeselo al DJ: la app no trae audio.',
+      'En las tarjetas con imagen, toca «Mostrar la imagen» para que todos la vean; otro toque la cierra.',
+      'Cierre «Canta conmigo»: nombras la canción, todos la cantan y gana el equipo que la cante más fuerte.',
+    ],
+    duracion: '10 a 15 minutos.',
+    jugadores: 'Todos, en dos equipos.',
+    puntaje: '1 punto por respuesta correcta.',
+    preparar: 'Si hay DJ, avísale para el cierre «Canta conmigo» y los temas de telenovela (o tenlos a mano en tu celular). La imagen del personaje la pone el organizador en el servidor; si no está, muéstrala desde tu celular.',
+  },
+  'venezolano-politica': {
+    resumen: 'Preguntas de la vida política venezolana, con humor.',
+    pasos: [
+      'Úsalo solo si el ambiente lo permite.',
+      'Lee la pregunta en voz alta. La respuesta la ves solo tú, al tocar «Revelar respuesta».',
+      'El primer equipo que grita la respuesta correcta se lleva el punto.',
+      'En la tarjeta de la firma, toca «Mostrar la imagen» para que todos la vean; otro toque la cierra.',
+      'Si alguien se incomoda, se pasa a otro juego.',
+    ],
+    duracion: 'Unos 5 a 10 minutos (ocho preguntas).',
+    jugadores: 'Todos, en dos equipos.',
+    puntaje: '1 punto por respuesta correcta.',
+    preparar: 'La imagen de la firma la pone el organizador en el servidor; si no está, muéstrala desde tu celular. Se apaga desde el admin si en la fiesta hay gente de los dos lados.',
+  },
+  expediente: {
+    resumen: 'Cierre: cada equipo inventa un cargo y una recompensa para el expediente de {nombre}.',
+    pasos: [
+      'Cada equipo escribe un cargo divertido y una recompensa.',
+      'Se leen tres o cuatro en voz alta.',
+      'Quien está de cumpleaños elige el ganador.',
+      'Después, la foto de todos los cómplices.',
+    ],
+    duracion: '5 a 10 minutos.',
+    jugadores: 'Todos, por equipos.',
+    puntaje: 'No se puntúa: quien está de cumpleaños elige el ganador.',
+    preparar: 'Papel y lápiz por equipo.',
+  },
+  atrevidas: {
+    resumen: 'Preguntas hipotéticas y atrevidas, nunca confesiones.',
+    pasos: [
+      'Lee la pregunta en voz alta.',
+      'Responde quien quiera, en 20 segundos.',
+      'El público o quien conduce da 0 a 3 puntos por la gracia.',
+      '«Paso» siempre vale.',
+    ],
+    duracion: 'Unos 10 minutos.',
+    jugadores: 'Voluntarios.',
+    puntaje: '0 a 3 puntos por gracia.',
+    preparar: 'Nada. No se pregunta por parejas, mensajes ni experiencias de nadie.',
+  },
+}
+for (const j of JUEGOS) j.guia = GUIAS[j.id] || null
 
 export const NIVEL_TEXTO = {
   coqueto: { nombre: 'Coqueto', detalle: 'Piropo y humor ligero.' },

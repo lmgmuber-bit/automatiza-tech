@@ -39,6 +39,20 @@ export function juegosDelNivel(juegos, nivel) {
   return juegos.filter((j) => j.sinCartas || cartasDelNivel(j, nivel).length > 0)
 }
 
+/**
+ * Los juegos que el admin no apagó (`party.animadorApagados`). Lo que no sea una lista de textos
+ * se trata como «ninguno apagado», y un id desconocido no hace nada.
+ */
+export function juegosActivos(juegos, apagados) {
+  const fuera = new Set(Array.isArray(apagados) ? apagados.filter((x) => typeof x === 'string') : [])
+  return juegos.filter((j) => !fuera.has(j.id))
+}
+
+/** Los niveles en que el juego aparece en la lista (para la guía del animador). */
+export function nivelesDelJuego(juego) {
+  return NIVELES.filter((n) => juego?.sinCartas || cartasDelNivel(juego, n).length > 0)
+}
+
 /** Fisher-Yates con un generador inyectable (en las pruebas, uno fijo). */
 export function barajar(lista, rng = Math.random) {
   const out = [...lista]
@@ -70,13 +84,28 @@ export function nuevaSesion({ nivel = 'coqueto', equipos = [] } = {}) {
 const usadasDe = (sesion, juegoId) => (sesion.usadas && sesion.usadas[juegoId]) || []
 
 /**
+ * El orden del mazo. Un juego `porRondas` (¿Quién es más venezolano?) se baraja dentro de cada
+ * categoría y las rondas quedan en el orden del catálogo; los demás se barajan enteros.
+ */
+export function ordenarMazo(juego, cartas, rng = Math.random) {
+  if (!juego?.porRondas) return barajar(cartas.map((c) => c.id), rng)
+  const rondas = new Map()
+  for (const c of cartas) {
+    const k = c.categoria || ''
+    if (!rondas.has(k)) rondas.set(k, [])
+    rondas.get(k).push(c.id)
+  }
+  return [...rondas.values()].flatMap((ids) => barajar(ids, rng))
+}
+
+/**
  * Entra a un juego. El mazo son las tarjetas del nivel que este juego todavía no mostró en la
  * partida, barajadas; si ya no queda ninguna, el juego abre agotado y no se rebaraja solo.
  * Siempre empieza una ronda nueva, con o sin tarjeta.
  */
 export function abrirJuego(sesion, juego, rng = Math.random) {
   const usadas = new Set(usadasDe(sesion, juego.id))
-  const ids = barajar(cartasDelNivel(juego, sesion.nivel).map((c) => c.id).filter((id) => !usadas.has(id)), rng)
+  const ids = ordenarMazo(juego, cartasDelNivel(juego, sesion.nivel).filter((c) => !usadas.has(c.id)), rng)
   const base = { ...sesion, juego: juego.id, mazo: ids, carta: null, revelada: false, agotado: false, rondaInicio: sesion.ronda + 1 }
   if (juego.sinCartas) return { ...base, ronda: sesion.ronda + 1 }
   const s = siguiente(base)

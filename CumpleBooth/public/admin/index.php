@@ -343,6 +343,13 @@ if ($loggedIn && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '
             $juegos = isset($_POST['juegos_definidos'])
                 ? cb_sanitize_party_games((array) ($_POST['juegos'] ?? []))
                 : null;
+            // Juegos del animador (solo adulto). Casilla marcada = disponible; se guardan los
+            // apagados. Sin `animador_definidos` (formulario viejo) no se toca lo guardado.
+            $animadorDefinido = isset($_POST['animador_definidos']);
+            $animadorApagados = $animadorDefinido
+                ? array_values(array_diff(array_keys(cb_animador_juegos()),
+                    cb_sanitize_animador_apagados((array) ($_POST['animador_on'] ?? []))))
+                : null;
             $invitadosRaw = (string) ($_POST['invitados'] ?? '');
             $invitados = admin_parse_invitados($invitadosRaw);
             $galeriaPin = trim((string) ($_POST['galeriaPin'] ?? ''));
@@ -480,9 +487,13 @@ if ($loggedIn && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '
                         'deposit_amount' => $_POST['deposit_amount'] ?? null,
                         'payment_note' => $_POST['payment_note'] ?? '',
                     ]);
+                    $ra = ['ok' => true];
+                    if ($eventType === 'adult_birthday' && $animadorApagados !== null) {
+                        $ra = cb_save_party_animador_apagados($publicSlug, $animadorApagados);
+                    }
                     // La fiesta ya quedó guardada: un error acá no la deshace, se avisa y
                     // se vuelve al formulario con lo que el operador escribió.
-                    $errs = array_merge($errs, (array) ($rc['errors'] ?? []), (array) ($rb['errors'] ?? []));
+                    $errs = array_merge($errs, (array) ($rc['errors'] ?? []), (array) ($rb['errors'] ?? []), (array) ($ra['errors'] ?? []));
                     if (empty($errs)) {
                         header('Location: index.php?ok=' . ($isEdit ? 'editada' : 'creada'));
                         exit;
@@ -507,6 +518,7 @@ if ($loggedIn && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '
                 'service_plan' => $servicePlan,
                 'gallery_enabled' => $galleryEnabled,
                 'juegos' => $juegos,
+                'animador_apagados' => $animadorApagados ?? ($isEdit ? cb_party_animador_apagados($origPublicSlug) : []),
                 'invitados_text' => $invitadosRaw,
                 'galeriaPin' => $galeriaPin,
                 'pin_configured' => $isEdit && !empty($parties[$origPublicSlug]['galeriaHabilitada']),
@@ -561,6 +573,9 @@ if ($loggedIn && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '
                         'admin_label'          => ($source['admin_label'] ?? '') . ' (copia)',
                         'birthday_person_name' => $newName,
                         'nombre'               => $newName,
+                        // Sin la modalidad, la copia de un adulto quedaba infantil con temática
+                        // adulta y el kiosco no la abría (409 theme_mismatch).
+                        'event_type'           => cb_party_event_type($source['event_type'] ?? ''),
                         'theme_slug'           => (string) ($source['tema'] ?? ''),
                         'tema'                 => (string) ($source['tema'] ?? ''),
                         'fecha'                => '',
@@ -571,7 +586,11 @@ if ($loggedIn && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '
                         'frameBox'             => cb_normalize_frame_box($source['frameBox'] ?? null),
                         'creada'               => gmdate('Y-m-d H:i:s'),
                     ];
-                    cb_save_parties(['parties' => $parties]);
+                    // La copia conserva los juegos del animador apagados (columna aparte).
+                    if (cb_save_parties(['parties' => $parties])
+                        && cb_party_event_type($source['event_type'] ?? '') === 'adult_birthday') {
+                        cb_save_party_animador_apagados($newPublicSlug, cb_party_animador_apagados($publicSlug));
+                    }
                 }
             }
             header('Location: index.php?ok=duplicada');
@@ -760,6 +779,7 @@ if ($formValues === null && $action === 'editar') {
             'service_plan' => in_array((string) ($p['service_plan'] ?? ''), ['booth', 'full'], true) ? (string) $p['service_plan'] : 'booth',
             'gallery_enabled' => !empty($p['gallery_enabled']),
             'juegos' => cb_sanitize_party_games($p['juegos'] ?? null),
+            'animador_apagados' => cb_party_animador_apagados($editSlug),
             'invitados_text' => admin_invitados_to_text($p['invitados'] ?? []),
             'galeriaPin' => '',
             'pin_configured' => !empty($p['galeriaHabilitada']),
@@ -784,6 +804,7 @@ if ($formValues === null && $action === 'editar') {
         'service_plan' => 'booth',
         'gallery_enabled' => false,
         'juegos' => null,
+        'animador_apagados' => [],
         'invitados_text' => '',
         'galeriaPin' => '',
         'pin_configured' => false,
@@ -982,6 +1003,29 @@ if ($formValues === null && $action === 'editar') {
             <small>Solo aparecen los juegos que ofrece <strong><?= h($themes[$temaForm]['nombre'] ?? $temaForm) ?></strong>. Si cambias de temática, guarda y vuelve a entrar para ver los suyos.</small>
           </div>
           <?php endif; ?>
+
+          <?php
+          // Juegos del animador: solo en un cumpleaños de adulto. Se dibuja siempre y el script
+          // lo muestra u oculta con la modalidad; un div y no `.field`, que pisaría el `hidden`.
+          $animadorOff = cb_sanitize_animador_apagados($formValues['animador_apagados'] ?? []);
+          $animadorTotal = count(cb_animador_juegos());
+          $animadorOn = $animadorTotal - count($animadorOff);
+          ?>
+          <div id="f-animador" <?= ($formValues['event_type'] ?? '') === 'adult_birthday' ? '' : 'hidden' ?>>
+            <fieldset class="field">
+              <legend>Juegos del animador</legend>
+              <input type="hidden" name="animador_definidos" value="1">
+              <small>Los que desmarques no aparecen en la lista de «Juegos de la fiesta» del kiosco. Por defecto están todos disponibles.</small>
+              <?php foreach (cb_animador_juegos() as $idJuego => $nombreJuego): ?>
+                <label class="checkbox-field">
+                  <input type="checkbox" name="animador_on[]" value="<?= h($idJuego) ?>" data-animador-juego
+                    <?= in_array($idJuego, $animadorOff, true) ? '' : 'checked' ?>>
+                  <?= h($nombreJuego) ?>
+                </label>
+              <?php endforeach; ?>
+              <small id="f-animador-cuenta" aria-live="polite"><?= (int) $animadorOn ?> de <?= (int) $animadorTotal ?> disponibles.<?= $animadorOn === 0 ? ' Con todos apagados, la lista «Juegos de la fiesta» queda vacía.' : '' ?></small>
+            </fieldset>
+          </div>
 
           <div class="field">
             <label for="f-galeriapin">PIN de galería de papás (opcional, 4 dígitos)</label>
@@ -1901,6 +1945,26 @@ if ($formValues === null && $action === 'editar') {
     });
   }
   updateFramePreview();
+
+  // --- Juegos del animador: visibles solo en cumpleaños de adulto, con su cuenta ---
+  var eventTypeSelect = document.getElementById('f-event-type');
+  var animadorBox = document.getElementById('f-animador');
+  var animadorCuenta = document.getElementById('f-animador-cuenta');
+  if (eventTypeSelect && animadorBox) {
+    eventTypeSelect.addEventListener('change', function () {
+      animadorBox.hidden = eventTypeSelect.value !== 'adult_birthday';
+    });
+  }
+  if (animadorBox && animadorCuenta) {
+    var animadorChecks = animadorBox.querySelectorAll('[data-animador-juego]');
+    var contarAnimador = function () {
+      var on = 0;
+      Array.prototype.forEach.call(animadorChecks, function (c) { if (c.checked) { on++; } });
+      animadorCuenta.textContent = on + ' de ' + animadorChecks.length + ' disponibles.'
+        + (on === 0 ? ' Con todos apagados, la lista «Juegos de la fiesta» queda vacía.' : '');
+    };
+    Array.prototype.forEach.call(animadorChecks, function (c) { c.addEventListener('change', contarAnimador); });
+  }
 
   // --- Copiar URL al portapapeles (con fallback) ---
   function fallbackCopy(text, done) {

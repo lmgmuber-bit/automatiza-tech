@@ -259,5 +259,23 @@ $r = accion_plan('at_pt_destrabar', releer($fila));
 ok((pt_query($r['redirect'])['id'] ?? '') === (string) $c['crm'], 'plan con el cliente del CRM guardado viejo: vuelve a la ficha del cliente enlazado hoy');
 $wpdb->update(at_pt_tabla(), ['crm_cliente_id' => (int) $c['crm']], ['id' => (int) $fila->id]);
 
+// Estado del proyecto, Etapa 1: «Actualizar la vista del plan».
+$mantener_ok = static function (array $r): bool {
+	$cuerpo = $r['n8n'][0]['cuerpo'] ?? [];
+	return count($r['n8n']) === 1 && strpos($r['n8n'][0]['url'], 'plan-v1-render') !== false
+		&& ($cuerpo['modo'] ?? '') === 'final' && ($cuerpo['aviso'] ?? null) === false && ($cuerpo['mantener'] ?? null) === true;
+};
+at_pt_guardar((int) $fila->id, ['estado' => 'enviado']);
+$r = accion_plan('at_pt_actualizar_vista', releer($fila));
+ok(msg($r) === 'vista_pedida' && $mantener_ok($r) && releer($fila)->estado === 'enviado', 'Actualizar vista de un plan enviado: pide el render con mantener, sin aviso, y sigue «enviado»');
+$r = accion_plan('at_pt_actualizar_vista', releer($fila), [], 'caido');
+$fila = releer($fila);
+ok(msg($r) === 'vista_fallo' && $fila->estado === 'enviado' && strpos((string) $fila->nota, 'No se pudo pedir la actualización de la vista') !== false, 'Actualizar vista con n8n caído: «vista_fallo», sigue «enviado» y deja la nota');
+at_pt_guardar((int) $fila->id, ['estado' => 'listo']);
+$r = accion_plan('at_pt_actualizar_vista', releer($fila));
+ok(msg($r) === 'vista_no_enviado' && !$r['n8n'] && releer($fila)->estado === 'listo', 'Actualizar vista de un plan que no está enviado: «vista_no_enviado» y no llama a n8n');
+$r = accion_plan('at_pt_actualizar_vista', releer($fila), [], 'ok', $admin, 'at_pt_plan_' . $f2->id);
+ok($r['redirect'] === '' && !$r['n8n'], 'Actualizar vista con el nonce de otro plan: no hace nada');
+
 ptc_limpiar();
 fin();

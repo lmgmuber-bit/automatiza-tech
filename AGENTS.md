@@ -102,6 +102,19 @@ Header: X-AT-Secret: <secret>  (wp-config.php del servidor — no exponer)
 `C:\Users\luis_\Documents\Codex\AI-Memory-Vault\30-Agent-Protocols\automatizatech-pipeline.md`
 <!-- AT-PIPELINE:END -->
 
+## GT Baseball Academy (cliente Jeffer García) — estado vivo
+
+- EN PROD en `https://gtbaseball.com/`:
+  - inscripción con QR, pago y Turnstile;
+  - portada con planes y fondos de estadio;
+  - buscador privado `/buscador/` con clave, fotos y listado en PDF.
+- Código en `demos/gt-baseball/`, en la rama `claude/gt-baseball-planes`. Flujos n8n en `N8N/gt-baseball/` (ver su
+  README).
+- 🔴 El repo es público: los datos del cliente viven en `gt-config.json`, fuera del repo. Se despliega solo con
+  `deploy_dominio.py` y con el ok de Luis.
+- **Relevo completo:** bóveda privada `10-Projects/GT-Baseball/README.md`. Diseño e historial en
+  `Docs/superpowers/specs/2026-09-27-gt-baseball-prototipo-design.md`.
+
 ## graphify
 
 This project has a knowledge graph at graphify-out/ with god nodes, community structure, and cross-file relationships.

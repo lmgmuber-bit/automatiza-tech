@@ -69,6 +69,12 @@ API key de n8n (ya configurada, ver abajo).
 **Pendientes de autorizar en Claude:** Notion y Stripe (OAuth), GitHub (header mal formado)
 y `magic` de 21st.dev (API key reseteada). Se arreglan con `/mcp` en sesión interactiva.
 
+**El conector de Google Drive de Claude NO es la cuenta `contacto@automatizatech.cl`** (verificado el 2026-09-28: al
+intentar compartir el Sheet de GT Baseball respondió «The caller does not have permission»). Para compartir, copiar o
+leer archivos de `contacto@` hay que usar las credenciales de Google de n8n (`Google Drive account`,
+`Google Sheets PROD`) con un flujo temporal que se crea, se llama una vez y se borra: `n8n_temp.py` en
+`C:\Users\luis_\respaldos\deploy-scripts\2026-09-27-gt-baseball\`.
+
 ### 3.1 Credenciales dentro de n8n (actualizado 2026-08-26)
 
 Los secretos que n8n usa para hablar con `automatizatech.cl` viven en **credenciales de n8n**
@@ -83,6 +89,11 @@ la cabecera de un nodo, es un bug: migrarlo a credencial.
 
 Constantes sin consumidor en n8n: `AT_REST_SECRET` (endpoint de propuestas, lo usan los
 agentes vía skill) y `AT_BOARD_TOKEN` (frontend del tablero, se pega en el navegador).
+
+**Variables de entorno del servicio n8n (Easypanel):** `TURNSTILE_SECRET` es la Secret de Cloudflare Turnstile de
+GT Baseball, y la lee el nodo «Verificar Turnstile» con `{{$env.TURNSTILE_SECRET}}`. La puso Luis el 2026-09-28. Ese
+día se verificó que este n8n deja leer `$env` en expresiones y en nodos Code: la prueba midió el largo, sin imprimir
+el valor. La cuenta de Cloudflare y la Site Key (pública) están en la bóveda y en `gt-config.json`, no en el repo.
 `OMNI_ADMIN_SECRET` va por variable de entorno del servidor, no por `wp-config-secrets.php`.
 
 **Al rotar un secreto**, actualizar el valor en los dos lados a la vez: `wp-config-secrets.php`
@@ -123,6 +134,11 @@ real 0600 + puente en `public_html/config/`, `almacen/{fotos,estado,invitaciones
 enlace `public -> public_html/app`; código = línea `codex/baby-shower-predicciones`, migraciones 001–011 + 014).
 Pre-producción = `automatizatech.cl/cumpleclick` (lo descrito abajo). Verificar en cuál se está trabajando antes
 de subir; el 2026-09-06 se subió primero a pre-producción por asumir que era el PROD.
+
+**La cuenta tiene siete dominios (2026-09-28), cada uno con su carpeta en `~/domains/`:** automatizatech.cl,
+cumpleclick.com, gtbaseball.com, hmsp.cl, nalilah.cl, petsgo.cl y tarotestrellas.com. Al desplegar, escribir solo en
+la carpeta del dominio que corresponde. GT Baseball vive en `domains/gtbaseball.com/public_html` y se despliega con
+`deploy_dominio.py`, que tiene la carpeta fija y aborta si la ruta real no es la de gtbaseball.com.
 
 Layout en pre-producción: webroot `domains/automatizatech.cl/public_html/cumpleclick/` (contenido
 de `dist/`; `juego/` es el juego 3D), config privada en `public_html/config/cumpleclick.local.php`,

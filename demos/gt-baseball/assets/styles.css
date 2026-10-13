@@ -643,6 +643,28 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--a
 .pie p { margin: 4px 0; }
 .pie a { color: var(--suave); }
 
+/* Redes sociales de la academia (pie, «¿Dónde estamos?» y pantalla final). Botón de 44 px con el ícono de la marca en
+ * el color del texto: se lee igual en los dos temas; al pasar, toma el acento. En .redes--iconos solo va el ícono y el
+ * nombre queda para lectores de pantalla (el enlace lleva su aria-label). */
+.redes { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.redes__titulo { margin: 22px 0 10px; font-weight: 600; color: var(--suave); }
+.donde .redes { justify-content: flex-start; }
+.donde .redes__titulo { margin-top: 20px; }
+.redes__enlace {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 0 16px;
+  border-radius: 999px; border: 1.5px solid var(--borde); background: var(--sup); color: var(--texto);
+  font-weight: 600; text-decoration: none; transition: border-color .2s ease, color .2s ease;
+}
+.pie .redes__enlace { color: var(--texto); }
+.redes__enlace .ico { width: 20px; height: 20px; }
+.redes__enlace:hover { border-color: var(--acento); color: var(--acento); }
+.redes__enlace:focus-visible { outline: 3px solid var(--foco); outline-offset: 2px; }
+.redes--iconos .redes__enlace { width: 44px; padding: 0; }
+.redes--iconos .redes__enlace span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.pie .redes { margin: 0 0 12px; }
+/* En la pantalla final ya va el bloque «Síguenos»: el del pie sobraría justo debajo. */
+.app:has(#vista-listo:not([hidden])) .pie .redes { display: none; }
+
 /* Volver arriba: botón redondo fijo abajo a la derecha. Aparece (app.js le pone .arriba--visible) al llegar a la
  * última sección de la portada o al pie, y lleva al inicio de una vez. Invisible, no se puede enfocar ni tocar. */
 .arriba {

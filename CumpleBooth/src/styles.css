@@ -1,3 +1,12 @@
+/* Anton (OFL-1.1): solo la cabina de cumpleaños de adulto la dibuja; el navegador la
+   baja la primera vez que se usa, no al abrir el kiosco. */
+@font-face {
+  font-family: 'Anton';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 400;
+  src: url('@fontsource/anton/files/anton-latin-400-normal.woff2') format('woff2');
+}
 @font-face {
   font-family: 'Baloo 2';
   font-style: normal;
@@ -3114,3 +3123,247 @@ body {
   font-size: clamp(22px, 6cqw, 32px);
 }
 .volver-hoja .cta { width: min(88cqw, 420px); min-height: 56px; }
+
+/* ---------- CUMPLEAÑOS DE ADULTO (AT-CUMPLECLICK-026) ----------
+   La bienvenida continúa el «¡SE BUSCA!» que ya viene pintado arriba en fondo-banner.jpg
+   (termina en el 25 % del alto). Paleta de la temática: fucsia, crema, dorado y negro. */
+.intro-adulto {
+  position: absolute; top: 29%; left: 6%; right: 6%;
+  display: flex; flex-direction: column; align-items: center; gap: 1.6cqh;
+}
+.intro-title--adulto {
+  position: static; transform: none; width: auto;
+  font-family: 'Anton', 'Baloo 2', Impact, sans-serif; font-weight: 400;
+  font-size: clamp(26px, 9cqw, 64px); line-height: 1.02; text-transform: uppercase;
+  color: #FFF0D4; -webkit-text-stroke: 3px #191218; text-shadow: 5px 5px 0 #191218;
+}
+.intro-cinta-adulto {
+  margin: 0; padding: 0.35em 1.1em;
+  font-family: 'Anton', 'Baloo 2', Impact, sans-serif; font-size: clamp(20px, 7cqw, 48px);
+  color: #191218; letter-spacing: 0.02em;
+  background: linear-gradient(180deg, #966C1C 0%, #FFE9A6 28%, #D8AA43 55%, #966C1C 100%);
+  border: 4px solid #191218; box-shadow: 6px 6px 0 #191218;
+}
+.intro-lema-adulto {
+  margin: 0; font-family: 'Anton', 'Baloo 2', Impact, sans-serif; font-size: clamp(18px, 6cqw, 40px);
+  color: #FFF0D4; -webkit-text-stroke: 2px #191218; paint-order: stroke fill; text-transform: uppercase;
+}
+.frase-adulto {
+  background: #F90B78 repeating-conic-gradient(from 0deg at 50% 40%, #FF559A 0deg 5deg, #F90B78 5deg 10deg);
+  justify-content: flex-start; gap: 2cqh; padding: 6cqh 6% 4cqh; overflow-y: auto;
+}
+.frase-adulto__titulo {
+  margin: 0; font-family: 'Anton', 'Baloo 2', Impact, sans-serif; font-weight: 400;
+  font-size: clamp(30px, 10cqw, 70px); text-transform: uppercase;
+  color: #FFF0D4; -webkit-text-stroke: 3px #191218; text-shadow: 5px 5px 0 #191218;
+}
+.frase-adulto__sub { margin: 0; color: #fff; font-weight: 700; font-size: clamp(15px, 3.8cqw, 22px); text-shadow: 0 2px 6px rgba(0,0,0,.45); }
+.frase-adulto__lista { display: flex; flex-direction: column; gap: 1.4cqh; width: 100%; max-width: 640px; }
+.frase-adulto__opcion {
+  font: 400 clamp(19px, 5.4cqw, 34px)/1.15 'Anton', 'Baloo 2', Impact, sans-serif; text-transform: uppercase;
+  color: #F90B78; background: #FFF0D4; border: 4px solid #191218; border-radius: 6px;
+  box-shadow: 6px 6px 0 #191218; padding: 0.55em 0.8em; cursor: pointer;
+}
+.frase-adulto__opcion:active { transform: translate(3px, 3px); box-shadow: 3px 3px 0 #191218; }
+.frase-adulto__opcion:focus-visible { outline: 4px solid #FFE9A6; outline-offset: 3px; }
+.frase-adulto__opcion--sola { color: #191218; background: #D8AA43; }
+.cta--revista { margin-top: 14px; font-size: clamp(16px, 3.8cqw, 22px); padding: 12px 26px; color: #191218; background: linear-gradient(180deg, #FFE9A6, #D8AA43); border: 3px solid #191218; box-shadow: 5px 5px 0 #191218; }
+
+/* ---------- JUEGOS DEL ANIMADOR (cumpleaños de adulto) ---------- */
+.cta--animador { margin-top: 12px; font-size: clamp(16px, 3.8cqw, 22px); padding: 12px 26px; color: #FFF0D4; background: #191218; border: 3px solid #FFF0D4; }
+.anim { background: #F90B78 repeating-conic-gradient(from 0deg at 50% 30%, #FF559A 0deg 5deg, #F90B78 5deg 10deg); justify-content: flex-start; gap: 1.6cqh; padding: 3cqh 5% 3cqh; overflow-y: auto; color: #191218; }
+.anim-titulo { margin: 0; font: 400 clamp(24px, 7cqw, 50px)/1.05 'Anton', 'Baloo 2', Impact, sans-serif; text-transform: uppercase; color: #FFF0D4; -webkit-text-stroke: 2px #191218; text-shadow: 4px 4px 0 #191218; }
+.anim-instr, .anim-nota, .anim-premio { margin: 0; max-width: 62ch; font-weight: 700; color: #fff; text-shadow: 0 2px 6px rgba(0,0,0,.45); font-size: clamp(14px, 3.4cqw, 20px); }
+.anim-nota { font-weight: 600; opacity: .95; }
+.anim-premio { color: #FFE9A6; }
+.anim-juegos { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(240px, 100%), 1fr)); gap: 12px; width: 100%; }
+.anim-juego, .anim-nivel { display: flex; align-items: center; gap: 10px; text-align: left; padding: 14px 16px; font: 400 clamp(17px, 4.4cqw, 26px)/1.1 'Anton', 'Baloo 2', Impact, sans-serif; text-transform: uppercase; color: #191218; background: #FFF0D4; border: 4px solid #191218; box-shadow: 5px 5px 0 #191218; cursor: pointer; }
+.anim-juego__emoji { font-size: 1.4em; }
+.anim-niveles { display: grid; gap: 10px; width: 100%; max-width: 640px; }
+.anim-nivel { flex-direction: column; align-items: flex-start; }
+.anim-nivel small { font: 700 clamp(13px, 3.2cqw, 17px) 'Baloo 2', system-ui, sans-serif; text-transform: none; }
+.anim-nivel.is-on, .anim-chip.is-on { background: #D8AA43; }
+.anim-equipos { display: flex; align-items: center; gap: 10px; color: #fff; font-weight: 800; font-size: clamp(16px, 4cqw, 22px); }
+.anim-input { width: min(100%, 520px); padding: 10px 14px; font: 700 clamp(16px, 4cqw, 22px) 'Baloo 2', system-ui, sans-serif; border: 3px solid #191218; background: #fff; }
+.anim-chip { padding: 10px 16px; min-height: 44px; font: 800 clamp(15px, 3.8cqw, 20px) 'Baloo 2', system-ui, sans-serif; color: #191218; background: #FFF0D4; border: 3px solid #191218; box-shadow: 3px 3px 0 #191218; cursor: pointer; }
+.anim-chip:disabled { opacity: .45; cursor: default; }
+.anim-chip--deshacer { background: #fff; }
+.anim-cabecera { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px; width: 100%; }
+.anim-marcador { display: flex; flex-wrap: wrap; gap: 8px; }
+.anim-marca { display: flex; flex-direction: column; align-items: center; min-width: 84px; padding: 4px 10px; background: #191218; color: #FFF0D4; border: 2px solid #D8AA43; }
+.anim-marca small { font-size: 12px; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.anim-marca b { font: 400 26px 'Anton', Impact, sans-serif; color: #FFE9A6; }
+.anim-nivel-sel { color: #fff; font-weight: 800; }
+.anim-nivel-sel select { font: 800 16px 'Baloo 2', system-ui, sans-serif; padding: 6px; border: 2px solid #191218; }
+.anim-carta { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; width: 100%; min-height: 22cqh; padding: 20px; background: #FFF0D4; border: 5px solid #191218; box-shadow: 8px 8px 0 #191218; }
+.anim-carta__texto { margin: 0; font: 400 clamp(24px, 7cqw, 52px)/1.12 'Anton', 'Baloo 2', Impact, sans-serif; color: #F90B78; -webkit-text-stroke: 1px #191218; }
+.anim-carta__resp { margin: 0; font: 800 clamp(20px, 5.4cqw, 34px) 'Baloo 2', system-ui, sans-serif; color: #191218; background: #D8AA43; padding: 4px 14px; }
+.anim-carta--privada, .anim-carta--fisico { font: 800 clamp(18px, 4.6cqw, 28px) 'Baloo 2', system-ui, sans-serif; color: #191218; cursor: pointer; user-select: none; -webkit-user-select: none; touch-action: none; }
+.anim-crono { display: flex; align-items: center; gap: 10px; }
+.anim-crono__num { min-width: 4.5ch; font: 400 clamp(26px, 7cqw, 46px) 'Anton', Impact, sans-serif; color: #FFF0D4; -webkit-text-stroke: 2px #191218; }
+.anim-crono.is-fin .anim-crono__num { color: #FFE9A6; }
+.anim-puntos { display: flex; flex-direction: column; gap: 8px; width: 100%; max-width: 640px; }
+.anim-puntos__fila { display: flex; align-items: center; gap: 8px; }
+.anim-puntos__fila span { flex: 1; text-align: left; color: #fff; font-weight: 800; text-shadow: 0 2px 4px rgba(0,0,0,.4); }
+.anim-pie { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; width: 100%; }
+.anim-ganador { margin: 0; font: 400 clamp(26px, 8cqw, 54px) 'Anton', Impact, sans-serif; color: #FFE9A6; -webkit-text-stroke: 2px #191218; }
+.anim-tabla { list-style: none; margin: 0; padding: 0; width: min(100%, 520px); display: grid; gap: 6px; }
+.anim-tabla li { display: flex; justify-content: space-between; padding: 8px 14px; background: #FFF0D4; border: 3px solid #191218; font: 800 clamp(16px, 4cqw, 22px) 'Baloo 2', system-ui, sans-serif; }
+.anim :is(button, select, input):focus-visible { outline: 4px solid #FFE9A6; outline-offset: 2px; }
+
+/* Bienvenida adulta en pantallas bajas (tablet acostada: el kiosco conserva su cuadro vertical y
+   queda de unos 540 px de alto). Con cuatro botones apilados no cabían bajo el titular y se
+   pisaban (revisión B de Codex, CX-15). Versión compacta medida en alto, no en orientación.
+   Solo la bienvenida de cumpleaños de adulto; la infantil no cambia. */
+@media (max-height: 760px) {
+  .intro--adulto .intro-adulto { top: 25.5%; gap: 4px; }
+  .intro--adulto .intro-title--adulto { font-size: clamp(15px, 3.2vh, 30px); -webkit-text-stroke-width: 2px; text-shadow: 3px 3px 0 #191218; }
+  .intro--adulto .intro-cinta-adulto { font-size: clamp(13px, 2.8vh, 26px); padding: 0.15em 0.8em; box-shadow: 4px 4px 0 #191218; }
+  .intro--adulto .intro-lema-adulto { font-size: clamp(12px, 2.3vh, 20px); }
+  .intro--adulto .intro-bottom { gap: 7px; bottom: 1.5%; }
+  .intro--adulto .intro-bottom .cta { margin-top: 0; font-size: clamp(13px, 2.5vh, 19px); padding: 7px 16px; }
+  .intro--adulto .intro-bottom .hint { display: none; }
+}
+/* Mímica: mantener apretado no abre el menú de copiar/compartir de iOS (CX-05). */
+.anim-carta--privada { -webkit-touch-callout: none; }
+
+/* ---------- NAVEGACIÓN DEL CUMPLEAÑOS DE ADULTO (12-oct) ----------
+   «← Volver» y «🏠 Inicio» arriba a la izquierda en cada pantalla del recorrido adulto. La
+   pantalla completa vive en esa esquina solo en la bienvenida, donde esta barra no se dibuja.
+   Lo que también usa la esquina de arriba (marcador del juego, selector de cámara, turno de
+   Asómate) baja a dejarle sitio; el recorrido infantil no lleva esta clase. */
+.nav-adulto {
+  position: absolute; z-index: 60;
+  top: max(12px, env(safe-area-inset-top)); left: max(12px, env(safe-area-inset-left));
+  display: flex; gap: 8px;
+}
+.nav-adulto__btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  min-height: 48px; padding: 0 16px;
+  border-radius: 999px; border: 2px solid rgba(255, 240, 212, 0.75);
+  background: rgba(25, 18, 24, 0.74); backdrop-filter: blur(8px);
+  color: #FFF0D4; font: 800 clamp(15px, 3.6cqw, 19px)/1 var(--font);
+  white-space: nowrap; cursor: pointer;
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.3);
+}
+.nav-adulto__btn:active { transform: scale(0.95); }
+.nav-adulto__btn:focus-visible { outline: 3px solid #FFE9A6; outline-offset: 3px; }
+.nav-adulto__btn:disabled { opacity: 0.45; cursor: default; transform: none; }
+/* En el juego de atrapar, el marcador baja bajo la barra y el título baja bajo el marcador. */
+.app--nav-adulto .juego-hud { max-width: calc(100% - 32px); }
+.app--nav-adulto .screen.juego { padding-top: 126px; }
+.app--nav-adulto .juego-hud,
+.app--nav-adulto .camera-picker,
+.app--nav-adulto .asomate-turno-aviso { top: 72px; }
+.app--nav-adulto .frase-adulto,
+.app--nav-adulto .anim,
+.app--nav-adulto .asomate-elegir { padding-top: 72px; }
+.app--nav-adulto .screen.preview,
+.app--nav-adulto .screen--preview,
+.app--nav-adulto .qr-screen { padding-top: 66px; }
+
+/* ---------- ASÓMATE: el botón de avanzar siempre a la vista (12-oct) ----------
+   Con muchas figuras (17 en la temática adulta) la grilla medía más que la pantalla: la sección
+   centraba todo, se recortaba arriba y abajo, y el «Siguiente persona» quedaba fuera del lienzo
+   sin scroll posible. Ahora título, cuántos y pie no se encogen y solo la grilla cede alto y
+   hace scroll propio. Si todo cabe (6 figuras infantiles), nada cambia: sigue centrado. */
+.asomate-elegir > .asomate-titulo,
+.asomate-elegir > .asomate-cuantos,
+.asomate-elegir > .asomate-pie { flex: 0 0 auto; }
+.asomate-elegir > .asomate-turno {
+  flex: 0 1 auto; min-height: 0;
+  display: flex; flex-direction: column;
+}
+.asomate-turno__quien { flex: 0 0 auto; }
+.asomate-elegir .asomate-grid {
+  flex: 0 1 auto; min-height: 0;
+  overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch;
+  align-content: start;
+}
+
+/* ---------- Animador: botón ℹ️ y guía de cada juego (12-oct) ---------- */
+.anim-juego-fila { display: flex; align-items: stretch; gap: 6px; min-width: 0; }
+.anim-juego-fila .anim-juego { flex: 1 1 auto; min-width: 0; }
+.anim-info {
+  flex: 0 0 auto; min-width: 52px; min-height: 48px; padding: 0 8px;
+  display: grid; place-items: center;
+  font-size: 22px; line-height: 1;
+  background: #FFE9A6; border: 4px solid #191218; box-shadow: 5px 5px 0 #191218;
+  cursor: pointer;
+}
+.anim-info:active { transform: translate(2px, 2px); box-shadow: 3px 3px 0 #191218; }
+.anim-titulo-fila { display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap; }
+.anim-titulo-fila .anim-info { box-shadow: 3px 3px 0 #191218; border-width: 3px; }
+.anim-carta__cat {
+  margin: 0; padding: 2px 12px;
+  font: 800 clamp(13px, 3.2cqw, 17px) 'Baloo 2', system-ui, sans-serif;
+  text-transform: uppercase; letter-spacing: 0.08em;
+  color: #FFF0D4; background: #191218;
+}
+.anim-ficha-velo {
+  position: fixed; inset: 0; z-index: 1100;
+  display: flex; align-items: center; justify-content: center;
+  padding: 16px;
+  background: rgba(25, 18, 24, 0.72);
+  animation: fade 0.2s ease;
+}
+.anim-ficha {
+  width: min(100%, 560px); max-height: 100%;
+  overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch;
+  display: flex; flex-direction: column; gap: 10px;
+  padding: 18px 18px 20px;
+  text-align: left; color: #191218;
+  background: #FFF0D4; border: 5px solid #191218; box-shadow: 8px 8px 0 #191218;
+  font: 600 clamp(15px, 3.6cqw, 19px)/1.35 'Baloo 2', system-ui, sans-serif;
+}
+.anim-ficha__titulo {
+  margin: 0; font: 400 clamp(22px, 6cqw, 36px)/1.05 'Anton', 'Baloo 2', Impact, sans-serif;
+  text-transform: uppercase; color: #F90B78;
+}
+.anim-ficha__resumen { margin: 0; font-weight: 800; }
+.anim-ficha__sub { margin: 4px 0 0; font: 800 clamp(15px, 3.8cqw, 20px) 'Baloo 2', system-ui, sans-serif; text-transform: uppercase; letter-spacing: 0.06em; }
+.anim-ficha__pasos { margin: 0; padding-left: 1.3em; display: grid; gap: 4px; }
+.anim-ficha__datos { margin: 0; display: grid; gap: 6px; }
+.anim-ficha__datos div { padding: 6px 10px; background: #fff; border: 2px solid #191218; }
+.anim-ficha__datos dt { font-weight: 800; color: #7A0039; }
+.anim-ficha__datos dd { margin: 0; }
+.anim-ficha__nota { margin: 0; font-weight: 700; color: #7A0039; }
+.anim-ficha .cta { align-self: center; margin-top: 4px; }
+.anim-ficha :is(button):focus-visible { outline: 4px solid #F90B78; outline-offset: 3px; }
+/* Tarjetas de música e imagen (juegos venezolanos). La imagen se abre sobre todo el lienzo. */
+.anim-carta__pista { margin: 0; font: 700 clamp(15px, 3.6cqw, 19px)/1.3 'Baloo 2', system-ui, sans-serif; color: #7A0039; }
+.anim-carta__imagen-falta { margin: 0; font: 800 clamp(15px, 3.6cqw, 19px) 'Baloo 2', system-ui, sans-serif; color: #7A0039; }
+.anim-imagen-grande {
+  position: fixed; inset: 0; z-index: 1100;
+  display: block; padding: 12px;
+  border: 0; background: rgba(25, 18, 24, 0.94); cursor: zoom-out;
+}
+.anim-imagen-grande img { display: block; width: 100%; height: 100%; object-fit: contain; }
+/* Selector de categoría (¿Quién es más venezolano?): una fila con scroll horizontal propio, para
+   que en 375 px no empuje la tarjeta hacia abajo. Botones de 44 px como mínimo. */
+.anim-cats {
+  display: flex; flex-wrap: nowrap; gap: 8px;
+  width: 100%; max-width: 100%;
+  overflow-x: auto; overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch;
+  padding: 4px 6px 10px;
+  scrollbar-width: thin;
+}
+.anim-cat { flex: 0 0 auto; min-height: 44px; white-space: nowrap; display: inline-flex; align-items: center; gap: 6px; }
+.anim-cat__n { min-width: 1.6em; padding: 1px 6px; font-size: 0.8em; background: #191218; color: #FFF0D4; border-radius: 999px; }
+.anim-carta__agotada { margin: 0; font: 800 clamp(17px, 4.2cqw, 24px) 'Baloo 2', system-ui, sans-serif; color: #191218; }
+/* RETO del juego venezolano: va dentro de la tarjeta crema, así que no usa el blanco de las notas. */
+.anim-carta .anim-nota--reto { color: #7A0039; text-shadow: none; }
+
+/* Vista previa de Asómate: con los mandos debajo, la foto medía más que el espacio y «Guardar»
+   quedaba bajo el borde del lienzo (12-oct). La foto cede alto y se ajusta entera (contain);
+   mandos y barra no se encogen. */
+.asomate-preview > .preview-img { flex: 0 1 auto; min-height: 0; max-height: 100%; }
+.asomate-preview > .loading { flex: 0 1 auto; }
+.asomate-preview > .asomate-mandos,
+.asomate-preview > .preview-bar { flex: 0 0 auto; }
+/* Mandos de Asómate en la temática adulta: el fondo de la vista previa es claro y el texto
+   blanco casi no se leía. */
+.app--nav-adulto .asomate-mando { color: #191218; text-shadow: none; }
+/* Las pantallas del animador tienen scroll propio: sus bloques no se encogen. Sin esto, con texto
+   largo la tarjeta se achicaba y la etiqueta de ronda y la respuesta quedaban montadas en su borde. */
+.anim > * { flex-shrink: 0; }

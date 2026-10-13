@@ -105,13 +105,19 @@ function cb_rsvp_resolve_parents_token(string $token): ?array
  * asistencia-papas.php: los niños llegan como texto libre ("Emma y Lucas", "Sofía, Tomás")
  * y se cuentan por los separadores más comunes. Es una cifra aproximada a propósito;
  * inventar exactitud sobre texto escrito a mano sería peor.
+ *
+ * En un cumpleaños de adulto ese mismo campo trae acompañantes («con Jorge»), no niños: las
+ * claves no cambian, pero `event_type` viaja en el resumen para que quien lo muestre use las
+ * etiquetas correctas (CX-13, AT-CUMPLECLICK-026).
  */
 function cb_rsvp_resumen(string $publicSlug): array
 {
-    $vacio = ['familias' => 0, 'ninos' => 0, 'ultima' => '', 'lista' => []];
+    $vacio = ['familias' => 0, 'ninos' => 0, 'ultima' => '', 'lista' => [], 'event_type' => 'child_birthday'];
     if (cb_storage_mode() !== 'db' || !cb_valid_public_slug($publicSlug)) {
         return $vacio;
     }
+    $party = cb_load_party_raw($publicSlug);
+    $vacio['event_type'] = cb_party_event_type($party['event_type'] ?? '');
     $partyId = cb_party_db_id($publicSlug);
     if ($partyId === null) {
         return $vacio;
@@ -137,7 +143,8 @@ function cb_rsvp_resumen(string $publicSlug): array
             'cuando' => substr($creada, 0, 16),
         ];
     }
-    return ['familias' => count($lista), 'ninos' => $ninos, 'ultima' => $ultima, 'lista' => $filas];
+    return ['familias' => count($lista), 'ninos' => $ninos, 'ultima' => $ultima, 'lista' => $filas,
+        'event_type' => $vacio['event_type']];
 }
 
 /**

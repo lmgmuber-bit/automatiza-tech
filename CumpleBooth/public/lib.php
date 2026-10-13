@@ -401,6 +401,40 @@ function cb_load_themes()
     return cb_load_json_file(cb_themes_path());
 }
 
+/**
+ * Las tres modalidades que conoce el producto. Cualquier otro valor cae a cumpleaños infantil,
+ * que es lo que tenían todas las fiestas antes de que existiera la columna.
+ *
+ * Antes cada lector colapsaba a mano `=== 'baby_shower' ? ... : 'child_birthday'`, en nueve
+ * lugares: agregar una modalidad obligaba a encontrarlos todos, y el que faltara la convertía
+ * en infantil en silencio. Ahora es una sola función.
+ */
+function cb_party_event_type($value): string
+{
+    $value = (string) $value;
+    return in_array($value, ['baby_shower', 'adult_birthday'], true) ? $value : 'child_birthday';
+}
+
+/** La edad tiene sentido para la modalidad: niño de 1 a 17, adulto de 18 a 120. */
+function cb_party_age_valid($edad, string $eventType): bool
+{
+    if ($edad === null || $edad === '' || !is_numeric($edad)) {
+        return false;
+    }
+    $edad = (int) $edad;
+    return $eventType === 'adult_birthday' ? ($edad >= 18 && $edad <= 120) : ($edad >= 1 && $edad <= 17);
+}
+
+/**
+ * ¿La temática es para adultos? Lo declara `audiencia: "adulto"` en themes.json.
+ * Una temática adulta solo se usa en un cumpleaños de adulto, y un cumpleaños de adulto solo
+ * con una temática adulta: así sus juegos y bromas no pueden aparecer en una fiesta infantil.
+ */
+function cb_theme_is_adult(array $themeData): bool
+{
+    return (string) ($themeData['audiencia'] ?? '') === 'adulto';
+}
+
 /** Carga data/parties.json → ['parties' => [...]] o false si no existe/corrupto. */
 function cb_load_parties()
 {
@@ -419,7 +453,7 @@ function cb_load_parties()
             $publicSlug = (string) $row['public_slug'];
             $galleryEnabled = (bool) ($row['gallery_enabled'] ?? 0);
             $servicePlan = in_array((string) ($row['service_plan'] ?? ''), ['booth', 'full'], true) ? (string) $row['service_plan'] : 'booth';
-            $eventType = (string) ($row['event_type'] ?? '') === 'baby_shower' ? 'baby_shower' : 'child_birthday';
+            $eventType = cb_party_event_type($row['event_type'] ?? '');
             $parties[$publicSlug] = [
                 'public_slug' => $publicSlug,
                 'admin_label' => (string) ($row['admin_label'] ?? ''),
@@ -462,7 +496,7 @@ function cb_load_parties()
         $themeSlug = (string) ($party['theme_slug'] ?? $party['tema'] ?? '');
         $servicePlan = in_array((string) ($party['service_plan'] ?? ''), ['booth', 'full'], true) ? (string) $party['service_plan'] : 'booth';
         $galleryEnabled = (bool) ($party['gallery_enabled'] ?? 0);
-        $eventType = (string) ($party['event_type'] ?? '') === 'baby_shower' ? 'baby_shower' : 'child_birthday';
+        $eventType = cb_party_event_type($party['event_type'] ?? '');
         $normalized[$publicSlug] = [
             'public_slug' => $publicSlug,
             'admin_label' => (string) ($party['admin_label'] ?? ''),
@@ -524,7 +558,7 @@ function cb_save_parties(array $data): bool
             $themeSlug = (string) ($party['theme_slug'] ?? $party['tema'] ?? '');
             $servicePlan = in_array((string) ($party['service_plan'] ?? ''), ['booth', 'full'], true) ? (string) $party['service_plan'] : 'booth';
             $galleryEnabled = (bool) ($party['gallery_enabled'] ?? 0);
-            $eventType = (string) ($party['event_type'] ?? '') === 'baby_shower' ? 'baby_shower' : 'child_birthday';
+            $eventType = cb_party_event_type($party['event_type'] ?? '');
             $toSave[$publicSlug] = [
                 'public_slug' => $publicSlug,
                 'admin_label' => (string) ($party['admin_label'] ?? ''),
@@ -574,14 +608,14 @@ function cb_save_parties(array $data): bool
             $now = gmdate('Y-m-d H:i:s');
             $frameJson = is_array($party['frameBox'] ?? null) ? json_encode($party['frameBox']) : null;
             $servicePlan = in_array((string) ($party['service_plan'] ?? ''), ['booth', 'full'], true) ? (string) $party['service_plan'] : 'booth';
-            $eventType = (string) ($party['event_type'] ?? '') === 'baby_shower' ? 'baby_shower' : 'child_birthday';
+            $eventType = cb_party_event_type($party['event_type'] ?? '');
             $values = [
                 (string) ($party['admin_label'] ?? ''),
                 (string) ($party['birthday_person_name'] ?? $party['nombre'] ?? ''),
-                // Edad que cumple. Se acota a un rango con sentido para una fiesta infantil:
-                // fuera de el, casi siempre es un error de tecleo y es mejor guardar nada.
-                isset($party['edad']) && (int) $party['edad'] >= 1 && (int) $party['edad'] <= 17
-                    ? (int) $party['edad'] : null,
+                // Edad que cumple, con el rango de su modalidad: un niño de 1 a 17, un adulto de
+                // 18 a 120 (TINYINT llega a 127). Fuera de él casi siempre es un error de tecleo
+                // y es mejor guardar nada. Con el tope fijo en 17, «69» se perdía sin aviso.
+                cb_party_age_valid($party['edad'] ?? null, $eventType) ? (int) $party['edad'] : null,
                 $eventType,
                 (string) ($party['theme_slug'] ?? $party['tema'] ?? ''),
                 ($party['fecha'] ?? '') ?: null,
@@ -846,6 +880,102 @@ function cb_sanitize_party_games($raw): ?array
 }
 
 /**
+ * Juegos del animador del cumpleaños de adulto: id => nombre, en el orden del kiosco.
+ *
+ * Copia de `src/animador/mazos.js` (ids y nombres), que manda. El servidor la usa para validar
+ * lo que llega del admin y para dibujar sus casillas; `tests/backend/animador-apagados.php`
+ * falla si las dos listas se separan.
+ */
+function cb_animador_juegos(): array
+{
+    return [
+        'tribunal'       => 'Tribunal de la coquetería',
+        'piropos'        => 'Piropos bajo arresto',
+        'doble-sentido'  => 'Doble sentido, respuesta inocente',
+        'swing'          => 'La dueña y el dueño del swing',
+        'yo-nunca'       => 'Yo nunca: edición cómplices',
+        'verdad-o-shot'  => 'Verdad o shot',
+        'coartada'       => 'La coartada perfecta',
+        'caballeros'     => 'Caballeros bajo sospecha',
+        'divas'          => 'Divas con prontuario',
+        'indirectas'     => 'Duelo de indirectas',
+        'bolso'          => 'El bolso del delito',
+        'mimica'         => 'Adivina la frase con mímica',
+        'beso-al-blanco' => 'Beso al blanco',
+        'globo'          => 'El globo cómplice',
+        'mas-venezolano' => '¿Quién es más venezolano?',
+        'venezolano-politica' => '¿Quién es más venezolano? Edición política',
+        'expediente'     => 'Expediente «Se busca»',
+        'atrevidas'      => 'Preguntas sin vergüenza',
+    ];
+}
+
+/** Deja solo ids conocidos, sin repetir y en el orden del catálogo. */
+function cb_sanitize_animador_apagados($raw): array
+{
+    $pedidos = [];
+    foreach ((array) $raw as $id) {
+        if (is_string($id) || is_int($id)) {
+            $pedidos[trim((string) $id)] = true;
+        }
+    }
+    $out = [];
+    foreach (array_keys(cb_animador_juegos()) as $id) {
+        if (isset($pedidos[$id])) {
+            $out[] = $id;
+        }
+    }
+    return $out;
+}
+
+/**
+ * Juegos del animador apagados en una fiesta. [] si no hay ninguno, si la fiesta no existe,
+ * en modo json o si falta la migración 027 (en ese caso el kiosco muestra todos).
+ * Se lee aparte y no en cb_load_parties(): así una base sin la columna no tumba la carga.
+ */
+function cb_party_animador_apagados(string $publicSlug): array
+{
+    try {
+        $partyId = cb_party_db_id($publicSlug);
+        if ($partyId === null) {
+            return [];
+        }
+        $stmt = cb_pdo()->prepare('SELECT animador_apagados FROM cc_parties WHERE id = ?');
+        $stmt->execute([$partyId]);
+        $crudo = $stmt->fetchColumn();
+    } catch (Throwable $e) {
+        error_log('CumpleClick animador_apagados (¿falta la migración 027?): ' . $e->getMessage());
+        return [];
+    }
+    $lista = is_string($crudo) && $crudo !== '' ? json_decode($crudo, true) : null;
+    return is_array($lista) ? cb_sanitize_animador_apagados($lista) : [];
+}
+
+/**
+ * Guarda los juegos del animador apagados. Columna propia, fuera de cb_save_parties(): el
+ * código anterior (188ba45) no la conoce y por eso no la borra al guardar (plan de rollback).
+ */
+function cb_save_party_animador_apagados(string $publicSlug, array $ids): array
+{
+    if (cb_storage_mode() !== 'db') {
+        return ['ok' => false, 'errors' => ['Los juegos del animador requieren storage_mode=db.']];
+    }
+    $partyId = cb_party_db_id($publicSlug);
+    if ($partyId === null) {
+        return ['ok' => false, 'errors' => ['La fiesta no existe.']];
+    }
+    $limpios = cb_sanitize_animador_apagados($ids);
+    try {
+        $stmt = cb_pdo()->prepare('UPDATE cc_parties SET animador_apagados = ?, updated_at = ? WHERE id = ?');
+        $stmt->execute([$limpios ? json_encode($limpios) : null, gmdate('Y-m-d H:i:s'), $partyId]);
+    } catch (Throwable $e) {
+        error_log('CumpleClick guardar animador_apagados: ' . $e->getMessage());
+        return ['ok' => false, 'errors' => ['No se pudieron guardar los juegos del animador: falta aplicar la migración 027.']];
+    }
+    return ['ok' => true];
+}
+
+/**
  * Versión de los assets de una temática: el mtime más nuevo de su carpeta.
  *
  * Existe por el fantasma del cache: los archivos de temática se reemplazan
@@ -1037,7 +1167,7 @@ function cb_build_theme_payload(
         }
     }
 
-    return [
+    $payload = [
         'slug'       => $themeSlug,
         'assetsVersion' => cb_theme_assets_version($themeDiskDir),
         'nombre'     => (string) ($themeData['nombre'] ?? $themeSlug),
@@ -1069,12 +1199,113 @@ function cb_build_theme_payload(
         // "La foto de todos": una sola foto del grupo dentro del marco grande. Misma
         // prudencia que arriba: se publica solo si el fondo esta en disco.
         'grupal'     => cb_theme_grupal($themeData['grupal'] ?? null, $base, $themeDiskDir),
-        'musica'     => $base . 'musica-fondo.mp3',
+        // Sin pista en disco no se publica: una temática nueva puede salir sin música todavía
+        // (la del piloto adulto no estaba elegida) y el kiosco no pide un archivo que no existe.
+        'musica'     => is_file($themeDiskDir . 'musica-fondo.mp3') ? $base . 'musica-fondo.mp3' : '',
         // Música propia de la pantalla de juegos (opcional). Solo se publica si
         // el archivo existe: sin él, el juego sigue sonando con la de fondo.
         'musicaJuego' => is_file($themeDiskDir . 'musica-juego.mp3')
             ? $base . 'musica-juego.mp3'
             : '',
+    ];
+    // Cabina de cumpleaños de adulto (frases, cinta, panel y juego). Solo la lleva una
+    // temática adulta: el kiosco infantil no recibe ni la clave, ni una de esas bromas.
+    if (cb_theme_is_adult($themeData)) {
+        $payload['cabinaAdulto'] = cb_theme_cabina_adulto($themeData['cabinaAdulto'] ?? null, $base, $themeDiskDir);
+    }
+    return $payload;
+}
+
+/**
+ * Bloque `cabinaAdulto` de una temática adulta, copiado campo por campo.
+ *
+ * Los textos son texto (el kiosco los dibuja en un canvas, nunca como HTML) y llevan tope de
+ * largo para que quepan en el panel. `{nombre}` y `{edad}` los reemplaza el kiosco con los
+ * datos de la fiesta: la temática no lleva el nombre de nadie.
+ * Devuelve null si falta algo esencial; el kiosco entonces usa sus textos por defecto.
+ */
+function cb_theme_cabina_adulto($bloque, string $base = '', string $dir = ''): ?array
+{
+    if (!is_array($bloque)) {
+        return null;
+    }
+    $texto = static function ($v, int $max): string {
+        $v = trim(preg_replace('/\s+/u', ' ', (string) $v));
+        return ($v !== '' && mb_strlen($v) <= $max) ? $v : '';
+    };
+    $caja = static function ($c): ?array {
+        if (!is_array($c)) {
+            return null;
+        }
+        $out = [];
+        foreach (['x', 'y', 'w', 'h'] as $k) {
+            if (!isset($c[$k]) || !is_numeric($c[$k])) {
+                return null;
+            }
+            $out[$k] = (float) $c[$k];
+        }
+        if ($out['w'] < 0.05 || $out['h'] < 0.02 || $out['x'] < 0 || $out['y'] < 0
+            || $out['x'] + $out['w'] > 1 || $out['y'] + $out['h'] > 1) {
+            return null;
+        }
+        return $out;
+    };
+    $frases = [];
+    foreach ((array) ($bloque['frases'] ?? []) as $f) {
+        $f = $texto($f, 48);
+        if ($f !== '' && count($frases) < 12) {
+            $frases[] = $f;
+        }
+    }
+    $emojis = [];
+    foreach ((array) ($bloque['juego']['emojis'] ?? []) as $e) {
+        $e = trim((string) $e);
+        if ($e !== '' && mb_strlen($e) <= 4 && count($emojis) < 8) {
+            $emojis[] = $e;
+        }
+    }
+    $cinta = $caja($bloque['cinta'] ?? null);
+    $panel = $caja($bloque['panel'] ?? null);
+    if (!$frases || !$cinta || !$panel) {
+        return null;
+    }
+    // Portada de revista en pareja: solo si el fondo está en disco, como la foto grupal.
+    $revista = null;
+    $r = is_array($bloque['revista'] ?? null) ? $bloque['revista'] : null;
+    $fondoRevista = $r ? (string) ($r['fondo'] ?? '') : '';
+    if ($r && preg_match('/\A[a-z0-9][a-z0-9._-]*\.(?:jpe?g|png|webp)\z/i', $fondoRevista) && $dir !== '' && is_file($dir . $fondoRevista)) {
+        $titulares = [];
+        foreach ((array) ($r['titulares'] ?? []) as $t) {
+            $t = $texto($t, 60);
+            if ($t !== '' && count($titulares) < 8) {
+                $titulares[] = $t;
+            }
+        }
+        $fotoRevista = $caja($r['foto'] ?? null);
+        $panelRevista = $caja($r['panel'] ?? null);
+        if ($titulares && $fotoRevista && $panelRevista) {
+            $revista = [
+                'fondo'     => $base . $fondoRevista,
+                'titulo'    => $texto($r['titulo'] ?? '', 14) ?: 'CLICK',
+                'edicion'   => $texto($r['edicion'] ?? '', 40),
+                'foto'      => $fotoRevista,
+                'panel'     => $panelRevista,
+                'titulares' => $titulares,
+            ];
+        }
+    }
+    return [
+        'revista'  => $revista,
+        'titulo'   => $texto($bloque['titulo'] ?? '', 60),
+        'lema'     => $texto($bloque['lema'] ?? '', 60),
+        'recuerdo' => $texto($bloque['recuerdo'] ?? '', 60),
+        'frases'   => $frases,
+        'cinta'    => $cinta,
+        'panel'    => $panel,
+        'juego'    => $emojis ? [
+            'label'  => $texto($bloque['juego']['label'] ?? '', 40) ?: '¡Atrápalos!',
+            'emojis' => $emojis,
+        ] : null,
     ];
 }
 
@@ -1172,11 +1403,13 @@ function cb_theme_asomate($bloque, string $base, string $dir, array $personajesT
             continue;
         }
         $ficha = $porArchivo[(string) $clave] ?? [];
+        // Una temática sin ruleta (Fiestas Patrias, 2026-09-26: huasos y huasitas solo para Asómate) no tiene
+        // personajes de donde sacar el nombre: entonces lo trae el propio bloque de Asómate.
         $limpio = [
             'clave'  => (string) $clave,
             'png'    => $base . $rel . '?v=' . cb_sello_archivo($dir . $rel),
-            'nombre' => (string) ($ficha['name'] ?? $clave),
-            'emoji'  => (string) ($ficha['emoji'] ?? ''),
+            'nombre' => (string) ($ficha['name'] ?? $geo['nombre'] ?? $clave),
+            'emoji'  => (string) ($ficha['emoji'] ?? $geo['emoji'] ?? ''),
         ];
         foreach ($campos as $campo) {
             $limpio[$campo] = (float) ($geo[$campo] ?? 0);
@@ -1235,6 +1468,12 @@ function cb_resolve_party(string $slugRaw): array
         return ['ok' => false, 'error' => 'not_found', 'code' => 404];
     }
     $themeData = $themes[$themeSlug];
+    $eventType = cb_party_event_type($party['event_type'] ?? '');
+    // Una temática adulta en una fiesta que no es de adultos (o al revés) solo puede venir de
+    // una base editada a mano: el admin no la deja guardar. El kiosco no la abre.
+    if (cb_theme_is_adult($themeData) !== ($eventType === 'adult_birthday')) {
+        return ['ok' => false, 'error' => 'theme_mismatch', 'code' => 409];
+    }
 
     // frameBox: override de la fiesta tiene prioridad sobre el default de la temática.
     $frameBox = cb_normalize_frame_box($party['frameBox'] ?? null)
@@ -1255,13 +1494,20 @@ function cb_resolve_party(string $slugRaw): array
         'public_slug'      => $slug,
         'slug'             => $slug,
         'nombre'           => (string) ($party['nombre'] ?? ''),
-        'event_type'       => (string) ($party['event_type'] ?? '') === 'baby_shower' ? 'baby_shower' : 'child_birthday',
+        'event_type'       => $eventType,
         'invitados'        => $invitados,
         'frameBox'         => $frameBox,
         'musica'           => !isset($party['musica']) || !empty($party['musica']),
         'service_plan'     => (string) ($party['service_plan'] ?? 'booth'),
         'gallery_enabled'  => (bool) ($party['gallery_enabled'] ?? false),
     ];
+    // La edad solo cruza en un cumpleaños de adulto: el lema de la cabina la usa
+    // («69 y todavía doy guerra»). En una fiesta infantil no se publica, como hasta hoy.
+    if ($eventType === 'adult_birthday') {
+        $partyPayload['edad'] = isset($party['edad']) && $party['edad'] !== null ? (int) $party['edad'] : null;
+        // Juegos del animador que el admin apagó: el kiosco los saca de «Juegos de la fiesta».
+        $partyPayload['animadorApagados'] = cb_party_animador_apagados($slug);
+    }
 
     // Juegos habilitados para ESTA fiesta (los marca Luis en el admin según el
     // plan contratado. La misión 3D del Full se agrega por separado y nunca
@@ -1275,6 +1521,16 @@ function cb_resolve_party(string $slugRaw): array
         cb_sanitize_party_games($party['juegos'] ?? null),
         $effectivePlan
     );
+
+    // Despedida propia de una fiesta (p. ej. la cumpleañera brindando): archivo que vive solo en el servidor,
+    // `themes/<tema>/despedida-fiesta-<slug>.mp4`, nunca en el repositorio público (.gitignore). Si existe,
+    // reemplaza la despedida de la temática.
+    $propia = cb_themes_dir() . '/' . $themeSlug . '/despedida-fiesta-' . $slug . '.mp4';
+    if (cb_valid_public_slug($slug) && is_file($propia)) {
+        $videos = (array) ($themePayload['videos'] ?? []);
+        $videos['despedida'] = 'themes/' . $themeSlug . '/despedida-fiesta-' . $slug . '.mp4?v=' . cb_sello_archivo($propia);
+        $themePayload['videos'] = $videos;
+    }
 
     return ['ok' => true, 'party' => $partyPayload, 'theme' => $themePayload];
 }

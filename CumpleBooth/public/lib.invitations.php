@@ -144,7 +144,7 @@ function cb_create_invitation(array $data): array
     $eventTime = trim((string) ($data['event_time'] ?? ''));
     $address = trim((string) ($data['address'] ?? ''));
     $message = trim((string) ($data['message'] ?? ''));
-    $eventType = (string) ($data['event_type'] ?? '') === 'baby_shower' ? 'baby_shower' : 'child_birthday';
+    $eventType = cb_party_event_type($data['event_type'] ?? '');
     $language = in_array((string) ($data['language'] ?? ''), ['es', 'en', 'pt'], true) ? (string) $data['language'] : 'es';
     $channel = in_array((string) ($data['channel'] ?? ''), ['whatsapp', 'email', 'print'], true) ? (string) $data['channel'] : 'whatsapp';
     // Elige la narración de cierre de Alice ("cumpleañero" vs "cumpleañera").

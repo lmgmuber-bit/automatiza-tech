@@ -1,0 +1,118 @@
+ticket_id: AT-CUMPLECLICK-026
+title: "Cumpleaños de adulto: modalidad adult_birthday y temática genérica Coquetería Pop (cabina, juego de atrapar e invitación)"
+origin: direct_luis
+portfolio: "AT"
+priority: P1
+status: IN_PROGRESS
+
+governance:
+  professional_standard: "Docs/ENGINEERING_STANDARDS/PROFESSIONAL_ENGINEERING_STANDARD.md"
+  quality_gate: C2
+
+objective: >
+  Llevar a CumpleClick la temática de un cumpleaños de adulto con humor de doble sentido («Se busca por exceso de
+  coquetería / N y todavía doy guerra»), con un evento privado como piloto (viernes 16-oct-2026). La temática es
+  GENÉRICA y reutilizable: no lleva nombre, edad, fotos ni dirección de nadie; el nombre y la edad los llena el kiosco
+  con los datos de la fiesta. Los datos y medios del piloto viven solo en el almacenamiento privado del evento en PROD,
+  nunca en este repositorio (es público).
+owner: claude
+reviewer: luis
+active_orchestrator: claude
+
+ownership:
+  current_owner: claude
+  previous_owners: []
+  takeover_allowed: false
+  takeover_count: 0
+  takeover_reason: null
+  urgency: high
+  resolution_status: pending
+  reassignment_authorized_by: null
+  handoff_ref: "Paquete privado de Codex (11-oct-2026), fuera del repositorio: contexto-cumpleclick-adultos-<piloto>"
+  handoff_quality: COMPLETE
+
+scope:
+  allowed_files:
+    - "CumpleBooth/public/themes/adulto-coqueteria-pop/**"
+    - "CumpleBooth/public/data/themes.json"
+    - "CumpleBooth/public/lib.php"
+    - "CumpleBooth/public/lib.invitations.php"
+    - "CumpleBooth/public/lib.predictions.php"
+    - "CumpleBooth/public/invitacion.php"
+    - "CumpleBooth/public/ver.php"
+    - "CumpleBooth/public/admin/index.php"
+    - "CumpleBooth/src/App.jsx"
+    - "CumpleBooth/src/cumpleAdulto.js"
+    - "CumpleBooth/src/asomateGuia.js"
+    - "CumpleBooth/src/animador/**"
+    - "CumpleBooth/public/asistencia-papas.php"
+    - "CumpleBooth/public/lib.rsvp.php"
+    - "CumpleBooth/public/assets/invitation.js"
+    - "CumpleBooth/src/styles.css"
+    - "CumpleBooth/design/generadores/tematicas/**"
+    - "CumpleBooth/tests/**"
+    - "CumpleBooth/docs/**"
+    - "CumpleBooth/package.json"
+    - "CumpleBooth/package-lock.json"
+  forbidden_files:
+    - "Datos, fotos, video o dirección del evento piloto en cualquier archivo versionado"
+  locked_files: []
+  branch: "claude/cumple-adulto-coqueteria"
+  base_commit: "188ba45"
+  depends_on: []
+  notes: >
+    Parte de origin/main (= PROD del kiosco) y no de la cadena de feria sin mergear (#58 → #72 → claude/cumpleclick-sdd),
+    para poder desplegarse sola antes del 16-oct. La cadena de feria trae sus propias temáticas adultas con `audiencia:
+    adulto` solo dentro del modo feria; al integrarlas, themes.json y la guarda cb_theme_is_adult deben conciliarse
+    (las temáticas de feria no son de fiesta privada). Sin migración: event_type es VARCHAR(40) y birthday_age TINYINT.
+    Tipografía nueva @fontsource/anton 5.3.0 (OFL-1.1), evaluada: aporta el cartel condensado de la invitación aprobada,
+    sin solaparse con Baloo 2 (que sigue siendo la del producto). Los fondos de la temática se dibujan con código, sin IA. Las 14 figuras de Asómate sí se generaron con IA (Recraft v4.1 por la API de Higgsfield, 18 imágenes, USD 0,63 de lista) con el visto bueno de Luis del 11-oct.
+
+routing:
+  complexity: C2
+  risk: medium
+  uncertainty: medium
+  reversibility: easy
+  selected_profile: orchestrator
+  selected_model: "claude"
+  rationale: "Toca el contrato kiosco/servidor (modalidad nueva) y la privacidad de un evento real; lo hace quien conoce las trampas del kiosco (edad recortada, CDN, inset del marco, guardas de nombre vacío)."
+  independent_review: true
+  human_gate: true
+
+acceptance:
+  criteria:
+    - "Una fiesta adult_birthday con la temática adulta abre el kiosco sin ruleta ni personajes (cumple-adulto-http.php)."
+    - "El admin rechaza con aviso temática adulta en fiesta infantil y viceversa; api.php responde 409 ante el cruce en la base."
+    - "La edad de un adulto se guarda entera (control en rojo: con el tope viejo de 17 la prueba falla)."
+    - "Una fiesta infantil no recibe edad ni cabinaAdulto y conserva personajes y música."
+    - "Recorrido local completo: bienvenida, juego de atrapar, frase, foto en el marco, QR (e2e con cámara falsa, sin errores de página)."
+    - "Ningún dato del evento piloto en archivos versionados (barrido del diff antes de cada commit)."
+    - "Suite frontend completa y suites backend en verde; build de Vite sin errores."
+    - "Portada en pareja: titular elegido o ninguno, foto 4:5 sin texto sobre caras, QR (e2e)."
+    - "Juegos del animador: nivel como techo, mazo sin repetir (también al volver a un juego), «Paso esta» sin castigo, un punto por equipo y ronda, Tribunal solo con preparación confirmada, mímica privada (tests del motor + recorrido en navegador)."
+    - "Asómate adulto: 14 figuras cuyo hueco cubre ojos y boca ilustrados sin abrirse fuera del rostro (revisión visual con fondo de control); zoom siempre positivo."
+    - "Invitación adulta silenciosa (sin narraciones de Alice, ni la de inicio), video con póster que no se interrumpe por el avance automático, asistencia sin vocabulario infantil."
+    - "Rollback documentado con TODOS los PHP que se reemplazan y su orden, sin perder la modalidad ni la edad de las fiestas adultas y sin dejar su invitación publicada con el código anterior (ensayo con el código de 188ba45)."
+    - "Revisión B por cargos del homólogo Codex (Forja, Lienzo, Centinela, Vigía, Contralor) sobre la misma revisión, con segundo ciclo tras las correcciones."
+  pending_physical:
+    - "Tablet real con cámara y personas reales (grupos, alturas, gafas)."
+    - "Impresión si se usa (Selphy): medidas reales; los carteles de 33x48 cm no son plantilla del kiosco."
+
+decisions_for_luis:
+  - "Go para desplegar a PROD (kiosco, PHP y temática) y para crear la fiesta del piloto con sus datos en el admin."
+  - "Música: sin pista hasta que la elija; la temática funciona muda."
+
+progress:
+  - "2026-10-11: P0 cabina implementado y probado en local (commit 1452ae1)."
+  - "2026-10-11: invitación adulta y foto grupal «cómplices» (0cc11f0)."
+  - "2026-10-11: Luis aprobó «haz todas»: portada en pareja y los 15 juegos del animador (ba97e37); Asómate adulto con 14 figuras, USD 0,63 de lista con su visto bueno (a646a4f)."
+  - "2026-10-11: revisión B encargada a Codex sobre 91083bf (PEER_REVIEW_PENDING). Encargo: Documents/Codex/Shared-Tools/Revision-Codex-AT-CUMPLECLICK-026.md; respuesta esperada en Revision-B-Codex-AT-CUMPLECLICK-026.md."
+  - "2026-10-11: cargos at-agent-company (piloto CumpleClick). Autor: Claude como un solo actor cubriendo Forja y Lienzo; sin cargos nativos convocados en la implementación (subagentes Explore genéricos para mapear, no son revisión). Revisión B pedida por cargo a Codex: Forja, Lienzo, Centinela, Vigía y Contralor."
+  - "2026-10-11: revisión B de Codex sobre 91083bf: NO APTO, 23 CX (2 ALTA). Corregidos en 0dbeeff por cargos: Forja-Claude (CX-12, 13, 14, 17 e insumos de CX-04), Lienzo-Claude (CX-05, 06, 07, 08, 18, 23) y el orquestador Claude (el resto e integración). Segundo ciclo B pedido a Codex en el mismo encargo. (Antes figuraba con fecha 12-oct por error: fue el 11-oct.)"
+  - "2026-10-11: revisión B2 de Codex sobre 0dbeeff: NO APTO; 21 de 23 CX cerrados, CX-02 (MEDIA) y CX-04 (ALTA) parciales y CX-24 nuevo (MEDIA). Informe: Documents/Codex/Shared-Tools/Revision-B2-Codex-AT-CUMPLECLICK-026.md. Corregidos en el commit siguiente por cargos: Forja-Claude CX-04 (database/rollback-adultos.php exportar/comprobar/restaurar, ensayo con el código de 188ba45 36/36, prueba de 34), Lienzo-Claude CX-24 (guardarUnaVez.js, 5 pruebas, E2E 4 casos), orquestador CX-02 (óvalos d2, f1 y g2; la medida de Codex da 0 en las 14) e integración. Tercer ciclo B pedido a Codex; PEER_REVIEW_PENDING."
+  - "2026-10-11: Luis pidió aplicar el arreglo de CX-24 también a la vista previa infantil (misma carrera, preexistente): 5d5a4b0, orquestador Claude, control en rojo hecho (antes: QR de la foto anterior y 3 descargas con tres toques). Entra en el tercer ciclo B."
+  - "2026-10-11: revisión B3 de Codex sobre bea45a1: CX-02, CX-04 y CX-24 CERRADOS; recorridos infantil y baby shower completos PASS; nuevo CX-25 (MEDIA): el respaldo del rollback aceptaba una carpeta hermana del repo público (Docs/). Corregido por Forja-Claude: la ruta se rechaza si está en la carpeta servida o en cualquier repositorio Git (.git carpeta o archivo), antes de escribir y de suspender; nombre final sin enlace y creación exclusiva. Prueba 58 (antes 34), control en rojo hecho. Revalidación focalizada pedida a Codex (Forja y Vigía)."
+  - "2026-10-11: Codex sin tokens; Luis autorizó que la revisión de CX-25 la haga Claude (misma plataforma, no cruzada). B4 de Vigía-Claude sobre 12c15e8: CX-25 CERRADO; nuevos CX-26 (webroot de otro dominio), CX-27 (open_basedir falla abierto), CX-28 (restaurar sin validar party_id ni entorno), todos BAJA, y CX-29 informativo (temporales del test). Corregidos por Forja-Claude: respaldo formato /2 con huella del entorno, rechazo de public_html/www/htdocs y de padres no revisables, aborto con open_basedir, party_id exigido, umask 077; test de 58 a 100, 7 controles en rojo, ensayo 188ba45 36/36. Vigía-Claude verificó 837f2df: CX-26 a CX-29 CERRADOS, sin CX-30 (informe Documents/Codex/Shared-Tools/Revision-B4-Claude-Vigia-AT-CUMPLECLICK-026.md, sección 9). Revisión de la misma plataforma; la cruzada de Codex sigue PEER_REVIEW_PENDING."
+  - "2026-10-12: Luis pidió probar en local la fiesta del piloto (adulta, 69): creada por el admin local, la edad se guarda en 69 y el kiosco la muestra bien. Se halló un defecto preexistente (desde 8938ec2): «Nueva fiesta» guardaba el marco genérico {0.32,0.30,0.36,0.28} y no el de la temática, así que la foto salía chica en Coquetería, Hielo, Spidey, K-Pop, Carreras, Familia Canina y baby shower. Corregido por Lienzo-Claude en admin/index.php (cada temática lleva su marco y se carga al elegirla); admin-formularios 78 a 88, control en rojo con 6 fallos; verificado en el admin local por el orquestador. Riesgo PROD sin verificar: fiestas ya creadas con el marco genérico (revisar frame_box en cc_parties con el ok de Luis). Revisión cruzada PEER_REVIEW_PENDING."
+  - "2026-10-12: pedidos de Luis tras probar la fiesta piloto en local. Lienzo-Claude: barra «🏠 Inicio / ← Volver» en todo el recorrido adulto (cámara liberada, CX-24 respetado); Asómate «elegir» no dejaba avanzar (grilla más alta que la pantalla; 18/18 combinaciones de 6 medidas y 1-3 personas ahora pasan; spidey idéntico); ficha ℹ️ por juego; juegos nuevos «Verdad o shot», «¿Quién es más venezolano?» (82 tarjetas, contenido propio y preguntas virales con respuesta de Luis) y su «Edición política»; «Yo nunca» ampliado; tarjetas de música (sin audio) e imagen (archivos fuera del repo). Forja-Claude: apagar juegos del animador por fiesta adulta (migración 027, columna animador_apagados, party.animadorApagados) y Duplicar conserva la modalidad. Pruebas: frontend 272, backend 13 suites en verde, animador-apagados 50. Verificado por el orquestador con la fiesta local del piloto. Pendientes: personaje-1.jpg y su respuesta (Luis); «Elegir yo qué juegos van» del kiosco infantil no se guarda (preexistente, decisión de Luis); grupalFoto no se limpia en reset infantil (preexistente). Revisión cruzada PEER_REVIEW_PENDING."
+  - "2026-10-13 00:28-00:40: DESPLEGADO en PROD con el go de Luis (12-oct). PROD tenía la feria (claude/feria-prod, migración 026): se fusionó antes (ad21dd6) para no borrarla; con ella subió la intro de la feria pendiente desde el 29-sep. Respaldo de la base y de los 11 archivos en ~/respaldos/*-026-20261013-0028; migración 027 aplicada; 19 archivos de la temática y 14 de código cotejados por sha256; verificado desde afuera (fiestas infantiles iguales, feria presente). Fiesta del piloto creada en PROD por CLI, inactiva hasta la aceptación o exención de Luis. Revisión cruzada de Codex de los últimos ciclos: PEER_REVIEW_PENDING (Luis siguió sin ella). Detalle en CumpleBooth/docs/FTP-MANIFEST.md."

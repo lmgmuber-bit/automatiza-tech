@@ -42,10 +42,14 @@ try {
 
 $lista = [];
 $esBabyShower = false;
+// Cumpleaños de adulto (CX-13, AT-CUMPLECLICK-026): el segundo campo de la invitación pregunta
+// «¿Vienes con alguien?», así que lo que llega son acompañantes, no niños.
+$esAdulto = false;
 $titulo = 'Confirmaciones';
 if (!$invalido) {
     $lista = cb_rsvp_list((int) $acceso['party_id']);
     $esBabyShower = (string) ($acceso['event_type'] ?? '') === 'baby_shower';
+    $esAdulto = (string) ($acceso['event_type'] ?? '') === 'adult_birthday';
     $nombre = trim((string) ($acceso['birthday_person_name'] ?? ''));
     $titulo = $esBabyShower
         ? ($nombre !== '' ? "Confirmados al baby shower de $nombre" : 'Confirmados al baby shower')
@@ -210,7 +214,10 @@ $cDark2 = $hex($colores['dark2'] ?? '', '#0a1029');
     <h1><?= $esc($titulo) ?></h1>
     <p class="resumen">
       <span class="cifra"><?= $totalFamilias === 1 ? '1 confirmación' : $esc($totalFamilias . ' confirmaciones') ?></span>
-      <?php if (!$esBabyShower && $totalNinos > 0): ?>
+      <?php if ($esAdulto && $totalNinos > 0): ?>
+      <?php /* Aproximado: sale del texto libre «con Jorge y Ana», igual que el conteo de niños. */ ?>
+      <span class="cifra">👥 <?= $esc($totalNinos) ?> <?= $totalNinos === 1 ? 'acompañante' : 'acompañantes' ?></span>
+      <?php elseif (!$esBabyShower && !$esAdulto && $totalNinos > 0): ?>
       <span class="cifra">👧🧒 <?= $esc($totalNinos) ?> <?= $totalNinos === 1 ? 'niño' : 'niños' ?></span>
       <?php endif; ?>
     </p>
@@ -230,7 +237,7 @@ $cDark2 = $hex($colores['dark2'] ?? '', '#0a1029');
       <?php foreach ($ninos as $n): ?><li><?= $esc($n) ?></li><?php endforeach; ?>
     </ul>
     <?php else: ?>
-    <p class="ninos ninos--vacio">Sin niños anotados</p>
+    <p class="ninos ninos--vacio"><?= $esAdulto ? 'Sin acompañantes anotados' : 'Sin niños anotados' ?></p>
     <?php endif; ?>
     <p class="fecha">Confirmó el <?= $esc(date('d-m-Y H:i', strtotime((string) $fila['created_at']) ?: time())) ?></p>
   </article>

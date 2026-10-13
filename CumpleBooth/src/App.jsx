@@ -1,5 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import QRCode from 'qrcode'
+import FeriaBooth from './feria/FeriaBooth.jsx'
+import { apiQuery, feriaFromResponse } from './feria/contract.js'
+import { loadImage } from './feria/media.js'
+import { createFeriaPhoto } from './feria/photo.js'
 import { ensureCanvasFonts } from './fonts.js'
 import { applyThemeColors } from './themeVars.js'
 import {
@@ -20,6 +24,10 @@ import { guiaEnPantalla, rectFotoEnLienzo } from './asomateGuia.js'
 import { prepararVideo, urlDeVideo } from './videoListo.js'
 import { ajusteParaCara } from './caraAuto.js'
 import { detectarCara, prepararDetector } from './detectorCara.js'
+import { cabinaAdulto, partirEnLineas, textoCinta } from './cumpleAdulto.js'
+import { crearGuardadoUnaVez } from './guardarUnaVez.js'
+import { navAdulto } from './navAdulto.js'
+import Animador from './animador/Animador.jsx'
 import { PREDICTION_OPTIONS, createPredictionSubmissionToken, predictionLabels, predictionSummary, validPrediction } from './predictions.js'
 
 /* ============================================================
@@ -38,6 +46,8 @@ const BASE = import.meta.env.BASE_URL // base relativa './' — funciona en cual
 const BRAND_LOGO_SRC = BASE + 'brand/cumpleclick-mark.svg'
 
 let CONFIG = null
+let FERIA = null
+let FERIA_THEME = null
 // Versión de assets del tema activo (rompe-cache). La escribe buildRuntime.
 let ASSETS_VERSION = 0
 let PARTY_SLUG = null
@@ -45,7 +55,8 @@ let THEME_SLUG = null
 // Juego 3D "Tu Cumple en 3D" (carpeta hermana juego/, mismo hosting que el kiosco).
 // Solo las temáticas con mundo 3D lo ofrecen desde la bienvenida; el juego recibe
 // la fiesta por ?p= y, con ?kiosco=1, muestra "Volver al kiosco" en pausa y al final.
-const TEMAS_JUEGO_3D = ['hielo', 'heroes', 'spidey']
+// Fiestas Patrias (26-09): su juego es Chile en Volantín, que el menú ofrece por la temática de la fiesta.
+const TEMAS_JUEGO_3D = ['hielo', 'heroes', 'spidey', 'fiestas-patrias']
 function juego3dUrl() {
   return BASE + 'juego/?p=' + encodeURIComponent(PARTY_SLUG || '') + '&kiosco=1'
 }
@@ -75,6 +86,8 @@ let DIPLOMA = '' // theme.diploma — título honorífico del diploma (ej "Pilot
 let THEME_LABEL = '' // theme.franquicia (ej "Cars") con fallback a theme.nombre — rótulo sobre el marco
 let INVITADOS_DEFAULT = []
 let MUSIC_ENABLED = true
+// Cumpleaños de adulto: textos de la cabina ya llenos con nombre y edad (src/cumpleAdulto.js).
+let CABINA_ADULTO = null
 let GRUPO_IMG = null
 let CONFETTI_COLORS = ['#e8000d', '#ffb800', '#1a1a1a', '#c0c0c0', '#ffffff', '#ffd166'] // fallback antes de runtime
 
@@ -177,7 +190,9 @@ function buildRuntime(party, theme, slug) {
       confetti: BASE + 'audio/confetti.mp3', // opcional, genérico (no por temática)
       nota: BASE + 'audio/nota.mp3', // opcional, genérico: al atrapar en el juego de copos
       error: BASE + 'audio/error.mp3', // opcional, genérico: al tocar una trampa en el juego de copos
-      musica: ver(BASE + theme.musica), // música de fondo en loop
+      // Música de fondo en loop. Una temática sin pista todavía (la adulta del piloto) no la
+      // publica, y entonces no suena nada en vez de pedir un archivo que no existe.
+      musica: theme.musica ? ver(BASE + theme.musica) : null,
       // Música exclusiva de la pantalla de juegos (Luis, 2026-07-26: en los
       // juegos suena "Y si hacemos un muñeco", en el resto "Libre soy").
       // Sin este archivo el juego conserva la música de fondo normal.
@@ -219,9 +234,19 @@ function buildRuntime(party, theme, slug) {
     // Música de fondo habilitada por el admin (default true si no viene del API)
     musicaHabilitada: party.musica !== false,
     servicePlan: party.service_plan === 'full' ? 'full' : 'booth',
-    eventType: party.event_type === 'baby_shower' ? 'baby_shower' : 'child_birthday',
+    eventType: ['baby_shower', 'adult_birthday'].includes(party.event_type) ? party.event_type : 'child_birthday',
+    // La edad de la celebrada. El servidor solo la manda en un cumpleaños de adulto.
+    edad: Number.isInteger(party.edad) ? party.edad : null,
+    // Juegos del animador apagados desde el admin (solo fiestas adultas). Sin la clave, ninguno.
+    animadorApagados: Array.isArray(party.animadorApagados)
+      ? party.animadorApagados.filter((id) => typeof id === 'string')
+      : [],
   }
-  MUSIC_ENABLED = CONFIG.musicaHabilitada
+  MUSIC_ENABLED = CONFIG.musicaHabilitada && Boolean(CONFIG.audio.musica)
+  CABINA_ADULTO = CONFIG.eventType === 'adult_birthday'
+    ? cabinaAdulto(theme.cabinaAdulto, { nombre: nombreEvento(), edad: CONFIG.edad })
+    : null
+  if (CABINA_ADULTO?.revista) CABINA_ADULTO.revista.fondo = ver(BASE + CABINA_ADULTO.revista.fondo)
   CONFETTI_COLORS = Array.isArray(theme.confetti) && theme.confetti.length ? theme.confetti : CONFETTI_COLORS
   DIPLOMA = theme.diploma || ''
   THEME_LABEL = (theme.franquicia || theme.nombre || '').toUpperCase()
@@ -430,7 +455,7 @@ export default function App() {
     setStatus('loading')
     let alive = true
 
-    fetch(BASE + 'api.php?p=' + encodeURIComponent(p), { cache: 'no-store' })
+    fetch(BASE + 'api.php?' + apiQuery(location.search), { cache: 'no-store' })
       .then(async (res) => {
         const data = await res.json().catch(() => null)
         if (!data || !data.ok) {
@@ -440,7 +465,12 @@ export default function App() {
       })
       .then((data) => {
         if (!alive) return
+        FERIA = feriaFromResponse(data)
+        FERIA_THEME = FERIA ? data.theme : null
         buildRuntime(data.party, data.theme, p)
+        if (FERIA) THEME_LABEL = (data.theme.nombre || '').toUpperCase()
+        // Los récords de los minijuegos guardan el nombre del niño en la tablet: en una feria son desconocidos.
+        if (FERIA) configurarRecords(null)
         applyThemeVars(data.theme && data.theme.colors)
         setStatus('ready')
       })
@@ -461,12 +491,48 @@ export default function App() {
     return <ErrorScreen code={errorCode} onRetry={() => setRetryTick((t) => t + 1)} />
   }
   // status === 'ready' → RUNTIME ya está poblado, es seguro montar la app
+  if (FERIA) return <FeriaBooth key={slug} feria={FERIA} theme={THEME_SLUG} themeData={FERIA_THEME}
+    characters={PERSONAJES} filter={FERIA_THEME?.filtro} base={BASE} Spinner={Spinner} Character={VideoPersonaje}
+    renderPhoto={composeFeriaPhoto} renderDiploma={composeFeriaDiploma}
+    asomate={CONFIG.asomate || null} gameFor={feriaGameFor} Game={Juego} AsomatePick={AsomateElegir} Capture={Capture}
+    AsomateReview={AsomatePreview} asomatePerson={personajeDeAsomate} prepareAsomate={prepararAsomateFeria}
+    welcomeSrc={FERIA_THEME?.videos?.welcome || THEME_SLUG === 'carreras' ? WELCOME_VIDEO_PRIMARY : null}
+    despedidaSrc={FERIA_THEME?.videos?.despedida ? CONFIG.videos.despedida : null}
+    volantinUrl={THEME_SLUG === 'fiestas-patrias' ? BASE + 'juego/volantin/' : null}
+    music={MUSIC_ENABLED ? CONFIG.audio.musica : null} />
   return <BoothApp key={slug} />
 }
 
 /* ============================================================
    Pantallas de la puerta de entrada (sin RUNTIME todavía, look genérico)
    ============================================================ */
+// Adaptadores exclusivos de feria; el recorrido normal conserva sus compositores.
+// THEME_FLOW se reasigna al cargar la temática: se consulta al momento, no se copia.
+const feriaGameFor = (nombre) => THEME_FLOW.gameFor(nombre)
+const prepararAsomateFeria = () => { prepararDetector(BASE).catch(() => {}) }
+
+async function composeFeriaPhoto(source, name, person, filter, segmenter) {
+  await Promise.all([ensureCanvasFonts(), preloadBrandLogo()])
+  return createFeriaPhoto({ source, name, person, filter, segmenter, base: BASE, theme: FERIA_THEME,
+    frame: async (image) => {
+      const [background, character] = await Promise.all([
+        loadImage(CONFIG.images.fondo), loadImage(CHAR_PNG[person?.name]).catch(() => null),
+      ])
+      return composeImage(background, image, name, character, person?.name || '')
+    },
+  })
+}
+
+async function composeFeriaDiploma(name, person, heroe = null) {
+  await Promise.all([ensureCanvasFonts(), preloadBrandLogo()])
+  // Asómate: el diploma se arma sobre la escena del niño convertido en personaje, como en DiplomaScreen.
+  if (heroe) return composeDiploma(name, null, await loadImage(heroe).catch(() => null))
+  const [winner, hero] = await Promise.all([
+    loadImage(CHAR_IMG[person?.name]).catch(() => null), loadImage(CHAR_PNG[person?.name]).catch(() => null),
+  ])
+  return composeDiploma(name, winner, hero)
+}
+
 function NoPartyScreen() {
   return (
     <div className="app">
@@ -514,6 +580,11 @@ function ErrorScreen({ code, onRetry }) {
 
 function BoothApp() {
   const isBabyShower = CONFIG.eventType === 'baby_shower'
+  // Cumpleaños de adulto: sin ruleta ni personajes. Juego de atrapar (se puede saltar),
+  // frase elegida, foto en el marco «Se busca» y QR.
+  const isAdulto = CONFIG.eventType === 'adult_birthday'
+  const [fraseAdulto, setFraseAdulto] = useState('')
+  const [titularRevista, setTitularRevista] = useState('')
   const [screen, setScreen] = useState('intro')
   const [invitado, setInvitado] = useState(null)
   const [personaje, setPersonaje] = useState(null)
@@ -521,6 +592,8 @@ function BoothApp() {
   const [trasInvitados, setTrasInvitados] = useState('spinner')
   // La foto grupal: una sola captura, sin ajustes ni dueño.
   const [grupalFoto, setGrupalFoto] = useState(null)
+  // Adulto: la foto de todos se abre desde la bienvenida o desde los juegos; «Volver» vuelve ahí.
+  const [grupalDesde, setGrupalDesde] = useState(null)
   const [asomateElenco, setAsomateElenco] = useState([])
   const [asomateFotos, setAsomateFotos] = useState([])
   // La escena de Asomate recompuesta para el diploma. Se arma al guardar, con los recursos
@@ -642,7 +715,25 @@ function BoothApp() {
     setAsomateHeroe(null)
     setPrediction(null)
     setGameScore(null)
+    setFraseAdulto('')
+    setTitularRevista('')
     setScreen('intro')
+  }
+
+  // Adulto: «🏠 Inicio» desde cualquier pantalla, sin recargar. Además de reset() olvida la foto
+  // grupal y Asómate; la cámara se libera sola al desmontarse Capture.
+  const inicio = () => {
+    reset()
+    setGrupalFoto(null)
+    setGrupalDesde(null)
+    setAsomateElenco([])
+    setAsomateFotos([])
+    setTrasInvitados('spinner')
+  }
+  const nav = isAdulto ? navAdulto(screen, { hayFoto: Boolean(photo), grupalDesde }) : null
+  const volverAdulto = (destino) => {
+    if (destino === 'asomate-elegir') setAsomateFotos([])
+    go(destino)
   }
 
   // toque 4x esquina sup-DERECHA => gestión de invitados (oculto para niños)
@@ -657,7 +748,7 @@ function BoothApp() {
 
   // Dónde se puede volver atrás: del recorrido de la ruleta (no de Asómate, que ya tiene su
   // propio Atrás, ni del baby shower, que no pasa por la ruleta).
-  const conVolver = !isBabyShower && trasInvitados === 'spinner'
+  const conVolver = !isBabyShower && !isAdulto && trasInvitados === 'spinner'
     && ['invitados', 'spinner', 'photo-session', 'video-personaje', 'juego', 'transition'].includes(screen)
   const volverA = (destino) => {
     setVolverAbierto(false)
@@ -668,8 +759,16 @@ function BoothApp() {
   }
 
   return (
-    <div className={`app${conVolver ? ' app--con-volver' : ''}`}>
+    <div className={`app${conVolver ? ' app--con-volver' : ''}${nav ? ' app--nav-adulto' : ''}`}>
       <div className="corner-hit-right" onClick={cornerTapRight} aria-hidden />
+
+      {nav && !nav.propia && (
+        <NavAdulto
+          onInicio={inicio}
+          volver={nav.volver}
+          onVolver={nav.volver ? () => volverAdulto(nav.volver.destino) : null}
+        />
+      )}
 
       {conVolver && !volverAbierto && (
         <button className="volver-btn" type="button" onClick={() => setVolverAbierto(true)} aria-label="Volver atrás">
@@ -714,7 +813,14 @@ function BoothApp() {
           onStart={() => {
             startMusic()
             setTrasInvitados('spinner')
-            go(isBabyShower ? 'prediccion' : 'invitados')
+            if (isAdulto) setInvitado('')
+            go(isBabyShower ? 'prediccion' : isAdulto ? 'juego' : 'invitados')
+          }}
+          onAnimador={() => go('animador')}
+          onRevista={() => {
+            startMusic()
+            setInvitado('')
+            go('revista-titular')
           }}
           onGrupal={() => {
             // Sin lista de invitados y sin detector de caras: la foto es de todos y el
@@ -722,6 +828,7 @@ function BoothApp() {
             startMusic()
             setInvitado('')
             setGrupalFoto(null)
+            setGrupalDesde('intro')
             go('grupal-capturar')
           }}
           onAsomate={() => {
@@ -733,7 +840,13 @@ function BoothApp() {
             setAsomateFotos([])
             setAsomateHeroe(null)
             setTrasInvitados('asomate-elegir')
-            go('invitados')
+            // Un cumpleaños de adulto no tiene lista de niños: se elige la figura directo.
+            if (isAdulto) {
+              setInvitado('')
+              go('asomate-elegir')
+            } else {
+              go('invitados')
+            }
           }}
         />
       )}
@@ -751,13 +864,15 @@ function BoothApp() {
           invitados={invitadosList}
           etiqueta={trasInvitados === 'asomate-elegir'
             ? 'Elegir personaje 🦸'
-            : 'Toca para girar la ruleta 🎉'}
+            : PERSONAJES.length ? 'Toca para girar la ruleta 🎉' : 'Toca para tu foto 📸'}
           onStart={(nombre) => {
             setInvitado(nombre)
             // Asomate tambien pasa por aca: sin invitado el diploma salia a nombre de
             // "Invitado" y sin personaje, y la foto entraba a la galeria como foto.png,
             // sin dueno. Un toque mas, y el recuerdo queda con nombre.
-            go(trasInvitados)
+            // Una temática sin personajes (Fiestas Patrias, 26-09) no tiene ruleta: con cero personajes el Spinner
+            // quedaba trabado (ángulo 360/0 y personaje indefinido). Se pasa directo a la cámara.
+            go(trasInvitados === 'spinner' && !PERSONAJES.length ? 'capture' : trasInvitados)
           }}
         />
       )}
@@ -786,7 +901,100 @@ function BoothApp() {
           onDone={() => go(THEME_FLOW.afterCharacter(personaje.name))}
         />
       )}
-      {screen === 'juego' && (
+      {screen === 'juego' && isAdulto && (
+        <JuegoCopos
+          config={{ kind: 'copos', seconds: 20, label: CABINA_ADULTO.juego.label, emojis: CABINA_ADULTO.juego.emojis }}
+          invitado=""
+          personaje={null}
+          onDone={(score) => {
+            setGameScore(Number.isFinite(score) ? score : 0)
+            go('frase-adulto')
+          }}
+        />
+      )}
+      {screen === 'frase-adulto' && isAdulto && (
+        <FraseAdulto
+          onElegir={(frase) => {
+            setFraseAdulto(frase)
+            // Cambiar la frase no obliga a repetir la foto (revisión B, CX-19).
+            go(photo ? 'preview-adulto' : 'capture')
+          }}
+          onCancel={inicio}
+        />
+      )}
+      {screen === 'animador' && CABINA_ADULTO && (
+        <Animador
+          nombre={nombreEvento()}
+          edad={CONFIG.edad}
+          clave={STORAGE_KEY + '_animador'}
+          apagados={CONFIG.animadorApagados}
+          baseImagenes={BASE + 'themes/' + THEME_SLUG + '/animador/'}
+          onSalir={inicio}
+          onFotoGrupal={CONFIG.grupal ? () => {
+            setInvitado('')
+            setGrupalFoto(null)
+            setGrupalDesde('animador')
+            go('grupal-capturar')
+          } : null}
+        />
+      )}
+      {screen === 'revista-titular' && CABINA_ADULTO?.revista && (
+        <FraseAdulto
+          titulo="Elige el titular"
+          sub="Va en la portada, debajo de la foto de los dos."
+          opciones={CABINA_ADULTO.revista.titulares}
+          sinTexto="Solo la portada, sin titular"
+          onElegir={(titular) => {
+            setTitularRevista(titular)
+            go(photo ? 'revista-preview' : 'revista-capturar')
+          }}
+          onCancel={inicio}
+        />
+      )}
+      {screen === 'revista-capturar' && CABINA_ADULTO?.revista && (
+        <Capture
+          onCancel={isAdulto ? inicio : undefined}
+          onCapture={(dataUrl) => {
+            setPhoto(dataUrl)
+            go('revista-preview')
+          }}
+        />
+      )}
+      {screen === 'revista-preview' && CABINA_ADULTO?.revista && photo && (
+        <PreviewRevista
+          photo={photo}
+          titular={titularRevista}
+          onRetry={() => {
+            setPhoto(null)
+            go('revista-capturar')
+          }}
+          onOtroTitular={() => go('revista-titular')}
+          onInicio={inicio}
+          onSave={(composed) => {
+            setResult(composed)
+            go('qr')
+          }}
+        />
+      )}
+      {screen === 'preview-adulto' && isAdulto && photo && (
+        <PreviewAdulto
+          photo={photo}
+          bgRef={bgRef}
+          frase={fraseAdulto}
+          score={gameScore}
+          onRetry={() => {
+            setPhoto(null)
+            go('capture')
+          }}
+          onOtraFrase={() => go('frase-adulto')}
+          onInicio={inicio}
+          onSave={(composed) => {
+            setResult(composed)
+            go('qr')
+          }}
+        />
+      )}
+      {screen === 'juego' && !isAdulto && (
         isBabyShower ? (
           <JuegoCopos
             config={{ kind: 'copos', seconds: 15, label: '¡Atrapa los chupetes!', emojis: ['🍼'] }}
@@ -817,9 +1025,10 @@ function BoothApp() {
       )}
       {screen === 'capture' && (
         <Capture
+          onCancel={isAdulto ? inicio : undefined}
           onCapture={(dataUrl) => {
             setPhoto(dataUrl)
-            go(isBabyShower ? 'prediction-reveal' : (REVELACION_VIDEO ? 'revelacion' : 'preview'))
+            go(isBabyShower ? 'prediction-reveal' : isAdulto ? 'preview-adulto' : (REVELACION_VIDEO ? 'revelacion' : 'preview'))
           }}
         />
       )}
@@ -866,7 +1075,7 @@ function BoothApp() {
             setAsomateFotos([])
             go('asomate-capturar')
           }}
-          onCancel={() => go('intro')}
+          onCancel={isAdulto ? inicio : () => go('intro')}
         />
       )}
       {screen === 'asomate-capturar' && asomateElenco.length > 0 && (
@@ -882,6 +1091,7 @@ function BoothApp() {
             </p>
           )}
           <Capture
+          onCancel={isAdulto ? inicio : undefined}
             key={asomateFotos.length}
             guia={asomateElenco[asomateFotos.length]}
             onCapture={(dataUrl) => {
@@ -905,6 +1115,7 @@ function BoothApp() {
         <>
           <AvisoAcostar />
           <Capture
+          onCancel={isAdulto ? inicio : undefined}
             onCapture={(dataUrl) => {
               setGrupalFoto(dataUrl)
               go('grupal-preview')
@@ -925,7 +1136,8 @@ function BoothApp() {
           invitado={invitado}
           archivarComo={grupalFoto ? 'grupal-' + (nombreEvento() || 'fiesta') : null}
           isBabyShower={isBabyShower}
-          onDiploma={() => go('diploma')}
+          // En un cumpleaños de adulto no hay diploma: el recuerdo ya va impreso en la foto.
+          onDiploma={isAdulto ? null : () => go('diploma')}
           onDone={() => go('farewell')}
         />
       )}
@@ -946,7 +1158,7 @@ function BoothApp() {
           src={urlDeVideo(CONFIG.videos.despedida)}
           skipLabel="Terminar"
           finale
-          onDone={reset}
+          onDone={isAdulto ? inicio : reset}
         />
       )}
     </div>
@@ -1568,6 +1780,12 @@ function Spinner({ onDone }) {
     // El slot win queda bajo la flecha cuando la rotación ≡ -win*angle (mod
     // 360). Cinco vueltas desde donde está la rueda, más el ajuste para caer
     // en el ganador.
+    if (FERIA && REDUCE_MOTION) {
+      if (rotRef.current) rotRef.current.style.setProperty('--spin', `${-win * angle}deg`)
+      setWinner(PERSONAJES[win])
+      autoRef.current = setTimeout(() => onDone(PERSONAJES[win]), 8000)
+      return () => clearTimeout(autoRef.current)
+    }
     const bruto = base + 360 * 5
     const ajuste = ((-win * angle - bruto) % 360 + 360) % 360
     const finalR = bruto + ajuste
@@ -1943,7 +2161,12 @@ function componerGrupal(fondoImg, fotoImg, caja, titulo, opciones = {}) {
 
 /** El texto del pie. En grupo saluda a todos; solo, al invitado. */
 function tituloAsomate(invitado, cuantos) {
+  // En una feria no hay cumpleañero (26-09: salía "Tomás en el cumple de <feria>" en la foto que se lleva la gente).
+  if (FERIA) return cuantos > 1 ? `Amigos en ${FERIA.nombre}` : (invitado ? `${invitado} en ${FERIA.nombre}` : `Un recuerdo de ${FERIA.nombre}`)
   const quien = nombreEvento()
+  // En un cumpleaños de adulto la foto de todos sigue la broma de la temática: «cómplices».
+  if (cuantos > 1 && CABINA_ADULTO) return quien ? `Los cómplices de ${quien}` : '¡Los cómplices!'
+  if (CABINA_ADULTO) return CABINA_ADULTO.recuerdo
   if (cuantos > 1) return quien ? `El cumple de ${quien} y sus amigos` : '¡Amigos!'
   if (invitado && quien) return `${invitado} en el cumple de ${quien}`
   if (quien) return `¡Feliz cumple, ${quien}!`
@@ -1960,7 +2183,8 @@ function tituloAsomate(invitado, cuantos) {
  */
 function AsomateElegir({ onDone, onCancel }) {
   const disponibles = CONFIG.asomate?.personajes || []
-  const [cuantos, setCuantos] = useState(1)
+  // En un cumpleaños de adulto se asoma la pareja: parte en «Los dos».
+  const [cuantos, setCuantos] = useState(CABINA_ADULTO && disponibles.length > 1 ? 2 : 1)
   const [turno, setTurno] = useState(0)   // a que nino le toca elegir
   const [elegidos, setElegidos] = useState([disponibles[0], disponibles[1], disponibles[2]])
 
@@ -2000,7 +2224,7 @@ function AsomateElegir({ onDone, onCancel }) {
       <div className="asomate-turno">
         {cuantos > 1 && (
           <p className="asomate-turno__quien">
-            Niño {turno + 1} de {cuantos}
+            {CABINA_ADULTO ? 'Persona' : 'Niño'} {turno + 1} de {cuantos}
           </p>
         )}
         <div className="asomate-grid">
@@ -2029,7 +2253,7 @@ function AsomateElegir({ onDone, onCancel }) {
         </button>
         {turno + 1 < cuantos ? (
           <button className="cta" onClick={() => setTurno(turno + 1)} disabled={!elegidos[turno]}>
-            Siguiente niño →
+            {CABINA_ADULTO ? 'Siguiente persona →' : 'Siguiente niño →'}
           </button>
         ) : (
           <button className="cta" onClick={() => onDone(listos)} disabled={listos.length < cuantos}>
@@ -2149,6 +2373,8 @@ function GrupalPreview({ foto, onRetry, onSave }) {
   )
 }
 
+const ZOOM_MINIMO = 0.25
+
 function AsomatePreview({ elenco, fotos, invitado, onRetry, onSave }) {
   const [compuesta, setCompuesta] = useState(null)
   const [ajustes, setAjustes] = useState(() => elenco.map(() => ({ zoom: 1, dx: 0, dy: 0 })))
@@ -2204,8 +2430,13 @@ function AsomatePreview({ elenco, fotos, invitado, onRetry, onSave }) {
     setCompuesta(componerAsomate(r.fondo, lista, tituloAsomate(invitado, elenco.length)))
   }, [ajustes, elenco, invitado])
 
-  const mover = (clave, valor) =>
-    setAjustes((a) => a.map((x, i) => (i === quien ? { ...x, [clave]: valor } : x)))
+  // El tamaño nunca baja de ZOOM_MINIMO: antes el mando recalculaba su mínimo desde el valor
+  // actual y, empujándolo varias veces, llegaba a cero o negativo (revisión B de Codex, CX-03).
+  const mover = (clave, valor) => {
+    if (!Number.isFinite(valor)) return
+    const v = clave === 'zoom' ? Math.max(ZOOM_MINIMO, valor) : valor
+    setAjustes((a) => a.map((x, i) => (i === quien ? { ...x, [clave]: v } : x)))
+  }
 
   /**
    * Guarda la foto y, con ella, la escena que va a llevar el diploma.
@@ -2233,7 +2464,8 @@ function AsomatePreview({ elenco, fotos, invitado, onRetry, onSave }) {
     // Primero a la tablet y después al servidor, igual que la cabina: si el wifi se cae, la
     // foto ya está en el aparato. Hasta hoy Asómate no dejaba ninguna copia y, si la subida
     // fallaba, la pantalla igual decía que la descarga local estaba segura.
-    guardarEnLaTablet(compuesta, `asomate-${invitado || 'invitados'}`)
+    // En feria la copia la guarda la cabina de feria con su número F-###; aquí saldría una segunda sin número.
+    if (!FERIA) guardarEnLaTablet(compuesta, `asomate-${invitado || 'invitados'}`)
     onSave(compuesta, paraDiploma)
   }
 
@@ -2241,7 +2473,7 @@ function AsomatePreview({ elenco, fotos, invitado, onRetry, onSave }) {
     const valor = ajustes[quien]?.[clave] ?? 0
     // El ajuste automático puede dejar el valor fuera del recorrido normal (una cara en la
     // esquina del cuadro se corre varios huecos): el mando se estira para incluirlo.
-    const desde = Math.min(min, valor - 0.5)
+    const desde = clave === 'zoom' ? Math.max(ZOOM_MINIMO, Math.min(min, valor - 0.5)) : Math.min(min, valor - 0.5)
     const hasta = Math.max(max, valor + 0.5)
     return (
       <label className="asomate-mando">
@@ -2617,7 +2849,7 @@ function PantallaCompleta() {
 /* ============================================================
    1) INTRO — gate de toque (desbloquea audio/autoplay)
    ============================================================ */
-function Intro({ onStart, onAsomate, onGrupal }) {
+function Intro({ onStart, onAsomate, onGrupal, onRevista, onAnimador }) {
   const start = () => {
     // desbloquea audio con un sonido silencioso dentro del gesto
     try {
@@ -2631,7 +2863,7 @@ function Intro({ onStart, onAsomate, onGrupal }) {
   }
   return (
     <section
-      className={`screen intro intro--${THEME_SLUG}`}
+      className={`screen intro intro--${THEME_SLUG}${CABINA_ADULTO ? ' intro--adulto' : ''}`}
       style={{ backgroundImage: `url(${CONFIG.images.bienvenida})` }}
       onClick={start}
     >
@@ -2657,6 +2889,16 @@ function Intro({ onStart, onAsomate, onGrupal }) {
         </button>
       )}
       <div className="intro-content">
+        {CABINA_ADULTO ? (
+          // El «¡SE BUSCA!» ya viene pintado en el fondo: el titular lo continúa.
+          <div className="intro-adulto">
+            <h1 className="intro-title intro-title--adulto">{CABINA_ADULTO.titulo}</h1>
+            {textoCinta({ nombre: nombreEvento() }) && (
+              <p className="intro-cinta-adulto">{textoCinta({ nombre: nombreEvento() })}</p>
+            )}
+            <p className="intro-lema-adulto">¡{CABINA_ADULTO.lema}!</p>
+          </div>
+        ) : (
         <h1 className="intro-title">
           {/* Un baby shower no es "la fiesta de Valentina": Valentina todavia
               no nacio. La bienvenida cambia de forma segun la modalidad. */}
@@ -2670,12 +2912,15 @@ function Intro({ onStart, onAsomate, onGrupal }) {
                 ? <>¡Bienvenidos a la<br />fiesta de<br />{nombreEvento()}!</>
                 : <>¡Bienvenidos a<br />la fiesta!</>)}
         </h1>
+        )}
+        {!CABINA_ADULTO && (
         <div className="intro-party-decoration" aria-hidden="true">
           <div className="intro-party-flags">
             <i /><i /><i /><i /><i />
           </div>
           <span>¡A celebrar!</span>
         </div>
+        )}
         {/* La etiqueta con el nombre sobre la torta se quitó (Luis, 2026-09-09): el nombre
             ya está en el titular de arriba, y en Spidey la etiqueta caía sobre el texto del
             botón de entrar. El CSS .intro-cake-name se deja por si se quiere recuperar. */}
@@ -2687,9 +2932,34 @@ function Intro({ onStart, onAsomate, onGrupal }) {
               start()
             }}
           >
-            🎉 Toca para entrar
+            {CABINA_ADULTO ? '📸 Tomarme una foto' : '🎉 Toca para entrar'}
           </button>
-          <p className="hint">Te tomaremos una foto de recuerdo 📸</p>
+          <p className="hint">{CABINA_ADULTO
+            ? `Antes, un juego cortito: ${CABINA_ADULTO.juego.label.replace(/^¡|!$/g, '').toLowerCase()} 😏`
+            : 'Te tomaremos una foto de recuerdo 📸'}</p>
+          {CABINA_ADULTO && (
+            <button
+              className="cta cta--animador"
+              onClick={(event) => {
+                event.stopPropagation()
+                onAnimador()
+              }}
+            >
+              🎲 Juegos de la fiesta
+            </button>
+          )}
+          {CABINA_ADULTO?.revista && (
+            <button
+              className="cta cta--revista"
+              onClick={(event) => {
+                event.stopPropagation()
+                entrarPantallaCompleta()
+                onRevista()
+              }}
+            >
+              📰 Portada en pareja
+            </button>
+          )}
           {TEMAS_JUEGO_3D.includes(THEME_SLUG) && (
             <button
               className="cta cta--juego3d"
@@ -2745,11 +3015,13 @@ const esBabyShower = () => CONFIG?.eventType === 'baby_shower'
 // `fraseA()` en src/album/evento.js para el Album Recuerdo.
 const nombreEvento = () => String(CONFIG?.nombre || '').trim()
 const eventoFraseA = () => {
+  if (FERIA) return `a ${FERIA.nombre}`
   const nombre = nombreEvento()
   if (esBabyShower()) return nombre ? `al baby shower de ${nombre}` : 'al baby shower'
   return nombre ? `a la fiesta de ${nombre}` : 'a la fiesta'
 }
 const eventoFraseEn = () => {
+  if (FERIA) return FERIA.nombre
   const nombre = nombreEvento()
   if (esBabyShower()) return nombre ? `el baby shower de ${nombre}` : 'el baby shower'
   return nombre ? `la fiesta de ${nombre}` : 'la fiesta'
@@ -4187,7 +4459,7 @@ function GuiaAsomate({ personaje, caja }) {
   )
 }
 
-function Capture({ onCapture, guia }) {
+function Capture({ onCapture, guia, onCancel }) {
   const videoRef = useRef(null)
   const streamRef = useRef(null)
   const [error, setError] = useState(null)
@@ -4200,6 +4472,13 @@ function Capture({ onCapture, guia }) {
   // la cámara ya entrega imagen y cada vez que la caja cambia (giro de la tablet, barra del
   // navegador que aparece o se esconde).
   const [cajaGuia, setCajaGuia] = useState(null)
+  // La cuenta regresiva en curso. Si la pantalla se desmonta a medias (Inicio o Volver en un
+  // cumpleaños de adulto), se cancela y no dispara una foto sobre la pantalla siguiente.
+  const cuentaRef = useRef(null)
+  useEffect(() => () => {
+    if (cuentaRef.current) clearInterval(cuentaRef.current)
+    cuentaRef.current = null
+  }, [])
 
   useEffect(() => {
     if (!guia || !ready) return undefined
@@ -4337,16 +4616,19 @@ function Capture({ onCapture, guia }) {
   }
 
   const startCountdown = () => {
+    if (cuentaRef.current) return
     let n = 3
     setCount(n)
     const iv = setInterval(() => {
       n -= 1
       if (n <= 0) {
         clearInterval(iv)
+        cuentaRef.current = null
         setCount(null)
         doCapture()
       } else setCount(n)
     }, 800)
+    cuentaRef.current = iv
   }
 
   return (
@@ -4376,6 +4658,12 @@ function Capture({ onCapture, guia }) {
           <button className="cta ghost" onClick={() => location.reload()} style={{ marginTop: 12 }}>
             Recargar página
           </button>
+          {/* Cumpleaños de adulto: sin cámara igual se puede volver y jugar (revisión B, CX-10). */}
+          {onCancel && (
+            <button className="cta ghost" onClick={onCancel} style={{ marginTop: 12 }}>
+              🏠 Volver al inicio
+            </button>
+          )}
         </div>
       ) : (
         <>
@@ -4529,7 +4817,9 @@ function composeImage(bgImg, photoImg, invitado = '', charImg = null, charName =
   // Agradecimiento al costado del marco: K-Pop a la derecha (Luis, 2026-07-28),
   // Héroes a la izquierda y alineado a la izquierda (Luis, 2026-08-01, con
   // captura). El resto sigue como siempre: centrado debajo de la foto completa.
-  const textSide = THEME_SLUG === 'kpop' ? 'right' : THEME_SLUG === 'heroes' ? 'left' : null
+  // Héroes pasó a la derecha el 26-09: con el marco calibrado sobre fondo-sala.jpg (antes usaba el marco por
+  // defecto y la foto caía sobre los globos) a la izquierda quedan 190 px y el texto salía diminuto sobre el borde.
+  const textSide = THEME_SLUG === 'kpop' || THEME_SLUG === 'heroes' ? 'right' : null
   const textBeside = textSide !== null
   const textSideMargin = W * 0.045
   const textSideCx = textSide === 'right' ? (frameRight + W) / 2 : frameLeft / 2
@@ -4870,12 +5160,16 @@ function Preview({ photo, bgRef, invitado, personaje, onRetry, onSave }) {
     }
   }, [photo, bgRef, invitado, personaje])
 
+  // Igual que en las vistas adultas (revisión B2, CX-24): una descarga, un paso al QR y, mientras
+  // guarda, «Otra foto» bloqueado; si la vista se va antes, el paso al QR se cancela.
+  const { guardando, guardar, libre } = useGuardarUnaVez()
   const save = () => {
     if (!composed) return
-    guardarEnLaTablet(composed, `foto-${invitado || 'invitado'}`)
-    playSound(CONFIG.audio.confetti)
-    burstConfetti(confRef.current, { duration: 2600, count: 180 })
-    setTimeout(() => onSave(composed), REDUCE_MOTION ? 300 : 1600)
+    guardar(() => {
+      guardarEnLaTablet(composed, `foto-${invitado || 'invitado'}`)
+      playSound(CONFIG.audio.confetti)
+      burstConfetti(confRef.current, { duration: 2600, count: 180 })
+    }, () => onSave(composed))
   }
 
   return (
@@ -4886,12 +5180,403 @@ function Preview({ photo, bgRef, invitado, personaje, onRetry, onSave }) {
         <div className="loading">Preparando tu foto…</div>
       )}
       <div className="preview-bar">
-        <button className="cta ghost" onClick={onRetry}>
+        <button className="cta ghost" onClick={libre(onRetry)} disabled={guardando}>
           🔄 Otra foto
         </button>
-        <button className="cta" onClick={save} disabled={!composed}>
+        <button className="cta" onClick={save} disabled={!composed || guardando}>
           💾 Guardar
         </button>
+      </div>
+      <canvas ref={confRef} className="confetti-canvas" />
+    </section>
+  )
+}
+
+/* ============================================================
+   Cumpleaños de adulto — elegir la frase y componer la foto «Se busca»
+   ============================================================ */
+function FraseAdulto({
+  onElegir,
+  onCancel,
+  titulo = 'Elige tu frase',
+  sub = 'Va impresa bajo tu foto. Es broma: nadie queda fichado.',
+  opciones = CABINA_ADULTO.frases,
+  sinTexto = 'Sin frase, solo la foto',
+}) {
+  return (
+    <section className="screen frase-adulto">
+      <h2 className="frase-adulto__titulo">{titulo}</h2>
+      <p className="frase-adulto__sub">{sub}</p>
+      <div className="frase-adulto__lista">
+        {opciones.map((frase) => (
+          <button key={frase} type="button" className="frase-adulto__opcion" onClick={() => onElegir(frase)}>
+            {frase}
+          </button>
+        ))}
+        <button type="button" className="frase-adulto__opcion frase-adulto__opcion--sola" onClick={() => onElegir('')}>
+          {sinTexto}
+        </button>
+      </div>
+      <button type="button" className="cta ghost" onClick={onCancel}>🏠 Volver al inicio</button>
+    </section>
+  )
+}
+
+const FUENTE_CARTEL = "'Anton', 'Baloo 2', Impact, sans-serif"
+
+// Anton solo la usa la cabina adulta: se pide aquí y no al abrir el kiosco, así una fiesta
+// infantil no baja una fuente que no va a dibujar.
+function cargarFuenteCartel() {
+  if (typeof document === 'undefined' || !document.fonts) return Promise.resolve(false)
+  return document.fonts.load("400 60px 'Anton'").then(() => document.fonts.check("400 60px 'Anton'")).catch(() => false)
+}
+
+function composeCabinaAdulto(bgImg, photoImg, frase, score) {
+  // Mismo criterio que la foto grupal: el CDN le entrega a Android una copia de 800 px, así
+  // que el lienzo se fija en 1080 de ancho y todo se mide en proporción.
+  const W = Math.max(1080, bgImg?.naturalWidth || 1080)
+  const H = bgImg?.naturalWidth ? Math.round((W * bgImg.naturalHeight) / bgImg.naturalWidth) : Math.round((W * 16) / 9)
+  const canvas = document.createElement('canvas')
+  canvas.width = W
+  canvas.height = H
+  const ctx = canvas.getContext('2d')
+  if (bgImg) ctx.drawImage(bgImg, 0, 0, W, H)
+  else { ctx.fillStyle = '#F90B78'; ctx.fillRect(0, 0, W, H) }
+
+  // La foto, entera y sin retoque, en el cuadrado interior del marco dorado.
+  const g = getSquarePhotoGeometry(CONFIG.frameBox, W, H)
+  const lado = Math.min(photoImg.width, photoImg.height)
+  ctx.drawImage(photoImg, (photoImg.width - lado) / 2, (photoImg.height - lado) / 2, lado, lado,
+    g.photoLeft, g.photoTop, g.photoSide, g.photoSide)
+  ctx.lineWidth = Math.max(3, W * 0.005)
+  ctx.strokeStyle = '#191218'
+  ctx.strokeRect(g.photoLeft, g.photoTop, g.photoSide, g.photoSide)
+
+  const caja = (c) => c && { x: c.x * W, y: c.y * H, w: c.w * W, h: c.h * H }
+  const ajustar = (texto, maxPx, anchoMax) => {
+    let px = maxPx
+    ctx.font = `400 ${px}px ${FUENTE_CARTEL}`
+    while (ctx.measureText(texto).width > anchoMax && px > 18) {
+      px -= 2
+      ctx.font = `400 ${px}px ${FUENTE_CARTEL}`
+    }
+    return px
+  }
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+
+  // Cinta dorada: el nombre de la celebrada (la edad va en el lema, debajo).
+  const cinta = caja(CABINA_ADULTO?.cinta)
+  const textoDeCinta = textoCinta({ nombre: nombreEvento() })
+  if (cinta && textoDeCinta) {
+    ajustar(textoDeCinta, Math.round(cinta.h * 0.72), cinta.w * 0.9)
+    ctx.fillStyle = '#191218'
+    ctx.fillText(textoDeCinta, cinta.x + cinta.w / 2, cinta.y + cinta.h * 0.54, cinta.w * 0.9)
+  }
+
+  // Panel crema: la frase elegida (o el recuerdo si no eligió), el lema y el puntaje.
+  const panel = caja(CABINA_ADULTO?.panel)
+  if (panel) {
+    // Frase vacía = el invitado eligió «Sin frase»: el panel lleva solo el lema (revisión B, CX-09).
+    const principal = frase
+    const anchoUtil = panel.w * 0.88
+    // Primero un renglón, achicando hasta un mínimo legible; si no cabe, dos renglones.
+    // Con la letra máxima en dos renglones la frase tocaba el borde de arriba del panel.
+    const medir = (s) => ctx.measureText(s).width
+    const texto = principal.toLocaleUpperCase('es-CL')
+    let px = 0
+    let lineas = null
+    for (const [desde, hasta, renglones] of [[0.27, 0.19, 1], [0.21, 0.1, 2]]) {
+      for (px = Math.round(panel.h * desde); px >= Math.round(panel.h * hasta); px -= 2) {
+        ctx.font = `400 ${px}px ${FUENTE_CARTEL}`
+        lineas = partirEnLineas(texto, anchoUtil, medir, renglones)
+        if (lineas) break
+      }
+      if (lineas) break
+    }
+    lineas = principal ? (lineas || [texto]) : []
+    const altoLinea = px * 1.08
+    const centroFrase = panel.y + panel.h * 0.37
+    ctx.lineJoin = 'round'
+    lineas.forEach((linea, i) => {
+      const y = centroFrase + (i - (lineas.length - 1) / 2) * altoLinea
+      ctx.lineWidth = Math.max(4, px * 0.09)
+      ctx.strokeStyle = '#191218'
+      // maxWidth: una palabra sin espacios más ancha que el panel se comprime en vez de salirse (CX-16).
+      ctx.strokeText(linea, panel.x + panel.w / 2, y, anchoUtil)
+      ctx.fillStyle = '#F90B78'
+      ctx.fillText(linea, panel.x + panel.w / 2, y, anchoUtil)
+    })
+    // Anton no trae « »: el lema va como grito de cartel, igual que en la bienvenida.
+    const lema = `¡${CABINA_ADULTO.lema.toLocaleUpperCase('es-CL')}!`
+    ajustar(lema, Math.round(panel.h * 0.13), anchoUtil)
+    ctx.fillStyle = '#191218'
+    const yLema = !principal ? (score > 0 ? 0.42 : 0.5) : (score > 0 ? 0.74 : 0.8)
+    ctx.fillText(lema, panel.x + panel.w / 2, panel.y + panel.h * yLema, anchoUtil)
+    if (score > 0) {
+      ctx.font = `800 ${Math.round(panel.h * 0.085)}px 'Baloo 2', system-ui, sans-serif`
+      ctx.fillStyle = '#7A0039'
+      ctx.fillText(`${CABINA_ADULTO.juego.label.replace(/^¡|!$/g, '')}: ${score} ${score === 1 ? 'punto' : 'puntos'}`, panel.x + panel.w / 2, panel.y + panel.h * (principal ? 0.9 : 0.68), anchoUtil)
+    }
+  }
+  drawBrandWatermark(ctx, W, H)
+  return exportarFoto(canvas)
+}
+
+/**
+ * Portada de revista para una pareja. La foto entra en modo «cubrir» en el hueco 4:5 (sin
+ * franjas, recortando más del techo que de los pies, como la foto grupal); arriba el nombre de
+ * la revista, encima de la foto solo un sello chico en la esquina con la edad (las caras van al
+ * centro) y abajo el titular. Ningún texto va delante de una cara.
+ */
+function composeRevista(fondoImg, fotoImg, titular) {
+  const R = CABINA_ADULTO.revista
+  const W = Math.max(1080, fondoImg?.naturalWidth || 1080)
+  const H = fondoImg?.naturalWidth ? Math.round((W * fondoImg.naturalHeight) / fondoImg.naturalWidth) : Math.round((W * 16) / 9)
+  const c = document.createElement('canvas')
+  c.width = W
+  c.height = H
+  const ctx = c.getContext('2d')
+  if (fondoImg) ctx.drawImage(fondoImg, 0, 0, W, H)
+  else { ctx.fillStyle = '#F90B78'; ctx.fillRect(0, 0, W, H) }
+  const caja = (b) => ({ x: b.x * W, y: b.y * H, w: b.w * W, h: b.h * H })
+  const hueco = caja(R.foto)
+  const k = Math.max(hueco.w / fotoImg.naturalWidth, hueco.h / fotoImg.naturalHeight)
+  const anchoUtil = hueco.w / k
+  const altoUtil = hueco.h / k
+  ctx.drawImage(fotoImg, (fotoImg.naturalWidth - anchoUtil) / 2, (fotoImg.naturalHeight - altoUtil) * 0.3, anchoUtil, altoUtil,
+    hueco.x, hueco.y, hueco.w, hueco.h)
+
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+  ctx.lineJoin = 'round'
+  const cartel = (texto, px, x, y, anchoMax, relleno, borde) => {
+    ctx.font = `400 ${px}px ${FUENTE_CARTEL}`
+    while (ctx.measureText(texto).width > anchoMax && px > 16) {
+      px -= 2
+      ctx.font = `400 ${px}px ${FUENTE_CARTEL}`
+    }
+    if (borde) {
+      ctx.lineWidth = Math.max(4, px * 0.09)
+      ctx.strokeStyle = borde
+      ctx.strokeText(texto, x, y, anchoMax)
+    }
+    ctx.fillStyle = relleno
+    ctx.fillText(texto, x, y, anchoMax)
+    return px
+  }
+
+  // Cabecera: nombre de la revista y la edición.
+  const altoCabecera = hueco.y
+  if (R.edicion) {
+    ctx.font = `800 ${Math.round(W * 0.026)}px 'Baloo 2', system-ui, sans-serif`
+    ctx.fillStyle = '#FFF0D4'
+    ctx.fillText(R.edicion.toLocaleUpperCase('es-CL'), W / 2, altoCabecera * 0.1)
+  }
+  ctx.save()
+  ctx.shadowColor = '#191218'
+  ctx.shadowOffsetX = W * 0.008
+  ctx.shadowOffsetY = W * 0.008
+  cartel(R.titulo.toLocaleUpperCase('es-CL'), Math.round(altoCabecera * 0.64), W / 2, altoCabecera * 0.6, W * 0.86, '#FFF0D4', '#191218')
+  ctx.restore()
+
+  // Sello con la edad de la celebrada, en la esquina de arriba a la derecha de la foto.
+  if (Number.isInteger(CONFIG.edad)) {
+    const r = W * 0.085
+    const cx = hueco.x + hueco.w - r * 0.75
+    const cy = hueco.y + r * 0.75
+    ctx.beginPath()
+    for (let i = 0; i < 24; i++) {
+      const a = (Math.PI * 2 * i) / 24 - Math.PI / 2
+      const rr = i % 2 ? r * 0.8 : r
+      ctx.lineTo(cx + rr * Math.cos(a), cy + rr * Math.sin(a))
+    }
+    ctx.closePath()
+    ctx.fillStyle = '#D8AA43'
+    ctx.fill()
+    ctx.lineWidth = Math.max(3, W * 0.004)
+    ctx.strokeStyle = '#191218'
+    ctx.stroke()
+    cartel(String(CONFIG.edad), Math.round(r * 0.9), cx, cy + r * 0.03, r * 1.3, '#191218', null)
+  }
+
+  // Panel: «EXCLUSIVA», el titular y de quién es la fiesta.
+  const panel = caja(R.panel)
+  const anchoTexto = panel.w * 0.88
+  // Titular vacío = «Solo la portada, sin titular»: sin EXCLUSIVA ni titular (revisión B, CX-09).
+  const texto = (titular || '').toLocaleUpperCase('es-CL')
+  if (texto) {
+    ctx.font = `800 ${Math.round(panel.h * 0.13)}px 'Baloo 2', system-ui, sans-serif`
+    ctx.fillStyle = '#F90B78'
+    ctx.fillText('★ EXCLUSIVA ★', panel.x + panel.w / 2, panel.y + panel.h * 0.16)
+  }
+  const medir = (s) => ctx.measureText(s).width
+  let px = 0
+  let lineas = null
+  for (const [desde, hasta, renglones] of [[0.3, 0.2, 1], [0.24, 0.12, 2]]) {
+    for (px = Math.round(panel.h * desde); px >= Math.round(panel.h * hasta); px -= 2) {
+      ctx.font = `400 ${px}px ${FUENTE_CARTEL}`
+      lineas = partirEnLineas(texto, anchoTexto, medir, renglones)
+      if (lineas) break
+    }
+    if (lineas) break
+  }
+  lineas = texto ? (lineas || [texto]) : []
+  lineas.forEach((linea, i) => {
+    const y = panel.y + panel.h * 0.52 + (i - (lineas.length - 1) / 2) * px * 1.06
+    ctx.font = `400 ${px}px ${FUENTE_CARTEL}`
+    ctx.lineWidth = Math.max(3, px * 0.08)
+    ctx.strokeStyle = '#191218'
+    ctx.strokeText(linea, panel.x + panel.w / 2, y, anchoTexto)
+    ctx.fillStyle = '#F90B78'
+    ctx.fillText(linea, panel.x + panel.w / 2, y, anchoTexto)
+  })
+  const quien = nombreEvento()
+  if (quien) {
+    ctx.font = `700 ${Math.round(panel.h * 0.1)}px 'Baloo 2', system-ui, sans-serif`
+    ctx.fillStyle = '#191218'
+    ctx.fillText(`En la fiesta de ${quien} · ${CABINA_ADULTO.lema}`, panel.x + panel.w / 2, panel.y + panel.h * (texto ? 0.87 : 0.5), anchoTexto)
+  }
+  drawBrandWatermark(ctx, W, H)
+  return exportarFoto(c)
+}
+
+/**
+ * Barra de navegación del cumpleaños de adulto: arriba a la izquierda, «← Volver» (si hay un paso
+ * anterior) y «🏠 Inicio». La bienvenida tiene ahí la pantalla completa, pero en ella no se dibuja.
+ * `bloqueada`: la vista previa está guardando y no se puede salir a medias (CX-24).
+ */
+function NavAdulto({ onInicio, volver = null, onVolver = null, bloqueada = false }) {
+  return (
+    <nav className="nav-adulto" aria-label="Navegación del kiosco">
+      {volver && onVolver && (
+        <button type="button" className="nav-adulto__btn" onClick={onVolver} disabled={bloqueada}
+          aria-label={volver.aria} title={volver.aria}>
+          <span aria-hidden="true">←</span> Volver
+        </button>
+      )}
+      <button type="button" className="nav-adulto__btn" onClick={onInicio} disabled={bloqueada}
+        aria-label="Volver al inicio" title="Volver al inicio">
+        <span aria-hidden="true">🏠</span> Inicio
+      </button>
+    </nav>
+  )
+}
+
+// Guardar una sola vez y cancelar el paso al QR si la vista se va antes (revisión B2, CX-24).
+// Lo usan las vistas previas adultas y, desde el tercer ciclo, la infantil.
+// Mientras guarda, la vista no ofrece otra foto ni otro texto: la foto ya bajó y lo que
+// sigue es el QR. `libre(fn)` envuelve esos botones con la misma guarda.
+function useGuardarUnaVez() {
+  const ref = useRef(null)
+  if (!ref.current) ref.current = crearGuardadoUnaVez()
+  const [guardando, setGuardando] = useState(false)
+  useEffect(() => {
+    const g = ref.current
+    g.armar()
+    return () => g.soltar()
+  }, [])
+  const guardar = useCallback((ahora, despues) => {
+    if (ref.current.guardar(ahora, despues, REDUCE_MOTION ? 300 : 1600)) setGuardando(true)
+  }, [])
+  const libre = useCallback((fn) => () => { if (!ref.current.usado) fn() }, [])
+  return { guardando, guardar, libre }
+}
+
+function PreviewRevista({ photo, titular, onRetry, onOtroTitular, onInicio, onSave }) {
+  const [composed, setComposed] = useState(null)
+  const confRef = useRef(null)
+
+  useEffect(() => {
+    let vivo = true
+    const cargar = (src) => new Promise((ok) => {
+      const i = new Image()
+      i.onload = () => ok(i)
+      i.onerror = () => ok(null)
+      i.src = src
+    })
+    Promise.all([cargar(CABINA_ADULTO.revista.fondo), cargar(photo), ensureCanvasFonts(), cargarFuenteCartel(), preloadBrandLogo()])
+      .then(([fondo, img]) => {
+        if (!vivo) return
+        try {
+          setComposed(img ? composeRevista(fondo, img, titular) : photo)
+        } catch (e) {
+          // Si componer falla, la foto sigue siendo la foto: se muestra sin portada y se guarda.
+          console.error('no se pudo componer la portada', e)
+          setComposed(photo)
+        }
+      })
+    return () => { vivo = false }
+  }, [photo, titular])
+
+  // Un solo guardado aunque se toque dos veces (revisión B, CX-11): una descarga y un onSave.
+  const { guardando, guardar, libre } = useGuardarUnaVez()
+  const save = () => {
+    if (!composed) return
+    guardar(() => {
+      guardarEnLaTablet(composed, `portada-${nombreEvento() || 'fiesta'}`)
+      playSound(CONFIG.audio.confetti)
+      burstConfetti(confRef.current, { duration: 2600, count: 180 })
+    }, () => onSave(composed))
+  }
+
+  return (
+    <section className="screen preview">
+      {onInicio && <NavAdulto onInicio={libre(onInicio)} bloqueada={guardando} />}
+      {composed ? (
+        <img className="preview-img" src={composed} alt="Su portada de revista" />
+      ) : (
+        <div className="loading">Imprimiendo la portada…</div>
+      )}
+      <div className="preview-bar">
+        <button className="cta ghost" onClick={libre(onRetry)} disabled={guardando}>🔄 Otra foto</button>
+        <button className="cta ghost" onClick={libre(onOtroTitular)} disabled={guardando}>✏️ Otro titular</button>
+        <button className="cta" onClick={save} disabled={!composed || guardando}>💾 Guardar</button>
+      </div>
+      <canvas ref={confRef} className="confetti-canvas" />
+    </section>
+  )
+}
+
+function PreviewAdulto({ photo, bgRef, frase, score, onRetry, onOtraFrase, onInicio, onSave }) {
+  const [composed, setComposed] = useState(null)
+  const confRef = useRef(null)
+
+  useEffect(() => {
+    if (!photo) return undefined
+    let cancelled = false
+    const p = new Image()
+    p.onload = async () => {
+      if (cancelled) return
+      await Promise.all([ensureCanvasFonts(), cargarFuenteCartel(), preloadBrandLogo()])
+      if (!cancelled) setComposed(composeCabinaAdulto(bgRef.current, p, frase, score))
+    }
+    p.src = photo
+    return () => { cancelled = true }
+  }, [photo, bgRef, frase, score])
+
+  const { guardando, guardar, libre } = useGuardarUnaVez()
+  const save = () => {
+    if (!composed) return
+    guardar(() => {
+      guardarEnLaTablet(composed, `foto-${nombreEvento() || 'fiesta'}`)
+      playSound(CONFIG.audio.confetti)
+      burstConfetti(confRef.current, { duration: 2600, count: 180 })
+    }, () => onSave(composed))
+  }
+
+  return (
+    <section className="screen preview">
+      {onInicio && <NavAdulto onInicio={libre(onInicio)} bloqueada={guardando} />}
+      {composed ? (
+        <img className="preview-img" src={composed} alt="Tu ficha de la fiesta" />
+      ) : (
+        <div className="loading">Preparando tu ficha…</div>
+      )}
+      <div className="preview-bar">
+        <button className="cta ghost" onClick={libre(onRetry)} disabled={guardando}>🔄 Otra foto</button>
+        <button className="cta ghost" onClick={libre(onOtraFrase)} disabled={guardando}>✏️ Otra frase</button>
+        <button className="cta" onClick={save} disabled={!composed || guardando}>💾 Guardar</button>
       </div>
       <canvas ref={confRef} className="confetti-canvas" />
     </section>
@@ -5011,9 +5696,11 @@ function QRScreen({ imageDataUrl, invitado, archivarComo = null, isBabyShower = 
           )}
         </div>
         <div className="qr-actions">
-          <button className="cta" onClick={onDiploma}>
-            {isBabyShower ? 'Ver mi recuerdito' : '🎓 Ver diploma'}
-          </button>
+          {onDiploma && (
+            <button className="cta" onClick={onDiploma}>
+              {isBabyShower ? 'Ver mi recuerdito' : '🎓 Ver diploma'}
+            </button>
+          )}
           <button className="cta ghost" onClick={onDone}>
             ✨ Siguiente invitado
           </button>
@@ -5411,7 +6098,7 @@ function composeDiploma(invitado = '', winnerImage = null, heroeImagen = null) {
 
   // "en la fiesta de {nombre} · {fecha si está}"
   const fecha = formatFecha(CONFIG && CONFIG.fecha)
-  const fiestaLine = CONFIG
+  const fiestaLine = FERIA ? `en ${FERIA.nombre} · ${FERIA.fecha_texto}` : CONFIG
     ? `en ${eventoFraseEn()}${fecha ? ' · ' + fecha : ''}`
     : ''
   if (fiestaLine) {

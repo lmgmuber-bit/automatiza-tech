@@ -49,3 +49,9 @@ scripts/web/*_BACKUP
 !sitio/vendor/
 !sitio/vendor/*.js
 cumpleclick-chat.php
+
+# Imágenes de las tarjetas de imagen de los juegos del animador: son de terceros (personajes,
+# firmas) y este repositorio es público. Las pone Luis directo en el servidor; aquí solo queda
+# la carpeta, con su .gitkeep.
+public/themes/*/animador/*
+!public/themes/*/animador/.gitkeep

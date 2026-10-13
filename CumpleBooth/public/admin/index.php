@@ -314,11 +314,27 @@ if ($loggedIn && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '
             // Edad que cumple. Vacio es valido: hay fiestas cargadas antes de que este campo
             // existiera, y el menu de juegos funciona igual sin ella.
             $birthdayAge = trim((string) ($_POST['birthday_age'] ?? ''));
-            $birthdayAge = $birthdayAge === '' ? null : max(1, min(17, (int) $birthdayAge));
+            // Un adulto cumple de 18 a 120; un niño de 1 a 17 (columna TINYINT, tope 127).
+            // Fuera de rango se rechaza con mensaje y se conserva lo escrito (CX-17,
+            // AT-CUMPLECLICK-026): antes se corregía en silencio y un adulto de 15 quedaba en 18.
+            $edadAdulto = cb_party_event_type($_POST['event_type'] ?? '') === 'adult_birthday';
+            $birthdayAgeRaw = $birthdayAge;
+            $edadError = '';
+            if ($birthdayAge === '') {
+                $birthdayAge = null;
+            } elseif (!preg_match('/^\d{1,3}$/', $birthdayAge)
+                || !cb_party_age_valid($birthdayAge, $edadAdulto ? 'adult_birthday' : 'child_birthday')) {
+                $edadError = $edadAdulto
+                    ? 'La edad de un cumpleaños de adulto va de 18 a 120 años (o déjala vacía).'
+                    : 'La edad de un cumpleaños infantil va de 1 a 17 años (o déjala vacía).';
+                $birthdayAge = null;
+            } else {
+                $birthdayAge = (int) $birthdayAge;
+            }
             $tema = (string) ($_POST['tema'] ?? '');
             $fecha = trim((string) ($_POST['fecha'] ?? ''));
             $activa = isset($_POST['activa']);
-            $eventType = (string) ($_POST['event_type'] ?? '') === 'baby_shower' ? 'baby_shower' : 'child_birthday';
+            $eventType = cb_party_event_type($_POST['event_type'] ?? '');
             $servicePlan = in_array((string) ($_POST['service_plan'] ?? ''), ['booth', 'full'], true) ? (string) $_POST['service_plan'] : 'booth';
             $galleryEnabled = isset($_POST['gallery_enabled']);
             // Juegos habilitados para esta fiesta. `juegos_definidos` distingue
@@ -326,6 +342,13 @@ if ($loggedIn && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '
             // opción" (juega la cadena completa, como siempre).
             $juegos = isset($_POST['juegos_definidos'])
                 ? cb_sanitize_party_games((array) ($_POST['juegos'] ?? []))
+                : null;
+            // Juegos del animador (solo adulto). Casilla marcada = disponible; se guardan los
+            // apagados. Sin `animador_definidos` (formulario viejo) no se toca lo guardado.
+            $animadorDefinido = isset($_POST['animador_definidos']);
+            $animadorApagados = $animadorDefinido
+                ? array_values(array_diff(array_keys(cb_animador_juegos()),
+                    cb_sanitize_animador_apagados((array) ($_POST['animador_on'] ?? []))))
                 : null;
             $invitadosRaw = (string) ($_POST['invitados'] ?? '');
             $invitados = admin_parse_invitados($invitadosRaw);
@@ -345,8 +368,18 @@ if ($loggedIn && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '
             if ($birthdayPersonName === '') {
                 $errs[] = 'El nombre del cumpleañero/a es obligatorio.';
             }
+            if ($edadError !== '') {
+                $errs[] = $edadError;
+            }
             if (!isset($themes[$tema])) {
                 $errs[] = 'Selecciona una temática válida.';
+            } elseif (cb_theme_is_adult($themes[$tema]) !== ($eventType === 'adult_birthday')) {
+                $errs[] = $eventType === 'adult_birthday'
+                    ? 'Un cumpleaños de adulto necesita una temática para adultos.'
+                    : 'Esa temática es para adultos: elige la modalidad «Cumpleaños de adulto».';
+            } elseif ($eventType === 'adult_birthday' && (string) ($themes[$tema]['modalidad'] ?? '') !== 'adult_birthday') {
+                // Las temáticas de adultos de la feria no traen la cabina de cumpleaños (cabinaAdulto).
+                $errs[] = 'Esa temática de adultos es solo para la feria: elige una temática de cumpleaños de adulto.';
             }
             if ($fecha !== '' && !cb_fecha_valida($fecha)) {
                 $errs[] = 'La fecha debe ser un día real con formato AAAA-MM-DD.';
@@ -457,9 +490,13 @@ if ($loggedIn && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '
                         'deposit_amount' => $_POST['deposit_amount'] ?? null,
                         'payment_note' => $_POST['payment_note'] ?? '',
                     ]);
+                    $ra = ['ok' => true];
+                    if ($eventType === 'adult_birthday' && $animadorApagados !== null) {
+                        $ra = cb_save_party_animador_apagados($publicSlug, $animadorApagados);
+                    }
                     // La fiesta ya quedó guardada: un error acá no la deshace, se avisa y
                     // se vuelve al formulario con lo que el operador escribió.
-                    $errs = array_merge($errs, (array) ($rc['errors'] ?? []), (array) ($rb['errors'] ?? []));
+                    $errs = array_merge($errs, (array) ($rc['errors'] ?? []), (array) ($rb['errors'] ?? []), (array) ($ra['errors'] ?? []));
                     if (empty($errs)) {
                         header('Location: index.php?ok=' . ($isEdit ? 'editada' : 'creada'));
                         exit;
@@ -474,7 +511,9 @@ if ($loggedIn && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '
                 'public_slug' => $publicSlug,
                 'admin_label' => $adminLabel,
                 'birthday_person_name' => $birthdayPersonName,
-                'edad' => $birthdayAge,
+                // Lo que escribió el usuario, no lo saneado: si la edad estaba fuera de
+                // rango, el formulario la devuelve tal cual junto al mensaje (CX-17).
+                'edad' => $birthdayAgeRaw,
                 'event_type' => $eventType,
                 'tema' => $tema,
                 'fecha' => $fecha,
@@ -482,6 +521,7 @@ if ($loggedIn && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '
                 'service_plan' => $servicePlan,
                 'gallery_enabled' => $galleryEnabled,
                 'juegos' => $juegos,
+                'animador_apagados' => $animadorApagados ?? ($isEdit ? cb_party_animador_apagados($origPublicSlug) : []),
                 'invitados_text' => $invitadosRaw,
                 'galeriaPin' => $galeriaPin,
                 'pin_configured' => $isEdit && !empty($parties[$origPublicSlug]['galeriaHabilitada']),
@@ -536,6 +576,9 @@ if ($loggedIn && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '
                         'admin_label'          => ($source['admin_label'] ?? '') . ' (copia)',
                         'birthday_person_name' => $newName,
                         'nombre'               => $newName,
+                        // Sin la modalidad, la copia de un adulto quedaba infantil con temática
+                        // adulta y el kiosco no la abría (409 theme_mismatch).
+                        'event_type'           => cb_party_event_type($source['event_type'] ?? ''),
                         'theme_slug'           => (string) ($source['tema'] ?? ''),
                         'tema'                 => (string) ($source['tema'] ?? ''),
                         'fecha'                => '',
@@ -546,7 +589,11 @@ if ($loggedIn && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '
                         'frameBox'             => cb_normalize_frame_box($source['frameBox'] ?? null),
                         'creada'               => gmdate('Y-m-d H:i:s'),
                     ];
-                    cb_save_parties(['parties' => $parties]);
+                    // La copia conserva los juegos del animador apagados (columna aparte).
+                    if (cb_save_parties(['parties' => $parties])
+                        && cb_party_event_type($source['event_type'] ?? '') === 'adult_birthday') {
+                        cb_save_party_animador_apagados($newPublicSlug, cb_party_animador_apagados($publicSlug));
+                    }
                 }
             }
             header('Location: index.php?ok=duplicada');
@@ -728,13 +775,14 @@ if ($formValues === null && $action === 'editar') {
             'admin_label' => $p['admin_label'] ?? '',
             'birthday_person_name' => $p['birthday_person_name'] ?? '',
             'edad' => $p['edad'] ?? '',
-            'event_type' => (string) ($p['event_type'] ?? '') === 'baby_shower' ? 'baby_shower' : 'child_birthday',
+            'event_type' => cb_party_event_type($p['event_type'] ?? ''),
             'tema' => $p['tema'] ?? '',
             'fecha' => $p['fecha'] ?? '',
             'activa' => !empty($p['activa']),
             'service_plan' => in_array((string) ($p['service_plan'] ?? ''), ['booth', 'full'], true) ? (string) $p['service_plan'] : 'booth',
             'gallery_enabled' => !empty($p['gallery_enabled']),
             'juegos' => cb_sanitize_party_games($p['juegos'] ?? null),
+            'animador_apagados' => cb_party_animador_apagados($editSlug),
             'invitados_text' => admin_invitados_to_text($p['invitados'] ?? []),
             'galeriaPin' => '',
             'pin_configured' => !empty($p['galeriaHabilitada']),
@@ -759,10 +807,13 @@ if ($formValues === null && $action === 'editar') {
         'service_plan' => 'booth',
         'gallery_enabled' => false,
         'juegos' => null,
+        'animador_apagados' => [],
         'invitados_text' => '',
         'galeriaPin' => '',
         'pin_configured' => false,
-        'frameBox' => ['x' => 0.32, 'y' => 0.30, 'w' => 0.36, 'h' => 0.28],
+        // Sin marco propio: el formulario muestra el de la temática ($formBox). Un valor fijo
+        // aquí se guardaba como marco de la fiesta y la foto salía chica en otras temáticas.
+        'frameBox' => null,
         'contactos' => [['name' => '', 'email' => '', 'phone' => '', 'relationship' => 'madre', 'is_primary' => true]],
         'cobro' => ['price_total' => '', 'discount_amount' => '', 'discount_percent' => '',
                     'discount_label' => '',
@@ -823,9 +874,10 @@ if ($formValues === null && $action === 'editar') {
       <?php
       $isEdit = $formValues['modo'] === 'editar';
       $selectedTheme = $themes[$formValues['tema']] ?? [];
+      $genericFrameBox = ['x' => 0.32, 'y' => 0.30, 'w' => 0.36, 'h' => 0.28];
       $formBox = cb_normalize_frame_box($formValues['frameBox'] ?? null)
           ?? cb_normalize_frame_box($selectedTheme['frameBox'] ?? null)
-          ?? ['x' => 0.32, 'y' => 0.30, 'w' => 0.36, 'h' => 0.28];
+          ?? $genericFrameBox;
       ?>
       <section class="card form-card">
         <h2><?= $isEdit ? 'Editar fiesta' : 'Nueva fiesta' ?></h2>
@@ -851,7 +903,7 @@ if ($formValues === null && $action === 'editar') {
           <div class="field">
             <label for="f-birthday-age">Cuántos años cumple <span class="muted small">(opcional)</span></label>
             <?php // "5" a secas se lee como un valor guardado cuando el campo esta vacio. ?>
-            <input type="number" id="f-birthday-age" name="birthday_age" min="1" max="17" value="<?= h($formValues['edad'] ?? '') ?>" placeholder="Ej: 5">
+            <input type="number" id="f-birthday-age" name="birthday_age" min="1" max="120" value="<?= h($formValues['edad'] ?? '') ?>" placeholder="Ej: 5">
             <small class="muted">Aparece en el menú de juegos y en el saludo. Si lo dejas vacío, no se muestra la edad.</small>
           </div>
 
@@ -860,6 +912,7 @@ if ($formValues === null && $action === 'editar') {
             <select id="f-event-type" name="event_type" required>
               <option value="child_birthday" <?= ($formValues['event_type'] ?? 'child_birthday') === 'child_birthday' ? 'selected' : '' ?>>Cumpleaños infantil</option>
               <option value="baby_shower" <?= ($formValues['event_type'] ?? '') === 'baby_shower' ? 'selected' : '' ?>>Baby shower</option>
+              <option value="adult_birthday" <?= ($formValues['event_type'] ?? '') === 'adult_birthday' ? 'selected' : '' ?>>Cumpleaños de adulto</option>
             </select>
             <small>La modalidad controla el recorrido y el vocabulario. Los eventos actuales permanecen como cumpleaños infantil.</small>
           </div>
@@ -882,8 +935,10 @@ if ($formValues === null && $action === 'editar') {
                 <?php
                 $franq = trim((string) ($tdata['franquicia'] ?? ''));
                 $optLabel = $franq !== '' ? $franq . ' (' . ($tdata['nombre'] ?? $tslug) . ')' : ($tdata['nombre'] ?? $tslug);
+                // Marco de la temática para el calibrador: al cambiarla, el script carga estos valores.
+                $optBox = cb_normalize_frame_box($tdata['frameBox'] ?? null) ?? $genericFrameBox;
                 ?>
-                <option value="<?= h($tslug) ?>" <?= $formValues['tema'] === $tslug ? 'selected' : '' ?>>
+                <option value="<?= h($tslug) ?>" data-frame-box="<?= h((string) json_encode($optBox)) ?>" <?= $formValues['tema'] === $tslug ? 'selected' : '' ?>>
                   <?= h($optLabel) ?> — <?= $st['ready'] ? 'Lista' : ('Faltan ' . count($st['missing']) . ' archivos') ?>
                 </option>
               <?php endforeach; ?>
@@ -951,6 +1006,29 @@ if ($formValues === null && $action === 'editar') {
             <small>Solo aparecen los juegos que ofrece <strong><?= h($themes[$temaForm]['nombre'] ?? $temaForm) ?></strong>. Si cambias de temática, guarda y vuelve a entrar para ver los suyos.</small>
           </div>
           <?php endif; ?>
+
+          <?php
+          // Juegos del animador: solo en un cumpleaños de adulto. Se dibuja siempre y el script
+          // lo muestra u oculta con la modalidad; un div y no `.field`, que pisaría el `hidden`.
+          $animadorOff = cb_sanitize_animador_apagados($formValues['animador_apagados'] ?? []);
+          $animadorTotal = count(cb_animador_juegos());
+          $animadorOn = $animadorTotal - count($animadorOff);
+          ?>
+          <div id="f-animador" <?= ($formValues['event_type'] ?? '') === 'adult_birthday' ? '' : 'hidden' ?>>
+            <fieldset class="field">
+              <legend>Juegos del animador</legend>
+              <input type="hidden" name="animador_definidos" value="1">
+              <small>Los que desmarques no aparecen en la lista de «Juegos de la fiesta» del kiosco. Por defecto están todos disponibles.</small>
+              <?php foreach (cb_animador_juegos() as $idJuego => $nombreJuego): ?>
+                <label class="checkbox-field">
+                  <input type="checkbox" name="animador_on[]" value="<?= h($idJuego) ?>" data-animador-juego
+                    <?= in_array($idJuego, $animadorOff, true) ? '' : 'checked' ?>>
+                  <?= h($nombreJuego) ?>
+                </label>
+              <?php endforeach; ?>
+              <small id="f-animador-cuenta" aria-live="polite"><?= (int) $animadorOn ?> de <?= (int) $animadorTotal ?> disponibles.<?= $animadorOn === 0 ? ' Con todos apagados, la lista «Juegos de la fiesta» queda vacía.' : '' ?></small>
+            </fieldset>
+          </div>
 
           <div class="field">
             <label for="f-galeriapin">PIN de galería de papás (opcional, 4 dígitos)</label>
@@ -1217,7 +1295,13 @@ if ($formValues === null && $action === 'editar') {
           <div class="envio envio--confirmados">
             <h3 class="envio__titulo"><?= admin_icon('party') ?> Confirmados · enlace para la familia</h3>
             <p class="envio__estado">
-              <?php if ($rsvpResumen['familias'] > 0): ?>
+              <?php $rsvpAdulto = ($rsvpResumen['event_type'] ?? '') === 'adult_birthday'; ?>
+              <?php if ($rsvpResumen['familias'] > 0 && $rsvpAdulto): ?>
+                <?php /* Adulto (CX-13): el segundo campo trae acompañantes, no niños. */ ?>
+                <span class="envios__ok"><?= (int) $rsvpResumen['familias'] ?>
+                  confirmaci<?= $rsvpResumen['familias'] === 1 ? 'ón' : 'ones' ?>
+                  · <?= (int) $rsvpResumen['ninos'] ?> acompañante<?= $rsvpResumen['ninos'] === 1 ? '' : 's' ?></span>
+              <?php elseif ($rsvpResumen['familias'] > 0): ?>
                 <span class="envios__ok"><?= (int) $rsvpResumen['familias'] ?>
                   familia<?= $rsvpResumen['familias'] === 1 ? '' : 's' ?>
                   · <?= (int) $rsvpResumen['ninos'] ?> niño<?= $rsvpResumen['ninos'] === 1 ? '' : 's' ?></span>
@@ -1239,15 +1323,20 @@ if ($formValues === null && $action === 'editar') {
                         <span class="rsvp-lista__ninos"><?= h($f['ninos']) ?></span>
                         <span class="muted small">(<?= (int) $f['cuantos'] ?>)</span>
                       <?php else: ?>
-                        <span class="muted small">sin niños anotados</span>
+                        <span class="muted small"><?= $rsvpAdulto ? 'sin acompañantes anotados' : 'sin niños anotados' ?></span>
                       <?php endif; ?>
                       <span class="muted small rsvp-lista__cuando"><?= h($f['cuando']) ?></span>
                     </li>
                   <?php endforeach; ?>
                 </ul>
                 <p class="muted small" style="margin:8px 0 0">
+                  <?php if ($rsvpAdulto): ?>
+                  El conteo de acompañantes es aproximado: llegan como texto libre
+                  («con Jorge y Ana») y se cuentan por las comas y las «y».
+                  <?php else: ?>
                   El conteo de niños es aproximado: los nombres llegan como texto libre
                   («Emma y Lucas») y se cuentan por las comas y las «y».
+                  <?php endif; ?>
                 </p>
               </details>
             <?php endif; ?>
@@ -1842,8 +1931,43 @@ if ($formValues === null && $action === 'editar') {
   }
   Array.prototype.forEach.call(frameInputs, function (input) { input.addEventListener('input', updateFramePreview); });
   var themeSelect = document.getElementById('f-tema');
-  if (themeSelect && framePreview) { themeSelect.addEventListener('change', function () { framePreview.style.backgroundImage = "url('../themes/" + encodeURIComponent(themeSelect.value) + "/fondo-sala.jpg')"; }); }
+  // Al cambiar de temática cambia el fondo, y la calibración anterior era para el otro
+  // fondo: se cargan los números de la nueva (o el genérico si no trae) para no guardarlos mal.
+  function themeFrameBox(option) {
+    var box = null;
+    try { box = JSON.parse((option && option.getAttribute('data-frame-box')) || 'null'); } catch (e) { box = null; }
+    var ok = box && ['x', 'y', 'w', 'h'].every(function (k) { return typeof box[k] === 'number'; });
+    return ok ? box : { x: 0.32, y: 0.30, w: 0.36, h: 0.28 };
+  }
+  if (themeSelect && framePreview) {
+    themeSelect.addEventListener('change', function () {
+      framePreview.style.backgroundImage = "url('../themes/" + encodeURIComponent(themeSelect.value) + "/fondo-sala.jpg')";
+      var box = themeFrameBox(themeSelect.options[themeSelect.selectedIndex]);
+      Array.prototype.forEach.call(frameInputs, function (input) { input.value = String(box[input.getAttribute('data-frame')]); });
+      updateFramePreview();
+    });
+  }
   updateFramePreview();
+
+  // --- Juegos del animador: visibles solo en cumpleaños de adulto, con su cuenta ---
+  var eventTypeSelect = document.getElementById('f-event-type');
+  var animadorBox = document.getElementById('f-animador');
+  var animadorCuenta = document.getElementById('f-animador-cuenta');
+  if (eventTypeSelect && animadorBox) {
+    eventTypeSelect.addEventListener('change', function () {
+      animadorBox.hidden = eventTypeSelect.value !== 'adult_birthday';
+    });
+  }
+  if (animadorBox && animadorCuenta) {
+    var animadorChecks = animadorBox.querySelectorAll('[data-animador-juego]');
+    var contarAnimador = function () {
+      var on = 0;
+      Array.prototype.forEach.call(animadorChecks, function (c) { if (c.checked) { on++; } });
+      animadorCuenta.textContent = on + ' de ' + animadorChecks.length + ' disponibles.'
+        + (on === 0 ? ' Con todos apagados, la lista «Juegos de la fiesta» queda vacía.' : '');
+    };
+    Array.prototype.forEach.call(animadorChecks, function (c) { c.addEventListener('change', contarAnimador); });
+  }
 
   // --- Copiar URL al portapapeles (con fallback) ---
   function fallbackCopy(text, done) {

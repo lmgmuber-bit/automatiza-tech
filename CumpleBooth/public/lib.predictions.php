@@ -3,7 +3,7 @@
 
 function cb_event_type(string $value): string
 {
-    return $value === 'baby_shower' ? 'baby_shower' : 'child_birthday';
+    return cb_party_event_type($value);
 }
 
 function cb_prediction_validate(array $input): array

@@ -49,6 +49,9 @@ if (!empty($invitation['expires_at']) && strtotime((string) $invitation['expires
 // dependen ya la narración y el vocabulario. `event_type` trae
 // 'child_birthday' por defecto, así que un cumpleaños no cambia nada.
 $esBabyShower = (string) ($invitation['event_type'] ?? 'child_birthday') === 'baby_shower';
+// Cumpleaños de adulto (AT-CUMPLECLICK-026): sin la voz de Alice (le habla a un niño), sin
+// capítulos de personajes y con un formulario de asistencia para adultos.
+$esAdulto = (string) ($invitation['event_type'] ?? '') === 'adult_birthday';
 
 $imageOutputs = cb_invitation_approved_outputs((int) $invitation['id'], 'personalized_image');
 if (!$imageOutputs) {
@@ -134,6 +137,16 @@ if (!is_file($narrationPlaylistEndPath)) {
 if (is_file($narrationPlaylistEndPath)) {
     $narrationPlaylistEndUrl = 'assets/audio/' . rawurlencode($narrationPlaylistEndFile)
         . '?v=' . rawurlencode((string) filemtime($narrationPlaylistEndPath));
+}
+
+if ($esAdulto) {
+    // Las dos narraciones compartidas dicen «cumpleañero/a» con voz para niños.
+    // El inicio personalizado también es la voz de Alice: aunque haya uno aprobado
+    // (por ejemplo, de una invitación clonada), la invitación adulta solo suena
+    // con su video (CX-14, AT-CUMPLECLICK-026).
+    $narrationIntroUrl = '';
+    $narrationOutroUrl = '';
+    $narrationPlaylistEndUrl = '';
 }
 
 $themeData = is_array($themesData['themes'][$themeSlug] ?? null) ? $themesData['themes'][$themeSlug] : [];
@@ -796,6 +809,10 @@ if ($isPreview) {
     $tieneCapitulos = preg_match('/^[a-z0-9-]+$/', $themeSlug) === 1
         && is_dir(__DIR__ . '/themes/' . $themeSlug . '/invitation/chapters');
     $planChapters = $tieneCapitulos ? '1' : 'auto';
+}
+if ($esAdulto && !$isPreview) {
+    // Los capítulos y la playlist son el recorrido de personajes de las temáticas infantiles.
+    $planChapters = 'none';
 }
 
 // Comparación de candidatos detrás del modo resuelto. La versión aprobada de
@@ -1557,13 +1574,16 @@ $cssVer = static function (string $rel): string {
     </figure>
     <?php else: ?>
     <figure class="inv-art-frame">
+      <?php // Adulto con video: la tarjeta va como póster del video, no repetida encima. ?>
+      <?php if (!($esAdulto && $hasVideo)): ?>
       <img class="inv-art" src="<?= $esc($imageUrl) ?>" alt="<?= $esc($tituloInvitacion) ?>" decoding="async">
+      <?php endif; ?>
       <?php if ($hasVideo): ?>
       <?php /* Sin loop ni muted: el invitado lo inicia con un toque (gesto que
                ya permite el sonido) y al terminar la página avanza sola a los
                datos de la fiesta — un video de invitación se ve UNA vez, no en
                bucle mudo (pedido de Luis con la invitación de Luciano). */ ?>
-      <video class="inv-art-video" src="<?= $esc((string) $videoUrl) ?>" controls playsinline preload="metadata" data-inv-video-final></video>
+      <video class="inv-art-video" src="<?= $esc((string) $videoUrl) ?>" poster="<?= $esc($imageUrl) ?>" aria-label="<?= $esc($tituloInvitacion) ?>" controls playsinline preload="metadata" data-inv-video-final></video>
       <?php endif; ?>
     </figure>
     <?php endif; ?>
@@ -1761,7 +1781,7 @@ $cssVer = static function (string $rel): string {
     <p class="inv-share-status" data-share-status role="status" aria-live="polite"></p>
   </section>
 
-  <?php if ($eventProfile !== null): ?>
+  <?php if ($eventProfile !== null && !$esAdulto): ?>
   <section class="inv-finale inv-reveal" id="inv-protagonista">
     <p class="inv-kicker"><?= $esc($esBabyShower ? 'Antes del baby shower' : 'Antes de la fiesta') ?></p>
     <h2 class="inv-finale-title"><?= $esc($finaleTitulo) ?></h2>
@@ -1928,7 +1948,7 @@ $cssVer = static function (string $rel): string {
            data-inv-base="<?= $esc(rtrim((string) cb_public_base_url(), '/')) ?>/">
     <p class="inv-kicker">¿Nos acompañas?</p>
     <h2 class="inv-finale-title">Confirma tu asistencia</h2>
-    <p class="inv-finale-lede"><?= $esc($esBabyShower
+    <p class="inv-finale-lede"><?= $esc($esBabyShower || $esAdulto
         ? 'Dinos tu nombre y te guardamos un lugar.'
         : 'Cuéntanos quiénes vienen para recibirlos como estrellas.') ?></p>
     <button class="inv-button inv-rsvp-open" type="button" data-rsvp-open>
@@ -1939,15 +1959,15 @@ $cssVer = static function (string $rel): string {
       <form data-rsvp-form>
         <h3 class="inv-rsvp-title">Confirma tu asistencia</h3>
         <label class="inv-rsvp-campo">
-          <span><?= $esc($esBabyShower ? 'Tu nombre' : 'Nombre del apoderado o familia') ?></span>
+          <span><?= $esc($esBabyShower || $esAdulto ? 'Tu nombre' : 'Nombre del apoderado o familia') ?></span>
           <input type="text" name="family_name" maxlength="120" required
-                 placeholder="<?= $esc($esBabyShower ? 'Ej: Carolina Díaz' : 'Ej: Familia Díaz / Carolina Díaz') ?>">
+                 placeholder="<?= $esc($esBabyShower || $esAdulto ? 'Ej: Carolina Díaz' : 'Ej: Familia Díaz / Carolina Díaz') ?>">
         </label>
         <?php if (!$esBabyShower): ?>
         <label class="inv-rsvp-campo">
-          <span>Nombre de los niños que vienen</span>
+          <span><?= $esc($esAdulto ? '¿Vienes con alguien? (opcional)' : 'Nombre de los niños que vienen') ?></span>
           <input type="text" name="guest_names" maxlength="400"
-                 placeholder="Ej: Emma y Lucas">
+                 placeholder="<?= $esc($esAdulto ? 'Ej: con Jorge' : 'Ej: Emma y Lucas') ?>">
         </label>
         <?php endif; ?>
         <p class="inv-rsvp-error" data-rsvp-error hidden>No pudimos guardar tu confirmación. Inténtalo de nuevo.</p>
@@ -1961,7 +1981,7 @@ $cssVer = static function (string $rel): string {
         <h3 class="inv-rsvp-title">¡Asistencia confirmada!</h3>
         <p><?= $esc($esBabyShower
             ? 'Gracias por avisar. ¡Nos vemos en el baby shower!'
-            : '¡La familia ya sabe que vienen! Nos vemos en la fiesta.') ?></p>
+            : ($esAdulto ? '¡Te esperamos! Nos vemos en la fiesta.' : '¡La familia ya sabe que vienen! Nos vemos en la fiesta.')) ?></p>
         <button class="inv-button inv-button-ghost" type="button" data-rsvp-cerrar>Cerrar</button>
       </div>
     </dialog>

@@ -41,7 +41,8 @@ test('buildRuntime versiona TODOS los mapas de assets del tema', () => {
     /CHAR_RUN_ATLAS\[p\.name\] = ver\(/,
     /fondo: ver\(BASE \+ theme\.images\.sala\)/,
     /bienvenida: ver\(BASE \+ theme\.images\.banner\)/,
-    /musica: ver\(BASE \+ theme\.musica\)/,
+    // Sin pista en disco el servidor publica '' y el kiosco no la pide (AT-CUMPLECLICK-026).
+    /musica: (?:theme\.musica \? )?ver\(BASE \+ theme\.musica\)/,
   ]) {
     assert.match(app, patron)
   }

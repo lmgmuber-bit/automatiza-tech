@@ -1,0 +1,81 @@
+ticket_id: AT-CUMPLECLICK-020
+title: "Modo feria: datos, API, galería de la feria y temáticas adultas"
+origin: direct_luis
+portfolio: "AT"
+priority: P1
+status: IN_PROGRESS
+
+governance:
+  professional_standard: "Docs/ENGINEERING_STANDARDS/PROFESSIONAL_ENGINEERING_STANDARD.md"
+  quality_gate: C2
+
+objective: >
+  Backend y admin del modo feria: ficha de feria reutilizable (duplicar para la próxima), mundos habilitados por modo
+  (Niños / Adultos), API para el selector y el kiosco, numeración F-### de las fotos, galería de la feria para buscar y
+  reimprimir (Selphy 10×15), bloqueo de la galería pública y del Álbum en ferias, borrado a los 7 días. Más el estudio y
+  la producción de temáticas adultas propias sin personajes ni franquicias.
+owner: claude
+reviewer: luis
+active_orchestrator: claude
+
+ownership:
+  current_owner: claude
+  previous_owners: []
+  takeover_allowed: true
+  takeover_count: 0
+  takeover_reason: null
+  urgency: high
+  resolution_status: pending
+  reassignment_authorized_by: null
+  handoff_ref: "CumpleBooth/docs/CODEX-HANDOFF-MODO-FERIA-2026-09-26.md"
+  handoff_quality: COMPLETE
+
+scope:
+  allowed_files:
+    - "CumpleBooth/database/migrations/026_modo_feria*.php"
+    - "CumpleBooth/database/aplicar-026.php"
+    - "CumpleBooth/public/lib.ferias.php"
+    - "CumpleBooth/public/feria-api.php"
+    - "CumpleBooth/public/api.php"
+    - "CumpleBooth/public/upload.php"
+    - "CumpleBooth/public/galeria.php"
+    - "CumpleBooth/scripts/retention.php"
+    - "CumpleBooth/public/admin/ferias.php"
+    - "CumpleBooth/public/admin/_acceso.php"
+    - "CumpleBooth/public/lib.admin-usuarios.php"
+    - "CumpleBooth/public/feria/**"
+    - "CumpleBooth/public/themes/adulto-*/**"
+    - "CumpleBooth/public/data/themes.json"
+    - "CumpleBooth/tests/backend/ferias*.php"
+    - "CumpleBooth/docs/**"
+  forbidden_files:
+    - "CumpleBooth/src/**"
+    - "CumpleBooth/public/feria.html"
+  locked_files: []
+  branch: "claude/modo-feria"
+  base_commit: "4cdc795"
+  depends_on: []
+
+routing:
+  complexity: C2
+  risk: medium
+  uncertainty: low
+  reversibility: easy
+  selected_profile: orchestrator
+  selected_model: "claude"
+  rationale: "Migración y cambios en api.php/upload.php de PROD: conoce las trampas (migración antes que código, columnas fijas de fiestas)."
+  independent_review: false
+  human_gate: true
+
+acceptance:
+  criteria:
+    - "Migración 026 (cc_ferias, cc_feria_fotos) idempotente, con .down y aplicar-026.php."
+    - "api.php y feria-api.php cumplen el contrato de la sección 4 del handoff; una fiesta sin feria responde igual que antes."
+    - "upload.php acepta feria_reserva sin perder nunca una foto; tope de fotos de la feria en vez de 200."
+    - "Admin: crear, editar, duplicar y activar ferias; mundos por modo; galería con búsqueda por nombre, número, mundo, modo y hora; reimpresión en Selphy 10×15; QR; contador de impresiones."
+    - "galeria.php y el Álbum no existen para una feria; retention.php borra las fotos de feria a los 7 días."
+    - "Estudio de temáticas adultas con fuentes y 3 temáticas adultas propias producidas (sin personajes ni franquicias)."
+  tests:
+    - "tests/backend/ferias*.php"
+    - "php -l de todo lo tocado"
+    - "Prueba de punta a punta en local con la rama de Codex"

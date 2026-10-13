@@ -119,6 +119,12 @@ $slug = (string) ($_GET['p'] ?? '');
 if (!cb_valid_public_slug($slug)) { gallery_message(400, 'Galería no disponible', 'El enlace no es válido.'); }
 $party = cb_load_party_raw($slug);
 if ($party === null) { gallery_message(404, 'Galería no disponible', 'No encontramos esta fiesta.'); }
+// Una feria no tiene galería pública, ni siquiera con PIN: son fotos de niños ajenos entre sí.
+// Cada visitante se lleva la suya por el QR y las reimpresiones salen del panel (Ferias).
+require_once __DIR__ . '/lib.ferias.php';
+if (cb_feria_de_fiesta_segura($slug) !== null) {
+    gallery_message(404, 'Galería no disponible', 'Las fotos de una feria no tienen galería pública. Tu foto está en el QR que te mostró la cabina.');
+}
 // La sesión de admin salta el PIN solo en las fiestas de ese usuario (2026-09-13); el resto
 // entra como cualquier invitado.
 if ($isAdmin) {

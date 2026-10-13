@@ -21,6 +21,162 @@ grep -o 'assets/[a-zA-Z0-9._-]*' dist/index.html   # lo que index.html pide
 Sube **todos** los de `dist/assets/` junto con `dist/index.html` en la misma
 tanda. Los que sobren del build anterior se pueden borrar después.
 
+## DESPLEGADO 2026-10-13 (mañana): despedida propia de la fiesta del piloto
+
+Pedido de Luis: en la despedida del kiosco, la imagen de la cumpleañera con la copa, con movimiento y la voz chilena de
+la demo de la botillería (Matilda `XrExE9yKIg1WjnnlVkGX`, `eleven_v3`; texto aprobado, transcripción `scribe_v1` correcta).
+- **Código** (`df737a7`): `cb_resolve_party` publica `themes/<tema>/despedida-fiesta-<slug>.mp4` como despedida de esa
+  fiesta si el archivo existe. El archivo lleva la cara de la persona festejada: solo en el servidor (`.gitignore`).
+  Prueba en `cumple-adulto-http.php` (56), con control en rojo.
+- **Subido:** `app/lib.php` (cotejado contra el del deploy anterior, respaldo
+  `~/respaldos/app-lib.php.antes-despedida-*`) y el video (720×1280, 9 s, 1,66 MB, −16 LUFS).
+- **Video actual: versión SIN IA** (acercamiento lento y balanceo sobre la imagen, más la voz). La animación con IA
+  (Kling 3.0, brindis y saludo, USD 0,63 de lista aprobado por Luis) **no se pudo generar: la API de Higgsfield no
+  tiene saldo** (el intento falló sin cobro) y BudgetPixel pide volver a conectarse. Cuando haya saldo se reemplaza el
+  mismo archivo, sin tocar código.
+- **NOT_RUN:** verla en el kiosco de PROD (la fiesta sigue inactiva) y en la tablet.
+
+## DESPLEGADO 2026-10-13 (00:28-00:40): cumpleaños de adulto, Coquetería Pop, juegos del animador y la feria integrada (AT-CUMPLECLICK-026)
+
+Go de Luis el 12-oct («vamos a PROD con todo»). Lo hizo Claude por SSH (`deploy-026/desplegar.py`, en la carpeta de Aseo de la
+sesión, fuera del repo) en tres fases que abortan al primer problema: respaldo, subida y verificación.
+
+**PROD no era `main`.** El reconocimiento encontró la feria (`claude/feria-prod`, migración `026_modo_feria`) en PROD: su
+`lib.php` y su `themes.json` eran los de esa rama, y el resto de los once archivos, los de `main` (`188ba45`). Subir la rama
+tal cual habría borrado la feria. Se fusionó `origin/claude/feria-prod` (commit `ad21dd6`): dos conflictos triviales, el
+admin ahora exige una temática con cabina de cumpleaños para un cumpleaños de adulto (las de adultos de la feria se
+rechazan) y `feria-marcos.test.mjs` acepta «Ir a mi foto» con movimiento reducido (fallaba al azar también en la feria
+sola). Con la fusión subió también **la intro de la feria pendiente desde el 29-sep** (`0357996`, sección PENDIENTE
+2026-09-29 más abajo): solo afecta al modo feria. `feria.html` no se tocó (sigue el de PROD).
+
+Cotejo completo `dist/` contra `app/` antes de subir: distintos solo los once de la tabla e `index.html`; nuevos solo tres
+assets (`main-CL2XqIT8.js`, `main-DNIuHEKU.css`, `anton-latin-400-normal-Byf51wtH.woff2`) y la carpeta de la temática. No se
+subieron, a propósito: `data/parties.json` y `data/ajustes.json` (datos vivos), `cartel-qr.html` (PROD tiene otra versión,
+fuera de este cambio) ni `feria.html`.
+
+- **Respaldo:** `~/respaldos/cumpleclick-db-antes-026-20261013-0028.sql` (0600, 40 tablas, «Dump completed») y
+  `~/respaldos/app-antes-026-20261013-0028.tar.gz` + `.sha256` (los 11 archivos reemplazados).
+- **Migración 027** aplicada con `php aplicar-027.php` («applied», 0 fiestas con juegos apagados). `rollback-adultos.php`,
+  `aplicar-027.php` y la migración quedaron en `domains/cumpleclick.com/database/`.
+- **Subido:** 19 archivos de `themes/adulto-coqueteria-pop/` y 14 de código en el orden de la tabla, cada uno cotejado por
+  sha256, con `php -l` y `json_decode`, e instalados con `mv` atómico (`lib.php` primero, `index.html` al final).
+- **Verificado desde afuera:** `samantha-hielo` y `luciano-spidey` responden igual (sin `edad`, sin `cabinaAdulto`, sin
+  `animadorApagados`, 6 personajes); `lib.php` nuevo con la feria presente; raíz, `index.html`, `feria.html`, assets nuevos,
+  fondo y PNG de Asómate (mismos bytes: el CDN no los achica), `admin/login.php` y `admin/maestro.php` en 200 sin errores.
+- **Fiesta del piloto creada en PROD** por CLI con las funciones del admin (adulta, 69, Coquetería Pop, 16-oct, marco de la
+  temática, todos los juegos disponibles), **inactiva** hasta que Luis genere la aceptación o la exima.
+- **NOT_RUN:** el kiosco adulto abierto en PROD (la fiesta está inactiva), la tablet, el rollback real, una invitación
+  publicada y el admin con sesión iniciada.
+
+### Lo que decía la sección PENDIENTE (se conserva para el rollback)
+
+
+Nada de esto está en PROD. Rama `claude/cumple-adulto-coqueteria` sobre `origin/main`. Detalle en
+`docs/CUMPLE-ADULTO-COQUETERIA.md`. La modalidad y la edad no llevan migración (`event_type` es VARCHAR(40) y
+`birthday_age` TINYINT). **Sí la lleva, desde el 12-oct, el apagado de juegos del animador: migración
+`027_animador_apagados`** (columna `cc_parties.animador_apagados`, TEXT NULL; el número 026 ya lo usa
+`026_modo_feria` en otras ramas). Va **antes** de subir `lib.php` y `admin/index.php` (paso 0b). Si por error se
+subiera el código antes, el kiosco igual abre (publica `animadorApagados: []`) y el admin avisa «falta aplicar la
+migración 027» al guardar una fiesta de adulto; nada se pierde en silencio. Requiere el go de Luis.
+
+Orden de subida (destino `app/`, origen `dist/` después de `npx vite build`):
+
+| # | Local | Destino PROD | Clase |
+|---|---|---|---|
+| 0 | `database/rollback-adultos.php` | `domains/cumpleclick.com/database/rollback-adultos.php` (privado, fuera de `public_html`; carga `../public/lib.php`, que allí es el enlace a `public_html/app`) | OBLIGATORIO, antes que todo: sin él no hay rollback sin pérdida. Solo CLI, nunca dentro de `app/` |
+| 0b | `database/migrations/027_animador_apagados.php` y `database/aplicar-027.php` | `domains/cumpleclick.com/database/` (privado, junto a las demás migraciones); después, por SSH: `php aplicar-027.php` (debe decir `applied 027_animador_apagados` o `skip`, y `cc_parties con animador_apagados: 0`) | OBLIGATORIO, antes del paso 2 |
+| 1 | `dist/themes/adulto-coqueteria-pop/fondo-sala.jpg`, `fondo-banner.jpg`, `fondo-grupal.jpg`, `fondo-revista.jpg` y la carpeta `asomate/` completa (15 archivos) | `app/themes/adulto-coqueteria-pop/` (carpeta nueva) | OBLIGATORIO |
+| 2 | `dist/lib.php` | `app/lib.php` | OBLIGATORIO, antes que los PHP de abajo (define `cb_party_event_type`, `cb_party_age_valid`, `cb_theme_is_adult`, `cb_theme_cabina_adulto`) |
+| 3 | `dist/lib.invitations.php`, `dist/lib.predictions.php`, `dist/lib.rsvp.php`, `dist/ver.php`, `dist/invitacion.php`, `dist/asistencia-papas.php` | `app/` | OBLIGATORIO |
+| 4 | `dist/admin/index.php` | `app/admin/index.php` | OBLIGATORIO |
+| 5 | `dist/data/themes.json` | `app/data/themes.json` | OBLIGATORIO |
+| 6 | `dist/assets/invitation.js` | `app/assets/invitation.js` | OBLIGATORIO (independiente; se refresca por `filemtime`) |
+| 7 | `dist/assets/` que referencia el `index.html` nuevo y no estén en PROD (cotejar por nombre; al menos `main-*.js`, `main-*.css` y `anton-latin-400-normal-*.woff2`) | `app/assets/` | OBLIGATORIO |
+| 8 | `dist/index.html` | `app/index.html` | OBLIGATORIO, al final |
+
+No subir: `design/generadores/`, `tests/`, `docs/`, ni el paquete privado del piloto; `database/rollback-adultos.php` va solo a `domains/cumpleclick.com/database/`. Las fotos y el video del piloto
+se suben **por el admin** (Invitaciones → imagen y video aprobados), que los guarda en el almacén privado fuera de
+`public_html`.
+
+**Respaldo previo obligatorio, con sha256** (los 11 archivos que se reemplazan; la revisión B de Codex, CX-04, encontró
+que la lista anterior omitía tres consumidores de `lib.php` y un rollback así dejaba `cb_party_event_type()` sin
+definir): `app/lib.php`, `app/lib.invitations.php`, `app/lib.predictions.php`, `app/lib.rsvp.php`, `app/ver.php`,
+`app/invitacion.php`, `app/asistencia-papas.php`, `app/admin/index.php`, `app/assets/invitation.js`,
+`app/data/themes.json` y `app/index.html`. **Y el volcado completo de la base** con el procedimiento de siempre
+(`mysqldump` desde la consola SSH, `scratchpad/alinear-0915/respaldo-db.py` del checkout principal; ver
+`docs/MAPA-PROD-Y-REPOSITORIOS.md`, re-cotejo del 2026-09-15). El volcado es la red de último recurso: el rollback
+normal no lo usa.
+
+**Por qué el rollback no es solo bajar archivos** (revisión B2 de Codex, CX-04). El código anterior (188ba45) no
+conoce `adult_birthday`: su `cb_load_parties()` lee al adulto como infantil (`lib.php:422`) y su `cb_save_parties()`,
+que reescribe **todas** las fiestas cada vez que el admin guarda cualquiera (basta apagar los juegos de otra fiesta),
+lo deja como `child_birthday` con edad nula, porque el tope era 17 (`lib.php:577-584`), y arrastra a su invitación
+(`lib.php:614`). Además `active=0` no apaga la invitación: las páginas públicas solo miran `status='published'`, y el
+código anterior la mostraría con «Nombre del apoderado o familia» y «Nombre de los niños». Por eso se respalda y se
+suspende antes, y se restaura exacto después. No se borra ninguna fila.
+
+**Los juegos del animador apagados no necesitan nada en el rollback.** Viven en su propia columna
+(`animador_apagados`, migración 027), que el código anterior no lee ni escribe: su `cb_save_parties()` nombra las
+columnas una por una en el `UPDATE` y el `INSERT`. Probado con el `lib.php` de 188ba45 operado de verdad sobre la
+misma base: guarda todas las fiestas y la columna queda igual en todas (`tests/backend/animador-apagados.php`). No
+hay que revertir la migración al bajar el código; `027_animador_apagados.down.php` existe solo si se quisiera quitar
+la columna, y borra la lista de cada fiesta.
+
+**Rollback, en este orden** (por SSH, en `domains/cumpleclick.com/database/`; `F` es el archivo de respaldo, p. ej.
+`~/respaldos/rollback-adultos-AAAAMMDD-HHMM.json`):
+1. Con el código nuevo todavía arriba: `mkdir -p ~/respaldos && php rollback-adultos.php exportar F`. Guarda
+   modalidad, edad, estado y temática de cada fiesta adulta y el estado de publicación de sus invitaciones (archivo
+   0600, nacido con umask 077, con suma sha256 de integridad, que no es una firma, y formato
+   `cumpleclick-rollback-adultos/2` con la huella del entorno: un hash del motor, del nombre de la base y de la URL
+   pública, nunca el DSN ni credenciales) y recién entonces las suspende: fiesta `active=0`, invitación `archived`.
+   Debe terminar con código 0 y `adultas_activas_fuera_del_respaldo: 0`. Se niega, antes de escribir el respaldo o
+   suspender nada, si `F` ya existe o es un enlace, si su carpeta (por ruta real, con los enlaces resueltos) queda
+   dentro de `public_html`, de cualquier webroot de la cuenta (un tramo `public_html`, `www` o `htdocs`, también
+   `domains/automatizatech.cl/public_html/`) o de cualquier repositorio Git (`.git` como carpeta o como archivo de
+   worktree en ella o en un padre: así queda fuera la raíz entera del repositorio público, `Docs/` incluida; en PROD
+   no hay `.git` y `~/respaldos` y `domains/cumpleclick.com/database/` se aceptan), si alguna carpeta padre no se
+   deja revisar, o si el `lib.php` cargado ya es el anterior. Si el PHP de consola tiene `open_basedir`, exportar
+   se niega sin leer ni escribir nada: correr `php -d open_basedir= rollback-adultos.php exportar F`.
+2. Restaurar `index.html` (sin borrar todavía los assets nuevos).
+3. Restaurar todos los consumidores: `admin/index.php`, `lib.invitations.php`, `lib.predictions.php`, `lib.rsvp.php`,
+   `ver.php`, `invitacion.php`, `asistencia-papas.php`, `assets/invitation.js` y `data/themes.json`.
+4. Recién al final, `lib.php`. Al revés quedan llamadas a funciones que la versión anterior no tiene.
+5. Opcional: retirar `themes/adulto-coqueteria-pop/` y los bundles nuevos.
+6. Verificar una fiesta infantil, un baby shower (predicciones), `ver.php`, una invitación infantil y `asistencia-papas`;
+   y que la invitación adulta responde 404 («todavía no está disponible»), no la página con textos infantiles.
+7. Mientras dure: no editar, publicar ni desarchivar fiestas o invitaciones adultas en el admin. Guardar otras fiestas sí
+   se puede; el código anterior reescribirá al adulto como infantil y eso lo deshace la vuelta.
+   `php rollback-adultos.php comprobar F` muestra en cualquier momento qué difiere; con el código anterior arriba sale 1
+   y lista modalidad, edad, estado y publicación, que es lo esperado.
+
+**Vuelta a la versión nueva, en este orden:**
+1. Subir otra vez la versión nueva con el orden de la tabla (`lib.php` antes que sus consumidores, `index.html` al final).
+2. Enseguida: `php rollback-adultos.php restaurar F`. Devuelve exactamente lo guardado (modalidad, edad, estado y
+   temática de la fiesta; estado, fecha y autor de publicación y modalidad de la invitación), todo o nada, y lo
+   comprueba. Lo editado a mano en otros campos durante el rollback (nombre, fecha, invitados, otras fiestas) se
+   conserva. Se niega con el código anterior arriba, con un respaldo alterado, con uno de otro entorno (otra base u
+   otra URL pública), con uno del formato `/1`, si falta alguna fila o si alguna fiesta cambió de slug o alguna
+   invitación pertenece hoy a otra fiesta; en ese caso no escribe nada y se recurre al volcado. `comprobar` también
+   se niega con un respaldo de otro entorno o del formato `/1`. Es idempotente. Debe terminar con código 0 e `igual_al_respaldo: true`.
+   Entre subir el código y restaurar, la fiesta adulta sigue inactiva y no abre: un hueco de minutos, sin datos perdidos.
+3. Verificar `api.php?p=<fiesta adulta>` con `event_type: adult_birthday` y su edad, la invitación adulta con
+   «¿Vienes con alguien?», y que `php rollback-adultos.php comprobar F` sale 0.
+4. `F` se queda en `~/respaldos/`: trae los slugs de fiestas reales y no se copia al repositorio.
+
+**Ensayado en local el 2026-10-11** (Forja-Claude, PHP 8.2.29, SQLite y fiestas ficticias; código de 188ba45 extraído
+fuera del repositorio y operado de verdad, el admin anterior por HTTP): 36 de 36 pasos PASS. Con el código anterior la
+invitación adulta da 404 sin textos infantiles, `rsvp-api.php` y `descargar-invitacion.php` la rechazan, y el admin
+anterior reescribe al adulto como se esperaba; tras la vuelta, el adulto queda `adult_birthday`, 61, activo, con su
+temática e invitación publicada con la misma fecha y autor, y la infantil y el baby shower intactos, con lo editado
+durante el rollback conservado. Prueba permanente con el código actual: `tests/backend/rollback-adultos.php`.
+Repetido el mismo día con el formato `/2` de la revisión B4 (CX-26 a CX-29): 36 de 36 pasos PASS, y el script
+nuevo junto al `lib.php` anterior sigue pudiendo `comprobar`.
+**NOT_RUN:** la subida y bajada física por FTP/SSH, la base MySQL de PROD (el ensayo usa SQLite), los estados
+intermedios con archivos a medio subir, el volcado real y el tiempo real del hueco entre subir y restaurar.
+
+Verificación desde afuera: `api.php?p=<fiesta infantil existente>` sin `edad` ni `cabinaAdulto` y con sus personajes;
+una fiesta adulta de prueba con `event_type: adult_birthday`.
+
 ## DESPLEGADO 2026-09-13 (07:05) — usuarios del backoffice: superadministrador y operadores por fiesta
 
 Luis pidió, la madrugada de las dos fiestas, poder delegar el admin de una fiesta a una persona:
@@ -4123,3 +4279,130 @@ balancea, el distintivo de chat late con un halo y el botón da un salto cuando 
 Verificado desde afuera y en el navegador a 390 px en PROD: aviso visible, animaciones activas, cero errores.
 Respaldos: `~/respaldos/sitio-*.antes-20260925-2315`.
 
+
+
+## AT-CUMPLECLICK-021 — kiosco de feria (Codex, 2026-09-26; LOCAL, SIN DEPLOY)
+
+Rama `codex/modo-feria-kiosco`, base `origin/main` = `4cdc795`. Revisor Claude, aprobador Luis. No se hizo merge ni despliegue. Costo 0 créditos; request_id: no aplica.
+
+Selector Niños/Adultos, autorización infantil, nombre opcional, foto numerada, QR y diploma infantil. Adultos con filtro blanco y negro y recorte real sobre fondo completo. Worker cancelable a los 4 s; por debajo de 15 FPS, vista previa normal y recorte solo en foto final. La foto conserva el marco si falla el modelo. Las máscaras y los fotogramas permanecen sincronizados; cámara/worker se liberan al salir.
+
+### Pruebas y evidencia
+
+`npm test` con `CC_FERIA_BACKEND_ROOT` y fixture de retrato configurados: **236 tests / 236 pass / 0 fail / 0 skipped**. `npm run build`: **exit 0** (advertencia preexistente del chunk Three.js de ~734 kB). Regresión normal en navegador y respuesta PHP normal idéntica byte a byte. Integración real contra `C:/wamp64/www/automatiza-tech/.worktrees/modo-feria/CumpleBooth`, con SQLite/almacenamiento temporales y cuatro fotos ligadas a su número; ningún archivo del backend modificado.
+
+Capturas 1200 × 2000, instrucciones y salidas en `src/feria/evidencia/`. Las imágenes son de prueba técnica, no material publicitario ni fotos de clientes. CSV de archivos y SHA-256 en `src/feria/evidencia/FTP-021.csv`.
+
+Mediciones en Chrome/153.0.8010.53 **en PC**, no Tab A7. Composición = recorte + franja + filtro + JPEG, excluye reserva/subida HTTP. FPS redondeados a un decimal; la decisión del umbral se toma antes de redondear.
+
+| Temática | FPS iniciales | Últimos FPS | Vista previa | Composición completa |
+|---|---:|---:|---|---:|
+| adulto-estudio-bn | 15 | 15 | final-only | 354 ms |
+| adulto-glam-dorado | 19 | 25 | live | 225 ms |
+| adulto-noche-brujas | 20.3 | 22.9 | live | 246 ms |
+
+### Orden FTP exacto (a ejecutar por Claude tras aprobación)
+
+**Precondición obligatoria:** integrar el ticket 020 y su propio manifiesto, aplicando la migración 026 ANTES de su PHP. El 020 también entrega catálogo, escenas adultas y video de espera. **No subir este `dist/` entero ni sus PHP**: son copias de la base anterior a 020. Las rutas de destino de la tabla son relativas a `domains/cumpleclick.com/`.
+
+Orden 1: modelo, SDK y verificar el WASM/.htaccess existente. Orden 2: assets compilados. Orden 3: entradas HTML. Orden 4: selector. Mantener los assets con hashes anteriores hasta que las sesiones abiertas terminen. No hay archivos opcionales nuevos; las capturas y el resto de la evidencia son solo revisión y NO se suben.
+
+| Orden | Clasificación | Ruta local exacta | Destino PROD |
+|---:|---|---|---|
+| 1 | OBLIGATORIO | C:/wamp64/www/automatiza-tech/.worktrees/codex-modo-feria-kiosco/CumpleBooth/dist/feria/vision-segmenter.js | public_html/app/feria/vision-segmenter.js |
+| 1 | OBLIGATORIO (verificar; subir si falta o difiere) | C:/wamp64/www/automatiza-tech/.worktrees/codex-modo-feria-kiosco/CumpleBooth/public/vendor/mediapipe/.htaccess | public_html/app/vendor/mediapipe/.htaccess |
+| 1 | OBLIGATORIO | C:/wamp64/www/automatiza-tech/.worktrees/codex-modo-feria-kiosco/CumpleBooth/dist/vendor/mediapipe/selfie_segmenter.tflite | public_html/app/vendor/mediapipe/selfie_segmenter.tflite |
+| 1 | OBLIGATORIO (verificar; subir si falta o difiere) | C:/wamp64/www/automatiza-tech/.worktrees/codex-modo-feria-kiosco/CumpleBooth/public/vendor/mediapipe/vision_wasm_internal.js | public_html/app/vendor/mediapipe/vision_wasm_internal.js |
+| 1 | OBLIGATORIO (verificar; subir si falta o difiere) | C:/wamp64/www/automatiza-tech/.worktrees/codex-modo-feria-kiosco/CumpleBooth/public/vendor/mediapipe/vision_wasm_internal.wasm | public_html/app/vendor/mediapipe/vision_wasm_internal.wasm |
+| 1 | OBLIGATORIO (verificar; subir si falta o difiere) | C:/wamp64/www/automatiza-tech/.worktrees/codex-modo-feria-kiosco/CumpleBooth/public/vendor/mediapipe/vision_wasm_nosimd_internal.js | public_html/app/vendor/mediapipe/vision_wasm_nosimd_internal.js |
+| 1 | OBLIGATORIO (verificar; subir si falta o difiere) | C:/wamp64/www/automatiza-tech/.worktrees/codex-modo-feria-kiosco/CumpleBooth/public/vendor/mediapipe/vision_wasm_nosimd_internal.wasm | public_html/app/vendor/mediapipe/vision_wasm_nosimd_internal.wasm |
+| 2 | OBLIGATORIO | C:/wamp64/www/automatiza-tech/.worktrees/codex-modo-feria-kiosco/CumpleBooth/dist/assets/album-CaWnfSyi.css | public_html/app/assets/album-CaWnfSyi.css |
+| 2 | OBLIGATORIO | C:/wamp64/www/automatiza-tech/.worktrees/codex-modo-feria-kiosco/CumpleBooth/dist/assets/album-zYhkPpjF.js | public_html/app/assets/album-zYhkPpjF.js |
+| 2 | OBLIGATORIO | C:/wamp64/www/automatiza-tech/.worktrees/codex-modo-feria-kiosco/CumpleBooth/dist/assets/baloo-2-latin-600-normal-B4tNaogw.woff | public_html/app/assets/baloo-2-latin-600-normal-B4tNaogw.woff |
+| 2 | OBLIGATORIO | C:/wamp64/www/automatiza-tech/.worktrees/codex-modo-feria-kiosco/CumpleBooth/dist/assets/baloo-2-latin-600-normal-tIfxVoAe.woff2 | public_html/app/assets/baloo-2-latin-600-normal-tIfxVoAe.woff2 |
+| 2 | OBLIGATORIO | C:/wamp64/www/automatiza-tech/.worktrees/codex-modo-feria-kiosco/CumpleBooth/dist/assets/baloo-2-latin-700-normal-CqTg7A15.woff2 | public_html/app/assets/baloo-2-latin-700-normal-CqTg7A15.woff2 |
+| 2 | OBLIGATORIO | C:/wamp64/www/automatiza-tech/.worktrees/codex-modo-feria-kiosco/CumpleBooth/dist/assets/baloo-2-latin-700-normal-Ld3Zm3l2.woff | public_html/app/assets/baloo-2-latin-700-normal-Ld3Zm3l2.woff |
+| 2 | OBLIGATORIO | C:/wamp64/www/automatiza-tech/.worktrees/codex-modo-feria-kiosco/CumpleBooth/dist/assets/baloo-2-latin-800-normal-B8BXfZF7.woff | public_html/app/assets/baloo-2-latin-800-normal-B8BXfZF7.woff |
+| 2 | OBLIGATORIO | C:/wamp64/www/automatiza-tech/.worktrees/codex-modo-feria-kiosco/CumpleBooth/dist/assets/baloo-2-latin-800-normal-BbF3Etk1.woff2 | public_html/app/assets/baloo-2-latin-800-normal-BbF3Etk1.woff2 |
+| 2 | OBLIGATORIO | C:/wamp64/www/automatiza-tech/.worktrees/codex-modo-feria-kiosco/CumpleBooth/dist/assets/browser-BeMEBtOm.js | public_html/app/assets/browser-BeMEBtOm.js |
+| 2 | OBLIGATORIO | C:/wamp64/www/automatiza-tech/.worktrees/codex-modo-feria-kiosco/CumpleBooth/dist/assets/cartel-SlR9LYHX.js | public_html/app/assets/cartel-SlR9LYHX.js |
+| 2 | OBLIGATORIO | C:/wamp64/www/automatiza-tech/.worktrees/codex-modo-feria-kiosco/CumpleBooth/dist/assets/cartel-yJHq8X4K.css | public_html/app/assets/cartel-yJHq8X4K.css |
+| 2 | OBLIGATORIO | C:/wamp64/www/automatiza-tech/.worktrees/codex-modo-feria-kiosco/CumpleBooth/dist/assets/carteles-CIwK2MVx.js | public_html/app/assets/carteles-CIwK2MVx.js |
+| 2 | OBLIGATORIO | C:/wamp64/www/automatiza-tech/.worktrees/codex-modo-feria-kiosco/CumpleBooth/dist/assets/carteles-CRjFN5QB.css | public_html/app/assets/carteles-CRjFN5QB.css |
+| 2 | OBLIGATORIO | C:/wamp64/www/automatiza-tech/.worktrees/codex-modo-feria-kiosco/CumpleBooth/dist/assets/caveat-latin-500-normal-B9SDL8cy.woff2 | public_html/app/assets/caveat-latin-500-normal-B9SDL8cy.woff2 |
+| 2 | OBLIGATORIO | C:/wamp64/www/automatiza-tech/.worktrees/codex-modo-feria-kiosco/CumpleBooth/dist/assets/caveat-latin-500-normal-Do9veZfZ.woff | public_html/app/assets/caveat-latin-500-normal-Do9veZfZ.woff |
+| 2 | OBLIGATORIO | C:/wamp64/www/automatiza-tech/.worktrees/codex-modo-feria-kiosco/CumpleBooth/dist/assets/client-eulB1LW-.js | public_html/app/assets/client-eulB1LW-.js |
+| 2 | OBLIGATORIO | C:/wamp64/www/automatiza-tech/.worktrees/codex-modo-feria-kiosco/CumpleBooth/dist/assets/cumpleclick-mark-C2JZLqUO.svg | public_html/app/assets/cumpleclick-mark-C2JZLqUO.svg |
+| 2 | OBLIGATORIO | C:/wamp64/www/automatiza-tech/.worktrees/codex-modo-feria-kiosco/CumpleBooth/dist/assets/feria-BF1TD7YO.js | public_html/app/assets/feria-BF1TD7YO.js |
+| 2 | OBLIGATORIO | C:/wamp64/www/automatiza-tech/.worktrees/codex-modo-feria-kiosco/CumpleBooth/dist/assets/feria-DiVuzLyh.js | public_html/app/assets/feria-DiVuzLyh.js |
+| 2 | OBLIGATORIO | C:/wamp64/www/automatiza-tech/.worktrees/codex-modo-feria-kiosco/CumpleBooth/dist/assets/feria-DpAUL2uk.css | public_html/app/assets/feria-DpAUL2uk.css |
+| 2 | OBLIGATORIO | C:/wamp64/www/automatiza-tech/.worktrees/codex-modo-feria-kiosco/CumpleBooth/dist/assets/Lockup-B8jQuzlB.js | public_html/app/assets/Lockup-B8jQuzlB.js |
+| 2 | OBLIGATORIO | C:/wamp64/www/automatiza-tech/.worktrees/codex-modo-feria-kiosco/CumpleBooth/dist/assets/Lockup-CQYbo7Xc.css | public_html/app/assets/Lockup-CQYbo7Xc.css |
+| 2 | OBLIGATORIO | C:/wamp64/www/automatiza-tech/.worktrees/codex-modo-feria-kiosco/CumpleBooth/dist/assets/main-BQAKXBRo.css | public_html/app/assets/main-BQAKXBRo.css |
+| 2 | OBLIGATORIO | C:/wamp64/www/automatiza-tech/.worktrees/codex-modo-feria-kiosco/CumpleBooth/dist/assets/main-DvPs7Asy.js | public_html/app/assets/main-DvPs7Asy.js |
+| 2 | OBLIGATORIO | C:/wamp64/www/automatiza-tech/.worktrees/codex-modo-feria-kiosco/CumpleBooth/dist/assets/segment.worker-CZ45B1n2.js | public_html/app/assets/segment.worker-CZ45B1n2.js |
+| 2 | OBLIGATORIO | C:/wamp64/www/automatiza-tech/.worktrees/codex-modo-feria-kiosco/CumpleBooth/dist/assets/themeVars-BWg77og2.js | public_html/app/assets/themeVars-BWg77og2.js |
+| 2 | OBLIGATORIO | C:/wamp64/www/automatiza-tech/.worktrees/codex-modo-feria-kiosco/CumpleBooth/dist/assets/three.module-Y-ql4QRg.js | public_html/app/assets/three.module-Y-ql4QRg.js |
+| 2 | OBLIGATORIO | C:/wamp64/www/automatiza-tech/.worktrees/codex-modo-feria-kiosco/CumpleBooth/dist/assets/vision_bundle-Cd7_-YIR.js | public_html/app/assets/vision_bundle-Cd7_-YIR.js |
+| 3 | OBLIGATORIO | C:/wamp64/www/automatiza-tech/.worktrees/codex-modo-feria-kiosco/CumpleBooth/dist/album.html | public_html/app/album.html |
+| 3 | OBLIGATORIO | C:/wamp64/www/automatiza-tech/.worktrees/codex-modo-feria-kiosco/CumpleBooth/dist/cartel-qr.html | public_html/app/cartel-qr.html |
+| 3 | OBLIGATORIO | C:/wamp64/www/automatiza-tech/.worktrees/codex-modo-feria-kiosco/CumpleBooth/dist/carteles.html | public_html/app/carteles.html |
+| 3 | OBLIGATORIO | C:/wamp64/www/automatiza-tech/.worktrees/codex-modo-feria-kiosco/CumpleBooth/dist/index.html | public_html/app/index.html |
+| 4 | OBLIGATORIO | C:/wamp64/www/automatiza-tech/.worktrees/codex-modo-feria-kiosco/CumpleBooth/dist/feria.html | public_html/app/feria.html |
+
+No subir `src/`, tests, node_modules, evidencias, ADB, fixtures, SQLite, fotos de prueba, logs ni configuraciones. El HTML fuente `public/feria.html` tampoco se sube directamente: usar `dist/feria.html` procesado por Vite.
+
+### No probado
+
+- Galaxy Tab A7 física: pendiente de conexión USB de Luis; ADB preparado, sin dispositivo detectado al cerrar la verificación en PC. No atribuir estos FPS al equipo real.
+- Cámara física frontal/trasera, iluminación de feria, grupos/personas en movimiento y una jornada continua. Las pruebas usan un retrato público por canvas.
+- Hostinger/HTTPS/CSP real, Selphy 10×15, permisos efectivos de descarga del navegador y task de retención. Corresponden a la validación integrada de Claude; no se accedió a PROD.
+
+### Contrato y preguntas abiertas para Claude
+
+- `upload.php` puede responder éxito aunque no ligue la reserva. Si se pierde una respuesta y se reintenta una reserva ya usada, puede guardar una copia sin vínculo. Se mantuvo el contrato; revisar confirmación/idempotencia en 020 antes de prometer recuperación de todos los casos de red.
+- El diploma se guarda en la tablet; el QR es de la foto. Entrega por QR del diploma requeriría acordar un contrato adicional, que no se inventó aquí.
+- La fuente del modelo quedó en `src/feria/models/` para respetar los archivos autorizados; Vite la emite en `vendor/mediapipe/selfie_segmenter.tflite`. Se reutiliza el mismo WASM instalado. Proveniencia y SHA-256 en `models/NOTICE.md`.
+- Sin nombres de franquicias en el nuevo copy. Las imágenes/nombres de personajes siguen viniendo del catálogo existente de 020.
+
+## DESPLEGADO 2026-10-13 junto con AT-CUMPLECLICK-026: feria: la intro siempre se ve y la temática se despide
+
+Subió en el bundle `main-CL2XqIT8.js` del deploy del cumpleaños de adulto (ver arriba); `feria.html` no se tocó. Lo de abajo
+es el texto de cuando estaba pendiente.
+
+
+Rama `claude/feria-prod`, commit `0357996`, PR lmgmuber-bit/automatiza-tech#58. Luis reportó el 28-sep que en la
+feria del 26-sep la intro se saltaba y el niño caía directo a la ruleta.
+
+**Qué cambia:** el video de bienvenida se baja entero al abrir el kiosco (`videoListo.js`), se ve aunque la tablet
+pida menos animaciones y, si no arranca o falla, queda una tarjeta con el nombre un mínimo de 4 s
+(`src/feria/intro.js`). Al terminar, la despedida de la temática antes de volver al selector. Solo afecta al modo
+feria: una fiesta normal usa `ListaInvitados` y `VideoScreen`, que no se tocaron.
+
+**Estado de PROD cotejado por HTTP el 29-sep:** `app/index.html` referencia `assets/main-BUofv_7z.js` (quinta subida
+del 26-sep, commit `089b1ac`). `app/feria.html` referencia `feria-B6aDrb3_.js` y `feria-CtKgOs8Z.js`.
+
+| Orden | Clase | Local | PROD |
+|---|---|---|---|
+| 1 | OBLIGATORIO | `CumpleBooth/dist/assets/main-B0T6cgEh.js` | `public_html/app/assets/main-B0T6cgEh.js` (nuevo) |
+| 2 | OBLIGATORIO | `CumpleBooth/dist/index.html` | `public_html/app/index.html` (reemplaza) |
+
+Ya están en PROD con los mismos bytes (no subir): `browser-BeMEBtOm.js`, `client-eulB1LW-.js`, `feria-DS66PGN6.css`,
+`feria-DvWbXH6O.js`, `feria-DFqILw4W.js`, `main-BQAKXBRo.css`, `themeVars-BWg77og2.js`, `three.module-Y-ql4QRg.js`,
+`vision_bundle-Cd7_-YIR.js`. **No subir `dist/feria.html`**: el selector no cambió. Sin migración, sin PHP.
+
+**Respaldo y vuelta atrás:** respaldar `app/index.html` antes; volver atrás es restaurarlo. `main-BUofv_7z.js` se
+deja en `assets/` para los navegadores que lo tengan en caché.
+
+**Verificación desde afuera:** `index.html` con los bytes del local y referencia a `main-B0T6cgEh.js`; el asset con
+`Content-Type` de JavaScript y los mismos bytes; `api.php?p=samantha-hielo` y `api.php?p=luciano-spidey` iguales que
+antes; los videos `welcome` y `despedida` de cada temática responden 200.
+
+**Pruebas en local:** `node --test tests/frontend/*.test.mjs` con el backend E2E: 243 pruebas, 242 pasan, 1 omitida
+(ADB), 0 fallas. La E2E cubre la despedida y la tarjeta de respaldo con el video abortado.
+
+### No probado
+
+- Tablet física con un niño.
+- El caso real del 26-sep no se reprodujo: la causa exacta (modo "menos animaciones" de la tablet o video que no
+  arrancó con el wifi del lugar) es la hipótesis más probable, no un hecho medido.

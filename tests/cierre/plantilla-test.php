@@ -15,12 +15,17 @@ preg_match_all('/\{\{([a-zA-Z0-9_]+)\}\}/', $cuerpo, $m);
 $usadas = array_values(array_unique($m[1]));
 $empresa = ['ciudad_firma', 'fecha_firma_larga', 'rut_at', 'representante_at_nombre', 'representante_at_rut', 'domicilio_at', 'email_at', 'ciudad_jurisdiccion'];
 // Task 5b: marcadores que no se guardan; ContractService los calcula al generar el PDF.
-$derivados = ['comparecencia_cliente'];
+// 13-oct: iva_texto lo completa ContractService::iva_texto() («IVA incluido» si AT no lo cambió).
+$derivados = ['comparecencia_cliente', 'iva_texto'];
 $sin_fuente = array_values(array_diff($usadas, at_cc_claves_contrato_servicios(), $empresa, $derivados));
 ok($sin_fuente === [], 'todos los marcadores tienen de dónde salir' . ($sin_fuente ? ': ' . implode(', ', $sin_fuente) : ''));
 $obligatorios = ['servicios_contratados', 'monto_total', 'forma_pago', 'alcance', 'entregables', 'plazo', 'comparecencia_cliente', 'fases_siguientes', 'propuesta_codigo', 'fecha_aceptacion', 'canal_aceptacion'];
 $faltan = array_values(array_diff($obligatorios, $usadas));
 ok($faltan === [], 'usa los datos del acuerdo' . ($faltan ? ': faltan ' . implode(', ', $faltan) : ''));
+
+// 13-oct: lo que sigue al precio en la 5.1 es un marcador; por defecto dice «IVA incluido».
+ok(strpos($md, '5.1. El precio total de lo contratado es de **{{monto_total}}**, {{iva_texto}}.') !== false, '5.1 usa {{iva_texto}} después del precio');
+ok(strpos($md, ', IVA incluido.') === false, 'la plantilla ya no fija «IVA incluido» en el texto');
 
 // Task 5b: el párrafo del cliente depende de si es persona natural o empresa.
 ok(strpos($cuerpo, '{{comparecencia_cliente}}') !== false, 'el cliente comparece con el párrafo según su tipo');

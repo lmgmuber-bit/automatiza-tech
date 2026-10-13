@@ -1425,8 +1425,45 @@ def prueba_render():
     rc = llamadas(t, 'Render')
     gv = llamadas(t, 'Guardar vista')
     ok(len(rc) == 1 and rc[0]['body']['image_briefs'] == [] and rc[0]['body']['images'] == {} and gv and gv[0]['body']['ok'] is True
-       and 'no hay fotos guardadas del plan' in gv[0]['body']['nota'] and not t['correos'],
-       'R17b mantener: sin manifest no se paga ninguna foto y la nota avisa que la vista sale sin fotos', gv)
+       and 'no hay fotos guardadas del plan; esas láminas van sin foto: portada, Método AT, carta Gantt' in gv[0]['body']['nota']
+       and not t['correos'],
+       'R17b mantener: sin manifest no se paga ninguna foto y la nota nombra las láminas que van sin foto', gv)
+
+    # R17f. Plan con propuesta: portada y cierre vuelven de las fotos de la propuesta (el renderer no las anota en el manifest
+    # del plan), junto con las del propio plan; ninguna foto se pide. Las pedidas sin foto se nombran en la nota.
+    t = sim(hook_m, **{'Leer render': leido(cuerpo_render(True), estado='enviado'), 'Fotos de la propuesta': [MANIFEST_PROP],
+                       'Fotos previas del plan': [manifest_propio], 'Render': [renderer_ok(0)]})
+    sin_error(t, 'R17f')
+    rc = llamadas(t, 'Render')
+    body = rc[0]['body'] if rc else {}
+    ok(rc and body.get('image_briefs') == [] and body.get('images') == {
+        'cover': BASE_R + '/p/PRUEBAprop01/img/cover.jpg', 'cierre': BASE_R + '/p/PRUEBAprop01/img/next_steps.png',
+        'metodo': BASE_R + '/p/PRUEBAplan01/img/metodo.jpg', 'gantt': BASE_R + '/p/PRUEBAplan01/img/gantt.png'},
+       'R17f mantener: portada y cierre de la propuesta + fotos del plan, sin pedir ninguna', body.get('images'))
+    gv = llamadas(t, 'Guardar vista')
+    nota = gv[0]['body']['nota'] if gv else ''
+    ok(gv and gv[0]['body']['ok'] is True and nota.startswith('Vista del plan actualizada: ')
+       and 'esas láminas van sin foto: fase 1, fase 2, fase 3, qué necesitamos de ti, reuniones y soporte, sigue tu proyecto' in nota
+       and 'portada' not in nota and 'cierre' not in nota and 'no hay fotos guardadas' not in nota and not t['correos'],
+       'R17f mantener: la nota nombra solo las láminas pedidas que quedan sin foto (no la portada ni el cierre)', nota)
+    # …y si la propuesta no tiene manifest (404), portada y cierre también se nombran.
+    t = sim(hook_m, **{'Leer render': leido(cuerpo_render(True), estado='enviado'), 'Fotos de la propuesta': [{'statusCode': 404, 'body': 'Not Found'}],
+                       'Fotos previas del plan': [manifest_propio], 'Render': [renderer_ok(0)]})
+    gv = llamadas(t, 'Guardar vista')
+    ok(gv and 'esas láminas van sin foto: portada, fase 1' in gv[0]['body']['nota'] and gv[0]['body']['nota'].count('van sin foto') == 1,
+       'R17f mantener: sin manifest de la propuesta, portada y cierre salen sin foto y la nota lo dice una sola vez', gv)
+
+    # R17g. El manifest del plan trae «metodo» pero no «gantt», y WordPress pidió las dos: la nota nombra la carta Gantt.
+    t = sim(hook_m, **{'Leer render': leido(cuerpo_render(True, image_briefs=BRIEFS_NUEVAS[:2]), uid='', estado='enviado'),
+                       'Fotos previas del plan': [{'statusCode': 200, 'body': {'metodo': {'file': 'metodo.jpg', 'hash': 'e' * 64}}}],
+                       'Render': [renderer_ok(0)]})
+    rc = llamadas(t, 'Render')
+    gv = llamadas(t, 'Guardar vista')
+    nota = gv[0]['body']['nota'] if gv else ''
+    ok(rc and rc[0]['body']['image_briefs'] == [] and list(rc[0]['body']['images']) == ['metodo']
+       and nota.endswith('esas láminas van sin foto: carta Gantt') and 'Método AT' not in nota.split('van sin foto')[-1]
+       and 'no hay fotos guardadas' not in nota and gv[0]['body']['ok'] is True,
+       'R17g mantener: una lámina pedida sin foto guardada se nombra en la nota', nota)
 
     # R17c. El renderer falla (500 las tres veces): se reintenta igual, /vista lleva mantener=true y ok=false, y SÍ hay correo.
     t = sim(hook_m, **{'Leer render': leido(cuerpo_render(True), uid='', estado='enviado'), 'Fotos previas del plan': [manifest_propio],

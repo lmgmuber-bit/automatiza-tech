@@ -67,9 +67,21 @@ if (modo === 'final' && mantener) {
     if (pp.statusCode === 200) previo = pp.body;
   }
   const propias = fotosPropiasDelPlan(previo, RENDERER_BASE, String(render.unique_id || ''));
-  render = Object.assign({}, render, { draft: false, image_briefs: [],
-    images: Object.assign({}, esObjetoPlano(render.images) ? render.images : {}, propias.images) });
-  reutilizadas = propias.slides;
+  // Portada y cierre de un plan con propuesta vienen de las fotos de la propuesta y el renderer no las anota en el
+  // manifest del plan: se vuelven a poner igual que en la versión final (sin costo).
+  let manifestPropuesta = null;
+  if ($('Fotos de la propuesta').isExecuted) {
+    const fp = $('Fotos de la propuesta').first().json || {};
+    if (fp.statusCode === 200) manifestPropuesta = fp.body;
+  }
+  const deLaPropuesta = reutilizarFotosPlan(render, manifestPropuesta, RENDERER_BASE, uid);
+  const images = Object.assign({}, deLaPropuesta.render.images, propias.images);
+  // Láminas que WordPress pidió (y portada/cierre si hay propuesta) y que quedan sin foto: se dicen en la nota.
+  const pedidasWp = (Array.isArray(render.image_briefs) ? render.image_briefs : [])
+    .map((b) => (esObjetoPlano(b) ? b.slide : '')).filter((x) => typeof x === 'string' && x);
+  sin_foto = Array.from(new Set(pedidasWp.concat(uid ? ['cover', 'cierre'] : []))).filter((x) => !images[x]);
+  render = Object.assign({}, render, { draft: false, image_briefs: [], images });
+  reutilizadas = Array.from(new Set(deLaPropuesta.reutilizadas.concat(propias.slides)));
 } else if (modo === 'final') {
   let manifest = null;
   if ($('Fotos de la propuesta').isExecuted) {
@@ -197,9 +209,12 @@ if (!lr.view_url) {
 if (modo === 'final' && missing.length) problemas.push('fotos que no se generaron tras ' + veces + ': ' + nombresLaminas(missing));
 if (remotas.length) avisos.push('fotos que no se pudieron guardar junto al plan (quedaron enlazadas): ' + nombresLaminas(remotas));
 if (mantener) {
-  // «Actualizar la vista»: no hay fotos nuevas ni portada/cierre de la propuesta que avisar. Solo importa que el plan
-  // tenga fotos guardadas: sin su manifest, la vista sale sin fotos (y no se paga ninguna).
-  if (!Array.isArray(v.reutilizadas) || !v.reutilizadas.length) avisos.push('no hay fotos guardadas del plan: la vista sale sin fotos');
+  // «Actualizar la vista»: no se pide ninguna foto nueva. Las láminas que no tienen foto guardada (ni propia ni de la
+  // propuesta) salen sin foto y se nombran; sin ninguna foto guardada, se dice también.
+  const sinFotos = !Array.isArray(v.reutilizadas) || !v.reutilizadas.length;
+  const sf = Array.isArray(v.sin_foto) ? v.sin_foto : [];
+  if (sf.length) avisos.push((sinFotos ? 'no hay fotos guardadas del plan; ' : '') + 'esas láminas van sin foto: ' + nombresLaminas(sf));
+  else if (sinFotos) avisos.push('no hay fotos guardadas del plan: la vista sale sin fotos');
 } else if (Array.isArray(v.sin_foto) && v.sin_foto.length) {
   avisos.push('la propuesta no tiene foto guardada para ' + nombresLaminas(v.sin_foto) + ': esas láminas van sin foto');
 }

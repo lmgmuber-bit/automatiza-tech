@@ -14,7 +14,16 @@ Antes de trabajar, crea una rama nueva. Usa y manten actualizados `CLAUDE.md`, `
 - No guardar secretos, tokens, passwords, credenciales ni datos sensibles.
 <!-- AI-MEMORY-WORKFLOW:END -->
 
+## GT Baseball Academy (cliente Jeffer García) — estado vivo
 
-
-
+- EN PROD en `https://gtbaseball.com/`:
+  - inscripción con QR, pago y Turnstile;
+  - portada con planes y fondos de estadio;
+  - buscador privado `/buscador/` con clave, fotos y listado en PDF.
+- Código en `demos/gt-baseball/`, en la rama `claude/gt-baseball-planes`. Flujos n8n en `N8N/gt-baseball/` (ver su
+  README).
+- 🔴 El repo es público: los datos del cliente viven en `gt-config.json`, fuera del repo. Se despliega solo con
+  `deploy_dominio.py` y con el ok de Luis.
+- **Relevo completo:** bóveda privada `10-Projects/GT-Baseball/README.md`. Diseño e historial en
+  `Docs/superpowers/specs/2026-09-27-gt-baseball-prototipo-design.md`.
 

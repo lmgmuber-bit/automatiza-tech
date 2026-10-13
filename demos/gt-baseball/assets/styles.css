@@ -1,0 +1,737 @@
+/* GT Baseball Academy · formulario de inscripción (v2).
+ * Tema oscuro por defecto (marca negro y dorado) y claro con el botón del encabezado.
+ * Contrastes medidos: texto 4,5:1 o más, bordes de campos 3:1 o más, en los dos temas.
+ * Radios: campos y botones 12 px, tarjetas 16-20 px, marcadores circulares.
+ * Capas: encabezados fijos 20, acciones fijas 20, carga 50, salto al contenido 60. */
+
+:root {
+  --fondo: #0e1216;
+  --sup: #151a20;
+  --sup-2: #1c222a;
+  --borde: #6a7482;
+  --borde-suave: #2a313a;
+  --texto: #f2f4f7;
+  --suave: #b3bcc8;
+  --tenue: #97a1ae;
+  --acento: #ffc54d;
+  --oro: #f4a91c;
+  --oro-2: #ffc54d;
+  --oro-texto: #1a1204;
+  --foco: #ffc54d;
+  --anillo: #f4a91c;
+  --error: #ff8f85;
+  --error-fondo: rgba(255, 143, 133, .1);
+  --ok: #4ade80;
+  --ok-fondo: rgba(74, 222, 128, .12);
+  --wa: #25d366;
+  --wa-fondo: rgba(37, 211, 102, .1);
+  --wa-texto: #dcfce7;
+  --chip: rgba(244, 169, 28, .14);
+  --sombra: 0 18px 50px rgba(0, 0, 0, .45);
+  --sombra-oro: 0 10px 28px rgba(244, 169, 28, .22);
+  --brillo: rgba(244, 169, 28, .16);
+  --velo: rgba(8, 10, 12, .72);
+  --barra: rgba(14, 18, 22, .9);
+  --titulos: 'Barlow Condensed', 'Arial Narrow', Arial, sans-serif;
+  --cuerpo: 'Barlow', system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
+  --curva: cubic-bezier(.2, .8, .2, 1);
+  --curva-larga: cubic-bezier(.16, 1, .3, 1);
+  color-scheme: dark;
+}
+
+:root[data-theme="light"] {
+  --fondo: #f2f4f7;
+  --sup: #fbfbfc;
+  --sup-2: #e9edf2;
+  --borde: #7a8492;
+  --borde-suave: #d7dce3;
+  --texto: #12161b;
+  --suave: #465160;
+  --tenue: #5a6473;
+  --acento: #7a4900;
+  --foco: #7a4900;
+  --anillo: #b07000;
+  --error: #b42318;
+  --error-fondo: rgba(180, 35, 24, .07);
+  --ok: #067647;
+  --ok-fondo: rgba(6, 118, 71, .1);
+  --wa: #128c4b;
+  --wa-fondo: rgba(37, 211, 102, .1);
+  --wa-texto: #0a5c33;
+  --chip: rgba(244, 169, 28, .2);
+  --sombra: 0 16px 40px rgba(18, 22, 27, .12);
+  --sombra-oro: 0 10px 24px rgba(176, 112, 0, .22);
+  --brillo: rgba(244, 169, 28, .18);
+  --velo: rgba(18, 22, 27, .45);
+  --barra: rgba(242, 244, 247, .92);
+  color-scheme: light;
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; overflow-x: clip; }
+body {
+  margin: 0;
+  min-height: 100dvh;
+  background:
+    radial-gradient(90% 55% at 70% -10%, var(--brillo), transparent 65%),
+    var(--fondo);
+  background-attachment: fixed;
+  overflow-x: clip;
+  color: var(--texto);
+  font: 400 17px/1.55 var(--cuerpo);
+  transition: background-color .25s ease, color .25s ease;
+}
+/* Fondo del sitio: tres fotos (Soul 2, 29-sep, sin texto; carteles y marcas borrosas borrados y luces altas
+ * comprimidas para que nada quede blanco puro) que se turnan con un fundido lento, en el orden que pidió Luis:
+ * pelota, atardecer y estadio de noche; cada una se ve unos 8 s (ciclo de 24 s). Encima va un velo del color del tema
+ * que mantiene el contraste del texto con cualquiera de las tres. Es una capa fija aparte y no
+ * background-attachment: fixed, porque iOS la ignora y estira la foto. Con «menos movimiento» queda fija la pelota y
+ * las otras dos ni se descargan. Esas dos se piden después de cargar la página (app.js pone .fondos-listos en <html>)
+ * para no retrasar la primera; en vertical se usan las versiones verticales. */
+:root { --velo-sitio: linear-gradient(180deg, rgba(14, 18, 22, .66), rgba(14, 18, 22, .8) 70%, rgba(14, 18, 22, .86)); }
+:root[data-theme="light"] { --velo-sitio: linear-gradient(180deg, rgba(242, 244, 247, .74), rgba(242, 244, 247, .84) 55%, rgba(242, 244, 247, .9)); }
+.fondo-sitio { position: fixed; inset: 0; z-index: -1; pointer-events: none; background: var(--fondo); }
+.fondo-sitio::after { content: ''; position: absolute; inset: 0; background: var(--velo-sitio); }
+.fondo-sitio__foto {
+  position: absolute; inset: 0; background: center 35% / cover no-repeat; opacity: 0;
+  animation: fondo-turno 24s ease-in-out infinite both;
+}
+.fondo-sitio__foto--pelota { background-image: url('fondo-pelota.jpg'); opacity: 1; animation-delay: -1.5s; }
+.fondo-sitio__foto--atardecer { animation-delay: 6.5s; }
+.fondo-sitio__foto--noche { animation-delay: 14.5s; }
+@media (prefers-reduced-motion: no-preference) {
+  .fondos-listos .fondo-sitio__foto--atardecer { background-image: url('fondo-atardecer.jpg'); }
+  .fondos-listos .fondo-sitio__foto--noche { background-image: url('estadio-noche.jpg'); }
+}
+@media (orientation: portrait) {
+  .fondo-sitio__foto { background-position: center 30%; }
+  .fondo-sitio__foto--pelota { background-image: url('fondo-pelota-vertical.jpg'); }
+}
+@media (orientation: portrait) and (prefers-reduced-motion: no-preference) {
+  .fondos-listos .fondo-sitio__foto--atardecer { background-image: url('fondo-atardecer-vertical.jpg'); }
+  .fondos-listos .fondo-sitio__foto--noche { background-image: url('estadio-noche-vertical.jpg'); }
+}
+/* Tema claro: tres fotos de día (pelota en el pasto, estadio con cielo azul y el diamante con luz de mañana, Soul 2,
+ * 29-sep, sin texto) en los mismos turnos, con un velo claro más liviano para que la foto se note (pedido de Luis). */
+:root[data-theme="light"] .fondo-sitio__foto--pelota { background-image: url('fondo-claro-pelota.jpg'); }
+@media (prefers-reduced-motion: no-preference) {
+  :root[data-theme="light"].fondos-listos .fondo-sitio__foto--atardecer { background-image: url('fondo-claro-estadio.jpg'); }
+  :root[data-theme="light"].fondos-listos .fondo-sitio__foto--noche { background-image: url('fondo-claro-diamante.jpg'); }
+}
+@media (orientation: portrait) {
+  :root[data-theme="light"] .fondo-sitio__foto--pelota { background-image: url('fondo-claro-pelota-vertical.jpg'); }
+}
+@media (orientation: portrait) and (prefers-reduced-motion: no-preference) {
+  :root[data-theme="light"].fondos-listos .fondo-sitio__foto--atardecer { background-image: url('fondo-claro-estadio-vertical.jpg'); }
+  :root[data-theme="light"].fondos-listos .fondo-sitio__foto--noche { background-image: url('fondo-claro-diamante-vertical.jpg'); }
+}
+/* Cada foto entra en 1,5 s, se queda hasta los 8 s y sale en 1,5 s mientras entra la siguiente. */
+@keyframes fondo-turno { 0% { opacity: 0; } 6.25% { opacity: 1; } 33.33% { opacity: 1; } 39.58% { opacity: 0; } 100% { opacity: 0; } }
+[hidden] { display: none !important; }
+img { max-width: 100%; display: block; }
+a { color: var(--acento); }
+h1, h2, h3 { text-wrap: balance; }
+p { text-wrap: pretty; }
+
+.sprite { position: absolute; width: 0; height: 0; overflow: hidden; }
+.ico { width: 22px; height: 22px; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.ico--chico { width: 16px; height: 16px; vertical-align: -3px; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.saltar { position: absolute; left: 12px; top: -60px; z-index: 60; padding: 10px 14px; border-radius: 12px; background: var(--oro); color: var(--oro-texto); font-weight: 700; text-decoration: none; }
+.saltar:focus { top: 12px; }
+
+.app {
+  width: 100%;
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 0 16px env(safe-area-inset-bottom);
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+main { flex: 1; outline: none; }
+
+/* Encabezado */
+.cabecera { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 0; }
+.marca { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.marca__logo { width: 48px; height: 48px; border-radius: 12px; box-shadow: 0 0 0 1px rgba(244, 169, 28, .45); }
+.marca__nombre { margin: 0; font: 700 20px/1.05 var(--titulos); letter-spacing: .03em; text-transform: uppercase; }
+.marca__sub { margin: 2px 0 0; font-size: 13px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--acento); }
+.tema { width: 44px; height: 44px; display: grid; place-items: center; border-radius: 50%; border: 1.5px solid var(--borde); background: var(--sup); color: var(--texto); cursor: pointer; transition: background-color .2s ease, border-color .2s ease; }
+.tema:hover { border-color: var(--acento); }
+
+/* Botones */
+.boton {
+  display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+  min-height: 52px; padding: 13px 22px; border-radius: 12px; border: 1.5px solid transparent;
+  font: 600 17px/1.2 var(--cuerpo); text-decoration: none; cursor: pointer; white-space: nowrap;
+  transition: background-color .2s ease, border-color .2s ease, color .2s ease, transform .15s ease, box-shadow .2s ease;
+}
+.boton:active { transform: translateY(1px) scale(.99); }
+.boton:disabled { cursor: progress; opacity: .7; }
+.boton--principal { background: linear-gradient(180deg, var(--oro-2), var(--oro)); color: var(--oro-texto); box-shadow: var(--sombra-oro); }
+.boton--principal:hover { filter: brightness(1.05); }
+.boton--secundario { background: var(--sup-2); color: var(--texto); border-color: var(--borde); }
+.boton--secundario:hover { border-color: var(--acento); }
+.boton--fantasma { background: transparent; color: var(--texto); border-color: var(--borde); }
+.boton--whatsapp { background: var(--wa-fondo); color: var(--wa-texto); border-color: var(--wa); }
+.boton--whatsapp .ico { fill: currentColor; stroke: none; color: var(--wa); }
+.boton--texto { background: none; color: var(--acento); min-height: 48px; padding: 10px 12px; }
+.boton--texto:hover { text-decoration: underline; }
+.boton--texto .ico { fill: currentColor; stroke: none; }
+.boton--chico { min-height: 44px; padding: 9px 14px; font-size: 15px; }
+.boton--ancho-auto { width: 100%; }
+:is(.boton, .tema, .progreso__volver, .opcion input, .acepto input, .resumen__editar, .copiar, .adjunto__quitar, .salir, .guia-enlace, .video-tarjeta, .dialogo-video__cerrar):focus-visible,
+.foto__input:focus-visible + * { outline: 3px solid var(--foco); outline-offset: 2px; }
+
+/* Portada */
+.vista { animation: entrar .26s var(--curva) both; }
+/* El halo y el rombo del logo sobresalen de su caja, y la franja de planes va de borde a borde: el recorte
+ * horizontal está en el body (pasa a la ventana), no aquí, para que no corte la franja. Así nunca hay scroll
+ * horizontal y no se crea un contenedor de scroll nuevo que rompa los elementos fijos. */
+.hero { display: grid; gap: 24px; padding: 16px 0 28px; align-items: center; }
+.etiqueta-prueba { display: inline-block; margin: 0 0 12px; padding: 4px 10px; border-radius: 999px; background: var(--chip); color: var(--acento); font-size: 13px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+.hero__titulo { margin: 0 0 12px; font: 700 clamp(2.6rem, 11.2vw, 5.4rem)/.94 var(--titulos); text-transform: uppercase; letter-spacing: .005em; }
+.hero__sub { margin: 0 0 22px; max-width: 34ch; color: var(--suave); font-size: 18px; }
+.hero__acciones { display: grid; gap: 12px; }
+/* Logo con efecto: el rombo se dibuja, el logo gira como medalla hacia el frente, se enciende el halo y
+ * lo cruza un destello; después flota, el destello vuelve cada 7 s, se inclina con el mouse y gira al tocarlo.
+ * Capas separadas para que cada transform no pise al otro: flotar > inclinar/girar > entrada.
+ * Solo transform y opacidad; todo se apaga con prefers-reduced-motion y se pausa fuera de pantalla. */
+.hero__visual { position: relative; display: grid; place-items: center; width: 148px; aspect-ratio: 1; order: -1; justify-self: start; margin: 2px 0 -6px; perspective: 900px; cursor: pointer; -webkit-tap-highlight-color: transparent; user-select: none; }
+.hero__diamante { position: absolute; inset: -9%; width: 118%; height: 118%; overflow: visible; pointer-events: none; }
+.hero__diamante rect { fill: none; stroke: rgba(244, 169, 28, .72); stroke-width: 1.8px; vector-effect: non-scaling-stroke; stroke-dasharray: 100; stroke-dashoffset: 100; animation: trazar 1.3s .1s var(--curva-larga) forwards; }
+.logo3d { position: relative; width: 76%; aspect-ratio: 1; perspective: 900px; animation: flotar 6s 1.7s ease-in-out infinite; }
+.logo3d__halo { position: absolute; inset: -34%; border-radius: 50%; pointer-events: none; background: radial-gradient(circle, rgba(244, 169, 28, .58), rgba(244, 169, 28, .17) 42%, transparent 68%); animation: halo-entra 1.1s .35s var(--curva-larga) both, halo-late 4.5s 1.8s ease-in-out infinite; }
+.logo3d__giro { position: relative; width: 100%; height: 100%; transform-style: preserve-3d; transform: rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)); transition: transform .6s var(--curva-larga); }
+.logo3d__giro.girando { animation: moneda .95s cubic-bezier(.3, .7, .2, 1); }
+.logo3d__cara { position: absolute; inset: 0; border-radius: 22%; overflow: hidden; box-shadow: 0 24px 60px rgba(0, 0, 0, .45), 0 0 0 1px rgba(244, 169, 28, .45); animation: logo-entra 1.2s .2s var(--curva-larga) both; }
+.hero__logo { width: 100%; height: 100%; object-fit: cover; }
+.logo3d__brillo { position: absolute; inset: -25%; pointer-events: none; background: linear-gradient(105deg, transparent 40%, rgba(255, 255, 255, .5) 50%, transparent 60%); transform: translateX(-130%); animation: brillo 7s 1.3s ease-in-out infinite; }
+.logo3d__reflejo { position: absolute; inset: 0; pointer-events: none; opacity: 0; background: radial-gradient(circle at var(--px, 30%) var(--py, 25%), rgba(255, 255, 255, .26), transparent 52%); transition: opacity .35s ease; }
+.hero__visual.con-mouse .logo3d__reflejo { opacity: 1; }
+.hero__visual.en-pausa *, .hero__visual.en-pausa .logo3d__halo { animation-play-state: paused !important; }
+
+.borrador { display: flex; gap: 12px; align-items: flex-start; margin-top: 18px; padding: 14px 16px; border-radius: 16px; background: var(--sup); border: 1.5px solid var(--borde-suave); }
+.borrador__ico { color: var(--acento); margin-top: 2px; }
+.borrador__titulo { margin: 0 0 10px; font-weight: 600; }
+.borrador__acciones { display: flex; flex-wrap: wrap; gap: 10px; }
+
+.bloque { padding: 32px 0; border-top: 1px solid var(--borde-suave); }
+.bloque__titulo { margin: 0 0 20px; font: 700 clamp(1.8rem, 6vw, 2.4rem)/1 var(--titulos); text-transform: uppercase; }
+.linea { list-style: none; margin: 0; padding: 0; display: grid; gap: 22px; position: relative; }
+.linea::before { content: ''; position: absolute; left: 21px; top: 22px; bottom: 22px; width: 2px; background: linear-gradient(var(--oro), transparent); opacity: .5; }
+.linea__paso { display: grid; grid-template-columns: 44px 1fr; gap: 14px; align-items: start; align-content: start; position: relative; }
+.linea__marca { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; background: var(--oro); color: var(--oro-texto); box-shadow: 0 0 0 6px var(--fondo); }
+.linea__paso h3 { margin: 0 0 4px; font: 700 22px/1.1 var(--titulos); text-transform: uppercase; }
+.linea__paso p { margin: 0; color: var(--suave); }
+/* «Paso 1»… sobre el nombre del paso: los mismos 5 que la barra del formulario. */
+.linea__paso .linea__num { margin: 0 0 2px; font-size: 13px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--acento); }
+.bloque__intro { margin: -8px 0 22px; max-width: 42ch; color: var(--suave); }
+.necesitas { list-style: none; margin: 0 0 24px; padding: 0; display: grid; gap: 12px; }
+.necesitas li { display: flex; align-items: center; gap: 14px; font-weight: 500; }
+.necesitas .ico { width: 44px; height: 44px; padding: 10px; border-radius: 12px; background: var(--chip); color: var(--acento); }
+
+/* Formulario */
+.form-layout { display: grid; gap: 8px; padding-bottom: 8px; }
+.progreso { position: sticky; top: 0; z-index: 20; margin: 0 -16px; padding: 10px 16px 12px; background: var(--barra); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-bottom: 1px solid var(--borde-suave); }
+.progreso__cabeza { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+.progreso__volver { width: 44px; height: 44px; display: grid; place-items: center; border-radius: 12px; border: 1.5px solid var(--borde); background: var(--sup); color: var(--texto); cursor: pointer; }
+.progreso__texto { margin: 0; font-weight: 600; color: var(--suave); }
+.progreso__texto strong { color: var(--texto); }
+.progreso__lista { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+.progreso__lista li { display: grid; gap: 6px; min-width: 0; font-size: 13px; font-weight: 600; color: var(--tenue); }
+.progreso__nombre { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.progreso__lista li::before { content: ''; height: 5px; border-radius: 3px; background: var(--sup-2); transition: background-color .25s ease; }
+.progreso__lista li.hecho::before, .progreso__lista li[aria-current="step"]::before { background: var(--oro); }
+.progreso__lista li[aria-current="step"] { color: var(--texto); }
+.progreso__num { display: none; }
+/* Salir al inicio: en la barra del celular (solo ícono si la pantalla es muy angosta) y bajo la lista en escritorio. */
+.salir { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-width: 44px; min-height: 44px; padding: 0 12px; border-radius: 12px; border: 1.5px solid var(--borde); background: var(--sup); color: var(--texto); font: 600 15px var(--cuerpo); cursor: pointer; transition: border-color .2s ease; }
+.salir .ico { width: 20px; height: 20px; }
+.salir--barra { margin-left: auto; flex: none; }
+.salir--lista { display: none; }
+@media (hover: hover) and (pointer: fine) { .salir:hover { border-color: var(--acento); } }
+@media (max-width: 379px) { .salir--barra { padding: 0; } .salir--barra .salir__texto { display: none; } }
+.dialogo { width: min(420px, calc(100% - 32px)); margin: auto; padding: 24px; border: 1.5px solid var(--borde-suave); border-radius: 20px; background: var(--sup); color: var(--texto); box-shadow: var(--sombra); }
+.dialogo[open] { animation: aparecer .2s ease both; }
+.dialogo::backdrop { background: var(--velo); }
+.dialogo__titulo { margin: 0 0 10px; font: 700 26px/1.05 var(--titulos); text-transform: uppercase; }
+.dialogo__texto { margin: 0 0 20px; color: var(--suave); }
+.dialogo__acciones { display: grid; gap: 10px; }
+
+/* Video guía: enlace bajo los botones de la portada, tarjeta en «¿Cómo funciona?» y ventana con el video. */
+.guia-enlace { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; margin: 10px 0 0; padding: 0 2px; border: 0; background: none; color: var(--acento); font: 600 16px var(--cuerpo); cursor: pointer; }
+.guia-enlace .ico { width: 18px; height: 18px; fill: currentColor; stroke: none; }
+.video-tarjeta { display: flex; align-items: center; gap: 14px; width: 100%; max-width: 420px; margin: 0 0 24px; padding: 10px; border: 1.5px solid var(--borde-suave); border-radius: 16px; background: var(--sup); color: var(--texto); font: inherit; text-align: left; cursor: pointer; transition: border-color .2s ease; }
+.video-tarjeta__imagen { position: relative; flex: none; width: 64px; aspect-ratio: 9 / 16; border-radius: 10px; overflow: hidden; background: #000; }
+.video-tarjeta__imagen img { width: 100%; height: 100%; object-fit: cover; }
+.video-tarjeta__play { position: absolute; inset: 0; display: grid; place-items: center; }
+.video-tarjeta__play .ico { width: 32px; height: 32px; padding: 8px 7px 8px 9px; border-radius: 50%; background: var(--oro); color: var(--oro-texto); fill: currentColor; stroke: none; }
+.video-tarjeta__texto { display: grid; gap: 2px; }
+.video-tarjeta__texto strong { font: 700 21px/1.1 var(--titulos); text-transform: uppercase; }
+.video-tarjeta__texto span { color: var(--suave); font-size: 15px; }
+@media (hover: hover) and (pointer: fine) { .video-tarjeta:hover { border-color: var(--acento); } }
+.dialogo--video { width: min(440px, calc(100vw - 24px)); padding: 12px; }
+.dialogo-video__cabeza { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0 0 10px; padding-left: 6px; }
+.dialogo-video__cabeza .dialogo__titulo { margin: 0; font-size: 22px; }
+.dialogo-video__cerrar { flex: none; width: 44px; height: 44px; display: grid; place-items: center; border-radius: 12px; border: 1.5px solid var(--borde); background: var(--sup-2); color: var(--texto); cursor: pointer; }
+#video-guia { display: block; width: 100%; height: auto; max-height: calc(100dvh - 110px); aspect-ratio: 9 / 16; border-radius: 12px; background: #000; object-fit: contain; }
+
+/* Quiénes somos y dónde estamos (textos de ejemplo marcados hasta tener los reales) */
+.etiqueta-ejemplo { display: inline-block; margin: -8px 0 18px; padding: 4px 10px; border-radius: 999px; border: 1.5px dashed var(--acento); color: var(--acento); font-size: 13px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+.nosotros__texto { margin: 0 0 18px; max-width: 62ch; color: var(--suave); font-size: 18px; }
+.nosotros__tarjetas { display: grid; gap: 12px; }
+.tarjeta-valor { padding: 16px; border-radius: 16px; background: var(--sup); border: 1.5px solid var(--borde-suave); }
+.tarjeta-valor .ico { width: 44px; height: 44px; padding: 10px; border-radius: 12px; background: var(--chip); color: var(--acento); }
+.tarjeta-valor h3 { margin: 10px 0 4px; font: 700 22px/1.1 var(--titulos); text-transform: uppercase; }
+.tarjeta-valor p { margin: 0; color: var(--suave); }
+.donde__direccion { display: flex; gap: 12px; align-items: center; margin: 0 0 10px; font-size: 18px; font-weight: 500; }
+.donde__direccion .ico { flex: none; width: 44px; height: 44px; padding: 10px; border-radius: 12px; background: var(--chip); color: var(--acento); }
+.donde__nota { margin: 0 0 18px; color: var(--suave); }
+
+/* Planes y precios: franja tipo póster, de borde a borde. En oscuro es estadio de noche, negro y dorado; en claro,
+ * el mismo estadio muy suave y tarjetas blancas. Todos sus colores son variables de la franja (abajo, las del modo
+ * claro), así el botón de tema la cambia igual que al resto. El fondo es la foto del estadio arriba (las torres de
+ * luces detrás del título, como en el póster) que se funde al color de la franja, más las franjas doradas.
+ * Sin animaciones: solo cambios de color al pasar el mouse. */
+.planes {
+  --texto: #f2f4f7; --suave: #c3cbd6; --acento: #ffc54d; --foco: #ffc54d; --borde: #6a7482;
+  --wa: #25d366; --wa-fondo: rgba(37, 211, 102, .12); --wa-texto: #dcfce7;
+  --linea: rgba(255, 255, 255, .14);
+  --franja: #07090c;
+  --foto-franja: url('estadio-noche.jpg');
+  --foto-franja-v: url('estadio-noche-vertical.jpg');
+  --velo-franja: linear-gradient(180deg, rgba(7, 9, 12, .34) 0, rgba(7, 9, 12, .62) 30vw, #07090c 55vw);
+  --velo-franja-v: linear-gradient(180deg, rgba(7, 9, 12, .3) 0, rgba(7, 9, 12, .6) 90vw, #07090c 140vw);
+  --brillo-franja: rgba(244, 169, 28, .22);
+  --antetitulo: #ffc54d;
+  --velo-titulo: rgba(7, 9, 12, .74);
+  --logo-halo: 0 0 0 2px rgba(244, 169, 28, .75), 0 0 44px rgba(244, 169, 28, .4), 0 18px 40px rgba(0, 0, 0, .35);
+  --titulo-grad: linear-gradient(180deg, #fff6d8 0%, #ffd46b 42%, #f4a91c 100%);
+  --titulo-sombra: drop-shadow(0 3px 0 rgba(0, 0, 0, .45));
+  --pastilla: rgba(10, 13, 17, .72);
+  --tarjeta: linear-gradient(180deg, rgba(24, 29, 37, .86), rgba(12, 15, 20, .92));
+  --tarjeta-sombra: 0 18px 44px rgba(0, 0, 0, .38);
+  --monto: #ffffff;
+  --tono-plata: #d6dce4; --barra-plata: linear-gradient(90deg, #8e99a6, #e6ebf0, #8e99a6);
+  --tono-oro: #ffc54d; --barra-oro: linear-gradient(90deg, #f4a91c, #fff0b8, #f4a91c);
+  --tono-platino: #eef3f8; --barra-platino: linear-gradient(90deg, #a9b7c8, #ffffff, #a9b7c8);
+  --borde-oro: rgba(244, 169, 28, .7);
+  --dia-off: rgba(255, 255, 255, .52); --dia-off-borde: rgba(255, 255, 255, .26);
+  --caja: rgba(14, 17, 22, .82);
+  --celda: rgba(0, 0, 0, .28);
+  --extra-fondo: linear-gradient(135deg, rgba(244, 169, 28, .17), rgba(244, 169, 28, .04) 62%);
+  color-scheme: dark;
+  position: relative; isolation: isolate; overflow: hidden;
+  width: 100vw; margin-inline: calc(50% - 50vw);
+  padding: 44px 16px 56px;
+  background: var(--franja); color: var(--texto);
+}
+/* Modo claro: el estadio queda de fondo, muy suave, y el texto pasa a oscuro. Contraste medido del texto chico sobre
+ * la parte más oscura de la foto con el velo claro (#e1e4e8 aprox.): antetítulo 5,3:1, texto de las tarjetas sobre
+ * blanco 7:1 o más; el título dorado oscuro es texto grande (3:1 basta). */
+:root[data-theme="light"] .planes {
+  --texto: #12161b; --suave: #3f4957; --acento: #7a4900; --foco: #7a4900; --borde: #7a8492;
+  --wa: #128c4b; --wa-fondo: rgba(37, 211, 102, .1); --wa-texto: #0a5c33;
+  --linea: rgba(18, 22, 27, .13);
+  --franja: #eef1f5;
+  --foto-franja: url('fondo-claro-estadio.jpg');
+  --foto-franja-v: url('fondo-claro-estadio-vertical.jpg');
+  --velo-franja: linear-gradient(180deg, rgba(238, 241, 245, .6) 0, rgba(238, 241, 245, .84) 30vw, #eef1f5 50vw);
+  --velo-franja-v: linear-gradient(180deg, rgba(238, 241, 245, .6) 0, rgba(238, 241, 245, .84) 90vw, #eef1f5 130vw);
+  --brillo-franja: rgba(244, 169, 28, .28);
+  --antetitulo: #5c3700;
+  --velo-titulo: rgba(238, 241, 245, .88);
+  --logo-halo: 0 0 0 2px rgba(209, 142, 15, .8), 0 12px 28px rgba(18, 22, 27, .18);
+  --titulo-grad: linear-gradient(180deg, #8a5300 0%, #6e4200 50%, #4f2f00 100%);
+  --titulo-sombra: none;
+  --pastilla: rgba(255, 255, 255, .88);
+  --tarjeta: linear-gradient(180deg, rgba(255, 255, 255, .95), rgba(250, 251, 252, .97));
+  --tarjeta-sombra: 0 14px 34px rgba(18, 22, 27, .1);
+  --monto: #12161b;
+  --tono-plata: #56606e; --barra-plata: linear-gradient(90deg, #9aa5b2, #e3e8ee, #9aa5b2);
+  --tono-oro: #8a5300; --barra-oro: linear-gradient(90deg, #e39a12, #ffd978, #e39a12);
+  --tono-platino: #26303d; --barra-platino: linear-gradient(90deg, #7d8da1, #eef2f6, #7d8da1);
+  --borde-oro: rgba(209, 142, 15, .75);
+  --dia-off: rgba(18, 22, 27, .64); --dia-off-borde: rgba(18, 22, 27, .32);
+  --caja: rgba(255, 255, 255, .9);
+  --celda: rgba(244, 169, 28, .07);
+  --extra-fondo: linear-gradient(135deg, rgba(244, 169, 28, .24), rgba(255, 255, 255, .92) 62%);
+  color-scheme: light;
+}
+.planes__fondo {
+  position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  background:
+    radial-gradient(36% 18% at 50% 7%, var(--brillo-franja), transparent 70%),
+    var(--velo-franja),
+    var(--foto-franja) center top / 100% auto no-repeat,
+    var(--franja);
+}
+@media (orientation: portrait) {
+  .planes__fondo {
+    background:
+      radial-gradient(60% 12% at 50% 5%, var(--brillo-franja), transparent 70%),
+      var(--velo-franja-v),
+      var(--foto-franja-v) center -35vw / 100% auto no-repeat,
+      var(--franja);
+  }
+}
+/* Franjas doradas en diagonal, arriba a la izquierda y abajo a la derecha, como los bordes del póster. */
+.planes__fondo::before, .planes__fondo::after {
+  content: ''; position: absolute; width: 190px; height: 190px; opacity: .55;
+  background: repeating-linear-gradient(135deg, var(--oro) 0 12px, transparent 12px 30px);
+}
+.planes__fondo::before { top: 0; left: 0; -webkit-mask-image: linear-gradient(135deg, #000 10%, transparent 62%); mask-image: linear-gradient(135deg, #000 10%, transparent 62%); }
+.planes__fondo::after { bottom: 0; right: 0; -webkit-mask-image: linear-gradient(315deg, #000 10%, transparent 62%); mask-image: linear-gradient(315deg, #000 10%, transparent 62%); }
+
+.planes__marco { position: relative; max-width: 1080px; margin: 0 auto; }
+.planes__cabeza { position: relative; isolation: isolate; max-width: 680px; margin: 0 auto 30px; text-align: center; }
+/* Velo suave detrás del antetítulo y el título: las torres de luces de la foto quedan a los lados, no detrás de las
+ * letras (medido sin él: el título en celular bajaba a 2,7:1 sobre un foco y el antetítulo claro a 3,8:1). */
+.planes__cabeza::before {
+  content: ''; position: absolute; z-index: -1; left: 50%; top: 92px; width: min(760px, 118%); height: 190px;
+  transform: translateX(-50%); pointer-events: none;
+  background: radial-gradient(closest-side, var(--velo-titulo) 55%, transparent);
+}
+.planes__logo {
+  width: 92px; height: 92px; margin: 0 auto 16px; border-radius: 22%;
+  box-shadow: var(--logo-halo);
+}
+.planes__antetitulo { margin: 0 0 6px; font-size: 14px; font-weight: 700; letter-spacing: .2em; text-transform: uppercase; color: var(--antetitulo); }
+.planes__titulo {
+  margin: 0 0 18px; font: 700 clamp(2.7rem, 13vw, 4.8rem)/.92 var(--titulos); text-transform: uppercase;
+  background: var(--titulo-grad); -webkit-background-clip: text; background-clip: text; color: transparent;
+  filter: var(--titulo-sombra);
+}
+.planes__duracion {
+  display: inline-flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px 10px; margin: 0;
+  padding: 10px 18px; border-radius: 20px; background: var(--pastilla); border: 1px solid rgba(244, 169, 28, .5); color: var(--suave);
+  -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+}
+.planes__duracion .ico { color: var(--acento); }
+.planes__duracion strong { color: var(--texto); }
+.planes__intensivo { padding: 3px 12px; border-radius: 999px; background: var(--oro); color: var(--oro-texto); font: italic 700 16px/1.3 var(--titulos); letter-spacing: .06em; text-transform: uppercase; }
+
+/* Tarjetas de planes: el tono de cada una (plata, oro y platino) va en el nombre y en la barra de arriba. */
+.planes__lista { list-style: none; margin: 0 0 20px; padding: 0; display: grid; gap: 16px; }
+.plan {
+  --tono: var(--tono-plata); --barra: var(--barra-plata);
+  position: relative; display: flex; flex-direction: column; gap: 8px; padding: 24px 20px 20px; border-radius: 20px; overflow: hidden;
+  background: var(--tarjeta); border: 1.5px solid var(--linea);
+  -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+  box-shadow: var(--tarjeta-sombra); transition: border-color .2s ease;
+}
+.plan::before { content: ''; position: absolute; inset: 0 0 auto; height: 5px; background: var(--barra); }
+.plan--gold { --tono: var(--tono-oro); --barra: var(--barra-oro); border-color: var(--borde-oro); box-shadow: var(--tarjeta-sombra), 0 0 36px rgba(244, 169, 28, .18); }
+.plan--platinum { --tono: var(--tono-platino); --barra: var(--barra-platino); }
+.plan__nombre { margin: 0; font: 700 26px/1 var(--titulos); letter-spacing: .03em; text-transform: uppercase; color: var(--tono); }
+.plan__precio { display: flex; align-items: baseline; gap: 8px; margin: 2px 0 0; }
+.plan__monto { font: 700 66px/.9 var(--titulos); color: var(--monto); letter-spacing: -.01em; }
+.plan__periodo { font: 700 20px/1 var(--titulos); letter-spacing: .06em; text-transform: uppercase; color: var(--suave); }
+.plan__alterno {
+  align-self: flex-start; margin: 2px 0 0; padding: 5px 12px; border-radius: 999px;
+  background: rgba(244, 169, 28, .14); border: 1px solid rgba(244, 169, 28, .45); color: var(--texto); font-weight: 600;
+}
+.plan__alterno strong { color: var(--acento); font: 700 20px/1 var(--titulos); letter-spacing: .02em; }
+.plan__dias { margin-top: 8px; padding-top: 14px; border-top: 1px solid var(--linea); }
+.dias { display: flex; gap: 6px; margin-bottom: 10px; }
+.dias b {
+  flex: 1; max-width: 46px; height: 34px; display: grid; place-items: center; border-radius: 9px;
+  font: 700 15px/1 var(--titulos); letter-spacing: .04em; text-transform: uppercase;
+  color: var(--dia-off); border: 1px dashed var(--dia-off-borde);
+}
+.dias b.dia--si { background: var(--oro); border: 1px solid var(--oro); color: var(--oro-texto); }
+.plan__detalle { margin: 0; color: var(--suave); }
+@media (hover: hover) and (pointer: fine) { .plan:hover { border-color: rgba(244, 169, 28, .85); } }
+
+/* ¿Qué incluye? */
+.incluye { margin: 0 0 20px; padding: 22px 18px 18px; border-radius: 20px; background: var(--caja); border: 1.5px solid var(--linea); }
+.incluye__titulo { margin: 0 0 16px; font: italic 700 clamp(1.8rem, 8vw, 2.3rem)/1 var(--titulos); text-transform: uppercase; color: var(--acento); text-align: center; }
+.incluye__lista { list-style: none; margin: 0 0 16px; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.incluye__lista li {
+  display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 16px 8px; border-radius: 16px; text-align: center;
+  background: var(--celda); border: 1px solid rgba(244, 169, 28, .3); font: 700 18px/1.1 var(--titulos); letter-spacing: .03em; text-transform: uppercase;
+}
+.incluye__lista .ico { width: 52px; height: 52px; padding: 12px; border-radius: 14px; background: rgba(244, 169, 28, .12); border: 1.5px solid var(--oro); color: var(--acento); }
+.incluye__lema { display: flex; align-items: center; gap: 12px; margin: 0; padding: 12px 16px; border-radius: 14px; background: rgba(244, 169, 28, .12); font-weight: 600; }
+.incluye__lema .ico { color: var(--acento); }
+
+/* Cumpleaños y cage de bateo */
+.extras { display: grid; gap: 16px; margin: 0 0 36px; }
+.extra {
+  display: grid; grid-template-columns: 52px minmax(0, 1fr); gap: 16px; align-items: start; padding: 20px; border-radius: 20px;
+  background: var(--extra-fondo); border: 1.5px solid rgba(244, 169, 28, .5);
+}
+.extra__ico { width: 52px; height: 52px; padding: 12px; border-radius: 14px; background: var(--oro); color: var(--oro-texto); }
+.extra h3 { margin: 2px 0 4px; font: 700 24px/1.05 var(--titulos); letter-spacing: .02em; text-transform: uppercase; }
+.extra p { margin: 0 0 14px; color: var(--suave); }
+/* Celulares angostos: el ícono va arriba para que el botón de WhatsApp quepa entero. */
+@media (max-width: 399px) { .extra { grid-template-columns: 1fr; gap: 12px; } }
+
+.planes__cierre { display: grid; justify-items: center; gap: 20px; text-align: center; }
+.planes__lema { margin: 0; font: italic 700 clamp(2.1rem, 10vw, 3.6rem)/.98 var(--titulos); text-transform: uppercase; transform: rotate(-2deg); }
+.planes__lema span { display: block; color: var(--acento); }
+.planes__cierre .boton { width: 100%; max-width: 380px; }
+
+@media (min-width: 600px) {
+  .planes { padding: 56px 28px 64px; }
+  .incluye__lista { grid-template-columns: repeat(4, 1fr); }
+  .extras { grid-template-columns: 1fr 1fr; }
+}
+@media (min-width: 880px) {
+  .planes { padding: 72px 32px 80px; }
+  .planes__logo { width: 112px; height: 112px; }
+  .planes__cabeza::before { top: 112px; }
+  .planes__lista { grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 24px; }
+  .plan { padding: 28px 24px 24px; }
+  .plan--gold { transform: translateY(-10px); }
+  .plan__monto { font-size: 76px; }
+  .incluye { padding: 26px 28px 22px; }
+  .planes__fondo::before, .planes__fondo::after { width: 300px; height: 300px; }
+}
+
+.formulario { padding: 8px 0 0; }
+.paso { border: 0; margin: 0; padding: 0; min-width: 0; animation: entrar .24s var(--curva) both; }
+.paso__titulo { padding: 0; margin: 12px 0 18px; font: 700 clamp(1.8rem, 7vw, 2.3rem)/1 var(--titulos); text-transform: uppercase; }
+.subtitulo { margin: 26px 0 14px; font: 700 22px/1 var(--titulos); text-transform: uppercase; color: var(--acento); }
+.campo { margin: 0 0 18px; min-width: 0; border: 0; padding: 0; }
+fieldset.campo { margin-inline: 0; }
+/* Solo la etiqueta directa del campo y con especificidad baja: no pisa los botones-etiqueta de la foto ni la casilla. */
+:where(.campo) > label, .campo__label { display: block; margin: 0 0 8px; padding: 0; font-weight: 600; font-size: 16px; }
+.req { color: var(--acento); }
+input[type=text], input[type=tel], input[type=email], select, textarea {
+  width: 100%; min-height: 52px; padding: 12px 14px; border-radius: 12px; border: 1.5px solid var(--borde);
+  background: var(--sup); color: var(--texto); font: 400 17px/1.3 var(--cuerpo);
+  appearance: none; -webkit-appearance: none; transition: border-color .2s ease, box-shadow .2s ease;
+}
+textarea { resize: vertical; min-height: 84px; }
+select { cursor: pointer; padding-right: 40px; background-image: linear-gradient(45deg, transparent 50%, var(--suave) 50%), linear-gradient(135deg, var(--suave) 50%, transparent 50%); background-position: calc(100% - 22px) 23px, calc(100% - 16px) 23px; background-size: 6px 6px; background-repeat: no-repeat; }
+input::placeholder, textarea::placeholder { color: var(--tenue); opacity: 1; }
+input:focus, select:focus, textarea:focus { outline: none; border-color: var(--acento); box-shadow: 0 0 0 3px var(--chip); }
+.campo--error input, .campo--error select, .campo--error textarea, .campo--error .foto__marco, .campo--error .opcion span { border-color: var(--error); }
+.campo__ayuda { margin: 6px 0 0; font-size: 15px; color: var(--suave); }
+.campo__error { margin: 6px 0 0; font-size: 15px; font-weight: 600; color: var(--error); }
+.campo__error:empty { display: none; }
+.fila { display: grid; gap: 0 14px; }
+.fila--cuatro { grid-template-columns: 1fr 1fr; }
+.trampa { position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0; }
+.aviso-error { display: flex; gap: 10px; align-items: center; margin: 4px 0 12px; padding: 12px 14px; border-radius: 12px; background: var(--error-fondo); color: var(--error); font-weight: 600; }
+
+.foto { display: grid; grid-template-columns: 104px minmax(0, 1fr); gap: 14px; align-items: center; }
+.foto__marco { width: 104px; aspect-ratio: 3 / 4; border-radius: 14px; border: 1.5px dashed var(--borde); background: var(--sup); display: grid; place-items: center; overflow: hidden; color: var(--tenue); }
+.foto__marco.tiene-foto { border-style: solid; border-color: var(--oro); }
+.foto__marco img { width: 100%; height: 100%; object-fit: cover; }
+.foto__vacio { width: 44px; height: 44px; stroke-width: 1.5; }
+.foto__opciones { display: grid; gap: 10px; justify-items: start; }
+.foto__opciones .campo__ayuda { margin: 0; }
+.foto__opciones .boton, .extra .boton { white-space: normal; text-align: center; }
+:root[data-theme="light"] .etiqueta-prueba { color: #5c3700; }
+.foto__input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+
+.fecha { display: grid; grid-template-columns: 1fr 1.7fr 1.25fr; gap: 10px; }
+.fecha__parte { margin: 0 !important; }
+.edad { margin: 8px 0 0; min-height: 1.4em; font-weight: 700; color: var(--acento); }
+
+.opciones { display: flex; gap: 8px; }
+.opcion { position: relative; flex: 1 1 0; margin: 0 !important; }
+.opcion input { position: absolute; inset: 0; opacity: 0; margin: 0; cursor: pointer; }
+.opcion span { display: flex; align-items: center; justify-content: center; min-height: 52px; padding: 0 8px; border-radius: 12px; border: 1.5px solid var(--borde); background: var(--sup); font-weight: 600; cursor: pointer; transition: background-color .2s ease, border-color .2s ease, color .2s ease; }
+.opcion input:checked + span { background: var(--oro); border-color: var(--oro); color: var(--oro-texto); }
+.opcion input:focus-visible + span { outline: 3px solid var(--foco); outline-offset: 2px; }
+
+.resumen { display: grid; gap: 12px; margin-bottom: 18px; }
+.resumen__bloque { padding: 14px 16px; border-radius: 16px; background: var(--sup); border: 1.5px solid var(--borde-suave); }
+.resumen__cabeza { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.resumen__cabeza h3 { margin: 0; font: 700 19px/1 var(--titulos); text-transform: uppercase; color: var(--acento); }
+.resumen__editar { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 8px; border: 0; background: none; color: var(--suave); font: 600 15px var(--cuerpo); cursor: pointer; border-radius: 10px; }
+.resumen__editar .ico { width: 18px; height: 18px; }
+.resumen dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; font-size: 16px; }
+.resumen dt { color: var(--suave); }
+.resumen dd { margin: 0; overflow-wrap: anywhere; }
+.resumen__atleta { display: flex; gap: 14px; align-items: center; }
+.resumen__atleta img { width: 60px; height: 80px; object-fit: cover; border-radius: 10px; }
+.acepto { display: flex; gap: 12px; align-items: flex-start; margin: 0 !important; padding: 14px 16px; border-radius: 16px; background: var(--sup); border: 1.5px solid var(--borde-suave); font-weight: 500 !important; cursor: pointer; }
+.acepto input { flex: none; width: 24px; height: 24px; margin: 1px 0 0; accent-color: var(--oro); }
+#campo-turnstile { margin-top: 14px; }
+.turnstile { min-height: 65px; }
+
+/* Pago: forma de pago en tarjetas, datos con «Copiar» y comprobante adjunto */
+.paso__intro { margin: -6px 0 18px; color: var(--suave); }
+.pago-monto { margin: -8px 0 18px; font-weight: 700; color: var(--acento); }
+.metodos { display: grid; gap: 10px; }
+.metodo { position: relative; display: block; margin: 0 !important; }
+.metodo input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; margin: 0; cursor: pointer; }
+.metodo__caja { display: grid; grid-template-columns: 44px minmax(0, 1fr) 24px; gap: 12px; align-items: center; min-height: 68px; padding: 10px 14px; border-radius: 16px; border: 1.5px solid var(--borde); background: var(--sup); cursor: pointer; transition: border-color .2s ease, box-shadow .2s ease; }
+.metodo__ico { width: 44px; height: 44px; padding: 10px; border-radius: 12px; background: var(--chip); color: var(--acento); }
+.metodo__texto { display: grid; gap: 2px; min-width: 0; }
+.metodo__nombre { font-weight: 700; }
+.metodo__detalle { font-size: 15px; color: var(--suave); }
+.metodo__marca { width: 24px; height: 24px; color: var(--anillo); opacity: 0; transform: scale(.6); transition: opacity .2s ease, transform .2s var(--curva); }
+/* Solo con mouse: en el celular el «hover» queda pegado donde estaba el dedo y la tarjeta parece elegida. */
+@media (hover: hover) and (pointer: fine) { .metodo:hover .metodo__caja { border-color: var(--acento); } }
+.metodo input:checked + .metodo__caja { border-color: var(--anillo); box-shadow: inset 0 0 0 1px var(--anillo); }
+.metodo input:checked + .metodo__caja .metodo__marca { opacity: 1; transform: none; }
+.metodo input:focus-visible + .metodo__caja { outline: 3px solid var(--foco); outline-offset: 2px; }
+.campo--error .metodo__caja { border-color: var(--error); }
+
+.pago-caja { margin: 0 0 18px; padding: 14px 16px; border-radius: 16px; background: var(--sup); border: 1.5px solid var(--borde-suave); animation: entrar .24s var(--curva) both; }
+.pago-caja__titulo { margin: 0 0 6px; font: 700 19px/1.1 var(--titulos); text-transform: uppercase; color: var(--acento); }
+.pago-caja__texto { margin: 0; }
+.datos-pago { display: grid; }
+/* Etiqueta y «Copiar» en una línea; el valor abajo, a todo el ancho, para que un correo largo quepa. */
+.dato { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "etq btn" "val val"; column-gap: 12px; row-gap: 2px; align-items: center; padding: 10px 0; border-top: 1px solid var(--borde-suave); }
+.dato:first-child { border-top: 0; }
+.dato__etiqueta { grid-area: etq; font-size: 14px; color: var(--suave); }
+.dato__valor { grid-area: val; font-size: 18px; font-weight: 700; overflow-wrap: anywhere; -webkit-user-select: all; user-select: all; }
+.copiar { grid-area: btn; display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 12px; border-radius: 12px; border: 1.5px solid var(--borde); background: var(--sup-2); color: var(--texto); font: 600 15px var(--cuerpo); cursor: pointer; transition: border-color .2s ease, color .2s ease; }
+.copiar .ico { width: 18px; height: 18px; }
+.copiar:hover { border-color: var(--acento); }
+.copiar.copiado { border-color: var(--ok); color: var(--ok); }
+
+.campo--comprobante .boton { margin-top: 2px; }
+.adjunto { display: grid; grid-template-columns: 56px minmax(0, 1fr) 44px; gap: 12px; align-items: center; margin: 0 0 12px; padding: 10px; border-radius: 14px; background: var(--sup); border: 1.5px solid var(--anillo); }
+.adjunto__vista { width: 56px; height: 72px; border-radius: 10px; overflow: hidden; display: grid; place-items: center; background: var(--sup-2); color: var(--acento); }
+.adjunto__vista img { width: 100%; height: 100%; object-fit: cover; object-position: top; }
+.adjunto__vista .ico { width: 30px; height: 30px; stroke-width: 1.6; }
+.adjunto__nombre { margin: 0; font-weight: 700; overflow-wrap: anywhere; }
+.adjunto__peso { margin: 2px 0 0; font-size: 14px; color: var(--suave); }
+.adjunto__quitar { width: 44px; height: 44px; display: grid; place-items: center; border-radius: 12px; border: 1.5px solid var(--borde); background: var(--sup-2); color: var(--texto); cursor: pointer; }
+.adjunto__quitar:hover { border-color: var(--error); color: var(--error); }
+.acepto--despues { margin-top: 14px !important; font-size: 16px; }
+
+.acciones { position: sticky; bottom: 0; z-index: 20; margin: 0 -16px; padding: 12px 16px calc(14px + env(safe-area-inset-bottom)); background: linear-gradient(180deg, transparent, var(--fondo) 28%); pointer-events: none; }
+.acciones .boton { width: 100%; pointer-events: auto; }
+/* Con las barras fijas del celular, lo enfocado o desplazado no queda tapado (WCAG 2.4.11). */
+@media (max-width: 999px) { html { scroll-padding-top: 118px; scroll-padding-bottom: 96px; } }
+
+/* Resultado */
+.listo { max-width: 540px; margin: 0 auto; padding: 40px 0 24px; text-align: center; }
+.listo__icono { width: 88px; height: 88px; margin: 0 auto 18px; border-radius: 50%; display: grid; place-items: center; background: var(--ok-fondo); color: var(--ok); }
+.listo__icono.error { background: var(--error-fondo); color: var(--error); }
+.listo__icono .ico { width: 46px; height: 46px; stroke-width: 2.2; }
+.listo__icono .trazo { stroke-dasharray: 60; stroke-dashoffset: 60; animation: trazo .5s .1s var(--curva) forwards; }
+.listo__titulo { margin: 0 0 10px; font: 700 clamp(2rem, 9vw, 2.8rem)/1 var(--titulos); text-transform: uppercase; outline: none; }
+.listo__texto { margin: 0 0 12px; color: var(--suave); }
+.listo__correo { display: flex; gap: 10px; align-items: flex-start; justify-content: center; margin: 0 0 22px; padding: 12px 14px; border-radius: 12px; background: var(--sup); border: 1.5px solid var(--borde-suave); text-align: left; font-size: 16px; }
+.listo__correo .ico { color: var(--acento); margin-top: 2px; }
+.listo__pago { margin: 0 0 22px; padding: 16px; border-radius: 16px; background: var(--sup); border: 1.5px solid var(--anillo); text-align: left; }
+.listo__pago-titulo { display: flex; gap: 10px; align-items: center; margin: 0 0 8px; font: 700 22px/1.1 var(--titulos); text-transform: uppercase; }
+.listo__pago-titulo .ico { color: var(--acento); }
+.listo__pago-texto { margin: 0; color: var(--suave); font-size: 16px; }
+.listo__pago .datos-pago { margin: 12px 0 0; padding: 2px 14px; border-radius: 12px; background: var(--fondo); }
+.listo__pago .boton { width: 100%; margin-top: 14px; }
+.listo__acciones { display: grid; gap: 12px; margin-bottom: 6px; }
+.nota { margin: 14px 0 0; color: var(--tenue); font-size: 14px; }
+
+/* Carga */
+.enviando { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; padding: 16px; background: var(--velo); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); animation: aparecer .2s ease both; }
+.enviando__caja { width: min(340px, 100%); display: grid; justify-items: center; gap: 6px; padding: 30px 26px 26px; border-radius: 24px; background: var(--sup); border: 1.5px solid var(--borde-suave); box-shadow: var(--sombra); text-align: center; }
+.enviando__titulo { margin: 14px 0 0; font: 700 24px/1.1 var(--titulos); text-transform: uppercase; }
+.enviando__detalle { margin: 0; color: var(--suave); font-size: 16px; min-height: 1.5em; }
+.cargador { position: relative; width: 132px; height: 132px; display: grid; place-items: center; }
+.cargador__anillo { position: absolute; inset: 0; transform: rotate(-90deg); }
+.cargador__pista { fill: none; stroke: var(--sup-2); stroke-width: 7; }
+.cargador__avance { fill: none; stroke: var(--anillo); stroke-width: 7; stroke-linecap: round; stroke-dasharray: 100; stroke-dashoffset: 100; transition: stroke-dashoffset .3s ease; }
+.cargador--procesando .cargador__anillo { animation: girar 1.1s linear infinite; }
+.cargador--procesando .cargador__avance { stroke-dasharray: 26 74; stroke-dashoffset: 0; }
+.cargador__pelota { width: 84px; height: 84px; border-radius: 50%; display: grid; place-items: center; background: radial-gradient(circle at 35% 30%, #ffffff, #efefe9 60%, #dcdcd3); box-shadow: inset -6px -8px 14px rgba(0, 0, 0, .12), 0 8px 20px rgba(0, 0, 0, .3); color: #c8102e; animation: girar 1.4s linear infinite; }
+.cargador__pelota .ico { width: 78px; height: 78px; stroke-width: 1.3; }
+
+/* Pie */
+.pie { padding: 22px 0 26px; border-top: 1px solid var(--borde-suave); text-align: center; font-size: 14px; color: var(--tenue); }
+.pie p { margin: 4px 0; }
+.pie a { color: var(--suave); }
+
+/* Volver arriba: botón redondo fijo abajo a la derecha. Aparece (app.js le pone .arriba--visible) al llegar a la
+ * última sección de la portada o al pie, y lleva al inicio de una vez. Invisible, no se puede enfocar ni tocar. */
+.arriba {
+  position: fixed; z-index: 20; right: max(16px, env(safe-area-inset-right)); bottom: calc(16px + env(safe-area-inset-bottom));
+  width: 52px; height: 52px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 50%; cursor: pointer;
+  background: linear-gradient(180deg, var(--oro-2), var(--oro)); color: var(--oro-texto);
+  box-shadow: var(--sombra-oro), 0 8px 24px rgba(0, 0, 0, .35);
+  opacity: 0; visibility: hidden; transform: translateY(14px);
+  transition: opacity .25s ease, transform .25s var(--curva), visibility 0s linear .25s, filter .2s ease;
+}
+.arriba .ico { width: 26px; height: 26px; stroke-width: 2.4; }
+.arriba--visible { opacity: 1; visibility: visible; transform: none; transition: opacity .25s ease, transform .25s var(--curva), visibility 0s, filter .2s ease; }
+.arriba:active { transform: translateY(1px) scale(.96); }
+.arriba:focus-visible { outline: 3px solid var(--foco); outline-offset: 3px; }
+@media (hover: hover) and (pointer: fine) { .arriba:hover { filter: brightness(1.06); } }
+/* En celular el pie deja lugar para que el botón no tape su texto. */
+@media (max-width: 599px) { .pie { padding-bottom: 80px; } }
+
+/* Movimiento */
+@keyframes entrar { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@keyframes aparecer { from { opacity: 0; } to { opacity: 1; } }
+@keyframes girar { to { transform: rotate(360deg); } }
+@keyframes trazo { to { stroke-dashoffset: 0; } }
+@keyframes trazar { to { stroke-dashoffset: 0; } }
+@keyframes logo-entra { 0% { opacity: 0; transform: rotateY(-100deg) scale(.7); } 50% { opacity: 1; } 100% { opacity: 1; transform: none; } }
+@keyframes halo-entra { from { opacity: 0; transform: scale(.4); } to { opacity: 1; transform: scale(1); } }
+@keyframes halo-late { 0%, 100% { opacity: 1; } 50% { opacity: .55; } }
+@keyframes flotar { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-7px); } }
+@keyframes brillo { 0% { transform: translateX(-130%); } 16%, 100% { transform: translateX(130%); } }
+@keyframes moneda { from { transform: rotateY(0); } to { transform: rotateY(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+  .listo__icono .trazo { stroke-dashoffset: 0; }
+  .hero__diamante rect { stroke-dashoffset: 0; }
+}
+/* En la portada del celular el logo grande reemplaza al chico del encabezado. */
+@media (max-width: 767px) {
+  .app:has(#vista-portada:not([hidden])) .marca__logo { display: none; }
+}
+
+/* Tabletas: 600 px */
+@media (min-width: 600px) {
+  .app { padding-inline: 28px; }
+  .hero__acciones { display: flex; flex-wrap: wrap; }
+  .boton--ancho-auto { width: auto; }
+  .fila { grid-template-columns: 1fr 1fr; }
+  .fila--cuatro { grid-template-columns: repeat(4, 1fr); }
+  .necesitas { grid-template-columns: 1fr 1fr; gap: 16px 28px; }
+  .nosotros__tarjetas { grid-template-columns: 1fr 1fr; }
+  .listo__acciones { grid-template-columns: 1fr 1fr; }
+  .listo__acciones .boton:only-child { grid-column: 1 / -1; }
+  .progreso { margin: 0 -28px; padding-inline: 28px; }
+  .acciones { margin: 0 -28px; padding-inline: 28px; }
+}
+
+/* Tableta horizontal y escritorio: 768 px */
+@media (min-width: 768px) {
+  .hero { grid-template-columns: 1.15fr .85fr; padding: 36px 0 48px; min-height: min(640px, 72dvh); }
+  .hero__visual { width: min(440px, 100%); order: 0; justify-self: center; margin: 0; }
+  .bloque { padding: 48px 0; }
+}
+
+/* Escritorio: 1000 px */
+@media (min-width: 1000px) {
+  /* Portada: título a la izquierda y contenido a la derecha (los 5 pasos en vertical, la lista y el botón). */
+  .vista--portada .bloque { display: grid; grid-template-columns: minmax(260px, 340px) minmax(0, 1fr); column-gap: 64px; align-items: start; }
+  .vista--portada .bloque > .boton { grid-column: 2; justify-self: start; }
+  .video-tarjeta { flex-direction: column; align-items: stretch; max-width: 220px; margin-top: 4px; }
+  .video-tarjeta__imagen { width: 100%; }
+  .video-tarjeta__play .ico { width: 56px; height: 56px; padding: 15px 13px 15px 17px; }
+  .form-layout { grid-template-columns: 240px minmax(0, 680px); gap: 48px; justify-content: center; padding: 28px 0 56px; align-items: start; }
+  .progreso { position: sticky; top: 24px; margin: 0; padding: 0; background: none; backdrop-filter: none; -webkit-backdrop-filter: none; border: 0; }
+  .progreso__cabeza { margin-bottom: 22px; }
+  .salir--barra { display: none; }
+  .salir--lista { display: inline-flex; margin-top: 18px; }
+  .progreso__lista { grid-template-columns: 1fr; gap: 0; }
+  .progreso__lista li { grid-template-columns: 36px 1fr; align-items: center; gap: 12px; padding: 10px 0; font-size: 17px; }
+  .progreso__lista li::before { display: none; }
+  .progreso__num { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; border: 1.5px solid var(--borde); font-weight: 700; color: var(--suave); transition: background-color .25s ease, color .25s ease, border-color .25s ease; }
+  .progreso__lista li.hecho .progreso__num, .progreso__lista li[aria-current="step"] .progreso__num { background: var(--oro); border-color: var(--oro); color: var(--oro-texto); }
+  .formulario { padding: 28px 36px 8px; border-radius: 20px; background: var(--sup); border: 1.5px solid var(--borde-suave); box-shadow: var(--sombra); }
+  .formulario input[type=text], .formulario input[type=tel], .formulario input[type=email], .formulario select, .formulario textarea, .formulario .opcion span, .formulario .foto__marco { background: var(--fondo); }
+  .formulario .resumen__bloque, .formulario .acepto, .formulario .metodo__caja, .formulario .pago-caja, .formulario .adjunto { background: var(--fondo); }
+  .formulario .copiar, .formulario .adjunto__quitar, .formulario .adjunto__vista { background: var(--sup-2); }
+  .acciones { position: static; margin: 8px 0 0; padding: 18px 0 24px; background: none; display: flex; justify-content: flex-end; }
+  .acciones .boton { width: auto; min-width: 220px; }
+  .listo { padding-top: 64px; }
+}
+
+@media (min-width: 1200px) {
+  .hero__titulo { font-size: 5.6rem; }
+}

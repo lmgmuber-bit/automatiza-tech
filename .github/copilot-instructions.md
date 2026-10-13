@@ -30,6 +30,19 @@ X-AT-Secret: <secret>  (wp-config.php del servidor)
 Referencia: `C:\Users\luis_\Documents\Codex\AI-Memory-Vault\30-Agent-Protocols\automatizatech-pipeline.md`
 <!-- AT-PIPELINE:END -->
 
+## GT Baseball Academy (cliente Jeffer García) — estado vivo
+
+- EN PROD en `https://gtbaseball.com/`:
+  - inscripción con QR, pago y Turnstile;
+  - portada con planes y fondos de estadio;
+  - buscador privado `/buscador/` con clave, fotos y listado en PDF.
+- Código en `demos/gt-baseball/`, en la rama `claude/gt-baseball-planes`. Flujos n8n en `N8N/gt-baseball/` (ver su
+  README).
+- 🔴 El repo es público: los datos del cliente viven en `gt-config.json`, fuera del repo. Se despliega solo con
+  `deploy_dominio.py` y con el ok de Luis.
+- **Relevo completo:** bóveda privada `10-Projects/GT-Baseball/README.md`. Diseño e historial en
+  `Docs/superpowers/specs/2026-09-27-gt-baseball-prototipo-design.md`.
+
 ## Automatizatech — Plan de trabajo con carta Gantt (Etapas 1 y 2 EN PROD)
 
 Guía única: `Docs/METODO_AT/PLAN-DE-TRABAJO.md`. Módulo `wp-content/themes/automatiza-tech/inc/plan-trabajo/` (cargado por `cargar.php`; `functions.php` no se toca). Al firmar un contrato de servicios se crea el plan; Luis lo edita y aprueba en la ficha del CRM y lo envía al cliente (correo con PDF o su WhatsApp, siempre con su clic). El cliente lo ve en `ver-plan.php?id=<código>` y agenda la llamada de seguimiento por `POST /wp-json/automatiza-tech/v1/plan-seguimiento` (reunión de seguimiento, nunca un lead). Pruebas en `tests/plan/`. Los correos al cliente nunca enlazan a `*.easypanel.host`.

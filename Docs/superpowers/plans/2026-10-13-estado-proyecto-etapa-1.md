@@ -74,7 +74,7 @@ Expected: todo en verde («pass», «TODO OK»). Si algo falla aquí, anotarlo e
 **Interfaces:**
 - Produces: `carrilesHitos(hitos, xs) -> Array<{carril: 0|1|2, izq: boolean, corrido: number}>` (exportada); `medidasGantt(nFilas, nFases, conHitos, carriles = 2)`; constante `GANTT_ALTO_HITOS_3 = 104`.
 
-Causa medida con el plan de Orly (`AbCdEf123456`): hitos el 08-oct, 04-nov, 13-nov, 25-nov («Entrega estimada») y 02-dic. Con dos carriles, «Asistente operativo · 2 dic» va a la izquierda de su rombo (`is-izq`, no cabe a la derecha), no encuentra carril libre y cae sobre «Sitio publicado y campaña activa · 13 nov».
+Causa medida con el plan de Orly: hitos el 08-oct, 04-nov, 13-nov, 25-nov («Entrega estimada») y 02-dic. Con dos carriles, «Asistente operativo · 2 dic» va a la izquierda de su rombo (`is-izq`, no cabe a la derecha), no encuentra carril libre y cae sobre «Sitio publicado y campaña activa · 13 nov».
 
 - [ ] **Step 1: Escribir las pruebas que fallan**
 
@@ -852,7 +852,7 @@ Agregar a `PLAN-DE-TRABAJO.md` una sección «Estado del proyecto — Etapa 1» 
 | 4 | `ver-estado.php` | raíz | OBLIGATORIO (nuevo) |
 | — | `tests/`, `Docs/` | — | NO subir |
 
-Después: con el OK aparte de Luis, «🔄 Actualizar la vista del plan» de Orly (`AbCdEf123456`); verificar desde afuera `ver-plan.php?id=AbCdEf123456` (botón en la lámina 02, cronograma sin etiquetas pisadas) y `ver-estado.php?id=AbCdEf123456` (aviso «Pronto…»).
+Después: con el OK aparte de Luis, «🔄 Actualizar la vista del plan» de Orly; verificar desde afuera `ver-plan.php?id=AbCdEf123456` (botón en la lámina 02, cronograma sin etiquetas pisadas) y `ver-estado.php?id=AbCdEf123456` (aviso «Pronto…»).
 
 - [ ] **Step 3: Grafo y commit**
 

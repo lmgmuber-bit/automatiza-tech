@@ -58,13 +58,19 @@ let render = esObjetoPlano(lr.render) ? lr.render : {};
 let reutilizadas = [];
 let sin_foto = [];
 let retomadas_antes = [];
+let saltar_render = false;
 if (modo === 'final' && mantener) {
   // «Actualizar la vista del plan» (D10): mismo contenido, mismas fotos, ninguna nueva. Las fotos que el plan ya tiene
   // guardadas en el renderer (su propio manifest) pasan como URL absolutas; con image_briefs vacío no se genera ni cobra nada.
   let previo = null;
+  // Si la lista de fotos del plan no se pudo leer (el nodo no corrió, no hubo respuesta o fue un 5xx) no se sabe qué fotos
+  // tiene: rehacer la vista las dejaría fuera. Se marca para no llamar al renderer. Un 404 (sin manifest) sí es una respuesta.
+  saltar_render = true;
   if ($('Fotos previas del plan').isExecuted) {
     const pp = $('Fotos previas del plan').first().json || {};
-    if (pp.statusCode === 200) previo = pp.body;
+    const sc = Number(pp.statusCode);
+    if (sc === 200) previo = pp.body;
+    if (sc > 0 && sc < 500) saltar_render = false;
   }
   const propias = fotosPropiasDelPlan(previo, RENDERER_BASE, String(render.unique_id || ''));
   // Portada y cierre de un plan con propuesta vienen de las fotos de la propuesta y el renderer no las anota en el
@@ -110,7 +116,7 @@ if (modo === 'final' && mantener) {
   // La vista previa nunca paga fotos, venga lo que venga de WordPress.
   render = Object.assign({}, render, { draft: true, image_briefs: [] });
 }
-return [{ json: { id, modo, mantener, aviso: avisoPedido(hook.aviso), render, reutilizadas, sin_foto, retomadas_antes,
+return [{ json: { id, modo, mantener, saltar_render, aviso: avisoPedido(hook.aviso), render, reutilizadas, sin_foto, retomadas_antes,
   crm: parseInt(lr.crm_cliente_id, 10) || 0,
   proyecto: String(render.proyecto || render.company_name || ('plan ' + id)) } }];"""
 
@@ -187,8 +193,16 @@ if (!$('Preparar render').isExecuted) {
     : 'sin respuesta' + (lr.error && lr.error.message ? ': ' + lr.error.message : '')) + ')' + (b.message ? ' — ' + b.message : '');
   return [{ json: Object.assign(vacio, { problemas: [sinUrlInterna(motivo)], nota: sinUrlInterna(motivo) + ' (ejecución ' + exec + ')' }) }];
 }
+// «Actualizar la vista» sin poder leer la lista de fotos del plan: no se llamó al renderer (ver «Preparar render»). Falla como
+// cualquier render fallido: /vista con ok=false (WordPress conserva los enlaces viejos y guarda la nota) y correo a Luis.
+const previa = $('Preparar render').first().json || {};
+if (previa.saltar_render === true) {
+  const motivo = 'no se pudo leer la lista de fotos del plan; no se rehízo la vista para no dejarla sin fotos';
+  return [{ json: Object.assign(vacio, { problemas: [motivo], nota: motivo + ' (ejecución ' + exec + ')',
+    crm: previa.crm || 0, proyecto: previa.proyecto || vacio.proyecto }) }];
+}
 // La última pasada del bucle de renders (llega aquí también desde la revisión de texto).
-const v = $('¿Reintentar render?').first().json || {};
+const v =$('¿Reintentar render?').first().json || {};
 const lr = leerRespuestaRender(v.resultado);
 const img = lr.images;
 const intento = Number(v.intento) || 1;
@@ -315,6 +329,8 @@ nodes = [
          "={{ '" + RENDERER_BASE + "/p/' + encodeURIComponent($('Leer render').first().json.body.propuesta_uid) + '/img/manifest.json' }}",
          cred=False),
     node('r6', 'Preparar render', 'n8n-nodes-base.code', 2, [1320, -120], {'jsCode': LIB + JS_AVISO + CODE_PREPARAR}),
+    # «Actualizar la vista» que no pudo leer la lista de fotos del plan: va directo al resultado, sin llamar al renderer.
+    iff('r25', '¿Saltar render?', [1430, -120], '={{ $json.saltar_render === true }}'),
     # Respuesta completa (código HTTP y cuerpo) para distinguir un 400 del esquema, que no se reintenta, de un 5xx (D11).
     node('r7', 'Render', 'n8n-nodes-base.httpRequest', 4.2, [1540, -120],
          {'method': 'POST', 'url': RENDERER, 'authentication': 'genericCredentialType', 'genericAuthType': 'httpHeaderAuth',
@@ -372,7 +388,9 @@ link('Fotos previas del plan', '¿Reutilizar fotos?')
 link('¿Reutilizar fotos?', 'Fotos de la propuesta', 0)
 link('¿Reutilizar fotos?', 'Preparar render', 1)
 link('Fotos de la propuesta', 'Preparar render')
-link('Preparar render', 'Render')
+link('Preparar render', '¿Saltar render?')
+link('¿Saltar render?', 'Resultado del render', 0)
+link('¿Saltar render?', 'Render', 1)
 link('Render', '¿Reintentar render?')
 link('¿Reintentar render?', '¿Faltan fotos?')
 link('¿Faltan fotos?', 'Render', 0)

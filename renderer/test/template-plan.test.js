@@ -592,8 +592,8 @@ test('Método AT: con estado_url aparece «Ver detalle del avance» junto a «Es
   assert.ok(html.includes('Ver detalle del avance'));
 });
 
-test('Método AT: sin estado_url, o con uno que no es http(s), no hay botón', () => {
-  for (const estado_url of [undefined, '', 'javascript:alert(1)', 'ftp://x', '"><script>']) {
+test('Método AT: sin estado_url, o con uno que no es https, no hay botón', () => {
+  for (const estado_url of [undefined, '', 'javascript:alert(1)', 'ftp://x', '"><script>', 'http://automatizatech.cl/ver-estado.php?id=AbCdEf123456']) {
     const html = tp.renderMetodoSlide({ estado_url }, 1, '');
     assert.ok(!html.includes('metodo-avance'), `sin botón con ${String(estado_url)}`);
   }

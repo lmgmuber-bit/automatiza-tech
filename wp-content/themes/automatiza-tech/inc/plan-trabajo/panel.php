@@ -67,7 +67,7 @@ function at_pt_mensajes_panel(): array {
 		'enviado'            => ['ok', 'Plan enviado por correo al cliente, con el PDF adjunto.'],
 		'enviado_sin_pdf'    => ['aviso', 'Plan enviado por correo, pero sin el PDF adjunto: el correo lleva el enlace para verlo.'],
 		'no_listo'           => ['error', 'Solo se envía un plan con la versión final lista.'],
-		'vista_pedida'       => ['ok', 'Pedimos la vista actualizada del plan. Queda lista en alrededor de un minuto; recarga la página para ver la nota.'],
+		'vista_pedida'       => ['ok', 'Pedimos la vista actualizada del plan. Queda lista en unos minutos; recarga la página para ver la nota.'],
 		'vista_fallo'        => ['error', 'No se pudo pedir la vista actualizada del plan. Revisa la nota del plan y reintenta.'],
 		'vista_no_enviado'   => ['aviso', 'Solo se actualiza la vista de un plan ya enviado al cliente.'],
 		'sin_correo'         => ['error', 'El cliente no tiene correo en su ficha ni en el contrato: agrégalo en la ficha y vuelve a enviar.'],

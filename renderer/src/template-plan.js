@@ -466,10 +466,10 @@ function renderMetodoSlide(data, index, imageUrl) {
   const hechas = new Set(Array.isArray(m.hechas) ? m.hechas : ['diagnostico', 'priorizacion']);
   const actual = typeof m.actual === 'string' && m.actual ? m.actual : 'propuesta';
   const firma = texto(data && data.fecha_firma_larga).trim();
-  // Página completa del avance (ver-estado.php). urlSegura solo deja https; aquí también vale http, como
-  // en un sitio de pruebas. El plan va dentro de un iframe: target="_top" abre la página en la ventana entera.
-  const avanceUrl = texto(data && data.estado_url).trim();
-  const boton = /^https?:\/\/[^\s"'<>]+$/i.test(avanceUrl)
+  // Página completa del avance (ver-estado.php). Solo https (urlSegura). El plan va dentro de un iframe:
+  // target="_top" abre la página en la ventana entera.
+  const avanceUrl = urlSegura(data && data.estado_url);
+  const boton = avanceUrl
     ? `<a class="metodo-avance" href="${escapeHtml(avanceUrl)}" target="_top" rel="noopener">Ver detalle del avance</a>`
     : '';
   const pasos = METODO.map((p, i) => {
@@ -689,7 +689,7 @@ const ESTILO_FASES = `
   .metodo-paso.is-hecha .metodo-estado { color: #00d9c0; }
   .metodo-aqui { display: inline-block; margin-top: 18px; padding: 7px 16px; border-radius: 999px; background: #00d9c0; color: #06222a;
     font-size: 16px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
-  .metodo-avance { display: inline-block; margin: 8px 0 0 10px; padding: 6px 14px; border-radius: 999px; background: #00d9c0; color: #0a1420; font-weight: 700; font-size: 15px; text-decoration: none; }
+  .metodo-avance { display: inline-block; margin: 10px 0 0 0; padding: 6px 14px; border-radius: 999px; background: #00d9c0; color: #0a1420; font-weight: 700; font-size: 15px; text-decoration: none; }
   .metodo-avance:hover { filter: brightness(1.08); }
   .metodo-firma { color: #fff; font-size: 18px; line-height: 1.45; margin-top: 12px; }
   .metodo-pie { position: absolute; left: 72px; right: 72px; bottom: 120px; z-index: 2; color: #c9d4e0; font-size: 24px;

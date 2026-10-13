@@ -1504,6 +1504,33 @@ def prueba_render():
                'Render': [renderer_ok(0)]})
     ok(llamadas(t, 'Render') and llamadas(t, 'Render')[0]['body']['image_briefs'] == [], 'R17e: mantener="true" como texto también vale')
 
+    # R17h. «Actualizar la vista» sin poder leer la lista de fotos del plan (5xx, sin código de estado): no se llama al
+    # renderer (la vista saldría sin fotos), /vista va con ok=false y Luis recibe el correo de falla.
+    for caso, previa in (('5xx', {'statusCode': 500, 'body': 'Internal Server Error'}),
+                         ('sin respuesta', {'error': {'message': 'The service refused the connection'}})):
+        t = sim(hook_m, **{'Leer render': leido(cuerpo_render(True), uid='', estado='enviado'), 'Fotos previas del plan': [previa],
+                           'Render': [renderer_ok(0)]})
+        sin_error(t, 'R17h ' + caso)
+        gv = llamadas(t, 'Guardar vista')
+        ok(not llamadas(t, 'Render') and 'Render' not in t['pasos'], f'R17h {caso}: no se llama al renderer', t['pasos'])
+        ok(gv and gv[0]['url'] == WP + '/plan/7/vista' and gv[0]['body']['mantener'] is True and gv[0]['body']['ok'] is False
+           and gv[0]['body']['modo'] == 'final' and gv[0]['body']['view_url'] == '' and gv[0]['body']['faltan'] == []
+           and 'no se pudo leer la lista de fotos del plan; no se rehízo la vista para no dejarla sin fotos' in gv[0]['body']['nota'],
+           f'R17h {caso}: POST /vista con mantener=true y ok=false y el motivo en la nota', gv)
+        ok(len(t['correos']) == 1 and t['correos'][0]['asunto'].endswith('la vista del plan no se pudo actualizar')
+           and 'easypanel' not in t['correos'][0]['html'], f'R17h {caso}: Luis recibe el correo de falla', [c['asunto'] for c in t['correos']])
+        ok('Buscar texto en fotos' not in t['pasos'], f'R17h {caso}: no revisa texto')
+    # …y un 404 (todavía no hay manifest) NO es una falla: el render sigue, como en R17b.
+    t = sim(hook_m, **{'Leer render': leido(cuerpo_render(True), uid='', estado='enviado'),
+                       'Fotos previas del plan': [{'statusCode': 404, 'body': 'Not Found'}], 'Render': [renderer_ok(0)]})
+    gv = llamadas(t, 'Guardar vista')
+    ok(len(llamadas(t, 'Render')) == 1 and gv and gv[0]['body']['ok'] is True and not t['correos'],
+       'R17h: con un 404 el manifest simplemente no existe y el render sigue', t['pasos'])
+    # La versión final normal (sin mantener) ignora la bandera: con el manifest roto sigue renderizando como siempre.
+    t = sim({'id': 7, 'modo': 'final', 'aviso': False}, **{'Leer render': leido(cuerpo_render(True), uid='', estado='aprobando'),
+            'Fotos previas del plan': [{'statusCode': 500, 'body': 'x'}], 'Render': [renderer_ok(8)]})
+    ok(len(llamadas(t, 'Render')) == 1, 'R17h: sin mantener, un manifest ilegible no impide el render', t['pasos'])
+
 
 # ---------------------------------------------------------------- M5 (revisión final): nada de *.easypanel.host en la nota ni el correo
 

@@ -287,12 +287,12 @@ Rama `claude/estado-proyecto` (commits `6e0aef0` a `b3cb9aa`). 🔴 **Nada de es
 - **Botón «Ver detalle del avance»** en la lámina «Método AT», junto a «Estás aquí» (abre en la ventana completa con `target="_top"`). Sale **solo** si el cuerpo del render trae un `estado_url` válido (http o https). WordPress lo manda desde ahora en todos los planes (`at_pt_url_ver_estado()`); los planes ya generados no lo traen hasta que se rehaga su vista.
 - **«🔄 Actualizar la vista del plan»** (ficha del CRM › «🗓️ Plan de trabajo», solo con el plan `enviado`): pide a n8n que rehaga la vista que ve el cliente para que tenga el botón nuevo, **sin cambiar nada más**. Detalle:
   - Flujo n8n «Plan de trabajo · 3 Render» con la bandera `mantener` (solo junto a `modo: final`): usa las **mismas fotos** del plan (las toma del manifest del propio renderer) más la portada y el cierre de la propuesta, no genera fotos nuevas (`image_briefs: []`), **no** pasa la revisión de texto con GPT-4o y **no** manda correo a Luis si sale bien (solo si falla).
-  - `POST /vista` con `mantener: true` guarda los enlaces y la nota, y **nunca cambia el estado** del plan. La nota nombra las láminas que quedaron sin foto.
+  - `POST /vista` con `mantener: true` guarda los enlaces y la nota, y **nunca cambia el estado** del plan. La nota nombra las láminas que quedaron sin foto. Se guarda la nota completa de n8n, con sus avisos. Si n8n no puede leer la lista de fotos del plan (error del renderer o sin respuesta; un 404 sí vale, es «sin fotos»), no rehace la vista: avisa a WordPress con `ok: false` (se conservan los enlaces anteriores) y manda el correo de falla a Luis.
   - El panel muestra los mensajes `vista_pedida`, `vista_fallo` y `vista_no_enviado` (este último si el plan no está `enviado`). Acción: `admin-post` `at_pt_actualizar_vista`.
 - **`ver-estado.php`** (raíz del sitio, archivo nuevo), mínimo a propósito: solo para planes `enviado`; muestra «Pronto verás aquí el avance de tu proyecto» y el enlace «Ver el plan de actividades inicial». Con cualquier otro plan o un código inválido da 404. Lleva `noindex` y sin caché.
-- **Lo que falta (Etapa 2 del Estado del proyecto, no hecha):** el avance real (hitos cumplidos, correo de cierre de hito) que reemplazará el aviso «Pronto…».
+- **Lo que falta (Etapas 2 a 4 del Estado del proyecto, no hechas):** el avance real (hitos cumplidos) que reemplazará el aviso «Pronto…» es la Etapa 2; el correo de cierre de hito y el texto de WhatsApp son la Etapa 3; el piloto con el cliente es la Etapa 4.
 
-### Para PROD, en este orden (Luis sube; nada se sube sin su autorización)
+### Para PROD, en este orden (Luis sube solo el zip del renderer a Easypanel; Claude despliega n8n y WordPress por API/SSH, siempre con el OK explícito de Luis, respaldo y verificación; nada se sube sin su autorización)
 
 | Orden | Local | Destino | Clase |
 |---|---|---|---|
@@ -302,7 +302,7 @@ Rama `claude/estado-proyecto` (commits `6e0aef0` a `b3cb9aa`). 🔴 **Nada de es
 | 4 | `ver-estado.php` | raíz de `public_html` | OBLIGATORIO (archivo nuevo) |
 | — | `tests/`, `Docs/`, `.superpowers/` | — | NO subir |
 
-Orden obligatorio: renderer → n8n → WordPress. Después, con un OK aparte de Luis, pulsar «🔄 Actualizar la vista del plan» en el plan de Orly (`AbCdEf123456`) y verificar desde afuera `ver-plan.php?id=AbCdEf123456` (botón en la lámina 02 y cronograma sin etiquetas pisadas) y `ver-estado.php?id=AbCdEf123456` (aviso «Pronto…»). **Rollback:** volver a subir el zip anterior del renderer, reimportar el `plan-3-render.json` de `main`, y restaurar los archivos de WordPress desde el respaldo (borrar `ver-estado.php`).
+Orden obligatorio: renderer → n8n → WordPress. Después, con un OK aparte de Luis, pulsar «🔄 Actualizar la vista del plan» en el plan de Orly y verificar desde afuera `ver-plan.php?id=AbCdEf123456` (botón en la lámina 02 y cronograma sin etiquetas pisadas) y `ver-estado.php?id=AbCdEf123456` (aviso «Pronto…»). **Rollback:** volver a subir el zip anterior del renderer, reimportar el `plan-3-render.json` de `main`, y restaurar los archivos de WordPress desde el respaldo (borrar `ver-estado.php`).
 
 ### Qué no se ha probado
 

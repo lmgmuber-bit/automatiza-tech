@@ -2,7 +2,7 @@
 
 Pedido de Luis del 13-oct-2026 (brief «correo de cierre de cada hito del plan» + aclaración de las tres presentaciones).
 Aprobado por partes en el chat el 13-oct: enfoque A (renderer), carga B (panel + importar archivo), partes 1 a 4.
-Rige para todos los clientes con plan de trabajo. Piloto: Orly (Funerarias Amor de Dios), plan `AbCdEf123456`.
+Rige para todos los clientes con plan de trabajo. Piloto: Orly (Funerarias Amor de Dios).
 
 ## 1. Qué se construye y para qué
 

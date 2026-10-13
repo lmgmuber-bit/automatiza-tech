@@ -581,3 +581,20 @@ test('renderGantt: sin choques no aparece la marca de tres carriles', () => {
   const html = renderGantt({ inicio: '2026-10-05', fin: '2026-11-27', barras: [{ fase: 'diseno_desarrollo', etiqueta: 'x', tipo: 'trabajo', responsable: 'at', desde: '2026-10-05', hasta: '2026-10-09' }], hitos: [{ nombre: 'Entrega estimada', fecha: '2026-11-27' }] });
   assert.ok(!html.includes('is-3carriles'));
 });
+
+test('Método AT: con estado_url aparece «Ver detalle del avance» junto a «Estás aquí» y abre la página completa', () => {
+  const html = tp.renderMetodoSlide({ estado_url: 'https://automatizatech.cl/ver-estado.php?id=AbCdEf123456' }, 1, '');
+  const i = html.indexOf('metodo-aqui');
+  const j = html.indexOf('class="metodo-avance"');
+  assert.ok(i > -1 && j > i, 'el botón va después de la etiqueta');
+  assert.ok(html.includes('href="https://automatizatech.cl/ver-estado.php?id=AbCdEf123456"'));
+  assert.ok(html.includes('target="_top"'));
+  assert.ok(html.includes('Ver detalle del avance'));
+});
+
+test('Método AT: sin estado_url, o con uno que no es http(s), no hay botón', () => {
+  for (const estado_url of [undefined, '', 'javascript:alert(1)', 'ftp://x', '"><script>']) {
+    const html = tp.renderMetodoSlide({ estado_url }, 1, '');
+    assert.ok(!html.includes('metodo-avance'), `sin botón con ${String(estado_url)}`);
+  }
+});

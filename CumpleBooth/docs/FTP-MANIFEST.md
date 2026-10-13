@@ -21,6 +21,21 @@ grep -o 'assets/[a-zA-Z0-9._-]*' dist/index.html   # lo que index.html pide
 Sube **todos** los de `dist/assets/` junto con `dist/index.html` en la misma
 tanda. Los que sobren del build anterior se pueden borrar después.
 
+## DESPLEGADO 2026-10-13 (mañana): despedida propia de la fiesta del piloto
+
+Pedido de Luis: en la despedida del kiosco, la imagen de la cumpleañera con la copa, con movimiento y la voz chilena de
+la demo de la botillería (Matilda `XrExE9yKIg1WjnnlVkGX`, `eleven_v3`; texto aprobado, transcripción `scribe_v1` correcta).
+- **Código** (`df737a7`): `cb_resolve_party` publica `themes/<tema>/despedida-fiesta-<slug>.mp4` como despedida de esa
+  fiesta si el archivo existe. El archivo lleva la cara de la persona festejada: solo en el servidor (`.gitignore`).
+  Prueba en `cumple-adulto-http.php` (56), con control en rojo.
+- **Subido:** `app/lib.php` (cotejado contra el del deploy anterior, respaldo
+  `~/respaldos/app-lib.php.antes-despedida-*`) y el video (720×1280, 9 s, 1,66 MB, −16 LUFS).
+- **Video actual: versión SIN IA** (acercamiento lento y balanceo sobre la imagen, más la voz). La animación con IA
+  (Kling 3.0, brindis y saludo, USD 0,63 de lista aprobado por Luis) **no se pudo generar: la API de Higgsfield no
+  tiene saldo** (el intento falló sin cobro) y BudgetPixel pide volver a conectarse. Cuando haya saldo se reemplaza el
+  mismo archivo, sin tocar código.
+- **NOT_RUN:** verla en el kiosco de PROD (la fiesta sigue inactiva) y en la tablet.
+
 ## DESPLEGADO 2026-10-13 (00:28-00:40): cumpleaños de adulto, Coquetería Pop, juegos del animador y la feria integrada (AT-CUMPLECLICK-026)
 
 Go de Luis el 12-oct («vamos a PROD con todo»). Lo hizo Claude por SSH (`deploy-026/desplegar.py`, en la carpeta de Aseo de la

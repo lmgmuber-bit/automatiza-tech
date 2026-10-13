@@ -481,3 +481,9 @@ cabeceras y un navegador real contra el dominio).
     pypdf (nombres, tildes, criterios, logo y hojas).
   - `probar-buscador.cjs`: 57, todas bien.
   - Sin probar todavía: un celular físico y el PDF con los datos reales.
+
+## Código en `main` (13-oct)
+
+El PR #61 (rama `claude/gt-baseball-planes`, que contiene a `claude/gt-baseball-prototipo`) se mergeó a `main` el
+13-oct-2026 (commit `37a5a40`). Desde ahí `main` tiene el mismo sitio y los mismos flujos que corren en gtbaseball.com.
+Cambios nuevos: rama desde `main`, despliegue con `deploy_dominio.py` y el ok de Luis.

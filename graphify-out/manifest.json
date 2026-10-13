@@ -4665,8 +4665,8 @@
     "semantic_hash": ""
   },
   ".github/copilot-instructions.md": {
-    "mtime": 1791859717.6757755,
-    "ast_hash": "a75234f25030d87e57f1a65703297467",
+    "mtime": 1791860769.9759934,
+    "ast_hash": "ecca0daf93b9aabddb60fd58140c7878",
     "semantic_hash": ""
   },
   ".github/dependabot.yml": {
@@ -4700,8 +4700,8 @@
     "semantic_hash": ""
   },
   "AGENTS.md": {
-    "mtime": 1791859675.232077,
-    "ast_hash": "6b5e1e4f7438390d6426a8c44171896d",
+    "mtime": 1791860769.9734635,
+    "ast_hash": "e53ceb49349f0b724adca7d36e638549",
     "semantic_hash": ""
   },
   "AUDITORIA_OPENAI_N8N.md": {
@@ -4710,8 +4710,8 @@
     "semantic_hash": ""
   },
   "CLAUDE.md": {
-    "mtime": 1791859675.2357843,
-    "ast_hash": "d20b435d9bdc9e0a0b8a533a5afb2dba",
+    "mtime": 1791860769.9724684,
+    "ast_hash": "986f227f656b3030a5fae07db0d852bc",
     "semantic_hash": ""
   },
   "CONTEXTO_COMPLETO.md": {
@@ -5505,8 +5505,8 @@
     "semantic_hash": ""
   },
   "Docs/AGENTS.md": {
-    "mtime": 1790738952.1073084,
-    "ast_hash": "7a565ab0c8f2bfa193d2c311f00146ab",
+    "mtime": 1791860769.9749753,
+    "ast_hash": "e1ab446a767925892e6124828c2a31c4",
     "semantic_hash": ""
   },
   "Docs/ANALISIS_MODULOS_INC.md": {

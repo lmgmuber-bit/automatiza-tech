@@ -243,3 +243,42 @@ test('el PDF del plan largo tiene una página por lámina', async () => {
     await fs.rm(dir, { recursive: true, force: true });
   }
 });
+
+test('cronograma: las etiquetas de los 5 hitos de Orly no se intersectan y caben en la lámina', async () => {
+  const plan = planLargo();
+  plan.cronograma.hitos = [
+    { nombre: 'Sitio sin fotos del personal antiguo', fecha: '2026-10-08' },
+    { nombre: 'Sitio rediseñado y campaña lista', fecha: '2026-11-04' },
+    { nombre: 'Sitio publicado y campaña activa', fecha: '2026-11-13' },
+    { nombre: 'Entrega estimada', fecha: '2026-11-25' },
+    { nombre: 'Asistente operativo', fecha: '2026-12-02' },
+  ];
+  plan.cronograma.inicio = '2026-10-02';
+  plan.cronograma.fin = '2026-12-10';
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'renderer-gantt-hitos-'));
+  const archivo = path.join(dir, 'index.html');
+  await fs.writeFile(archivo, renderPlanHtml(plan, {}), 'utf8');
+  const browser = await chromium.launch({ args: ['--disable-dev-shm-usage', '--no-sandbox'] });
+  try {
+    const page = await browser.newPage({ viewport: { width: 1920, height: 1080 } });
+    await page.goto(pathToFileURL(archivo).href, { waitUntil: 'load' });
+    await page.emulateMedia({ media: 'print' });
+    const r = await page.evaluate(() => {
+      const ems = [...document.querySelectorAll('.gantt-fila-hitos .gantt-hito em')].map((e) => e.getBoundingClientRect());
+      const slide = document.querySelector('.gantt-fila-hitos').closest('.slide').getBoundingClientRect();
+      let choques = 0;
+      for (let i = 0; i < ems.length; i++) for (let j = i + 1; j < ems.length; j++) {
+        const a = ems[i], b = ems[j];
+        if (a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom) choques++;
+      }
+      const fuera = ems.filter((e) => e.left < slide.left || e.right > slide.right || e.bottom > slide.bottom - 20).length;
+      return { n: ems.length, choques, fuera };
+    });
+    assert.equal(r.n, 5);
+    assert.equal(r.choques, 0, 'ninguna etiqueta se monta sobre otra');
+    assert.equal(r.fuera, 0, 'todas dentro de la lámina');
+  } finally {
+    await browser.close();
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});

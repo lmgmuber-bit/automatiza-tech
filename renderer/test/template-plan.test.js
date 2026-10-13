@@ -525,3 +525,59 @@ test('elementos que no son objetos (null, números) en fases, bloques, actividad
   // Sin fases en absoluto, o con solo elementos rotos, también sale un documento.
   assert.doesNotThrow(() => tp.renderPlanHtml({ ...planCorto(), fases: [null, 4], reuniones: [null, 2], necesitamos_de_ti: [null] }, {}));
 });
+
+// --- Cronograma: tercer carril de hitos --------------------------------------
+
+const { carrilesHitos, medidasGantt, renderGantt } = tp;
+
+// Ancho que el algoritmo le asigna a cada etiqueta, en fracción de la pista (mismo cálculo que carrilesHitos).
+function anchoEtiqueta(nombre) {
+  return ((String(nombre).length + 9) * 9.5) / 1300;
+}
+// Tramo [desde, hasta] que ocupa cada etiqueta según el resultado de carrilesHitos.
+function tramos(hitos, xs, carriles) {
+  return hitos.map((h, i) => {
+    const a = anchoEtiqueta(h.nombre);
+    const { izq, corrido, carril } = carriles[i];
+    const desde = izq ? xs[i] - a : xs[i] + corrido / 1300;
+    return { carril, desde, hasta: desde + a };
+  });
+}
+
+test('carrilesHitos: los 5 hitos de Orly no comparten tramo en el mismo carril', () => {
+  const hitos = [
+    { nombre: 'Sitio sin fotos del personal antiguo', fecha: '2026-10-08' },
+    { nombre: 'Sitio rediseñado y campaña lista', fecha: '2026-11-04' },
+    { nombre: 'Sitio publicado y campaña activa', fecha: '2026-11-13' },
+    { nombre: 'Entrega estimada', fecha: '2026-11-25' },
+    { nombre: 'Asistente operativo', fecha: '2026-12-02' },
+  ];
+  const xs = [0.14, 0.49, 0.61, 0.77, 0.86];
+  const c = carrilesHitos(hitos, xs);
+  const t = tramos(hitos, xs, c);
+  for (let i = 0; i < t.length; i++) {
+    for (let j = i + 1; j < t.length; j++) {
+      if (t[i].carril !== t[j].carril) continue;
+      assert.ok(t[i].hasta <= t[j].desde || t[j].hasta <= t[i].desde, `«${hitos[i].nombre}» y «${hitos[j].nombre}» se pisan en el carril ${t[i].carril}`);
+    }
+  }
+  assert.ok(c.some((x) => x.carril === 2), 'con tres hitos pegados se abre el tercer carril');
+});
+
+test('carrilesHitos: con 1 o 2 hitos separados no se usa el tercer carril', () => {
+  const dos = carrilesHitos([{ nombre: 'A', fecha: '2026-10-08' }, { nombre: 'B', fecha: '2026-12-01' }], [0.1, 0.8]);
+  assert.ok(dos.every((x) => x.carril < 2));
+  assert.deepEqual(carrilesHitos([], []), []);
+});
+
+test('medidasGantt: con tres carriles la fila de hitos crece y las barras ceden ese alto', () => {
+  const dos = medidasGantt(10, 3, true);
+  const tres = medidasGantt(10, 3, true, 3);
+  assert.ok(tres.fila <= dos.fila);
+  assert.equal(medidasGantt(10, 3, true, 2).fila, dos.fila, 'dos carriles = lo de siempre');
+});
+
+test('renderGantt: sin choques no aparece la marca de tres carriles', () => {
+  const html = renderGantt({ inicio: '2026-10-05', fin: '2026-11-27', barras: [{ fase: 'diseno_desarrollo', etiqueta: 'x', tipo: 'trabajo', responsable: 'at', desde: '2026-10-05', hasta: '2026-10-09' }], hitos: [{ nombre: 'Entrega estimada', fecha: '2026-11-27' }] });
+  assert.ok(!html.includes('is-3carriles'));
+});

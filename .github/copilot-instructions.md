@@ -36,7 +36,7 @@ Referencia: `C:\Users\luis_\Documents\Codex\AI-Memory-Vault\30-Agent-Protocols\a
   - inscripción con QR, pago y Turnstile;
   - portada con planes y fondos de estadio;
   - buscador privado `/buscador/` con clave, fotos y listado en PDF.
-- Código en `demos/gt-baseball/`, en la rama `claude/gt-baseball-planes`. Flujos n8n en `N8N/gt-baseball/` (ver su
+- Código en `demos/gt-baseball/`, en `main` desde el 13-oct-2026 (PR #61). Flujos n8n en `N8N/gt-baseball/` (ver su
   README).
 - 🔴 El repo es público: los datos del cliente viven en `gt-config.json`, fuera del repo. Se despliega solo con
   `deploy_dominio.py` y con el ok de Luis.

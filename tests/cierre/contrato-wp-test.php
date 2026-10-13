@@ -62,10 +62,10 @@ ok(in_array('Tipo de cliente', ContractService::faltantes($ct(['tipo_cliente' =>
 ok(ContractService::faltantes($ct($completo_persona)) === [], 'persona completa: no falta nada');
 // Task 15: las etiquetas del número de la persona y del representante pasan a «Documento del cliente»
 // y «Documento del representante» (puede ser RUT, DNI o pasaporte); el de la empresa sigue siendo RUT.
-ok(ContractService::faltantes($ct(['tipo_cliente' => 'persona'])) === ['Nombre completo del cliente', 'Documento del cliente', 'Domicilio del cliente', 'Precio total, IVA incluido', 'Forma de pago'], 'persona vacía: faltan sus datos, con las etiquetas de persona');
+ok(ContractService::faltantes($ct(['tipo_cliente' => 'persona'])) === ['Nombre completo del cliente', 'Documento del cliente', 'Domicilio del cliente', 'Precio total', 'Forma de pago'], 'persona vacía: faltan sus datos, con las etiquetas de persona');
 ok(ContractService::faltantes($ct($completo_empresa)) === [], 'empresa completa: no falta nada');
 ok(ContractService::faltantes($ct(array_diff_key($completo_empresa, ['representante_cliente_nombre' => 1, 'representante_cliente_rut' => 1]))) === ['Representante (solo si es empresa)', 'Documento del representante'], 'empresa sin representante: lo lista');
-ok(ContractService::faltantes($ct(['tipo_cliente' => 'empresa'])) === ['Razón social', 'RUT de la empresa', 'Representante (solo si es empresa)', 'Documento del representante', 'Domicilio del cliente', 'Precio total, IVA incluido', 'Forma de pago'], 'empresa vacía: faltan sus datos, con las etiquetas de empresa');
+ok(ContractService::faltantes($ct(['tipo_cliente' => 'empresa'])) === ['Razón social', 'RUT de la empresa', 'Representante (solo si es empresa)', 'Documento del representante', 'Domicilio del cliente', 'Precio total', 'Forma de pago'], 'empresa vacía: faltan sus datos, con las etiquetas de empresa');
 ok(ContractService::faltantes($ct(['rut_cliente' => '11.111.111-2'] + $completo_persona)) === ['Documento del cliente (no es válido)'], 'RUT inválido: cuenta como faltante');
 ok(ContractService::faltantes($ct(['representante_cliente_rut' => '11.111.111-2'] + $completo_empresa)) === ['Documento del representante (no es válido)'], 'RUT del representante inválido: cuenta como faltante');
 ok(ContractService::faltantes($ct(['domicilio_cliente' => '   '] + $completo_persona)) === ['Domicilio del cliente'], 'un dato con solo espacios cuenta como vacío');
@@ -244,6 +244,12 @@ ok(array_slice(array_keys($cr), 0, 8) === ['tipo_cliente', 'razon_social_cliente
 ok($cr['tipo_documento_cliente'] === ['Tipo de documento del cliente', 'documento'] && $cr['tipo_documento_representante'] === ['Tipo de documento del representante', 'documento'], 'T15: campos de tipo de documento con su etiqueta y el tipo «documento»');
 ok($cr['rut_cliente'][0] === 'Documento del cliente (RUT si es empresa)' && $cr['representante_cliente_rut'][0] === 'Documento del representante (solo si es empresa)', 'T15: etiquetas de los números: «Documento del cliente (RUT si es empresa)» y «Documento del representante (solo si es empresa)»');
 ok(ContractService::tipos_documento() === ['rut' => 'RUT', 'dni' => 'DNI', 'pasaporte' => 'Pasaporte'], 'T15: tipos de documento del selector');
+// 13-oct: la 5.1 dice «IVA incluido» salvo que AT lo cambie en un contrato (cliente del extranjero, «sin IVA»).
+ok($cr['monto_total'] === ['Precio total', 'linea'] && $cr['iva_texto'] === ['IVA del precio (cláusula 5.1; vacío = «IVA incluido»)', 'linea'], 'iva_texto: campo de la revisión, justo después del precio');
+ok(array_search('iva_texto', array_keys($cr), true) === array_search('monto_total', array_keys($cr), true) + 1, 'iva_texto va inmediatamente después de monto_total');
+ok(ContractService::iva_texto([]) === 'IVA incluido' && ContractService::iva_texto(['iva_texto' => '   ']) === 'IVA incluido', 'iva_texto: vacío o ausente = «IVA incluido» (contratos anteriores salen iguales)');
+ok(ContractService::iva_texto(['iva_texto' => ' sin IVA ']) === 'sin IVA', 'iva_texto: el valor de AT, sin espacios de sobra');
+ok(!in_array('IVA del precio (cláusula 5.1; vacío = «IVA incluido»)', ContractService::faltantes($ct($completo_persona)), true), 'iva_texto no es obligatorio para firmar');
 // Aceptó con DNI (marcadores como los arma at_cc_marcadores_servicios()) y el cliente deja sus datos como persona.
 $ph_dni = ['razon_social_cliente' => '[PRUEBA] Marca Negocio', 'nombre_proyecto' => '[PRUEBA] Marca Negocio', 'representante_cliente_nombre' => 'Ana Prueba', 'aceptante_nombre' => 'Ana Prueba', 'tipo_documento_cliente' => 'rut', 'tipo_documento_representante' => 'dni', 'representante_cliente_rut' => '12345678'] + $marca_precio;
 $c10 = ContractService::create_contract(['client_id' => 0, 'proposal_id' => 0, 'type' => 'servicios', 'template_id' => 'servicios_v1', 'placeholders' => $ph_dni, 'created_by' => 0]);

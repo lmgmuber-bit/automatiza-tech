@@ -59,7 +59,7 @@ Ambas partes, en adelante "**LAS PARTES**", acuerdan el siguiente contrato (en a
 
 ## CLÁUSULA QUINTA — Precio y forma de pago
 
-5.1. El precio total de lo contratado es de **{{monto_total}}**, IVA incluido.
+5.1. El precio total de lo contratado es de **{{monto_total}}**, {{iva_texto}}.
 
 5.2. **Forma de pago:** {{forma_pago}}
 

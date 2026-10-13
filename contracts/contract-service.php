@@ -84,10 +84,20 @@ class ContractService {
             'alcance'                      => array('Alcance', 'texto'),
             'entregables'                  => array('Entregables (uno por línea, empezando con «- »)', 'texto'),
             'plazo'                        => array('Plazo', 'texto'),
-            'monto_total'                  => array('Precio total, IVA incluido', 'linea'),
+            'monto_total'                  => array('Precio total', 'linea'),
+            'iva_texto'                    => array('IVA del precio (cláusula 5.1; vacío = «IVA incluido»)', 'linea'),
             'forma_pago'                   => array('Forma de pago', 'texto'),
             'fases_siguientes'             => array('Fases siguientes (una por línea, empezando con «- »)', 'texto'),
         );
+    }
+    /**
+     * Lo que va después del precio en la cláusula 5.1. Por defecto «IVA incluido», como decía la plantilla
+     * antes del marcador, así los contratos ya firmados y los nuevos salen iguales; AT lo cambia en uno solo
+     * desde «Ajustar el contrato» (p. ej. «sin IVA» para un cliente del extranjero).
+     */
+    public static function iva_texto(array $ph) {
+        $v = trim((string) ($ph['iva_texto'] ?? ''));
+        return $v !== '' ? $v : 'IVA incluido';
     }
     /** Tipos de cliente de un contrato de servicios: valor => texto del selector. */
     public static function tipos_cliente() {
@@ -790,6 +800,7 @@ class ContractService {
         require_once get_template_directory() . '/lib/contract-pdf-fpdf.php';
         // Derivado, no se guarda: el párrafo de EL CLIENTE según su tipo (plantilla de servicios).
         $ph['comparecencia_cliente'] = self::comparecencia_cliente($ph);
+        $ph['iva_texto'] = self::iva_texto($ph);
         $pdf = new ContractPDFFPDF($ph, $body, $signatures);
         $pdf->build();
         $file = self::contract_pdf_path($c, $final);

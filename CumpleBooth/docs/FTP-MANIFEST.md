@@ -21,7 +21,40 @@ grep -o 'assets/[a-zA-Z0-9._-]*' dist/index.html   # lo que index.html pide
 Sube **todos** los de `dist/assets/` junto con `dist/index.html` en la misma
 tanda. Los que sobren del build anterior se pueden borrar después.
 
-## PENDIENTE 2026-10-11 — cumpleaños de adulto y temática Coquetería Pop (AT-CUMPLECLICK-026, LOCAL)
+## DESPLEGADO 2026-10-13 (00:28-00:40): cumpleaños de adulto, Coquetería Pop, juegos del animador y la feria integrada (AT-CUMPLECLICK-026)
+
+Go de Luis el 12-oct («vamos a PROD con todo»). Lo hizo Claude por SSH (`deploy-026/desplegar.py`, en la carpeta de Aseo de la
+sesión, fuera del repo) en tres fases que abortan al primer problema: respaldo, subida y verificación.
+
+**PROD no era `main`.** El reconocimiento encontró la feria (`claude/feria-prod`, migración `026_modo_feria`) en PROD: su
+`lib.php` y su `themes.json` eran los de esa rama, y el resto de los once archivos, los de `main` (`188ba45`). Subir la rama
+tal cual habría borrado la feria. Se fusionó `origin/claude/feria-prod` (commit `ad21dd6`): dos conflictos triviales, el
+admin ahora exige una temática con cabina de cumpleaños para un cumpleaños de adulto (las de adultos de la feria se
+rechazan) y `feria-marcos.test.mjs` acepta «Ir a mi foto» con movimiento reducido (fallaba al azar también en la feria
+sola). Con la fusión subió también **la intro de la feria pendiente desde el 29-sep** (`0357996`, sección PENDIENTE
+2026-09-29 más abajo): solo afecta al modo feria. `feria.html` no se tocó (sigue el de PROD).
+
+Cotejo completo `dist/` contra `app/` antes de subir: distintos solo los once de la tabla e `index.html`; nuevos solo tres
+assets (`main-CL2XqIT8.js`, `main-DNIuHEKU.css`, `anton-latin-400-normal-Byf51wtH.woff2`) y la carpeta de la temática. No se
+subieron, a propósito: `data/parties.json` y `data/ajustes.json` (datos vivos), `cartel-qr.html` (PROD tiene otra versión,
+fuera de este cambio) ni `feria.html`.
+
+- **Respaldo:** `~/respaldos/cumpleclick-db-antes-026-20261013-0028.sql` (0600, 40 tablas, «Dump completed») y
+  `~/respaldos/app-antes-026-20261013-0028.tar.gz` + `.sha256` (los 11 archivos reemplazados).
+- **Migración 027** aplicada con `php aplicar-027.php` («applied», 0 fiestas con juegos apagados). `rollback-adultos.php`,
+  `aplicar-027.php` y la migración quedaron en `domains/cumpleclick.com/database/`.
+- **Subido:** 19 archivos de `themes/adulto-coqueteria-pop/` y 14 de código en el orden de la tabla, cada uno cotejado por
+  sha256, con `php -l` y `json_decode`, e instalados con `mv` atómico (`lib.php` primero, `index.html` al final).
+- **Verificado desde afuera:** `samantha-hielo` y `luciano-spidey` responden igual (sin `edad`, sin `cabinaAdulto`, sin
+  `animadorApagados`, 6 personajes); `lib.php` nuevo con la feria presente; raíz, `index.html`, `feria.html`, assets nuevos,
+  fondo y PNG de Asómate (mismos bytes: el CDN no los achica), `admin/login.php` y `admin/maestro.php` en 200 sin errores.
+- **Fiesta del piloto creada en PROD** por CLI con las funciones del admin (adulta, 69, Coquetería Pop, 16-oct, marco de la
+  temática, todos los juegos disponibles), **inactiva** hasta que Luis genere la aceptación o la exima.
+- **NOT_RUN:** el kiosco adulto abierto en PROD (la fiesta está inactiva), la tablet, el rollback real, una invitación
+  publicada y el admin con sesión iniciada.
+
+### Lo que decía la sección PENDIENTE (se conserva para el rollback)
+
 
 Nada de esto está en PROD. Rama `claude/cumple-adulto-coqueteria` sobre `origin/main`. Detalle en
 `docs/CUMPLE-ADULTO-COQUETERIA.md`. La modalidad y la edad no llevan migración (`event_type` es VARCHAR(40) y
@@ -4317,7 +4350,11 @@ No subir `src/`, tests, node_modules, evidencias, ADB, fixtures, SQLite, fotos d
 - La fuente del modelo quedó en `src/feria/models/` para respetar los archivos autorizados; Vite la emite en `vendor/mediapipe/selfie_segmenter.tflite`. Se reutiliza el mismo WASM instalado. Proveniencia y SHA-256 en `models/NOTICE.md`.
 - Sin nombres de franquicias en el nuevo copy. Las imágenes/nombres de personajes siguen viniendo del catálogo existente de 020.
 
-## PENDIENTE 2026-09-29 — feria: la intro siempre se ve y la temática se despide (LOCAL, SIN DEPLOY)
+## DESPLEGADO 2026-10-13 junto con AT-CUMPLECLICK-026: feria: la intro siempre se ve y la temática se despide
+
+Subió en el bundle `main-CL2XqIT8.js` del deploy del cumpleaños de adulto (ver arriba); `feria.html` no se tocó. Lo de abajo
+es el texto de cuando estaba pendiente.
+
 
 Rama `claude/feria-prod`, commit `0357996`, PR lmgmuber-bit/automatiza-tech#58. Luis reportó el 28-sep que en la
 feria del 26-sep la intro se saltaba y el niño caía directo a la ruleta.

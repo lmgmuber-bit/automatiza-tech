@@ -62,4 +62,22 @@ $GLOBALS['pt_http_respuesta'] = 200;
 $antes = count($GLOBALS['pt_http']);
 ok(at_pt_pedir_render($pid, 'otro', false) === 'Modo de render inválido.' && count($GLOBALS['pt_http']) === $antes, '4) modo desconocido: no llama a n8n');
 
+// mantener solo viaja cuando es true.
+$GLOBALS['pt_http'] = [];
+at_pt_pedir_render($pid, 'final', false, true);
+$c = pt_llamadas('render')[0]['cuerpo'] ?? [];
+ok(($c['mantener'] ?? null) === true && ($c['modo'] ?? '') === 'final' && ($c['aviso'] ?? null) === false, '4) con mantener = true, el cuerpo a n8n lleva mantener: true');
+$GLOBALS['pt_http'] = [];
+at_pt_pedir_render($pid, 'final', false);
+$c = pt_llamadas('render')[0]['cuerpo'] ?? [];
+ok(!array_key_exists('mantener', $c) && ($c['modo'] ?? '') === 'final', '4) sin mantener, el cuerpo no lleva la clave');
+// mantener fallido: solo nota, nunca «error».
+at_pt_guardar($pid, ['estado' => 'enviado', 'nota' => '']);
+$GLOBALS['pt_http_respuesta'] = 500;
+ok(at_pt_pedir_render($pid, 'final', false, true) === 'n8n respondió HTTP 500' && at_pt_plan($pid)->estado === 'enviado' && strpos((string) at_pt_plan($pid)->nota, 'No se pudo pedir la actualización de la vista') !== false, '4) mantener sin n8n: el estado no cambia y queda la nota');
+at_pt_guardar($pid, ['estado' => 'aprobando', 'nota' => '']);
+at_pt_pedir_render($pid, 'final', false, true);
+ok(at_pt_plan($pid)->estado === 'aprobando', '4) mantener sin n8n con el plan «aprobando»: tampoco pasa a «error»');
+$GLOBALS['pt_http_respuesta'] = 200;
+
 fin();

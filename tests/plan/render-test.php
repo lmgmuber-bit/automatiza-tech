@@ -61,7 +61,7 @@ $datos = [
 	'fecha_firma'  => '2026-09-29 18:40:12',
 ];
 $r = at_pt_armar_render($plan, $datos, false);
-ok($v['ok'] && array_keys($r) === ['document_type', 'unique_id', 'draft', 'company_name', 'client_name', 'proyecto', 'fecha_firma_larga', 'fecha_inicio', 'fecha_fin', 'semanas', 'metodo', 'fases', 'cronograma', 'necesitamos_de_ti', 'reuniones', 'soporte', 'portal_url', 'agenda', 'image_briefs', 'images'], 'las claves del cuerpo del render, en el orden del esqueleto');
+ok($v['ok'] && array_keys($r) === ['document_type', 'unique_id', 'draft', 'company_name', 'client_name', 'proyecto', 'fecha_firma_larga', 'fecha_inicio', 'fecha_fin', 'semanas', 'metodo', 'fases', 'cronograma', 'necesitamos_de_ti', 'reuniones', 'soporte', 'portal_url', 'agenda', 'estado_url', 'image_briefs', 'images'], 'las claves del cuerpo del render, en el orden del esqueleto');
 ok($r['document_type'] === 'plan' && $r['unique_id'] === 'Ab3dE5fG7hJ9' && preg_match('/^[A-Za-z0-9_-]{6,64}$/', $r['unique_id']) === 1, 'tipo plan y unique_id = código (calza con la regla del renderer)');
 ok($r['draft'] === true && $r['image_briefs'] === [], 'vista previa: draft true y sin fotos');
 ok(strpos(json_encode($r), '"images":{}') !== false && strpos(json_encode($r), '"web_url":""') !== false, 'images sale como objeto JSON vacío {} y web_url vacío');
@@ -100,5 +100,10 @@ ok(!array_key_exists('garantia_meses', $datos) && $r['soporte'] === $plan['sopor
 ok(at_pt_armar_render([], ['garantia_meses' => 6], false)['soporte'] === ['garantia_meses' => 6, 'mensuales' => []], 'plan sin soporte: la garantía del contrato igual llega al documento');
 ok(at_pt_armar_render($plan, array_merge($datos, ['fecha_firma' => '']), false)['fecha_firma_larga'] === '29 de septiembre de 2026', 'sin fecha de firma en los datos: la del plan');
 ok(at_pt_armar_render([], ['codigo' => 'Ab3dE5fG7hJ9'], false)['fases'] === [] && at_pt_armar_render([], [], false)['semanas'] === 0, 'un plan vacío no rompe el armado (el renderer lo rechaza por su esquema)');
+
+ok(at_pt_url_ver_estado('https://automatizatech.cl', 'AbCdEf123456') === 'https://automatizatech.cl/ver-estado.php?id=AbCdEf123456', 'url de ver-estado con el código del plan');
+ok(at_pt_url_ver_estado('https://automatizatech.cl/', 'abc') === '' && at_pt_url_ver_estado('', 'AbCdEf123456') === '', 'código corto o sin sitio: sin url');
+$conSitio = array_merge($datos, ['sitio' => 'https://automatizatech.cl']);
+ok(at_pt_armar_render($plan, $conSitio, true)['estado_url'] === 'https://automatizatech.cl/ver-estado.php?id=Ab3dE5fG7hJ9' && $r['estado_url'] === '', 'el cuerpo del render lleva estado_url (vacío sin sitio)');
 
 fin();

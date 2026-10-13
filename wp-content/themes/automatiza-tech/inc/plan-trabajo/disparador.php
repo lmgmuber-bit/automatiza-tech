@@ -70,9 +70,10 @@ function at_pt_iniciar_borrador(int $plan_id, int $timeout = 15): string {
  * Pide la vista previa ($modo 'draft') o la versión final ('final') al flujo «Plan de trabajo · 3 Render»
  * (cuerpo {id, codigo, modo, aviso}; con $aviso, n8n le escribe a Luis cuando está lista). Si n8n no recibe el
  * aviso: en la final con el plan «aprobando», el plan pasa a «error»; si no, solo queda la nota y el
- * estado no cambia. Devuelve '' o el motivo.
+ * estado no cambia. Con $mantener (solo viaja si es true) n8n rehace la vista con el mismo contenido y las mismas
+ * fotos; si no recibe el aviso, solo queda la nota y el estado nunca cambia. Devuelve '' o el motivo.
  */
-function at_pt_pedir_render(int $plan_id, string $modo, bool $aviso): string {
+function at_pt_pedir_render(int $plan_id, string $modo, bool $aviso, bool $mantener = false): string {
 	if (!in_array($modo, ['draft', 'final'], true)) {
 		return 'Modo de render inválido.';
 	}
@@ -80,9 +81,17 @@ function at_pt_pedir_render(int $plan_id, string $modo, bool $aviso): string {
 	if (!$f) {
 		return 'El plan no existe.';
 	}
-	$motivo = at_pt_llamar_n8n(AT_N8N_PLAN_RENDER, ['id' => (int) $f->id, 'codigo' => (string) $f->codigo, 'modo' => $modo, 'aviso' => $aviso]);
+	$cuerpo = ['id' => (int) $f->id, 'codigo' => (string) $f->codigo, 'modo' => $modo, 'aviso' => $aviso];
+	if ($mantener) {
+		$cuerpo['mantener'] = true;
+	}
+	$motivo = at_pt_llamar_n8n(AT_N8N_PLAN_RENDER, $cuerpo);
 	if ($motivo === '') {
 		return '';
+	}
+	if ($mantener) {
+		at_pt_guardar($plan_id, ['nota' => 'No se pudo pedir la actualización de la vista: ' . $motivo]);
+		return $motivo;
 	}
 	$que = $modo === 'final' ? 'la versión final' : 'la vista previa';
 	$ahora = at_pt_plan($plan_id);

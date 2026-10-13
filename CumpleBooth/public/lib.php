@@ -1522,6 +1522,16 @@ function cb_resolve_party(string $slugRaw): array
         $effectivePlan
     );
 
+    // Despedida propia de una fiesta (p. ej. la cumpleañera brindando): archivo que vive solo en el servidor,
+    // `themes/<tema>/despedida-fiesta-<slug>.mp4`, nunca en el repositorio público (.gitignore). Si existe,
+    // reemplaza la despedida de la temática.
+    $propia = cb_themes_dir() . '/' . $themeSlug . '/despedida-fiesta-' . $slug . '.mp4';
+    if (cb_valid_public_slug($slug) && is_file($propia)) {
+        $videos = (array) ($themePayload['videos'] ?? []);
+        $videos['despedida'] = 'themes/' . $themeSlug . '/despedida-fiesta-' . $slug . '.mp4?v=' . cb_sello_archivo($propia);
+        $themePayload['videos'] = $videos;
+    }
+
     return ['ok' => true, 'party' => $partyPayload, 'theme' => $themePayload];
 }
 

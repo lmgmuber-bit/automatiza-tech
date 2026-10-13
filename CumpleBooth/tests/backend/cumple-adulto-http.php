@@ -168,6 +168,15 @@ a_check(($aso['personajes'][0]['nombre'] ?? '') === 'Dama de rojo' && ($aso['per
 a_check($api['theme']['musica'] === '', 'sin pista en disco no se publica música');
 a_check(is_array($api['theme']['grupal']) && str_ends_with($api['theme']['grupal']['fondo'], 'fondo-grupal.jpg'), 'la foto grupal tiene su fondo');
 
+// Despedida propia de la fiesta: solo si el archivo existe en el servidor (nunca en el repositorio).
+$despPropia = cb_themes_dir() . '/adulto-coqueteria-pop/despedida-fiesta-' . $slug . '.mp4';
+a_check(!str_contains((string) ($api['theme']['videos']['despedida'] ?? ''), 'despedida-fiesta-'), 'sin video propio, la fiesta no publica despedida propia');
+file_put_contents($despPropia, 'video de prueba');
+register_shutdown_function(static function () use ($despPropia): void { @unlink($despPropia); });
+$apiDesp = json_decode($luis->pedir('GET', '/api.php?p=' . rawurlencode($slug))['html'], true);
+a_check(str_contains((string) ($apiDesp['theme']['videos']['despedida'] ?? ''), 'themes/adulto-coqueteria-pop/despedida-fiesta-' . $slug . '.mp4?v='), 'con video propio, el kiosco recibe la despedida de la fiesta');
+@unlink($despPropia);
+
 // La invitación de un cumpleaños de adulto: tarjeta + video del evento (subidos y aprobados),
 // sin la voz de Alice (le habla a un niño) y con un formulario de asistencia para adultos.
 $tokenInv = cb_opaque_token(16);

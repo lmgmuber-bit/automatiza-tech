@@ -1,0 +1,28 @@
+Codex: toma el ticket AT-CUMPLECLICK-022, "La Mansión de la Noche de Brujas". Luis lo pidió el 26-09-2026: una
+experiencia 3D inmersiva y sorprendente para la temática de Halloween, programada como los juegos de Spidey y Aurora
+de Cristal, con el arte hecho con la API de Higgsfield. Tú la programas en su propio repositorio; después Claude la
+integra a la plataforma (menú de juegos, puntajes y modo feria). Tiene que estar probada en tablet antes del sábado
+31 de octubre.
+
+Tope de gasto en Higgsfield aprobado por Luis para esta experiencia: USD 1,50 (precio de lista).
+
+1. Lee completo, antes de escribir código:
+   C:\wamp64\www\automatiza-tech\.worktrees\modo-feria\CumpleBooth\docs\CODEX-HANDOFF-JUEGO-NOCHE-BRUJAS-2026-09-26.md
+   C:\wamp64\www\automatiza-tech\.worktrees\modo-feria\Docs\ORCHESTRATION\AT-CUMPLECLICK-022.yaml
+   y, como lecciones, CumpleBooth\docs\REVISION-JUEGOS-CODEX.md y CumpleBooth\docs\AURORA-INTEGRACION-CLAUDE.md.
+2. Referencia visual: public\themes\adulto-noche-brujas\ (fondos y colores) en ese mismo worktree. Referencia técnica:
+   C:\wamp64\www\cumpleclick-juego-aurora-cristal (solo lectura).
+3. Trabaja en un repositorio NUEVO y local: C:\wamp64\www\cumpleclick-juego-noche-brujas\ (git, rama main). No toques
+   automatiza-tech, tucumple-repo ni los otros juegos: la integración la hace Claude.
+4. Higgsfield: usa C:\wamp64\www\automatiza-tech\scratchpad\higgsfield-api\hf_api.py (lee su README; nunca abras ni
+   copies una clave). Solo imagen y video. Estima antes de cada gasto, no pases el tope, registra cada request_id en
+   assets\higgsfield\registro-generacion.json, sin texto dentro de las imágenes. Si una pieza pasa de USD 0,50 o el
+   total pasaría el tope, para y pregunta.
+   Voces: si suman, escribe assets\voces\guion.json (sección 4.2 del brief) y Claude las genera con ElevenLabs.
+5. Todo público: misterio y sorpresa, sin sangre, sin armas, sin sustos violentos. Partidas de 60 a 90 s. Español de
+   Chile. Sin franquicias.
+6. Trampas conocidas: .htaccess con AddType .mjs (si no, pantalla negra), nada de style inline (CSP), `nombre` es el
+   de la FIESTA y `jugador` el de quien juega, P10 >= 30 fps a 1200 x 2000. No hagas push ni despliegues.
+7. Entrega: commit en main del repo nuevo, README, registro de Higgsfield con el total, capturas o video a 1200 x 2000
+   de las cuatro escenas y del retrato final, fps medidos (P10 y promedio) y lista FTP hacia app/juego/mansion/
+   (.htaccess primero).

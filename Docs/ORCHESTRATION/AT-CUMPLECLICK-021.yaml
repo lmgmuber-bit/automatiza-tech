@@ -1,0 +1,87 @@
+ticket_id: AT-CUMPLECLICK-021
+title: "Modo feria del kiosco: selector de mundos (Niños / Adultos) y recorrido de feria"
+origin: direct_luis
+portfolio: "AT"
+priority: P1
+status: READY
+
+governance:
+  professional_standard: "Docs/ENGINEERING_STANDARDS/PROFESSIONAL_ENGINEERING_STANDARD.md"
+  quality_gate: C2
+
+objective: >
+  Que el kiosco de CumpleClick funcione en ferias: un selector (app/feria.html?f=<slug>) con pantalla de espera en
+  bucle, elección Niños / Adultos, grilla de mundos habilitados y autorización del adulto responsable; y un recorrido
+  de feria en el kiosco (sin lista de invitados, nombre opcional, diploma "en {feria} · {fecha}" para niños, adultos sin
+  diploma y sin ruleta cuando la temática no tiene personajes, franja de recuerdo con el número F-### en la foto y vuelta
+  automática al selector). Una fiesta sin feria no cambia en nada.
+owner: codex
+reviewer: claude
+active_orchestrator: claude
+
+ownership:
+  current_owner: codex
+  previous_owners: []
+  takeover_allowed: true
+  takeover_count: 0
+  takeover_reason: null
+  urgency: high
+  resolution_status: pending
+  reassignment_authorized_by: "Luis Miguel (26-09-2026: 'puedes asignar a Codex, dividirse el trabajo')"
+  handoff_ref: "CumpleBooth/docs/CODEX-HANDOFF-MODO-FERIA-2026-09-26.md"
+  handoff_quality: COMPLETE
+
+scope:
+  allowed_files:
+    - "CumpleBooth/public/feria.html"
+    - "CumpleBooth/src/feria/**"
+    - "CumpleBooth/src/App.jsx"
+    - "CumpleBooth/src/**/*.js"
+    - "CumpleBooth/src/**/*.css"
+    - "CumpleBooth/vite.config.*"
+    - "CumpleBooth/tests/frontend/feria*.test.mjs"
+    - "CumpleBooth/docs/FTP-MANIFEST.md (solo anexar al final)"
+  forbidden_files:
+    - "CumpleBooth/public/*.php"
+    - "CumpleBooth/public/admin/**"
+    - "CumpleBooth/database/**"
+    - "CumpleBooth/scripts/**"
+    - "CLAUDE.md"
+    - "CumpleBooth/CLAUDE.md"
+    - "AGENTS.md"
+  locked_files: []
+  branch: "codex/modo-feria-kiosco"
+  base_commit: "4cdc795"
+  depends_on:
+    - "AT-CUMPLECLICK-020 (backend: api.php, feria-api.php, upload.php). Trabajar en paralelo contra el contrato de la sección 4 del handoff, con datos de ejemplo."
+
+routing:
+  complexity: C2
+  risk: medium
+  uncertainty: low
+  reversibility: easy
+  selected_profile: standard_executor
+  selected_model: "codex (runtime)"
+  rationale: "Frontend React del kiosco con contrato de API fijo; el riesgo es romper el recorrido de las fiestas normales, cubierto con prueba de regresión."
+  independent_review: true
+  human_gate: true
+
+acceptance:
+  criteria:
+    - "feria.html?f=<slug>: espera con video en bucle -> Niños/Adultos -> mundo -> autorización (solo niños) -> kiosco con tema, modo y volver; vuelve a espera tras 45 s sin toques."
+    - "Con feria: '¿Cómo te llamas?' en vez de la lista de invitados (opcional, máx. 20 caracteres)."
+    - "Niños: diploma 'en {feria.nombre} · {fecha_texto}'. Adultos: sin diploma y sin textos infantiles."
+    - "Temática sin personajes (personajes vacío en themes.json): sin ruleta, directo a la foto en el marco."
+    - "Franja de recuerdo (feria.recuerdo + organizador_ig + F-###) en la foto y en el diploma de niños, sin tapar la cara; número reservado con POST feria-api.php y enviado a upload.php como feria_reserva."
+    - "Pantalla del QR con 'Tu foto: F-###'; vuelta automática al selector a los 60 s."
+    - "Una fiesta sin feria se ve y funciona exactamente igual (prueba de regresión)."
+    - "Español de Chile, botones de 44 px o más, prefers-reduced-motion respetado, sin nombres de franquicias en textos nuevos."
+  tests:
+    - "npm test (incluye tests/frontend/feria*.test.mjs nuevos)"
+    - "npm run build limpio"
+    - "Capturas a 1200 x 2000 (vertical, Galaxy Tab A7) del selector y del recorrido niños y adultos"
+
+delivery:
+  pr: "Un PR contra main desde codex/modo-feria-kiosco, con capturas y lista FTP (ruta local -> destino en PROD, OBLIGATORIO/OPCIONAL, orden)."
+  deploy: "No despliega Codex. Claude integra con el ticket 020, despliega por SSH con el go de Luis y mergea."
+  credits: "Ningún gasto de créditos."

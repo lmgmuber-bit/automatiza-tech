@@ -128,7 +128,10 @@ $r = $luis->pedir('POST', '/admin/index.php', $ficha(['event_type' => 'child_bir
 a_check($r['estado'] === 200 && str_contains($r['html'], 'Esa temática es para adultos'), 'temática adulta en fiesta infantil: rechazada con aviso');
 $r = $luis->pedir('POST', '/admin/index.php', $ficha(['event_type' => 'adult_birthday', 'tema' => 'spidey']));
 a_check($r['estado'] === 200 && str_contains($r['html'], 'necesita una temática para adultos'), 'cumpleaños de adulto con temática infantil: rechazado con aviso');
-a_check(count(cb_load_parties()['parties']) === 0, 'ninguno de los dos cruces se guardó');
+// Las temáticas de adultos de la feria no traen la cabina de cumpleaños: no sirven para un cumpleaños de adulto.
+$r = $luis->pedir('POST', '/admin/index.php', $ficha(['event_type' => 'adult_birthday', 'tema' => 'adulto-glam-dorado']));
+a_check($r['estado'] === 200 && str_contains($r['html'], 'solo para la feria'), 'cumpleaños de adulto con temática de la feria: rechazado con aviso');
+a_check(count(cb_load_parties()['parties']) === 0, 'ninguno de los cruces se guardó');
 
 // CX-17: una edad fuera del rango de la modalidad se rechaza con mensaje y se conserva lo
 // escrito. Antes el servidor la corregía en silencio (un adulto de 15 quedaba en 18).

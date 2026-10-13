@@ -1,6 +1,7 @@
 <?php
 /** Endpoint de fotos: PNG real, cuota por fiesta, rate limit persistente y storage privado. */
 require __DIR__ . '/lib.php';
+require __DIR__ . '/lib.ferias.php';
 
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store');
@@ -43,7 +44,12 @@ if (empty($party['activa'])) {
     cb_upload_error(403, 'party_inactive');
 }
 
-$limit = cb_rate_limit('photo-upload:' . $partySlug, cb_request_identity(), 30, 600, 600);
+// Modo feria (2026-09-26): tope de fotos propio (1.000 por defecto) y más subidas por IP, porque
+// las tablets del stand salen todas por la misma red. Sin feria, todo igual que siempre.
+$feria = cb_feria_de_fiesta_segura($partySlug);
+$maxFotos = $feria !== null ? $feria['max_fotos'] : 200;
+
+$limit = cb_rate_limit('photo-upload:' . $partySlug, cb_request_identity(), $feria !== null ? 90 : 30, 600, 600);
 if (!$limit['allowed']) {
     header('Retry-After: ' . max(1, (int) $limit['retry_after']));
     cb_upload_error(429, 'rate_limited', ['retry_after' => (int) $limit['retry_after']]);
@@ -107,8 +113,8 @@ if ($width < 1 || $height < 1 || $width > 4096 || $height > 4096) {
 }
 
 $usage = cb_photo_usage($partySlug);
-if ($usage['count'] >= 200 || $usage['bytes'] + $bytes > 1024 * 1024 * 1024) {
-    cb_upload_error(507, 'party_quota_exceeded', ['max_photos' => 200, 'max_bytes' => 1073741824]);
+if ($usage['count'] >= $maxFotos || $usage['bytes'] + $bytes > 1024 * 1024 * 1024) {
+    cb_upload_error(507, 'party_quota_exceeded', ['max_photos' => $maxFotos, 'max_bytes' => 1073741824]);
 }
 
 $token = bin2hex(random_bytes(16)); // 128 bits, opaco y no enumerable.
@@ -139,13 +145,18 @@ $record = [
     'byte_size' => $bytes, 'width' => $width, 'height' => $height,
     'sha256' => hash('sha256', $bin), 'created_at' => gmdate('Y-m-d H:i:s'),
 ];
-$recordResult = cb_record_photo_with_quota($partySlug, $record);
+$recordResult = cb_record_photo_with_quota($partySlug, $record, $maxFotos);
 if ($recordResult !== 'ok') {
     @unlink($path);
     if ($recordResult === 'quota') {
-        cb_upload_error(507, 'party_quota_exceeded', ['max_photos' => 200, 'max_bytes' => 1073741824]);
+        cb_upload_error(507, 'party_quota_exceeded', ['max_photos' => $maxFotos, 'max_bytes' => 1073741824]);
     }
     cb_upload_error(500, 'metadata_failed');
+}
+
+// La foto ya está guardada: ligarla a su número F-### es un extra y nunca la hace fallar.
+if ($feria !== null && isset($data['feria_reserva'])) {
+    cb_feria_ligar_foto($feria, (string) $data['feria_reserva'], $token);
 }
 
 $url = cb_public_base_url() . '/ver.php?t=' . rawurlencode($token);

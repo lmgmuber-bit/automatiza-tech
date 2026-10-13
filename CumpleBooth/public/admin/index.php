@@ -377,6 +377,9 @@ if ($loggedIn && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '
                 $errs[] = $eventType === 'adult_birthday'
                     ? 'Un cumpleaños de adulto necesita una temática para adultos.'
                     : 'Esa temática es para adultos: elige la modalidad «Cumpleaños de adulto».';
+            } elseif ($eventType === 'adult_birthday' && (string) ($themes[$tema]['modalidad'] ?? '') !== 'adult_birthday') {
+                // Las temáticas de adultos de la feria no traen la cabina de cumpleaños (cabinaAdulto).
+                $errs[] = 'Esa temática de adultos es solo para la feria: elige una temática de cumpleaños de adulto.';
             }
             if ($fecha !== '' && !cb_fecha_valida($fecha)) {
                 $errs[] = 'La fecha debe ser un día real con formato AAAA-MM-DD.';

@@ -1,0 +1,79 @@
+ticket_id: AT-CUMPLECLICK-025
+title: "Temáticas infantiles Noche de Brujas (brujitas) y Navidad del Viejito Pascuero (navidad), completas y con marco grande"
+origin: direct_luis
+portfolio: "AT"
+priority: P1
+status: READY
+
+governance:
+  professional_standard: "Docs/ENGINEERING_STANDARDS/PROFESSIONAL_ENGINEERING_STANDARD.md"
+  quality_gate: C2
+
+objective: >
+  Dos temáticas infantiles completas según la Tabla A de CumpleBooth/docs/TEMATICA-COMPLETA.md (banner, sala, música,
+  seis personajes con foto, recorte, rompecabezas y saludo en video, intro, despedida, fondo de ruleta), más Asómate y
+  modo Adultos (foto con la escena), con personajes propios sin franquicias y con marco grande desde el primer día
+  (foto ≥ 60 % del ancho, referencia fiestas-patrias). Para vender Halloween antes del 16-oct y Navidad antes del
+  20-nov. Costo estimado ≈ USD 7 de lista por temática (sección 5 del plan); nada se genera sin el OK de Luis.
+owner: claude
+reviewer: luis
+active_orchestrator: claude
+
+ownership:
+  current_owner: claude
+  previous_owners: []
+  takeover_allowed: false
+  takeover_count: 0
+  takeover_reason: null
+  urgency: high
+  resolution_status: pending
+  reassignment_authorized_by: null
+  handoff_ref: "CumpleBooth/docs/PLAN-COLEGIOS-Y-JARDINES-2026-09-29.md"
+  handoff_quality: COMPLETE
+
+scope:
+  allowed_files:
+    - "CumpleBooth/public/themes/brujitas/**"
+    - "CumpleBooth/public/themes/navidad/**"
+    - "CumpleBooth/public/data/themes.json"
+    - "CumpleBooth/design/generadores/brujitas/**"
+    - "CumpleBooth/design/generadores/navidad/**"
+    - "CumpleBooth/tests/frontend/themeFlow.test.mjs"
+    - "CumpleBooth/docs/**"
+  forbidden_files:
+    - "CumpleBooth/public/themes/adulto-*/**"
+    - "CumpleBooth/public/themes/fiestas-patrias/**"
+  locked_files: []
+  branch: "claude/tematicas-brujitas-navidad"
+  base_commit: "0357996"
+  depends_on: []
+  notes: >
+    Gasto de créditos solo con el OK de Luis, pieza por pieza, por la API REST de Higgsfield (nunca MCP). Personajes
+    propuestos: brujitas = calabaza sonriente, fantasmita amistoso, bruja buena, gato negro, murcielaguito, momia
+    despistada; navidad = Viejito Pascuero, Señora Pascuera, reno de nariz roja, duende ayudante, muñeco de nieve,
+    pingüino. Voces de Alice verificadas con ebur128 y scribe_v1. Música la genera Luis en Gemini (Lyria 3).
+
+routing:
+  complexity: C2
+  risk: low
+  uncertainty: medium
+  reversibility: easy
+  selected_profile: orchestrator
+  selected_model: "claude"
+  rationale: "Producción de arte con gasto de créditos y calibración de frameBox contra la geometría del kiosco: lo hace quien conoce las trampas (CDN, medidas en themes.json, inset 8,5 %)."
+  independent_review: false
+  human_gate: true
+
+acceptance:
+  criteria:
+    - "brujitas y navidad cumplen la Tabla A (prueba themeFlow 'cumple la tabla A de temática completa' en verde para las dos)."
+    - "frameBox con foto ≥ 650 px sobre 1080 (≥ 60 % del ancho) en las dos; la prueba lo exige para temáticas con marcoGrande: true."
+    - "Asómate con seis huecos, borde 100 % dentro de la figura (método de asomate_huasos.py)."
+    - "Modo Adultos: fondo-escena.jpg y modoFoto fondo; en navidad, 'Foto con el Viejito Pascuero' para el actor del colegio."
+    - "Intro y despedida con voz de Alice a nivel de las demás (ebur128) y transcripción correcta (scribe_v1)."
+    - "Registro de cada request_id y del costo real en Documents/CumpleClick/tematicas-2026-10/ (fuera del repo); costo total presentado a Luis antes y después."
+    - "Ningún nombre de franquicia ni personaje con dueño en imágenes, textos, voces ni themes.json."
+  tests:
+    - "tests/frontend/themeFlow.test.mjs"
+    - "tests/frontend/asomateGuia.test.mjs"
+    - "Prueba en la tablet física con un niño (con permiso) antes del primer colegio"

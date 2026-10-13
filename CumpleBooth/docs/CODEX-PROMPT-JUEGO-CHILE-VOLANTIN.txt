@@ -1,0 +1,25 @@
+Codex: toma el ticket AT-CUMPLECLICK-023, "Chile en Volantín". Luis lo pidió el 26-09-2026: una experiencia 3D
+inmersiva y bien chilena de Fiestas Patrias, como los juegos de Spidey y Aurora de Cristal, con el arte hecho con la
+API de Higgsfield.
+
+Tope de gasto en Higgsfield aprobado por Luis para esta experiencia: USD 1,50 (precio de lista).
+
+1. Lee completo, antes de escribir código:
+   C:\wamp64\www\automatiza-tech\.worktrees\modo-feria\CumpleBooth\docs\CODEX-HANDOFF-JUEGO-CHILE-VOLANTIN-2026-09-26.md
+   C:\wamp64\www\automatiza-tech\.worktrees\modo-feria\Docs\ORCHESTRATION\AT-CUMPLECLICK-023.yaml
+   y las secciones 3 y 4.1 de CODEX-HANDOFF-JUEGO-NOCHE-BRUJAS-2026-09-26.md (misma carpeta): reglas técnicas y de
+   Higgsfield. Como lecciones: CumpleBooth\docs\REVISION-JUEGOS-CODEX.md y AURORA-INTEGRACION-CLAUDE.md.
+2. Referencia técnica: C:\wamp64\www\cumpleclick-juego-aurora-cristal (solo lectura).
+3. Trabaja en un repositorio NUEVO y local: C:\wamp64\www\cumpleclick-juego-chile-volantin\ (git, rama main). No toques
+   automatiza-tech, tucumple-repo ni los otros juegos: la integración la hace Claude.
+4. Higgsfield: usa C:\wamp64\www\automatiza-tech\scratchpad\higgsfield-api\hf_api.py (lee su README; nunca abras ni
+   copies una clave). Solo imagen y video. Estima antes de cada gasto, no pases el tope, registra cada request_id en
+   assets\higgsfield\registro-generacion.json, sin texto dentro de las imágenes. Si una pieza pasa de USD 0,50 o el
+   total pasaría el tope, para y pregunta.
+   Voces: si suman, escribe assets\voces\guion.json (sección 4.2 del brief) y Claude las genera con ElevenLabs.
+5. La bandera de Chile se dibuja en código, exacta y con respeto; nunca la pidas a la IA. Nada de hilo curado ni marcas.
+   Todo público, español de Chile, partidas de 60 a 90 s.
+6. Trampas conocidas: .htaccess con AddType .mjs, nada de style inline (CSP), `nombre` es el de la FIESTA y `jugador`
+   el de quien juega, P10 >= 30 fps a 1200 x 2000. No hagas push ni despliegues.
+7. Entrega: commit en main del repo nuevo, README, registro de Higgsfield con el total, capturas o video a 1200 x 2000
+   de las cuatro escenas y del cierre, fps medidos (P10 y promedio) y lista FTP hacia app/juego/volantin/.

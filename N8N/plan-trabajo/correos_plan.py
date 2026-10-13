@@ -130,14 +130,18 @@ const g = $('Guardar vista').first().json;
 const guardado = g.statusCode === 200;
 const ok = v.ok === true;
 const final = v.modo === 'final';
+// «Actualizar la vista del plan» (mantener): el plan ya estaba enviado y sigue como estaba; WordPress solo cambia los
+// enlaces de la vista. Sin correo si salió bien; si no, avisa sin hablar de «error» ni de «aprobando».
+const mantener = v.mantener === true;
 // Una versión final que salió bien deja el plan «listo» solo si seguía «aprobando»: si Luis lo destrabó mientras
 // tanto, WordPress guarda los enlaces pero el plan sigue en «error». Sin «estado» en la respuesta, se asume «listo».
 const estadoWp = g.body && typeof g.body.estado === 'string' ? g.body.estado : '';
-const quedoListo = !final || estadoWp === '' || estadoWp === 'listo';
+const quedoListo = !final || mantener || estadoWp === '' || estadoWp === 'listo';
 const bien = ok && guardado && quedoListo;
-const enviar = v.aviso === true || final || !ok || !guardado;
+const enviar = mantener ? (!ok || !guardado) : (v.aviso === true || final || !ok || !guardado);
 const panel = urlPanel(v.crm, v.id);
 const que = !guardado ? 'el resultado del plan no quedó guardado en WordPress'
+  : mantener ? (ok ? 'vista del plan actualizada' : 'la vista del plan no se pudo actualizar')
   : final ? (!ok ? 'la versión final del plan tiene problemas'
     : (quedoListo ? 'plan de trabajo listo' : 'la versión final salió, pero el plan quedó en «' + estadoWp + '»'))
   : (ok ? 'borrador del plan listo para revisar' : 'la vista previa del plan no se pudo generar');
@@ -147,7 +151,7 @@ const lista = (l, pre) => (Array.isArray(l) ? l : []).map((t) => li(pre + esc(t)
     ul = '<ul style="margin:0;padding-left:18px;">'
     no_guardado = caja('<strong>No se pudo guardar el resultado en WordPress</strong> '
                        '(${esc(g.statusCode ? "HTTP " + g.statusCode : "sin respuesta")}).'
-                       '${final ? " El plan puede haber quedado en «aprobando»: revísalo en el panel y usa «Destrabar»." : ""}',
+                       '${mantener ? " La vista del plan puede no haberse actualizado: revísala en el panel." : (final ? " El plan puede haber quedado en «aprobando»: revísalo en el panel y usa «Destrabar»." : "")}',
                        'error')
     no_quedo_listo = caja('La versión final salió bien, pero WordPress dejó el plan en «${esc(estadoWp)}» (por ejemplo, si '
                           'lo destrabaste mientras se generaba): no quedó «listo». Revísalo en el panel: puedes volver al '
@@ -158,8 +162,10 @@ const lista = (l, pre) => (Array.isArray(l) ? l : []).map((t) => li(pre + esc(t)
                                                   'envió al cliente.')
                 + "` : `" + no_quedo_listo + "`)}")
     final_mal = (caja(ul + '${lista(v.problemas, "")}${lista(v.avisos, "⚠️ ")}</ul>', 'error')
-                 + parrafo('El plan quedó en <strong>error</strong>. Desde el panel puedes volver al borrador o aprobarlo de '
-                           'nuevo: las fotos que ya salieron no se vuelven a pagar.'))
+                 + "${mantener ? `" + parrafo('El plan sigue como estaba. Puedes intentar la actualización de la vista otra vez '
+                                              'desde el panel.')
+                 + "` : `" + parrafo('El plan quedó en <strong>error</strong>. Desde el panel puedes volver al borrador o '
+                                     'aprobarlo de nuevo: las fotos que ya salieron no se vuelven a pagar.') + "`}")
     borrador_ok = (parrafo('${guardado ? "La vista previa del plan (sin fotos) quedó lista." : "La vista previa del plan '
                            '(sin fotos) se generó, pero el panel no la tiene: «Guardar y recalcular» la vuelve a pedir."} '
                            'En la pestaña «Plan de trabajo» de la ficha del cliente ves las actividades, los días y las '

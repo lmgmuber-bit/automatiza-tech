@@ -283,6 +283,25 @@ function reutilizarFotosPlan(render, manifest, base, uid) {
   return { render: r, reutilizadas, sin_foto };
 }
 
+// «Actualizar la vista del plan» (mantener): las fotos que el plan ya tiene guardadas en el renderer
+// (img/manifest.json del propio plan) pasan como URL absolutas, para que el render no pida ni cobre ninguna.
+function fotosPropiasDelPlan(manifest, base, uid) {
+  let m = manifest;
+  if (typeof m === 'string') { try { m = JSON.parse(m); } catch (e) { m = null; } }
+  const images = {};
+  const slides = [];
+  if (!esObjetoPlano(m) || !/^[A-Za-z0-9_-]{6,64}$/.test(String(uid || '')) || !/^https?:\/\/[A-Za-z0-9.-]+(:\d+)?$/.test(String(base || ''))) {
+    return { images, slides };
+  }
+  for (const [slide, e] of Object.entries(m)) {
+    const file = esObjetoPlano(e) && typeof e.file === 'string' && /^[A-Za-z0-9_-]+\.[A-Za-z0-9]{2,5}$/.test(e.file) ? e.file : '';
+    if (!file || !/^[a-z0-9_]{2,40}$/.test(slide)) continue;
+    images[slide] = base + '/p/' + uid + '/img/' + file;
+    slides.push(slide);
+  }
+  return { images, slides };
+}
+
 // Decisión D10: con el plan en uno de estos estados, una vista previa no se dibuja (pisaría la versión final en
 // /p/<codigo>/). WordPress tampoco guarda sus enlaces (POST /vista, Task 7).
 const ESTADOS_SIN_VISTA_PREVIA = ['aprobando', 'listo', 'enviado'];

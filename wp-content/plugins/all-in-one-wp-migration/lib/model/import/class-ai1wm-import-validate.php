@@ -94,6 +94,12 @@ class Ai1wm_Import_Validate {
 			);
 		}
 
+		// Set archive CRC value
+		$params['archive_crc_value'] = $archive->get_archive_crc_value();
+
+		// Set archive CRC size
+		$params['archive_crc_size'] = $archive->get_archive_crc_size();
+
 		// Close the archive file
 		$archive->close();
 

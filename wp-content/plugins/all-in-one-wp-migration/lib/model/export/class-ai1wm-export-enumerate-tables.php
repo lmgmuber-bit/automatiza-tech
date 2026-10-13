@@ -48,7 +48,7 @@ class Ai1wm_Export_Enumerate_Tables {
 		Ai1wm_Status::info( __( 'Gathering database tables...', 'all-in-one-wp-migration' ) );
 
 		// Get database client
-		$db_client = Ai1wm_Database_Utility::create_client();
+		$db_client = Ai1wm_Database_Utility::get_client();
 
 		// Include table prefixes
 		if ( ai1wm_table_prefix() ) {

@@ -35,6 +35,7 @@ function at_pa_render_ficha($p, string $message): void {
       </div>
       <hr class="wp-header-end">
       <?php echo $message; ?>
+      <?php if (function_exists('at_cc_aviso_panel')) { echo at_cc_aviso_panel((int) $p->id); } ?>
 
       <form method="POST" enctype="multipart/form-data" class="at-pa-form" data-tab-inicial="<?php echo esc_attr($tab); ?>">
         <button type="submit" style="display:none" tabindex="-1" aria-hidden="true"></button>
@@ -169,8 +170,8 @@ function at_pa_render_ficha($p, string $message): void {
           <p class="at-pa-botones">
             <button type="submit" name="at_v3_accion" value="cambios" class="button">✏️ Pedir cambios (sin costo)</button>
             <button type="submit" name="at_v3_accion" value="aprobar" class="button button-primary"
-              onclick="return confirm('Se generarán <?php echo (int) $costo['fotos']; ?> fotos (≈ US$<?php echo esc_js(number_format($costo['usd_lista'], 4, ',', '.')); ?> de lista) y la versión final. ¿Aprobar?');">
-              ✅ Aprobar y generar versión final (<?php echo (int) $costo['fotos']; ?> fotos ≈ US$<?php echo esc_html(number_format($costo['usd_lista'], 4, ',', '.')); ?>)</button>
+              onclick="return confirm('Se generarán <?php echo (int) $costo['fotos']; ?> fotos, se revisará que no tengan texto (≈ US$<?php echo esc_js(number_format($costo['usd_lista'], 4, ',', '.')); ?> de lista; hasta US$<?php echo esc_js(number_format($costo['usd_max'], 4, ',', '.')); ?> si hay que rehacerlas) y la versión final. ¿Aprobar?');">
+              ✅ Aprobar y generar versión final (<?php echo (int) $costo['fotos']; ?> fotos + revisión ≈ US$<?php echo esc_html(number_format($costo['usd_lista'], 4, ',', '.')); ?>)</button>
             <?php if (in_array($p->status, ['ajustando', 'generando'], true)): ?>
             <button type="submit" name="at_v3_accion" value="destrabar" class="button"
               onclick="return confirm('¿Destrabar esta propuesta? Va a quedar en estado «error» para poder reintentar. No se llama a n8n ni se tocan precios.');">
@@ -221,23 +222,49 @@ function at_pa_render_ficha($p, string $message): void {
           $correo = at_pa_correo_textos(is_array($payload) ? $payload : null, (string) $p->company_name);
         ?>
         <section class="at-pa-panel" data-panel="envio" role="tabpanel">
+          <?php if (function_exists('at_cc_render_panel_respuesta')) { at_cc_render_panel_respuesta($p); } ?>
           <div class="checkbox-section">
             <label>
               <?php
               $puede = at_propuesta_puede_enviarse($p->flujo ?? null, (string) $p->status);
               $es_v3_checkbox = ($p->flujo ?? '') === 'v3';
-              $send_email_attr = !$puede ? 'disabled' : ($es_v3_checkbox ? '' : 'checked');
+              // Ronda 1 de revisión (26-sep), hallazgo 4 (T11): con respuesta del cliente ('aceptada',
+              // 'evaluando' o 'rechazada') Guardar ya no reenvía nada (acciones.php, guarda de la
+              // Task 9), pero at_propuesta_puede_enviarse() solo bloquea esto para flujo v3 fuera de
+              // 'lista'/'sent': en una propuesta clásica (flujo distinto de v3) las casillas seguían
+              // marcadas y habilitadas, dando a entender que sí se iba a reenviar. Se desmarcan y
+              // deshabilitan aquí para los tres estados, sin tocar la guarda real ni
+              // at_propuesta_puede_enviarse().
+              $estados_con_respuesta_checkbox = ['aceptada', 'evaluando', 'rechazada'];
+              $tiene_respuesta_checkbox = in_array((string) $p->status, $estados_con_respuesta_checkbox, true);
+              // Task 14: una archivada tampoco se reenvía (acciones.php la protege); se desarchiva primero.
+              $archivada_checkbox = (string) $p->status === 'archivada';
+              $sin_envio_checkbox = $tiene_respuesta_checkbox || $archivada_checkbox;
+              $send_email_attr = ($sin_envio_checkbox || !$puede) ? 'disabled' : ($es_v3_checkbox ? '' : 'checked');
+              $whatsapp_marcado = !$sin_envio_checkbox && trim((string) $p->phone) !== '';
+              $whatsapp_deshabilitado = $sin_envio_checkbox || trim((string) $p->phone) === '';
               ?>
               <input type="checkbox" name="send_email" value="1" id="send_email" <?php echo $send_email_attr; ?>>
               <span>📧 Enviar correo con la propuesta al cliente</span>
             </label>
             <p>Si desmarcas esta opción, solo se guardarán los datos sin enviar el correo.</p>
+            <label style="display:block;margin-top:8px">
+              <input type="checkbox" name="at_cc_whatsapp" value="1" <?php checked($whatsapp_marcado); ?> <?php disabled($whatsapp_deshabilitado); ?>>
+              <span>💬 También por WhatsApp (con el enlace para aceptar)</span>
+            </label>
+            <p class="description">El correo lleva el botón «Aceptar la propuesta». El WhatsApp sale desde tu teléfono hasta que Meta apruebe la plantilla con botones.</p>
             <?php if (at_pa_url_pdf_renderer((string) $p->gamma_iframe_url, (string) $p->pdf_path) !== ''): ?>
             <p class="description">Se adjunta el PDF que subas en «Cliente y enlaces»; si no subiste uno, se adjunta el de la presentación (hasta 15 MB). Si pesa más, el correo lleva solo los botones.</p>
             <?php else: ?>
             <p class="description">Se adjunta el PDF que subas en «Cliente y enlaces» o el que ya esté guardado; sin PDF, el correo lleva solo los botones.</p>
             <?php endif; ?>
-            <?php if (!$puede): ?><p class="at-pa-aviso">Se habilita cuando la propuesta esté <strong>lista</strong>.</p><?php endif; ?>
+            <?php if ($archivada_checkbox): ?>
+            <p class="at-pa-aviso">Esta propuesta está archivada: desarchívala para volver a enviarla.</p>
+            <?php elseif ($tiene_respuesta_checkbox): ?>
+            <p class="at-pa-aviso">Esta propuesta ya tiene respuesta del cliente: para volver a escribirle usa «Pedir respuesta».</p>
+            <?php elseif (!$puede): ?>
+            <p class="at-pa-aviso">Se habilita cuando la propuesta esté <strong>lista</strong>.</p>
+            <?php endif; ?>
           </div>
 
           <div class="email-section">
@@ -282,6 +309,7 @@ function at_pa_render_ficha($p, string $message): void {
           <button type="submit" class="button button-primary button-large">💾 Guardar</button>
         </div>
       </form>
+      <?php if (function_exists('at_cc_render_formularios_respuesta')) { at_cc_render_formularios_respuesta($p); } ?>
     </div>
     <?php
 }

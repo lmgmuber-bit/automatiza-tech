@@ -1,0 +1,81 @@
+/* Plan de trabajo (inc/plan-trabajo/panel.php): pestaña «🗓️ Plan de trabajo» de la ficha del cliente en el CRM.
+   Se encola solo en admin.php?page=automatiza-crm-ficha. Mismos colores que el módulo de propuestas. */
+.at-pt { --at-navy: #0d1b2a; --at-teal: #00d9c0; --at-borde: #e2e8f0; --at-suave: #f8fafc; --at-gris: #64748b; }
+
+/* La barra de pestañas de la ficha esconde lo que no cabe (overflow: hidden, sin salto de línea): con la quinta
+   pestaña, en escritorio pasa a la línea siguiente en vez de cortarse. Bajo 768 px el CRM ya la hace desplazable. */
+@media screen and (min-width: 768px) {
+  .ficha-col > .ficha-tabs { flex-wrap: wrap; }
+}
+/* En celular esa barra es desplazable (overflow-x: auto), pero la columna de la grilla toma el ancho mínimo de su
+   contenido y estira la página entera (medido a 390 px: 543 px con 4 pestañas, 691 px con 5). Con min-width: 0 la
+   columna del plan cabe en la pantalla y la barra se desplaza. */
+.ficha-grid > .ficha-col:has(> #tab-plan) { min-width: 0; }
+
+.at-pt h3 { margin: 0 0 8px; }
+.at-pt-sub { margin: 0 0 12px; color: var(--at-gris); overflow-wrap: anywhere; }
+.at-pt-caja .at-pt-sub { margin: 6px 0 0; font-size: 12px; }
+.at-pt .notice.inline { margin: 8px 0 12px; }
+.at-pt .notice.inline form { margin: 0 0 8px; }
+
+.at-pt-estado { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; line-height: 1.6; background: #e2e8f0; color: #334155; white-space: nowrap; }
+.at-pt-estado--generando, .at-pt-estado--cambios, .at-pt-estado--aprobando { background: #dbeafe; color: #1e40af; }
+.at-pt-estado--borrador { background: #fef3c7; color: #92400e; }
+.at-pt-estado--listo { background: #ccfbf1; color: #115e59; }
+.at-pt-estado--enviado { background: #dcfce7; color: #166534; }
+.at-pt-estado--error { background: #fee2e2; color: #991b1b; }
+
+.at-pt-selector { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 12px; }
+.at-pt-selector .button { white-space: normal; height: auto; line-height: 1.4; padding-top: 4px; padding-bottom: 4px; }
+
+.at-pt-resumen { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; margin: 0 0 12px; }
+.at-pt-caja { border: 1px solid var(--at-borde); border-radius: 6px; padding: 10px 12px; background: var(--at-suave); min-width: 0; overflow-wrap: anywhere; }
+.at-pt-caja h4 { margin: 0 0 6px; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--at-gris); }
+.at-pt-caja p { margin: 0 0 4px; }
+
+.at-pt fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
+.at-pt fieldset[disabled] { opacity: .65; }
+.at-pt-campo { display: block; margin: 0 0 10px; font-weight: 600; font-size: 12px; color: #334155; }
+.at-pt-campo input[type="text"], .at-pt-campo input[type="date"], .at-pt-campo input[type="number"], .at-pt-campo textarea {
+  display: block; width: 100%; max-width: 100%; box-sizing: border-box; margin-top: 3px; font-weight: 400; font-size: 14px;
+}
+.at-pt-campo input[type="date"] { max-width: 220px; }
+.at-pt-campo input[type="number"] { max-width: 120px; }
+
+.at-pt-fase { border-top: 3px solid var(--at-teal); padding: 12px 0 4px; margin: 16px 0 0; }
+.at-pt-fase > h4 { margin: 0 0 8px; font-size: 15px; color: var(--at-navy); }
+.at-pt-bloque { border: 1px solid var(--at-borde); border-radius: 6px; padding: 10px; margin: 0 0 10px; background: #fff; }
+.at-pt-bloque-cab { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0 10px; }
+.at-pt-bloque-pie { display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: center; margin: 0 0 4px; }
+.at-pt-bloque-pie .at-pt-quitar-bloque { margin-left: auto; }
+
+.at-pt-act { border-top: 1px dashed var(--at-borde); padding: 8px 0; }
+.at-pt-act-l1 { display: flex; gap: 6px; align-items: center; }
+.at-pt-act-l1 .at-pt-a-nombre { flex: 1 1 auto; min-width: 0; font-size: 14px; }
+.at-pt-act-l2 { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; margin-top: 6px; font-size: 12px; color: #334155; }
+.at-pt-act-l2 label { display: inline-flex; align-items: center; gap: 4px; }
+.at-pt-act-l2 select { max-width: 150px; }
+.at-pt-act-l3 { margin-top: 6px; }
+.at-pt-act-l3 input { width: 100%; max-width: 100%; box-sizing: border-box; font-size: 12px; }
+.at-pt-a-dias { width: 4.5em; }
+.at-pt-check { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; }
+.at-pt-origen { display: inline-block; padding: 0 8px; border-radius: 999px; font-size: 11px; font-weight: 600; line-height: 1.8; white-space: nowrap; }
+.at-pt-origen--tabla { background: #f1f5f9; color: #475569; }
+.at-pt-origen--ia { background: #fef3c7; color: #92400e; }
+.at-pt-origen--luis { background: #dbeafe; color: #1e40af; }
+.at-pt-fechas { color: var(--at-gris); white-space: nowrap; font-size: 12px; }
+.at-pt-quitar { background: none; border: 0; color: #b32d2e; cursor: pointer; padding: 4px 6px; font-size: 12px; line-height: 1; min-width: 32px; min-height: 32px; }
+.at-pt-quitar:hover, .at-pt-quitar:focus-visible { text-decoration: underline; }
+.at-pt-quitar:disabled { color: #a7aaad; cursor: default; }
+
+.at-pt-textos { margin-top: 16px; }
+.at-pt-botones { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 4px; }
+.at-pt-botones .button { white-space: normal; height: auto; min-height: 32px; line-height: 1.4; padding-top: 5px; padding-bottom: 5px; }
+.at-pt-acciones { border-top: 1px solid var(--at-borde); margin-top: 16px; padding-top: 12px; }
+.at-pt-acciones form { margin: 0 0 12px; }
+
+@media screen and (max-width: 767px) {
+  .at-pt-bloque-cab { grid-template-columns: minmax(0, 1fr); }
+  .at-pt-botones .button { width: 100%; text-align: center; }
+  .at-pt-campo input[type="date"] { max-width: 100%; }
+}

@@ -35,6 +35,7 @@ function automatiza_tech_followup_create_table() {
         notes text DEFAULT '',
         status varchar(20) DEFAULT 'scheduled',
         confirmed_at datetime DEFAULT NULL,
+        confirmed_attendance tinyint(1) NOT NULL DEFAULT 0,
         email_sent tinyint(1) DEFAULT 0,
         whatsapp_sent tinyint(1) DEFAULT 0,
         reminder_24h_sent tinyint(1) DEFAULT 0,
@@ -612,6 +613,13 @@ function automatiza_tech_followup_page() {
         $edit_id = intval($_GET['edit_id']);
         $edit_meeting = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table_name WHERE id = %d", $edit_id));
     }
+
+    // --- PRECARGA DESDE EL PLAN DE TRABAJO (?pt_plan=<id>, inc/plan-trabajo/panel.php) ---
+    // Solo al abrir el formulario (GET) y sin edit_id: rellena una reunión NUEVA con los datos del cliente del plan.
+    // No crea nada ni pasa a modo edición; tras un POST no se repite (evita agendar dos veces).
+    $pt_plan_pedido = isset($_GET['pt_plan']) ? absint($_GET['pt_plan']) : 0;
+    $pt_precargar = !$edit_meeting && $pt_plan_pedido > 0 && ($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST';
+    $pt_precarga = ($pt_precargar && function_exists('at_pt_datos_agenda')) ? at_pt_datos_agenda($pt_plan_pedido) : array();
     
     // --- FILTROS ---
     $filter_status = isset($_GET['filter_status']) ? sanitize_text_field($_GET['filter_status']) : '';
@@ -640,6 +648,12 @@ function automatiza_tech_followup_page() {
         <p>Programa reuniones de seguimiento con clientes que ya tuvieron una demo. El correo de invitación incluye los colores corporativos.</p>
         
         <?php echo $message; ?>
+        <?php if ($pt_precarga): ?>
+            <div class="notice notice-info inline"><p>📋 Datos precargados desde el plan de trabajo. Elige fecha y hora; el evento en Google Calendar, el correo y el WhatsApp salen solo con sus casillas marcadas.</p>
+            <?php if ($pt_precarga['client_email'] === ''): ?><p><strong>Este cliente no tiene correo en su ficha:</strong> escríbelo antes de programar la reunión.</p><?php endif; ?></div>
+        <?php elseif ($pt_precargar): ?>
+            <div class="notice notice-warning inline"><p>No se encontró ese plan de trabajo: el formulario queda vacío.</p></div>
+        <?php endif; ?>
         
         <!-- ESTADÍSTICAS -->
         <div style="display:flex; gap:15px; margin-bottom:20px;">
@@ -740,7 +754,7 @@ function automatiza_tech_followup_page() {
                                     <th><label for="client_name">👤 Nombre Cliente *</label></th>
                                     <td>
                                         <input type="text" name="client_name" id="client_name" class="regular-text" required
-                                            value="<?php echo esc_attr($edit_meeting->client_name ?? ''); ?>"
+                                            value="<?php echo esc_attr($edit_meeting->client_name ?? ($pt_precarga['client_name'] ?? '')); ?>"
                                             placeholder="Juan Pérez">
                                     </td>
                                 </tr>
@@ -748,7 +762,7 @@ function automatiza_tech_followup_page() {
                                     <th><label for="client_email">📧 Email *</label></th>
                                     <td>
                                         <input type="email" name="client_email" id="client_email" class="regular-text" required
-                                            value="<?php echo esc_attr($edit_meeting->client_email ?? ''); ?>"
+                                            value="<?php echo esc_attr($edit_meeting->client_email ?? ($pt_precarga['client_email'] ?? '')); ?>"
                                             placeholder="cliente@empresa.com">
                                     </td>
                                 </tr>
@@ -770,7 +784,7 @@ function automatiza_tech_followup_page() {
                                     <th><label for="company_name">🏢 Empresa</label></th>
                                     <td>
                                         <input type="text" name="company_name" id="company_name" class="regular-text"
-                                            value="<?php echo esc_attr($edit_meeting->company_name ?? ''); ?>"
+                                            value="<?php echo esc_attr($edit_meeting->company_name ?? ($pt_precarga['company_name'] ?? '')); ?>"
                                             placeholder="Empresa S.A.">
                                     </td>
                                 </tr>
@@ -778,7 +792,7 @@ function automatiza_tech_followup_page() {
                                     <th><label for="phone">📱 Teléfono</label></th>
                                     <td>
                                         <input type="text" name="phone" id="phone" class="regular-text"
-                                            value="<?php echo esc_attr($edit_meeting->phone ?? ''); ?>"
+                                            value="<?php echo esc_attr($edit_meeting->phone ?? ($pt_precarga['phone'] ?? '')); ?>"
                                             placeholder="+56 9 1234 5678">
                                     </td>
                                 </tr>
@@ -832,7 +846,7 @@ function automatiza_tech_followup_page() {
                                     <th><label for="meeting_subject">📌 Asunto</label></th>
                                     <td>
                                         <input type="text" name="meeting_subject" id="meeting_subject" class="large-text"
-                                            value="<?php echo esc_attr($edit_meeting->meeting_subject ?? 'Reunión de Seguimiento - AutomatizaTech'); ?>"
+                                            value="<?php echo esc_attr($edit_meeting->meeting_subject ?? ($pt_precarga['meeting_subject'] ?? 'Reunión de Seguimiento - AutomatizaTech')); ?>"
                                             placeholder="Reunión de Seguimiento - Proyecto X">
                                     </td>
                                 </tr>
@@ -840,7 +854,7 @@ function automatiza_tech_followup_page() {
                                     <th><label for="notes">📝 Notas Internas</label></th>
                                     <td>
                                         <textarea name="notes" id="notes" class="large-text" rows="3"
-                                            placeholder="Notas sobre el cliente o la reunión (solo visible internamente)..."><?php echo esc_textarea($edit_meeting->notes ?? ''); ?></textarea>
+                                            placeholder="Notas sobre el cliente o la reunión (solo visible internamente)..."><?php echo esc_textarea($edit_meeting->notes ?? ($pt_precarga['notes'] ?? '')); ?></textarea>
                                     </td>
                                 </tr>
                             </table>
@@ -1491,9 +1505,9 @@ function automatiza_tech_send_followup_email($meeting_id, $target_profiles = nul
         ));
         if ($cliente_email_row) {
             // Cliente convertido → enlace a ficha pública existente
-            $token_cl = md5($cliente_email_row->id . 'AUTOMATIZA_CRM_V2' . $cliente_email_row->email);
-            $timeline_link = 'https://automatizatech.cl/?crm_view=timeline&cid=' . $cliente_email_row->id . '&token=' . $token_cl;
-            $timeline_section = '
+            $timeline_link = class_exists('AutomatizaTech_CRM_AI') && method_exists('AutomatizaTech_CRM_AI', 'url_ficha_cliente')
+                ? AutomatizaTech_CRM_AI::url_ficha_cliente($cliente_email_row->id, $cliente_email_row->email) : '';
+            $timeline_section = $timeline_link === '' ? '' : '
             <div style="background: linear-gradient(135deg, #ebf4ff, #e0e7ff); border: 2px solid #667eea; border-radius: 12px; padding: 20px; margin: 25px 0; text-align: center;">
                 <p style="color: #4c51bf; margin: 0 0 15px 0; font-size: 16px;"><strong>📂 Tu Portal de Cliente</strong></p>
                 <p style="color: #555; margin: 0 0 15px; font-size: 14px;">Accede a tu ficha personalizada para ver proyectos, historial y consultar con MAXTECH 🤖</p>
@@ -2055,8 +2069,8 @@ function automatiza_tech_send_followup_whatsapp($meeting_id, $context = 'new') {
         if ($cliente_row) {
             // Es cliente convertido → tipo seguimiento con ficha
             $meeting_type = 'seguimiento';
-            $token = md5($cliente_row->id . 'AUTOMATIZA_CRM_V2' . $cliente_row->email);
-            $ficha_url = 'https://automatizatech.cl/?crm_view=timeline&cid=' . $cliente_row->id . '&token=' . $token;
+            $ficha_url = class_exists('AutomatizaTech_CRM_AI') && method_exists('AutomatizaTech_CRM_AI', 'url_ficha_cliente')
+                ? AutomatizaTech_CRM_AI::url_ficha_cliente($cliente_row->id, $cliente_row->email) : '';
         }
     }
     
@@ -2345,30 +2359,14 @@ function automatiza_tech_verify_client_by_phone($request) {
     $propuestas_table = $wpdb->prefix . 'automatiza_propuestas';
     $leads_table = $wpdb->prefix . 'automatiza_leads';
     
-    $phone = $request->get_param('phone');
+    $phone = (string) $request->get_param('phone');
     
-    // Normalizar teléfono (eliminar espacios, guiones, etc.)
-    $phone_normalized = preg_replace('/[^0-9+]/', '', $phone);
-    
-    // Buscar variantes del número (con y sin código de país)
-    $phone_variants = array();
-    $phone_variants[] = $phone_normalized;
-    
-    // Si empieza con +56, agregar versión sin código de país
-    if (strpos($phone_normalized, '+56') === 0) {
-        $phone_variants[] = substr($phone_normalized, 3); // Sin +56
-        $phone_variants[] = '9' . substr($phone_normalized, 4); // Solo 9XXXXXXXX
-    }
-    // Si empieza con 56 (sin +), agregar versiones
-    elseif (strpos($phone_normalized, '56') === 0 && strlen($phone_normalized) >= 11) {
-        $phone_variants[] = '+' . $phone_normalized; // Con +
-        $phone_variants[] = substr($phone_normalized, 2); // Sin 56
-    }
-    // Si empieza con 9, agregar versiones con código de país
-    elseif (strpos($phone_normalized, '9') === 0 && strlen($phone_normalized) == 9) {
-        $phone_variants[] = '+56' . $phone_normalized;
-        $phone_variants[] = '56' . $phone_normalized;
-    }
+    // 01-oct-2026: las propuestas y las citas guardan el teléfono con o sin espacios ("+56 9 1234 5678",
+    // "+56912345678") y WhatsApp lo manda como "56912345678". Se compara por los últimos 9 dígitos de
+    // ambos lados, sin espacios ni signos; con menos de 9 dígitos no se busca.
+    $digitos = preg_replace('/\D/', '', $phone);
+    $ultimos9 = strlen($digitos) >= 9 ? substr($digitos, -9) : '';
+    $telefono_sql = "RIGHT(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(phone, ' ', ''), '-', ''), '+', ''), '(', ''), ')', ''), '.', ''), 9)";
     
     // 1. Buscar en tabla de propuestas (clientes con propuesta enviada)
     $proposal = null;
@@ -2376,34 +2374,29 @@ function automatiza_tech_verify_client_by_phone($request) {
     // Verificar si existe columna phone en propuestas
     $has_phone_col = $wpdb->get_var("SHOW COLUMNS FROM $propuestas_table LIKE 'phone'");
     
-    if ($has_phone_col) {
-        foreach ($phone_variants as $variant) {
-            $proposal = $wpdb->get_row($wpdb->prepare(
-                "SELECT id, client_name, client_email, company_name, phone, unique_link_id, created_at, status
-                 FROM $propuestas_table 
-                 WHERE phone LIKE %s
-                 ORDER BY created_at DESC 
-                 LIMIT 1",
-                '%' . $wpdb->esc_like($variant) . '%'
-            ));
-            if ($proposal) break;
-        }
+    if ($has_phone_col && $ultimos9 !== '') {
+        $proposal = $wpdb->get_row($wpdb->prepare(
+            "SELECT id, client_name, client_email, company_name, phone, unique_link_id, created_at, status
+             FROM $propuestas_table 
+             WHERE $telefono_sql = %s
+             ORDER BY created_at DESC 
+             LIMIT 1",
+            $ultimos9
+        ));
     }
     
-    // 2. Buscar en tabla de leads (demos agendadas) si no encontró en propuestas
+    // 2. Buscar en tabla de leads (demos agendadas) si no encontró en propuestas.
+    // automatiza_leads no tiene columna de empresa: pedirla hacía fallar la consulta.
     $lead = null;
-    if (!$proposal) {
-        foreach ($phone_variants as $variant) {
-            $lead = $wpdb->get_row($wpdb->prepare(
-                "SELECT id, name, email, phone, company, created_at, status
-                 FROM $leads_table 
-                 WHERE phone LIKE %s
-                 ORDER BY created_at DESC 
-                 LIMIT 1",
-                '%' . $wpdb->esc_like($variant) . '%'
-            ));
-            if ($lead) break;
-        }
+    if (!$proposal && $ultimos9 !== '') {
+        $lead = $wpdb->get_row($wpdb->prepare(
+            "SELECT id, name, email, phone, created_at, status
+             FROM $leads_table 
+             WHERE $telefono_sql = %s
+             ORDER BY created_at DESC 
+             LIMIT 1",
+            $ultimos9
+        ));
     }
     
     // Determinar resultado
@@ -2429,7 +2422,7 @@ function automatiza_tech_verify_client_by_phone($request) {
             'client_type' => 'lead',
             'client_name' => $lead->name ?: 'Prospecto',
             'client_email' => $lead->email,
-            'company_name' => $lead->company ?: '',
+            'company_name' => '',
             'phone' => $lead->phone,
             'message' => '¡Hola ' . ($lead->name ?: '') . '! Veo que ya tuviste una demo con nosotros. Podemos agendar tu reunión de seguimiento.'
         );
@@ -2449,6 +2442,45 @@ function automatiza_tech_verify_client_by_phone($request) {
 /**
  * Callback para crear una reunión de seguimiento desde API (N8N/WhatsApp)
  */
+/**
+ * Máximo de 2 reuniones activas por correo, sumando seguimientos y DEMOs futuras. Lo usan la API del bot
+ * (automatiza_tech_create_followup_meeting_api) y la agenda web del plan (at_pt_agendar_seguimiento).
+ * Devuelve ['alcanzado' => bool, 'seguimientos' => int, 'demos' => int, 'mensaje' => string].
+ */
+function automatiza_tech_limite_reuniones_activas($email) {
+    global $wpdb;
+    $table_name = $wpdb->prefix . 'automatiza_followup_meetings';
+    $leads_table = $wpdb->prefix . 'automatiza_leads';
+    $current_datetime = current_time('mysql');
+
+    // Contar seguimientos activos
+    $followup_count = intval($wpdb->get_var($wpdb->prepare(
+        "SELECT COUNT(*) FROM $table_name
+         WHERE client_email = %s
+         AND CONCAT(meeting_date, ' ', meeting_time) >= %s
+         AND status NOT IN ('cancelled', 'completed')",
+        $email,
+        $current_datetime
+    )));
+
+    // Contar DEMOs activas
+    $demo_count = intval($wpdb->get_var($wpdb->prepare(
+        "SELECT COUNT(*) FROM $leads_table
+         WHERE email = %s
+         AND CONCAT(scheduled_date, ' ', scheduled_time) >= %s
+         AND (status IS NULL OR status NOT IN ('cancelled', 'no_show'))",
+        $email,
+        $current_datetime
+    )));
+
+    return array(
+        'alcanzado' => ($followup_count + $demo_count) >= 2,
+        'seguimientos' => $followup_count,
+        'demos' => $demo_count,
+        'mensaje' => 'Ya tienes 2 reuniones activas (' . $demo_count . ' demo(s) y ' . $followup_count . ' seguimiento(s)). Cancela o espera a que pase alguna para agendar otra.',
+    );
+}
+
 function automatiza_tech_create_followup_meeting_api($request) {
     global $wpdb;
     $table_name = $wpdb->prefix . 'automatiza_followup_meetings';
@@ -2495,39 +2527,15 @@ function automatiza_tech_create_followup_meeting_api($request) {
     }
     
     // Verificar límite de agendamientos por email (máximo 2 activos en total: DEMOs + Seguimientos)
-    $current_datetime = current_time('mysql');
-    $leads_table = $wpdb->prefix . 'automatiza_leads';
-    
-    // Contar seguimientos activos
-    $followup_count = $wpdb->get_var($wpdb->prepare(
-        "SELECT COUNT(*) FROM $table_name 
-         WHERE client_email = %s 
-         AND CONCAT(meeting_date, ' ', meeting_time) >= %s
-         AND status NOT IN ('cancelled', 'completed')",
-        $email,
-        $current_datetime
-    ));
-    
-    // Contar DEMOs activas
-    $demo_count = $wpdb->get_var($wpdb->prepare(
-        "SELECT COUNT(*) FROM $leads_table 
-         WHERE email = %s 
-         AND CONCAT(scheduled_date, ' ', scheduled_time) >= %s
-         AND (status IS NULL OR status NOT IN ('cancelled', 'no_show'))",
-        $email,
-        $current_datetime
-    ));
-    
-    $active_count = intval($followup_count) + intval($demo_count);
-    
-    if ($active_count >= 2) {
-        return new WP_Error(
-            'limit_reached', 
-            'Ya tienes 2 reuniones activas (' . intval($demo_count) . ' demo(s) y ' . intval($followup_count) . ' seguimiento(s)). Cancela o espera a que pase alguna para agendar otra.', 
-            array('status' => 400)
-        );
+    $limite = automatiza_tech_limite_reuniones_activas($email);
+    if ($limite['alcanzado']) {
+        return new WP_Error('limit_reached', $limite['mensaje'], array('status' => 400));
     }
-    
+
+    // Nota: el bot manda «Plan de trabajo <código>. …» al reagendar, para que la página del plan vea la reunión
+    // (at_pt_seguimiento_pendiente). Sin nota, la de siempre.
+    $notes_param = trim(sanitize_textarea_field((string) $request->get_param('notes')));
+
     // Insertar reunión
     $data = array(
         'client_name' => $name,
@@ -2537,7 +2545,7 @@ function automatiza_tech_create_followup_meeting_api($request) {
         'meeting_date' => $date,
         'meeting_time' => $time_normalized . ':00',
         'meeting_subject' => $subject,
-        'notes' => 'Agendada desde ' . $source,
+        'notes' => $notes_param !== '' ? mb_substr($notes_param, 0, 500) : 'Agendada desde ' . $source,
         'status' => 'scheduled',
         'created_at' => current_time('mysql')
     );
@@ -3502,8 +3510,8 @@ function automatiza_tech_call_followup_reschedule_workflow($meeting, $new_date, 
         ));
         if ($cliente_row) {
             $meeting_type = 'seguimiento';
-            $token = md5($cliente_row->id . 'AUTOMATIZA_CRM_V2' . $cliente_row->email);
-            $ficha_url = 'https://automatizatech.cl/?crm_view=timeline&cid=' . $cliente_row->id . '&token=' . $token;
+            $ficha_url = class_exists('AutomatizaTech_CRM_AI') && method_exists('AutomatizaTech_CRM_AI', 'url_ficha_cliente')
+                ? AutomatizaTech_CRM_AI::url_ficha_cliente($cliente_row->id, $cliente_row->email) : '';
         }
     }
 

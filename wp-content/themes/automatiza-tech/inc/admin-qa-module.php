@@ -130,6 +130,17 @@ function at_qa_get_context($case_db_id) {
         'tester'  => $tester_user,
     ];
 }
+
+/**
+ * Enlace a la ficha pública del cliente (fila de crm_clientes) para los correos de QA.
+ * Lo firma el CRM; '' si el CRM no está cargado o le falta su clave.
+ */
+function at_qa_url_ficha_cliente($client) {
+    if (empty($client->id) || !class_exists('AutomatizaTech_CRM_AI') || !method_exists('AutomatizaTech_CRM_AI', 'url_ficha_cliente')) {
+        return '';
+    }
+    return AutomatizaTech_CRM_AI::url_ficha_cliente($client->id, $client->email ?? '');
+}
 // ──────────────────────────────────────────────
 function at_qa_setup_tables() {
     global $wpdb;
@@ -776,8 +787,7 @@ add_action('wp_ajax_at_qa_update_status', function() {
 
                 // Notificar al cliente sobre módulo completo (manual)
                 if ($ctx->client && !empty($ctx->client->email)) {
-                    $token_mod = md5($ctx->client->id . 'AUTOMATIZA_CRM_V2' . $ctx->client->email);
-                    $ficha_url_mod = home_url('/?crm_view=timeline&cid=' . $ctx->client->id . '&token=' . $token_mod);
+                    $ficha_url_mod = at_qa_url_ficha_cliente($ctx->client);
                     $client_mod_body = '<p>Hola <strong>' . esc_html($ctx->client->nombre) . '</strong>,</p>
       <p>Le informamos que un módulo de pruebas de su proyecto ha sido completamente verificado:</p>' . $mod_body . '
       <p>Puede ver el detalle completo en su ficha de cliente:</p>
@@ -836,10 +846,7 @@ add_action('wp_ajax_at_qa_update_status', function() {
 
                 // Notificar al cliente
                 if ($ctx->client && !empty($ctx->client->email)) {
-                    $token_func_proj = function($cid, $email) {
-                        return md5($cid . 'AUTOMATIZA_CRM_V2' . $email);
-                    };
-                    $ficha_url_proj = home_url('/?crm_view=timeline&cid=' . $ctx->client->id . '&token=' . $token_func_proj($ctx->client->id, $ctx->client->email));
+                    $ficha_url_proj = at_qa_url_ficha_cliente($ctx->client);
                     $client_proj_body = '<p>Hola <strong>' . esc_html($ctx->client->nombre) . '</strong>,</p>
       <p>¡Excelentes noticias! Su proyecto <strong>' . esc_html($project_name) . '</strong> ha completado exitosamente todas las pruebas de calidad.</p>
       <div style="background:#ecfdf5;border:2px solid #10b981;padding:16px;border-radius:8px;text-align:center;margin:15px 0;">
@@ -863,12 +870,7 @@ add_action('wp_ajax_at_qa_update_status', function() {
 
             // 3) Correo al CLIENTE (si tiene email)
             if ($ctx->client && !empty($ctx->client->email)) {
-                $ficha_url = '';
-                // Generar link de timeline público si existe el método
-                $token_func = function($cid, $email) {
-                    return md5($cid . 'AUTOMATIZA_CRM_V2' . $email);
-                };
-                $ficha_url = home_url('/?crm_view=timeline&cid=' . $ctx->client->id . '&token=' . $token_func($ctx->client->id, $ctx->client->email));
+                $ficha_url = at_qa_url_ficha_cliente($ctx->client);
 
                 $client_body = '<p>Hola <strong>' . esc_html($ctx->client->nombre) . '</strong>,</p>
       <p>Le informamos que se ha realizado una actualización en las pruebas de calidad de su proyecto:</p>
@@ -1703,8 +1705,7 @@ add_action('wp_ajax_at_qa_send_report_email', function() {
     // URL personalizada de la ficha del cliente con token de acceso
     $ficha_url = home_url('/');
     if (!empty($project->client_id) && !empty($cli)) {
-        $client_token = md5($cli->id . 'AUTOMATIZA_CRM_V2' . $cli->email);
-        $ficha_url = home_url('/?crm_view=timeline&cid=' . $cli->id . '&token=' . $client_token);
+        $ficha_url = at_qa_url_ficha_cliente($cli) ?: $ficha_url;
     }
 
     // URL de descarga directa del PDF (siempre incluida en el cuerpo)
@@ -4210,10 +4211,7 @@ add_action('wp_ajax_nopriv_at_qa_agent_update_status', function() {
 
             // 3) Correo al CLIENTE (si tiene email)
             if ($ctx->client && !empty($ctx->client->email)) {
-                $token_func_agent = function($cid_val, $email) {
-                    return md5($cid_val . 'AUTOMATIZA_CRM_V2' . $email);
-                };
-                $ficha_url_agent = home_url('/?crm_view=timeline&cid=' . $ctx->client->id . '&token=' . $token_func_agent($ctx->client->id, $ctx->client->email));
+                $ficha_url_agent = at_qa_url_ficha_cliente($ctx->client);
                 $client_agent_body = '<p>Hola <strong>' . esc_html($ctx->client->nombre) . '</strong>,</p>
       <p>Le informamos que se ha verificado exitosamente un caso de prueba en su proyecto:</p>
       <div class="info-box">
@@ -4317,8 +4315,7 @@ add_action('wp_ajax_nopriv_at_qa_agent_update_status', function() {
 
                 // Notificar al cliente sobre módulo completo (agente)
                 if ($ctx->client && !empty($ctx->client->email)) {
-                    $token_mod_agent = md5($ctx->client->id . 'AUTOMATIZA_CRM_V2' . $ctx->client->email);
-                    $ficha_url_mod_agent = home_url('/?crm_view=timeline&cid=' . $ctx->client->id . '&token=' . $token_mod_agent);
+                    $ficha_url_mod_agent = at_qa_url_ficha_cliente($ctx->client);
                     $client_mod_agent_body = '<p>Hola <strong>' . esc_html($ctx->client->nombre) . '</strong>,</p>
       <p>Le informamos que un módulo de pruebas de su proyecto ha sido completamente verificado:</p>' . $mod_body . '
       <p>Puede ver el detalle completo en su ficha de cliente:</p>
@@ -4375,10 +4372,7 @@ add_action('wp_ajax_nopriv_at_qa_agent_update_status', function() {
 
                 // Notificar al cliente cuando el proyecto está 100% completado
                 if ($ctx->client && !empty($ctx->client->email)) {
-                    $token_func_proj = function($cid_val, $email) {
-                        return md5($cid_val . 'AUTOMATIZA_CRM_V2' . $email);
-                    };
-                    $ficha_url_proj = home_url('/?crm_view=timeline&cid=' . $ctx->client->id . '&token=' . $token_func_proj($ctx->client->id, $ctx->client->email));
+                    $ficha_url_proj = at_qa_url_ficha_cliente($ctx->client);
                     $client_proj_body = '<p>Hola <strong>' . esc_html($ctx->client->nombre) . '</strong>,</p>
       <p>¡Excelentes noticias! Su proyecto <strong>' . esc_html($project_name) . '</strong> ha completado exitosamente todas las pruebas de calidad.</p>
       <div style="background:#ecfdf5;border:2px solid #10b981;padding:16px;border-radius:8px;text-align:center;margin:15px 0;">

@@ -1,0 +1,99 @@
+ticket_id: AT-INT-FIN-001
+title: "Finanzas AT: main refleja PROD (módulo desplegado y nunca commiteado)"
+origin: direct_luis
+portfolio: AT
+priority: P2
+status: WAITING_HUMAN_GATE
+created_at: "2026-09-23"
+created_by: claude
+
+governance:
+  professional_standard: "Docs/ENGINEERING_STANDARDS/PROFESSIONAL_ENGINEERING_STANDARD.md"
+  quality_gate: C1
+
+objective: >
+  Que main contenga exactamente lo que corre en PROD (Hostinger, automatizatech.cl) del
+  módulo Finanzas AT: el require en functions.php, inc/admin-at-finanzas.php y el
+  controlador omnichannel-atfinance-controller.php. Sin desplegar nada: PROD ya lo tiene.
+
+owner: claude
+reviewer: luis
+active_orchestrator: "según Docs/ORCHESTRATION/current-handoff.yaml"
+
+ownership:
+  current_owner: luis
+  previous_owners: [claude]
+  takeover_allowed: true
+  takeover_count: 0
+  takeover_reason: null
+  urgency: normal
+  resolution_status: pending
+  reassignment_authorized_by: null
+  handoff_ref: "https://github.com/lmgmuber-bit/automatiza-tech/pull/38"
+  handoff_quality: COMPLETE
+
+scope:
+  branch: "claude/finanzas-at-desde-prod"
+  base_commit: "21c0c1a"
+  pr: "https://github.com/lmgmuber-bit/automatiza-tech/pull/38"
+  allowed_files:
+    - wp-content/themes/automatiza-tech/functions.php
+    - wp-content/themes/automatiza-tech/inc/admin-at-finanzas.php
+    - omnichannel-atfinance-controller.php
+    - Docs/ORCHESTRATION/AT-INT-FIN-001.yaml
+  forbidden_files:
+    - "checkout principal C:\\wamp64\\www\\automatiza-tech (tiene cambios sin commit de otras sesiones)"
+  depends_on: []
+
+routing:
+  complexity: C1
+  risk: low
+  uncertainty: low
+  reversibility: easy
+  selected_profile: standard_executor
+  selected_model: claude-opus-5-5
+  rationale: "Solo agrega al repo archivos idénticos a PROD; no cambia comportamiento en PROD."
+  independent_review: false
+  human_gate: true
+
+acceptance:
+  criteria:
+    - "Los tres archivos del PR son idénticos a PROD por md5 sin CR."
+    - "php -l sin errores."
+    - "No se despliega nada y no se toca el checkout principal."
+  tests:
+    - "php -l con PHP 8.3.28 y 8.5.0 en los tres archivos: sin errores."
+  evidence_required:
+    - "Tabla de md5 en la descripción del PR #38."
+  rollback_plan: "Revertir el commit en la rama; PROD no cambia."
+
+safety:
+  allow_push: true
+  allow_merge: false
+  allow_deploy: false
+  allow_secrets: false
+  allow_external_messages: false
+
+findings:
+  - "main estaba roto: api-omnichannel.php (línea 19) hace require_once de omnichannel-atfinance-controller.php y ese archivo no estaba en el repo. Un despliegue limpio desde main habría dado un error fatal en la API del portal."
+  - "inc/admin-at-finanzas.php del checkout principal y del respaldo f4c4bbd NO es el de PROD: trae un rediseño responsivo del 2026-09-07 (clases at-fin-*, tabla a tarjetas en celular) que nunca se subió. PROD tiene la versión del 10-jul con estilos inline. El PR usa la de PROD."
+  - "Los archivos de PROD están en LF puro; en la rama quedan LF en el índice y CRLF en el árbol de trabajo, como el resto del repo."
+
+md5_sin_cr:
+  functions.php: { prod: "597b8ce38177", pr: "597b8ce38177", main_antes: "df250f44cabe" }
+  inc/admin-at-finanzas.php: { prod: "9078edadd9bd", pr: "9078edadd9bd", main_antes: "no existe", checkout_y_respaldo: "fe19e99f9fe3" }
+  omnichannel-atfinance-controller.php: { prod: "5e183591fd88", pr: "5e183591fd88", main_antes: "no existe" }
+  api-omnichannel.php: { prod: "d3700b5112c1", main: "d3700b5112c1" }
+  omnichannel-controller.php: { prod: "8558b843ec57", main: "8558b843ec57" }
+
+result:
+  summary: "PR #38 abierto con los tres archivos copiados de PROD y cotejados. Esperando revisión de Luis."
+  evidence_refs:
+    - "https://github.com/lmgmuber-bit/automatiza-tech/pull/38"
+    - "commit 1d1d273"
+  residual_risks:
+    - "Los checks de GitHub Actions fallan en ~2 s por el bloqueo de facturación desde el 21-sep; no es el código."
+    - "Tras el merge, el checkout principal seguirá mostrando functions.php modificado y los dos archivos sin trackear hasta que se sincronice con main; su admin-at-finanzas.php (rediseño) es distinto al de main y no debe descartarse sin decisión de Luis."
+  next_action: >
+    Luis revisa el PR #38 y decide el merge. Aparte, Luis decide si el rediseño responsivo de
+    admin-at-finanzas.php (en f4c4bbd y en el checkout principal) se sube a PROD en un PR nuevo.

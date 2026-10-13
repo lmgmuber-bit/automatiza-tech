@@ -41,7 +41,7 @@ class Ai1wm_Export_Config {
 		$options = wp_load_alloptions();
 
 		// Get database client
-		$db_client = Ai1wm_Database_Utility::create_client();
+		$db_client = Ai1wm_Database_Utility::get_client();
 
 		$config = array();
 

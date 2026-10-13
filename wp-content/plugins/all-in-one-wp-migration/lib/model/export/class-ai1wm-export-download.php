@@ -33,6 +33,12 @@ class Ai1wm_Export_Download {
 
 	public static function execute( $params ) {
 
+		// Get archive CRC value
+		$archive_crc_value = null;
+		if ( isset( $params['archive_crc_value'] ) ) {
+			$archive_crc_value = $params['archive_crc_value'];
+		}
+
 		// Set progress
 		Ai1wm_Status::info( __( 'Renaming export file...', 'all-in-one-wp-migration' ) );
 
@@ -40,7 +46,7 @@ class Ai1wm_Export_Download {
 		$archive = new Ai1wm_Compressor( ai1wm_archive_path( $params ) );
 
 		// Append EOF block
-		$archive->close( true );
+		$archive->close( true, $archive_crc_value );
 
 		// Rename archive file
 		if ( rename( ai1wm_archive_path( $params ), ai1wm_backup_path( $params ) ) ) {
@@ -99,6 +105,7 @@ class Ai1wm_Export_Download {
 
 		do_action( 'ai1wm_status_export_done', $params );
 
+		// Run manual on backup created hook
 		if ( isset( $params['ai1wm_manual_backup'] ) ) {
 			do_action( 'ai1wm_status_backup_created', $params );
 		}

@@ -33,7 +33,7 @@ class Ai1wm_Import_Clean {
 
 	public static function execute( $params ) {
 		// Get database client
-		$db_client = Ai1wm_Database_Utility::create_client();
+		$db_client = Ai1wm_Database_Utility::get_client();
 
 		// Flush mainsite tables
 		$db_client->add_table_prefix_filter( ai1wm_table_prefix( 'mainsite' ) );
@@ -43,10 +43,11 @@ class Ai1wm_Import_Clean {
 		if ( isset( $params['ai1wm_import_cancel'] ) ) {
 			do_action( 'ai1wm_status_import_canceled', $params );
 		} else {
-			do_action( 'ai1wm_status_import_done', $params );
+			do_action( 'ai1wm_status_import_cleaned', $params );
 		}
 
-		// Delete storage files
+		// Delete storage files. The ai1wm_status_<job_id> option lingers so poll
+		// clients still see the terminal state; the daily cron sweeps it later.
 		Ai1wm_Directory::delete( ai1wm_storage_path( $params ) );
 
 		// Exit in console

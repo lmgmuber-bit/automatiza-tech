@@ -17,4 +17,4 @@ $fila = at_pt_fila_ver_estado((string) $codigo);
 if (!$fila) {
 	status_header(404);
 }
-echo at_pt_html_ver_estado($fila);
+echo at_pt_html_ver_estado($fila, isset($_GET['agendar']) && $_GET['agendar'] === '1');

@@ -11,7 +11,7 @@ El cliente tiene tres presentaciones de su proyecto: la **propuesta**, el **plan
 
 La sección está en **CRM › ficha del cliente › «🗓️ Plan de trabajo» › «📈 Avance del proyecto»**. Solo aparece con el plan ya **enviado** al cliente.
 
-1. **Importar el cierre.** En «Importar cierre» se adjunta el archivo `.json` (formato `at-cierre-v1`, ver la sección 3; hasta 1 MB) o se pega su contenido, y se adjuntan en el mismo formulario las capturas, videos y portadas, con el **nombre exacto** que dice el JSON (da lo mismo mayúsculas o minúsculas). «📥 Guardar como borrador» valida todo; si hay errores no guarda nada y los muestra en una lista.
+1. **Importar el cierre.** En «Importar cierre» se adjunta el archivo `.json` (formato `at-cierre-v1`, ver la sección 3; hasta 1 MB) o se pega su contenido, y se adjuntan en el mismo formulario las capturas, videos y portadas, con el **nombre exacto** que dice el JSON (da lo mismo mayúsculas o minúsculas). «📥 Guardar como borrador» valida todo; si hay errores no guarda nada y los muestra en una lista. **Importar nunca rehace la presentación del cliente:** el cliente no ve este cierre hasta que lo publiques. Si el archivo trae además `bloques`, `cambios_plan`, `necesitamos` o `alcance`, esas cuatro listas son datos generales del avance: quedan guardadas al tiro, pero el cliente las ve en la próxima presentación (cuando publiques un cierre o uses «Rehacer la presentación»); si ya hay un cierre publicado, el panel te lo recuerda en el detalle.
 2. **Subir lo que falte.** Si algún archivo no vino en el formulario, en la fila del cierre (desplegable «Archivos y edición») cada evidencia con archivo tiene su botón **Subir**. Un cierre con archivos faltantes no se puede publicar.
 3. **«👁️ Pedir vista previa con borradores».** Genera una presentación solo para nosotros que incluye los borradores; el cliente no la ve. Se abre con «Abrir la vista previa con borradores». Revisarla antes de publicar.
 4. **«✅ Publicar».** Pide confirmación (dice que no se le envía nada al cliente). Pasa el cierre a publicado y se pide rehacer la presentación del cliente.
@@ -20,7 +20,7 @@ La sección está en **CRM › ficha del cliente › «🗓️ Plan de trabajo»
 
 Otras acciones del panel:
 
-- **↩️ Volver a borrador.** La presentación anterior se oculta **en el acto**, porque ya no refleja lo publicado. El cliente ve «Pronto verás aquí el avance de tu proyecto» hasta que la presentación nueva esté lista, si es que quedan otros cierres publicados (se rehace sola, en unos minutos); si no queda ninguno, se queda con el «Pronto…».
+- **↩️ Volver a borrador.** La presentación anterior se oculta **en el acto**, porque ya no refleja lo publicado. El cliente ve «Pronto verás aquí el avance de tu proyecto» hasta que la presentación nueva esté lista, si es que quedan otros cierres publicados (se rehace sola, en unos minutos); si no queda ninguno, se queda con el «Pronto…». Después hay que esperar el «Lista» del panel y revisar `ver-estado.php?id=<código del plan>`. Ojo: la presentación vieja puede seguir abriéndose por su enlace directo del renderer hasta que se rehaga; ese enlace no es la página del cliente.
 - **🗑️ Quitar.** Solo un cierre en borrador; borra también sus archivos.
 - **Editar un cierre (borrador).** En «Archivos y edición» aparece su JSON en un cuadro de texto («💾 Guardar cambios del cierre»). Se valida igual que una importación. Las evidencias que mantienen su nombre de archivo conservan el que ya subimos. **Un cierre publicado no se edita ni admite archivos nuevos:** hay que volverlo a borrador primero (los formularios de subida y el cuadro de edición solo aparecen en borrador).
 - **Bloques del plan.** Tabla «Bloques del plan» (por venir, en curso, listo, con fechas reales). Un bloque con un cierre **publicado** que lo cubre se muestra «listo» por sí solo.
@@ -42,7 +42,7 @@ Es un JSON en UTF-8. Lo prepara la sesión de Claude Code o Codex que cerró el 
 | `cierre.titulo` | Texto, hasta 120 caracteres. Identifica el cierre (ver «Ojo al reimportar»). |
 | `cierre.bloques` | Lista de nombres de bloques **que existen en el plan firmado** (no distingue mayúsculas). Al menos uno. |
 | `cierre.fecha_real` | `AAAA-MM-DD`, la fecha real en que se cerró el hito. |
-| `cierre.entregable_id` | Número; `0` si el cierre no tiene una entrega publicada en «Entregables». |
+| `cierre.entregable_id` | Número; `0` si el cierre no tiene una entrega publicada en «Entregables». Debe ser un entregable **del mismo cliente** del plan: si no existe o es de otro cliente, se rechaza el archivo («El entregable N no existe o no es de este cliente.»). |
 | `cierre.antes` / `cierre.despues` | `texto` (hasta 2.000 caracteres), `puntos` (hasta 8, de hasta 200 caracteres cada uno) y `evidencias` (lista de `ref`, que deben existir en `evidencias[]`). |
 | `cierre.durante` | `texto` (hasta 2.000) y `actividades` (hasta 30): `{bloque, nombre, real, nota}`. El `bloque` debe estar entre los del cierre; `real` es `AAAA-MM-DD` o vacío; `nota` hasta 300. Si se **omite** `actividades`, se precargan las del plan para esos bloques. Una actividad con un nombre que el plan no tiene entra sin fechas planificadas y con un aviso. |
 | `evidencias[]` | Hasta 60 por plan (30 cierres como máximo). Cada una trae `ref`, `tipo` y `titulo` (hasta 120). Detalle abajo. |
@@ -59,6 +59,8 @@ Es un JSON en UTF-8. Lo prepara la sesión de Claude Code o Codex que cerró el 
 | `enlace` | `url` obligatoria: `https://`, sin espacios ni comillas, hasta 500 caracteres, y **nunca** del servidor de Easypanel (el correo de Hostinger rechaza esos enlaces). |
 | `captura` | `archivo`: nombre `.jpg`, `.jpeg`, `.png` o `.webp`. |
 | `video` | `archivo`: nombre `.mp4` o `.webm`; `poster` opcional: nombre de imagen. |
+
+Reglas de los textos: se guardan tal cual (un «<90» o «menos de <3 segundos» no se corta), pero un texto que lleve una **etiqueta HTML** (p. ej. `<script>`) rechaza el archivo entero. Las fechas van entre 2020 y 2100. La `ref` de una evidencia lleva al menos una letra (`a1` vale, `1` no).
 
 `fuente` y `fecha` son opcionales en los demás tipos. Los nombres de archivo llevan letras, números, punto, guion y guion bajo (hasta 120).
 

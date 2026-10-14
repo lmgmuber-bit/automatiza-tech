@@ -76,6 +76,19 @@ test('más de 4 evidencias: siguen en láminas «Evidencias» de hasta 8', () =>
   assert.deepEqual(c1, ['Evidencias (1/2)', 'Evidencias (2/2)']); // 13 = 4 en la lámina del cierre + 8 + 1
 });
 
+test('una fecha real absurda (2099) no revienta el cronograma: como mucho 104 semanas desde el inicio del plan', () => {
+  const e = estadoCorto();
+  e.bloques[0].fin_real = '2099-12-31';
+  const html = renderEstadoHtml(e);
+  const cabeceras = html.match(/<b>S\d+<\/b>/g) || [];
+  assert.equal(cabeceras.length, 104);
+  assert.ok(html.includes('--semanas:104'));
+  assert.ok(html.includes('<b>S1</b><small>')); // y empieza en la semana del inicio del plan, no en la fecha absurda
+  assert.ok(html.includes('5/10'), 'la primera semana es la del lunes 5 de octubre de 2026');
+  // un plan normal sigue igual (8 semanas el ejemplo, igual que antes del tope)
+  assert.equal(((renderEstadoHtml(estadoCorto()).match(/<b>S\d+<\/b>/g)) || []).length, 8);
+});
+
 test('validateEstadoPayload explica lo que falta', () => {
   const r = validateEstadoPayload({ document_type: 'estado', unique_id: '../x', company_name: '', proyecto: 'P', actualizado: '2026-13-01', bloques: {}, cierres: [{}] });
   assert.equal(r.valid, false);

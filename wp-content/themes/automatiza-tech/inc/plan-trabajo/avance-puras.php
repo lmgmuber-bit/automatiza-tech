@@ -62,21 +62,25 @@ function at_av_normalizar(mixed $guardado): array {
 	return $a;
 }
 
-/** Texto sin etiquetas ni caracteres de control; en una sola línea salvo $multilinea. No recorta. */
+/** Texto sin caracteres de control; en una sola línea salvo $multilinea. No recorta ni quita nada más: un «<» suelto
+ *  se guarda tal cual (toda salida escapa). Las etiquetas HTML las rechaza at_av_texto(). */
 function at_av_limpiar(mixed $v, bool $multilinea = false): string {
 	if (!is_string($v) && !is_int($v) && !is_float($v)) {
 		return '';
 	}
-	$t = strip_tags((string) $v);
-	$t = (string) preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/u', '', $t);
+	$t = (string) preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/u', '', (string) $v);
 	$t = str_replace(["\r\n", "\r"], "\n", $t);
 	$t = $multilinea ? (string) preg_replace("/\n{3,}/", "\n\n", $t) : (string) preg_replace('/\s+/u', ' ', $t);
 	return trim($t);
 }
 
-/** Texto de un campo con tope. Pasarse es un error: nada se recorta en silencio. */
+/** Texto de un campo con tope. Pasarse del tope o llevar una etiqueta HTML es un error: nada se recorta en silencio. */
 function at_av_texto(mixed $v, int $max, string $que, array &$errores, bool $multilinea = false): string {
 	$t = at_av_limpiar($v, $multilinea);
+	if (preg_match('/<\/?[a-z!][^>]*>/i', $t)) {
+		$errores[] = "{$que} no puede llevar etiquetas HTML.";
+		return '';
+	}
 	if (mb_strlen($t) > $max) {
 		$errores[] = "{$que} tiene " . mb_strlen($t) . " caracteres (máximo {$max}).";
 		return '';
@@ -85,7 +89,8 @@ function at_av_texto(mixed $v, int $max, string $que, array &$errores, bool $mul
 }
 
 function at_av_fecha_valida(mixed $f): bool {
-	return is_string($f) && (bool) preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $f, $m) && checkdate((int) $m[2], (int) $m[3], (int) $m[1]);
+	return is_string($f) && (bool) preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $f, $m) && checkdate((int) $m[2], (int) $m[3], (int) $m[1])
+		&& (int) $m[1] >= 2020 && (int) $m[1] <= 2100;
 }
 
 /** Enlace que puede ver el cliente: https, sin espacios ni comillas, hasta 500 caracteres y nunca del servidor de
@@ -172,7 +177,7 @@ function at_av_validar_evidencia(mixed $e, int $n, array &$errores): ?array {
 	}
 	$antes = count($errores);
 	$ref = is_string($e['ref'] ?? null) ? strtolower(trim($e['ref'])) : '';
-	if (!preg_match('/^[a-z0-9][a-z0-9-]{0,39}$/', $ref)) {
+	if (!preg_match('/^(?=[a-z0-9-]*[a-z])[a-z0-9][a-z0-9-]{0,39}$/', $ref)) {
 		$errores[] = "La evidencia {$n} no tiene «ref» (minúsculas, números y guiones; hasta 40).";
 		return null;
 	}

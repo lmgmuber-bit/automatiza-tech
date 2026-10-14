@@ -29,6 +29,8 @@ const EVIDENCIAS_POR_LAMINA = 8;
 const PUNTOS_VISIBLES = 3;
 const ACTIVIDADES_VISIBLES = 6;
 const BLOQUES_POR_COLUMNA = 7;
+/** Tope de semanas que dibuja el cronograma (dos años). */
+const TOPE_SEMANAS = 104;
 const CAMBIOS_VISIBLES = 8;
 const PROXIMOS_VISIBLES = 6;
 const NECESITAMOS_VISIBLES = 8;
@@ -135,9 +137,15 @@ function renderCronogramaReal(d, index, foto) {
   const fechas = [c.inicio, c.fin, hoy, ...bloques.flatMap((b) => [b.plan_desde, b.plan_hasta]), ...reales.filter(Boolean).flatMap((r) => [r.desde, r.hasta])]
     .filter(esFecha)
     .sort();
-  const lunes0 = fechas.length ? lunesDe(fechas[0]) : '';
-  const ultima = lunes0 ? semanaIndice(fechas[fechas.length - 1], lunes0) : NaN;
-  const semanas = Number.isNaN(ultima) || ultima < 0 ? 1 : ultima + 1;
+  let lunes0 = fechas.length ? lunesDe(fechas[0]) : '';
+  let ultima = lunes0 ? semanaIndice(fechas[fechas.length - 1], lunes0) : NaN;
+  if (ultima + 1 > TOPE_SEMANAS) {
+    // Una fecha absurda (p. ej. un fin real en 2099) no puede dibujar miles de semanas: se parte del lunes de inicio del
+    // plan —o de la primera fecha— y se recorta a TOPE_SEMANAS; las barras que caen fuera las deja recortadas pos().
+    lunes0 = lunesDe(esFecha(c.inicio) ? c.inicio : fechas[0]);
+    ultima = semanaIndice(fechas[fechas.length - 1], lunes0);
+  }
+  const semanas = Number.isNaN(ultima) || ultima < 0 ? 1 : Math.min(TOPE_SEMANAS, ultima + 1);
   const total = semanas * 7;
   const largo = semanas > 18;
   const pos = (desde, hasta) => {
@@ -394,7 +402,7 @@ function renderCierreEstado(d, index, foto) {
 const ESTILO_ESTADO = `
   .estado-portada h1.is-largo { font-size: 50px; }
   .estado-vacio { color: #c9d4e0; font-size: 22px; }
-  .estado-fases { position: absolute; left: 72px; right: 72px; top: 196px; z-index: 2; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 26px; }
+  .estado-fases { position: absolute; left: 72px; right: 72px; top: 236px; z-index: 2; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 26px; }
   .estado-fase h3 { color: #00d9c0; font-size: 17px; letter-spacing: .14em; text-transform: uppercase; margin-bottom: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .estado-fase ol { list-style: none; display: flex; flex-direction: column; gap: 12px; }
   .estado-bloque { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 12px; padding: 10px 16px; overflow: hidden;
@@ -413,7 +421,7 @@ const ESTILO_ESTADO = `
   .estado-plan b { font-size: 22px; }
   .estado-plan small { color: #9fb3c8; font-size: 15px; }
 
-  .estado-crono .crono { position: absolute; top: 196px; left: 72px; right: 72px; bottom: 50px; z-index: 2; display: flex; flex-direction: column; --col: 380px;
+  .estado-crono .crono { position: absolute; top: 216px; left: 72px; right: 72px; bottom: 50px; z-index: 2; display: flex; flex-direction: column; --col: 380px;
     background: rgba(6,13,21,.72); border: 1px solid rgba(255,255,255,.1); border-radius: 18px; padding: 18px 26px 14px; }
   .crono-cabecera { display: flex; align-items: flex-end; height: 50px; flex: none; border-bottom: 1px solid rgba(255,255,255,.14); }
   .crono-esquina { width: var(--col); flex: none; color: #9fb3c8; font-size: 15px; letter-spacing: .12em; text-transform: uppercase; padding-bottom: 10px; }
@@ -487,8 +495,8 @@ const ESTILO_ESTADO = `
   .cambio p { color: #c9d4e0; font-size: 15px; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
   .estado-nota { position: absolute; left: 72px; bottom: 34px; z-index: 2; color: #9fb3c8; font-size: 16px; }
 
-  .alcance, .sigue { position: absolute; left: 72px; right: 72px; top: 220px; bottom: 56px; z-index: 2; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px; }
-  .alcance > div, .sigue > div { padding: 22px 26px; overflow: hidden; background: rgba(6,13,21,.72); border: 1px solid rgba(255,255,255,.1); border-radius: 16px; }
+  .alcance, .sigue { position: absolute; left: 72px; right: 72px; top: 220px; bottom: 56px; z-index: 2; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px; align-items: start; }
+  .alcance > div, .sigue > div { padding: 22px 26px; overflow: hidden; max-height: 100%; background: rgba(6,13,21,.72); border: 1px solid rgba(255,255,255,.1); border-radius: 16px; }
   .alcance h3, .sigue h3 { color: #00d9c0; font-size: 17px; letter-spacing: .14em; text-transform: uppercase; margin-bottom: 16px; }
   .alcance ul { list-style: none; columns: 2; column-gap: 24px; }
   .alcance li { break-inside: avoid; position: relative; padding-left: 18px; margin-bottom: 10px; color: #fff; font-size: 16px; line-height: 1.35;

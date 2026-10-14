@@ -25,16 +25,32 @@ function at_av_url_render_valida(string $u, string $codigo, bool $previa): strin
 	return preg_match($patron, $u) ? $u : '';
 }
 
-/** URL públicas (ver-entregable.php) de los entregables que nombran los cierres: [id => url]. */
-function at_av_urls_entregables(array $avance): array {
+/**
+ * URL pública (ver-entregable.php) de un entregable, solo si existe y es del MISMO cliente del CRM que el plan
+ * (spec §9: un cierre no puede enlazar el entregable de otro cliente). '' si no.
+ */
+function at_av_entregable_del_plan(object $fila, int $entregable_id): string {
+	if ($entregable_id <= 0 || !function_exists('at_en_por_id') || !function_exists('at_en_detalle') || !function_exists('at_en_crm_de_detalle') || !function_exists('at_en_url_pagina')) {
+		return '';
+	}
+	$crm_plan = (int) at_pt_db_partes($fila)['crm_id'];
+	$e = at_en_por_id($entregable_id);
+	$detalle = $e ? at_en_detalle((int) $e->detalle_id) : null;
+	if (!$e || !$detalle || $crm_plan <= 0 || at_en_crm_de_detalle($detalle) !== $crm_plan) {
+		return '';
+	}
+	return at_en_url_pagina(home_url(), (string) $e->codigo);
+}
+
+/** URL públicas (ver-entregable.php) de los entregables que nombran los cierres y son de este cliente: [id => url]. */
+function at_av_urls_entregables(object $fila, array $avance): array {
 	$out = [];
 	foreach ($avance['cierres'] as $c) {
 		$id = (int) ($c['entregable_id'] ?? 0);
-		if ($id <= 0 || isset($out[$id]) || !function_exists('at_en_por_id') || !function_exists('at_en_url_pagina')) {
+		if ($id <= 0 || isset($out[$id])) {
 			continue;
 		}
-		$e = at_en_por_id($id);
-		$u = $e ? at_en_url_pagina(home_url(), (string) $e->codigo) : '';
+		$u = at_av_entregable_del_plan($fila, $id);
 		if ($u !== '') {
 			$out[$id] = $u;
 		}
@@ -51,7 +67,7 @@ function at_av_rest_render_estado(object $f, bool $previa) {
 		return new WP_Error('at_av_sin_columna', 'Falta la migración del avance (columna avance).', ['status' => 409]);
 	}
 	$avance = at_av_leer($f);
-	$datos = at_pt_datos_render($f) + ['previa_token' => at_av_token_previa((string) $f->codigo), 'entregables' => at_av_urls_entregables($avance)];
+	$datos = at_pt_datos_render($f) + ['previa_token' => at_av_token_previa((string) $f->codigo), 'entregables' => at_av_urls_entregables($f, $avance)];
 	return new WP_REST_Response([
 		'ok'             => true,
 		'render'         => at_av_armar_render_estado(at_pt_payload($f), $avance, $datos, $previa, current_time('Y-m-d')),

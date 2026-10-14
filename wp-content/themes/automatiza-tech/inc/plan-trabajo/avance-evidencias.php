@@ -54,7 +54,7 @@ function at_av_tipo_contenido(string $ruta): string {
 	}
 	$h = (string) @file_get_contents($ruta, false, null, 0, 16);
 	if (strlen($h) >= 12 && substr($h, 4, 4) === 'ftyp') {
-		return preg_match('/^(isom|iso[0-9a-z]|mp4[0-9a-z]|avc1|M4V |M4VH|M4VP|msnv|dash|qt  |3g[a-z0-9]{2}|f4v )/', substr($h, 8, 4)) ? 'mp4' : '';
+		return preg_match('/^(isom|iso[0-9a-z]|mp4[0-9a-z]|avc1|M4V |M4VH|M4VP|msnv|dash|qt  |3g[a-z0-9]{2}|f4v |xavc|mmp4|cmf[a-z0-9])/i', substr($h, 8, 4)) ? 'mp4' : '';
 	}
 	if (strncmp($h, "\x1A\x45\xDF\xA3", 4) === 0) {
 		return 'webm';

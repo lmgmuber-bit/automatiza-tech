@@ -122,16 +122,74 @@ $cid_p = (string) (end($todos)['id'] ?? '');
 $r = $correr('at_av_publicar', ['cierre_id' => $cid_p]);
 ok($msg($r) === 'av_publicado' && $cid_p !== '', '15) un primer cierre queda publicado (el que se mantiene publicado)');
 
+// F1: importar un borrador NUNCA rehace la presentación del cliente; si el archivo cambió bloques, cambios, «necesitamos» o
+// alcance, el detalle avisa que el cliente los verá al publicar un cierre o al «Rehacer la presentación».
+wp_set_current_user($admin);
+at_pt_tomar_detalles($id);
+$con_bloques = $archivo;
+$con_bloques['cierre']['titulo'] = 'Cierre con bloques nuevos';
+$con_bloques['cierre']['bloques'] = ['Diseño'];
+$con_bloques['bloques'] = ['Desarrollo' => ['estado' => 'en_curso', 'inicio_real' => '2026-10-12', 'fin_real' => '']];
+$r = $correr('at_av_importar', ['cierre_texto' => wp_json_encode($con_bloques)]);
+$cid_b = '';
+foreach ($leer()['cierres'] as $cb) {
+	if ($cb['titulo'] === 'Cierre con bloques nuevos') { $cid_b = (string) $cb['id']; }
+}
+$det = implode(' | ', at_pt_tomar_detalles($id));
+ok($cid_b !== '' && in_array($msg($r), ['av_importado', 'av_importado_faltan'], true) && $r['n8n'] === [], '15b) importar un borrador con un cierre ya publicado NO pide la presentación a n8n (F1)');
+ok(str_contains($det, 'El archivo también cambió bloques, cambios de plan, «necesitamos» o alcance: el cliente los verá cuando publiques un cierre o uses «Rehacer la presentación».'), '15b) el detalle avisa que lo demás se verá al publicar o rehacer (F1)');
+ok(($leer()['bloques']['Desarrollo']['estado'] ?? '') === 'en_curso', '15b) los bloques del archivo sí quedaron guardados');
+$r = $correr('at_av_quitar', ['cierre_id' => $cid_b]);
+ok($msg($r) === 'av_quitado' && $cid_b !== '' && count($leer()['cierres']) === 1, '15b) borrador de prueba quitado');
+at_pt_tomar_detalles($id);
+
+// F2: importar con el entregable de un cliente que no es el del plan (o inexistente) se rechaza; con uno propio, se acepta.
+global $wpdb;
+$wpdb->insert($wpdb->prefix . 'automatiza_clients_details', ['client_id' => $c['tech'], 'detail_type' => 'entregable', 'title' => '[PRUEBA] Entregable propio', 'status' => 'completed', 'attachment_url' => 'https://example.com/v1', 'created_by' => 1]);
+$det_mio = (int) $wpdb->insert_id;
+$ent_mio = at_en_activar($det_mio);
+register_shutdown_function(function () use ($ent_mio, $det_mio) {
+	global $wpdb;
+	if (is_int($ent_mio)) { $wpdb->delete(at_en_tablas()['e'], ['id' => $ent_mio]); }
+	$wpdb->delete($wpdb->prefix . 'automatiza_clients_details', ['id' => $det_mio]);
+});
+$con_ent = $archivo;
+$con_ent['cierre']['titulo'] = 'Cierre con entregable ajeno';
+$con_ent['cierre']['entregable_id'] = 999999991;
+$n_antes = count($leer()['cierres']);
+$r = $correr('at_av_importar', ['cierre_texto' => wp_json_encode($con_ent)]);
+$det = implode(' | ', at_pt_tomar_detalles($id));
+ok($msg($r) === 'av_import_error' && count($leer()['cierres']) === $n_antes && str_contains($det, 'El entregable 999999991 no existe o no es de este cliente.'), '15c) importar con un entregable que no existe o no es del cliente: se rechaza y no se guarda nada (F2)');
+$con_ent['cierre']['titulo'] = 'Cierre con entregable propio';
+$con_ent['cierre']['entregable_id'] = is_int($ent_mio) ? $ent_mio : 0;
+$r = $correr('at_av_importar', ['cierre_texto' => wp_json_encode($con_ent)]);
+$cid_e = '';
+foreach ($leer()['cierres'] as $ce) {
+	if ($ce['titulo'] === 'Cierre con entregable propio') { $cid_e = (string) $ce['id']; }
+}
+ok($cid_e !== '' && is_int($ent_mio) && $ent_mio > 0 && in_array($msg($r), ['av_importado', 'av_importado_faltan'], true), '15c) con un entregable del mismo cliente se acepta (F2)');
+$r = $correr('at_av_quitar', ['cierre_id' => $cid_e]);
+ok($msg($r) === 'av_quitado' && count($leer()['cierres']) === 1, '15c) borrador de prueba quitado');
+at_pt_tomar_detalles($id);
+
+// F8: un archivo de más de 1 MB dice eso, no que «no es un JSON válido».
+$grande = ['name' => 'cierre.json', 'type' => 'application/json', 'tmp_name' => $tmp . 'portada.png', 'error' => 0, 'size' => 1048577];
+$r = $correr('at_av_importar', ['__files' => ['cierre_json' => $grande]]);
+$det = implode(' | ', at_pt_tomar_detalles($id));
+ok($msg($r) === 'av_import_error' && str_contains($det, 'El archivo pesa más de 1 MB.') && !str_contains($det, 'JSON válido'), '15d) un archivo de más de 1 MB: «El archivo pesa más de 1 MB.» (F8)');
+
 $hostilito = $archivo;
 $hostilito['cierre']['titulo'] = $hostil;
+$n_antes = count($leer()['cierres']);
 $r = $correr('at_av_importar', ['cierre_texto' => wp_json_encode($hostilito)]);
+ok($msg($r) === 'av_import_error' && count($leer()['cierres']) === $n_antes && !str_contains(implode('|', array_column($leer()['cierres'], 'titulo')), '<script'), '16) un título con etiquetas HTML se rechaza entero: no se guarda ni se corta en silencio (F3)');
+$r = $correr('at_av_importar', ['cierre_texto' => wp_json_encode($archivo)]);
 $cid_h = '';
 foreach ($leer()['cierres'] as $c) {
 	if ($c['id'] !== $cid_p) { $cid_h = (string) $c['id']; }
 }
 $eid_h = $cid_h . '-portada';
 ok($msg($r) === 'av_importado_faltan' && $cid_h !== '' && ($leer()['evidencias'][$eid_h]['url'] ?? '') === '', '16) segundo cierre en borrador con la portada pendiente');
-ok(!str_contains(implode('|', array_column($leer()['cierres'], 'titulo')), '<script'), '16) la importación le quita las etiquetas al título (y el panel igual lo escapa: ver 14)');
 $r = $correr('at_av_subir', ['evidencia_id' => $eid_h, 'campo' => 'archivo', '__files' => ['archivo' => $subida]]);
 $url_h = (string) ($leer()['evidencias'][$eid_h]['url'] ?? '');
 $nombre_h = at_av_nombre_de_url($url_h);
@@ -152,7 +210,7 @@ ok($msg($r) === 'av_borrador' && $rr['estado'] === 'pendiente' && $rr['view_url'
 ob_start();
 at_pt_render_plan(at_pt_plan($id), $crm);
 $h = (string) ob_get_clean();
-// El título hostil se guarda a mano (la importación ya lo limpia): así se prueba el escape de la propia sección.
+// El título hostil se guarda a mano (la importación ahora lo rechaza): así se prueba el escape de la propia sección.
 $av = $leer();
 foreach ($av['cierres'] as $k => $c) {
 	if ($c['id'] === $cid_h) { $av['cierres'][$k]['titulo'] = $hostil; }

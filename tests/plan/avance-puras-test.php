@@ -78,8 +78,17 @@ ok(count($n['cierres']) === 1 && $n['alcance']['fase1'] === ['A'] && $n['render'
 // --- ayudas
 ok(at_av_url_publica('https://example.com/a?b=1') === 'https://example.com/a?b=1', 'enlace https: sirve');
 ok(at_av_url_publica('http://example.com/') === '' && at_av_url_publica('https://n8n-propuesta-renderer.kchiba.easypanel.host/p/x') === '' && at_av_url_publica('https://ex ample.com') === '' && at_av_url_publica('javascript:alert(1)') === '', 'http, easypanel, espacios o javascript: no sirven (D8)');
-ok(at_av_limpiar("<b>Hola</b>\n  mundo\x07") === 'Hola mundo' && at_av_limpiar("a\n\n\n\nb", true) === "a\n\nb", 'limpiar quita etiquetas y caracteres de control');
+ok(at_av_limpiar("Hola\n  mundo\x07") === 'Hola mundo' && at_av_limpiar("a\n\n\n\nb", true) === "a\n\nb", 'limpiar quita caracteres de control y junta espacios');
+ok(at_av_limpiar('Lighthouse >=90 y <90 en celular') === 'Lighthouse >=90 y <90 en celular', 'limpiar no corta un «<» suelto (F3)');
+$e = [];
+ok(at_av_texto('Lighthouse >=90 y <90 en celular', 200, 'El texto', $e) === 'Lighthouse >=90 y <90 en celular' && $e === [], 'un texto con «<90» se guarda completo (F3)');
+$e = [];
+ok(at_av_texto('menos de <3 segundos', 200, 'El texto', $e) === 'menos de <3 segundos' && $e === [], 'un texto con «<3 segundos» se guarda completo (F3)');
+$e = [];
+at_av_texto('"><script>alert(1)</script>', 200, 'El título', $e);
+ok(count($e) === 1 && str_contains($e[0], 'no puede llevar etiquetas HTML'), 'un texto con etiquetas HTML es error y no se guarda (F3)');
 ok(at_av_fecha_valida('2026-02-28') && !at_av_fecha_valida('2026-02-30') && !at_av_fecha_valida('10-10-2026') && !at_av_fecha_valida(null), 'fechas AAAA-MM-DD reales');
+ok(at_av_fecha_valida('2026-10-14') && !at_av_fecha_valida('2019-12-31') && !at_av_fecha_valida('2101-01-01') && at_av_fecha_valida('2020-01-01') && at_av_fecha_valida('2100-12-31'), 'fechas entre 2020 y 2100 (F4)');
 $bp = at_av_bloques_plan($plan);
 ok(array_column($bp, 'nombre') === ['Diseño', 'Desarrollo', 'Puesta en marcha'] && $bp[0]['plan_desde'] === '2026-10-05' && $bp[0]['plan_hasta'] === '2026-10-09' && $bp[2]['fase'] === 'implementacion', 'bloques del plan con su fase y sus fechas planificadas');
 ok(at_av_bloque_del_plan($bp, '  DISEÑO ') === 'Diseño' && at_av_bloque_del_plan($bp, 'Otro') === '', 'los bloques se reconocen sin importar mayúsculas ni espacios');
@@ -115,6 +124,8 @@ $casos = [
 	'texto muy largo' => [['cierre.antes' => ['texto' => str_repeat('a', 2001)]], 'máximo 2000'],
 	'ref repetida' => [['evidencias' => [['ref' => 'x', 'tipo' => 'enlace', 'titulo' => 'A', 'url' => 'https://a.cl'], ['ref' => 'x', 'tipo' => 'enlace', 'titulo' => 'B', 'url' => 'https://b.cl']], 'cierre.antes' => ['evidencias' => ['x']], 'cierre.despues' => []], 'misma «ref»'],
 	'muchas evidencias' => [['evidencias' => array_map(fn($i) => ['ref' => "e$i", 'tipo' => 'enlace', 'titulo' => "E$i", 'url' => 'https://a.cl'], range(1, 61)), 'cierre.antes' => [], 'cierre.despues' => []], 'máximo 60'],
+	'ref solo numeros' => [['evidencias' => [['ref' => '1', 'tipo' => 'enlace', 'titulo' => 'A', 'url' => 'https://a.cl']], 'cierre.antes' => ['evidencias' => ['1']], 'cierre.despues' => []], 'no tiene «ref»'],
+	'titulo con etiqueta' => [['cierre.titulo' => '"><script>alert(1)</script>'], 'no puede llevar etiquetas HTML'],
 	'estado de bloque raro' => [['bloques' => ['Diseño' => ['estado' => 'casi']]], 'estado desconocido'],
 	'cambio sin fecha' => [['cambios_plan' => [['titulo' => 'Algo']]], 'fecha válida'],
 ];
@@ -123,6 +134,8 @@ foreach ($casos as $nombre => [$cambios, $esperado]) {
 	$texto = implode(' | ', $r['errores']);
 	ok($r['ok'] === false && $r['cierre'] === [] && stripos($texto, $esperado) !== false, "rechaza: {$nombre} («{$esperado}»)" . ($r['ok'] ? '' : " — {$texto}"));
 }
+$ra1 = at_av_validar_import(archivo(['evidencias' => [['ref' => 'a1', 'tipo' => 'enlace', 'titulo' => 'A', 'url' => 'https://a.cl']], 'cierre.antes' => ['evidencias' => ['a1']], 'cierre.despues' => []]), COD, $plan, $vacio);
+ok($ra1['ok'] === true, 'una ref con al menos una letra («a1») vale (F6)');
 ok(at_av_validar_import('no es arreglo', COD, $plan, $vacio)['ok'] === false, 'algo que no es un objeto: rechazado sin lanzar');
 
 // --- aplicar

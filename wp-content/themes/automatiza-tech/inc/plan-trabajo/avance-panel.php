@@ -4,6 +4,8 @@
  * acciones admin-post (spec §5). Cada acción: manage_options + nonce del plan (at_pt_accion_plan) y vuelta a la ficha
  * con pt_msg; los detalles (errores de la importación, avisos) van con at_pt_guardar_detalles. Lo que cambia algo
  * visible para el cliente rehace «Estado del proyecto» si hay al menos un cierre publicado (R4). Publicar no envía nada (D5).
+ * Importar un borrador NUNCA pide la presentación: el cliente no ve un borrador, y lo demás que traiga el archivo (bloques,
+ * cambios de plan, «necesitamos», alcance) se ve en la próxima presentación.
  */
 if (!defined('ABSPATH')) {
 	exit;
@@ -12,7 +14,7 @@ if (!defined('ABSPATH')) {
 /** Avisos de la sección: se suman a at_pt_mensajes_panel(). */
 function at_av_mensajes(): array {
 	return [
-		'av_importado'            => ['ok', 'Cierre guardado como borrador. Revísalo y publícalo cuando esté listo; el cliente todavía no lo ve.'],
+		'av_importado'            => ['ok', 'Cierre guardado como borrador. El cliente no ve este cierre hasta que lo publiques.'],
 		'av_importado_faltan'     => ['aviso', 'Cierre guardado como borrador, pero faltan archivos por subir (detalle abajo). No se puede publicar hasta subirlos.'],
 		'av_import_error'         => ['error', 'No se guardó el cierre: el archivo tiene errores (detalle abajo). No cambió nada.'],
 		'av_subido'               => ['ok', 'Archivo subido.'],
@@ -77,6 +79,7 @@ function at_av_accion_importar(): void {
 	$id = (int) $fila->id;
 	$texto = '';
 	$f = $_FILES['cierre_json'] ?? null;
+	$pesado = is_array($f) && (int) ($f['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_OK && (int) ($f['size'] ?? 0) > 1048576;
 	if (is_array($f) && (int) ($f['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_OK && (int) ($f['size'] ?? 0) <= 1048576) {
 		$tmp = (string) ($f['tmp_name'] ?? '');
 		if ($tmp !== '' && (is_uploaded_file($tmp) || (defined('AT_AV_PRUEBAS') && AT_AV_PRUEBAS === true && is_file($tmp)))) {
@@ -88,12 +91,18 @@ function at_av_accion_importar(): void {
 	}
 	$datos = json_decode($texto, true);
 	if (!is_array($datos)) {
-		at_pt_guardar_detalles($id, ['El archivo no es un JSON válido (' . json_last_error_msg() . ').']);
+		at_pt_guardar_detalles($id, [$pesado ? 'El archivo pesa más de 1 MB.' : 'El archivo no es un JSON válido (' . json_last_error_msg() . ').']);
 		at_pt_volver($crm, $id, 'av_import_error');
 	}
 	$v = at_av_validar_import($datos, (string) $fila->codigo, at_pt_payload($fila), $avance);
 	if (!$v['ok']) {
 		at_pt_guardar_detalles($id, $v['errores']);
+		at_pt_volver($crm, $id, 'av_import_error');
+	}
+	// Un cierre solo puede enlazar un entregable del mismo cliente del plan (spec §9).
+	$ent_id = (int) ($v['cierre']['entregable_id'] ?? 0);
+	if ($ent_id > 0 && at_av_entregable_del_plan($fila, $ent_id) === '') {
+		at_pt_guardar_detalles($id, ["El entregable {$ent_id} no existe o no es de este cliente."]);
 		at_pt_volver($crm, $id, 'av_import_error');
 	}
 	$ids = array_column($avance['cierres'], 'id');
@@ -117,9 +126,11 @@ function at_av_accion_importar(): void {
 	if ($faltan) {
 		$avisos[] = 'Faltan por subir: ' . implode(', ', $faltan) . '.';
 	}
+	// Importar nunca rehace la presentación del cliente (D5): lo general del archivo se ve en la próxima presentación.
+	if (($v['bloques'] || $v['cambios_plan'] !== null || $v['necesitamos'] !== null || $v['alcance'] !== null) && at_av_publicados($nuevo)) {
+		$avisos[] = 'El archivo también cambió bloques, cambios de plan, «necesitamos» o alcance: el cliente los verá cuando publiques un cierre o uses «Rehacer la presentación».';
+	}
 	at_pt_guardar_detalles($id, $avisos);
-	// Bloques, cambios, necesitamos y alcance pueden haber cambiado y esos sí se ven (R4: solo si hay algo publicado).
-	at_av_refrescar($id);
 	at_pt_volver($crm, $id, $faltan ? 'av_importado_faltan' : 'av_importado');
 }
 

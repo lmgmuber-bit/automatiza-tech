@@ -70,6 +70,43 @@ ok(array_column($d['render']['cierres'], 'titulo') === ['Diseño terminado'] && 
 $d = pedir('GET', "/plan/{$id}/render", null, ['modo' => 'estado', 'previa' => '1'])->get_data();
 ok(count($d['render']['cierres']) === 2 && $d['render']['unique_id'] === $cod . '-previa-' . at_av_token_previa($cod) && $d['render']['draft'] === true, '3) la vista previa trae los dos, en su ruta con token (R3)');
 ok(preg_match('/^[0-9a-f]{10}$/', at_av_token_previa($cod)) && at_av_token_previa($cod) === at_av_token_previa($cod), '3) token de 10, fijo por plan');
+// F2: el entregable de un cierre solo se enlaza si es del mismo cliente del plan (spec §9).
+add_filter('home_url', fn() => 'https://example.com');
+$otro = ptc_cliente($m, 'prueba-rest-estado-otro@example.com');
+$mk_ent = function (int $tech, string $titulo): array {
+	global $wpdb;
+	$wpdb->insert($wpdb->prefix . 'automatiza_clients_details', ['client_id' => $tech, 'detail_type' => 'entregable', 'title' => $titulo, 'status' => 'completed', 'attachment_url' => 'https://example.com/v1', 'created_by' => 1]);
+	$det = (int) $wpdb->insert_id;
+	$eid = at_en_activar($det);
+	return [$det, is_int($eid) ? $eid : 0];
+};
+[$det_mio, $ent_mio] = $mk_ent($c['tech'], '[PRUEBA] Entregable propio');
+[$det_otro, $ent_otro] = $mk_ent($otro['tech'], '[PRUEBA] Entregable ajeno');
+register_shutdown_function(function () use ($ent_mio, $ent_otro, $det_mio, $det_otro) {
+	global $wpdb;
+	foreach ([$ent_mio, $ent_otro] as $e) {
+		$wpdb->delete(at_en_tablas()['e'], ['id' => $e]);
+	}
+	foreach ([$det_mio, $det_otro] as $dd) {
+		$wpdb->delete($wpdb->prefix . 'automatiza_clients_details', ['id' => $dd]);
+	}
+});
+ok($ent_mio > 0 && $ent_otro > 0, '3b) entregables de prueba creados (uno del cliente del plan, otro de otro cliente)');
+$f_plan = at_pt_plan($id);
+$mio = at_av_entregable_del_plan($f_plan, $ent_mio);
+ok($mio !== '' && str_starts_with($mio, 'https://example.com/ver-entregable.php?id='), '3b) el entregable del mismo cliente da su URL pública');
+ok(at_av_entregable_del_plan($f_plan, $ent_otro) === '' && at_av_entregable_del_plan($f_plan, 999999991) === '' && at_av_entregable_del_plan($f_plan, 0) === '', '3b) el de otro cliente, uno que no existe y 0 dan vacío');
+$a_orig = at_av_leer(at_pt_plan($id));
+$a_ent = $a_orig;
+$a_ent['cierres'][1]['entregable_id'] = $ent_otro;
+at_av_guardar($id, $a_ent);
+$d = pedir('GET', "/plan/{$id}/render", null, ['modo' => 'estado'])->get_data();
+ok(($d['render']['cierres'][0]['entregable_url'] ?? 'x') === '', '3b) un cierre publicado con el entregable de OTRO cliente: entregable_url vacío');
+$a_ent['cierres'][1]['entregable_id'] = $ent_mio;
+at_av_guardar($id, $a_ent);
+$d = pedir('GET', "/plan/{$id}/render", null, ['modo' => 'estado'])->get_data();
+ok(($d['render']['cierres'][0]['entregable_url'] ?? '') === $mio, '3b) con el entregable del mismo cliente: entregable_url es su enlace');
+at_av_guardar($id, $a_orig);
 
 $vista = 'https://' . at_pt_host_renderer() . '/p/' . $cod . '-estado/index.html';
 $pdf = 'https://' . at_pt_host_renderer() . '/p/' . $cod . '-estado/presentation.pdf';

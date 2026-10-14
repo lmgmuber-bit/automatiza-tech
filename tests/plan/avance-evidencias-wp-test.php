@@ -27,6 +27,20 @@ function png(int $w = 40, int $h = 30): string {
 	ob_start(); imagepng($im); imagedestroy($im);
 	return (string) ob_get_clean();
 }
+/** PNG de 1 bit armado a mano (liviano y sin decodificar con GD: GD pediría ~324 MB para un 9000×9000 de verdad). */
+function png_grande(int $w, int $h): string {
+	$chunk = function (string $tipo, string $datos): string {
+		return pack('N', strlen($datos)) . $tipo . $datos . pack('N', crc32($tipo . $datos));
+	};
+	$fila = str_repeat("\0", 1 + (int) ceil($w / 8));
+	$raw = '';
+	$z = deflate_init(ZLIB_ENCODING_DEFLATE);
+	for ($i = 0; $i < $h; $i++) {
+		$raw .= deflate_add($z, $fila, ZLIB_NO_FLUSH);
+	}
+	$raw .= deflate_add($z, '', ZLIB_FINISH);
+	return "\x89PNG\r\n\x1a\n" . $chunk('IHDR', pack('NNCCCCC', $w, $h, 1, 0, 0, 0, 0)) . $chunk('IDAT', $raw) . $chunk('IEND', '');
+}
 /** JPEG con un segmento EXIF falso que trae un texto de GPS reconocible. */
 function jpeg_con_exif(): string {
 	$im = imagecreatetruecolor(60, 40);
@@ -64,9 +78,29 @@ foreach ([['foto.jpg', '<?php echo 1; ?>'], ['dibujo.png', '<svg xmlns="http://w
 $grande = subido($tmp, 'grande.png', png() . str_repeat("\0", 15728641));
 $e = at_av_guardar_archivo($grande, $plan_id, 'imagen');
 ok(is_wp_error($e) && str_contains($e->get_error_message(), '15 MB'), 'imagen de más de 15 MB: rechazada');
+// Tope de medidas antes de decodificar: un PNG liviano de 9000×9000 decodificaría ~324 MB.
+$gigante = subido($tmp, 'enorme.png', png_grande(9000, 9000));
+ok(filesize($gigante['tmp_name']) < AT_AV_IMAGEN_MAX, 'el PNG de 9000×9000 pesa poco (el peso solo no lo detiene)');
+$antes = count(glob($d['dir'] . '*'));
+$e = at_av_guardar_archivo($gigante, $plan_id, 'imagen');
+ok(is_wp_error($e) && str_contains($e->get_error_message(), 'demasiado grande') && str_contains($e->get_error_message(), '12.000 px') && count(glob($d['dir'] . '*')) === $antes, 'imagen de 9000×9000 (más de 25 millones de píxeles): rechazada sin decodificar ni guardar');
+// Lado mayor a 2000 px: queda en 2000 px conservando la proporción.
+$r = at_av_guardar_archivo(subido($tmp, 'ancha.png', png(3000, 1000)), $plan_id, 'imagen');
+$medida = is_array($r) ? getimagesize($d['dir'] . $r['archivo']) : false;
+ok($medida && $medida[0] === 2000 && $medida[1] === 667, 'un PNG de 3000×1000 queda de 2000×667');
 // Videos: MP4 o WebM tal cual.
 $r = at_av_guardar_archivo(subido($tmp, 'reel.mp4', $mp4), $plan_id, 'video');
 ok(is_array($r) && preg_match('/^[a-z0-9]{20}\.mp4$/', $r['archivo']) && file_get_contents($d['dir'] . $r['archivo']) === $mp4, 'video MP4 guardado sin cambios');
+// Video de más de 200 MB: archivo disperso (casi no ocupa disco) con cabecera MP4.
+$enorme = $tmp . 'enorme.mp4';
+$fh = fopen($enorme, 'wb');
+fwrite($fh, "\x00\x00\x00\x18ftypmp42\x00\x00\x00\x00mp42isom");
+fseek($fh, 209715200);
+fwrite($fh, 'x');
+fclose($fh);
+$e = at_av_guardar_archivo(['name' => 'enorme.mp4', 'type' => 'video/mp4', 'tmp_name' => $enorme, 'error' => UPLOAD_ERR_OK, 'size' => filesize($enorme)], $plan_id, 'video');
+@unlink($enorme);
+ok(is_wp_error($e) && str_contains($e->get_error_message(), '200 MB'), 'video de más de 200 MB: rechazado');
 $e = at_av_guardar_archivo(subido($tmp, 'reel.mp4', 'esto no es un video'), $plan_id, 'video');
 ok(is_wp_error($e) && str_contains($e->get_error_message(), 'no es un video'), 'un «.mp4» que es texto: rechazado');
 $e = at_av_guardar_archivo(['name' => 'x.png', 'tmp_name' => '', 'error' => UPLOAD_ERR_INI_SIZE, 'size' => 0], $plan_id, 'imagen');
@@ -76,9 +110,15 @@ ok(is_wp_error($e) && str_contains($e->get_error_message(), 'no llegó completo'
 $av = at_av_vacio();
 $av['cierres'][] = ['id' => 'cabc123', 'titulo' => 'Sitio', 'estado' => 'borrador', 'antes' => ['evidencias' => []], 'despues' => ['evidencias' => ['cabc123-portada', 'cabc123-reel']]];
 $av['evidencias']['cabc123-portada'] = ['tipo' => 'captura', 'titulo' => 'Portada', 'url' => '', 'archivo' => 'portada.png', 'poster' => '', 'poster_archivo' => ''];
+$av['cierres'][0]['despues']['evidencias'][] = 'cabc123-reel2';
+$av['cierres'][0]['despues']['evidencias'][] = 'cabc123-foto';
+$av['evidencias']['cabc123-reel2'] = ['tipo' => 'video', 'titulo' => 'Mismo reel', 'url' => '', 'archivo' => 'REEL.mp4', 'poster' => '', 'poster_archivo' => ''];
+$av['evidencias']['cabc123-foto'] = ['tipo' => 'captura', 'titulo' => 'Foto', 'url' => '', 'archivo' => 'foto.png', 'poster' => '', 'poster_archivo' => 'poster.jpg'];
 $av['evidencias']['cabc123-reel'] = ['tipo' => 'video', 'titulo' => 'Reel', 'url' => '', 'archivo' => 'reel.mp4', 'poster' => '', 'poster_archivo' => 'poster.jpg'];
-$res = at_av_asignar_archivos($av, 'cabc123', [subido($tmp, 'Portada.PNG', png()), subido($tmp, 'reel.mp4', $mp4), subido($tmp, 'poster.jpg', jpeg_con_exif()), subido($tmp, 'sobra.png', png())], $plan_id);
+$res = at_av_asignar_archivos($av, 'cabc123', [subido($tmp, 'Portada.PNG', png()), subido($tmp, 'reel.mp4', $mp4), subido($tmp, 'poster.jpg', jpeg_con_exif()), subido($tmp, 'sobra.png', png()), subido($tmp, 'foto.png', png())], $plan_id);
 $ev = $res['avance']['evidencias'];
+ok($res['errores'] === [] && $ev['cabc123-reel2']['url'] !== '' && $ev['cabc123-reel2']['url'] === $ev['cabc123-reel']['url'], 'dos evidencias con el mismo archivo subido reutilizan el primer resultado');
+ok($ev['cabc123-foto']['url'] !== '' && $ev['cabc123-foto']['poster'] === '', 'una captura nunca recibe póster, aunque nombre uno');
 ok($res['errores'] === [] && $ev['cabc123-portada']['url'] !== '' && $ev['cabc123-reel']['url'] !== '' && $ev['cabc123-reel']['poster'] !== '', 'captura, video y póster quedan con su URL');
 ok(count($res['avisos']) === 1 && str_contains($res['avisos'][0], 'sobra.png') && at_av_faltan_archivos($res['avance'], 'cabc123') === [], 'un archivo que no calza se avisa; ya no falta nada');
 $viejo = basename($ev['cabc123-portada']['url']);
@@ -90,6 +130,10 @@ ok($mala['error'] === 'Solo un video lleva póster.', 'una captura no lleva pós
 // Borrado: solo nombres propios del plan, nunca rutas.
 file_put_contents($d['dir'] . 'zzzzzzzzzzzzzzzzzzzz.png', 'x');
 file_put_contents($tmp . 'fuera.png', 'x');
-at_av_borrar_archivos($plan_id, ['zzzzzzzzzzzzzzzzzzzz.png', '../../fuera.png', '.htaccess', $viejo]);
-ok(!is_file($d['dir'] . 'zzzzzzzzzzzzzzzzzzzz.png') && !is_file($d['dir'] . $viejo) && is_file($tmp . 'fuera.png') && is_file($base . '.htaccess'), 'borra solo archivos propios de la carpeta del plan');
+$senuelo = $base . 'fuera.png'; // el destino real de «../fuera.png» desde la carpeta del plan
+file_put_contents($senuelo, 'x');
+at_av_borrar_archivos($plan_id, ['zzzzzzzzzzzzzzzzzzzz.png', '../../fuera.png', '../fuera.png', '.htaccess', $viejo]);
+$sobrevive = is_file($senuelo);
+@unlink($senuelo);
+ok(!is_file($d['dir'] . 'zzzzzzzzzzzzzzzzzzzz.png') && !is_file($d['dir'] . $viejo) && is_file($tmp . 'fuera.png') && $sobrevive && is_file($base . '.htaccess'), 'borra solo archivos propios de la carpeta del plan');
 fin();

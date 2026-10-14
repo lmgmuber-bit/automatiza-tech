@@ -43,20 +43,27 @@ function at_av_dir(int $plan_id): array {
 	return ['dir' => $dir, 'url' => $url . (int) $plan_id . '/'];
 }
 
-/** Tipo real por el contenido: 'jpg', 'png', 'webp', 'mp4', 'webm' o '' (cualquier otra cosa). */
+/**
+ * Tipo real por el contenido: 'jpg', 'png', 'webp', 'mp4', 'webm' o '' (cualquier otra cosa). El video se reconoce por
+ * su cabecera ANTES de llamar a getimagesize(): en un MP4 grande esa función puede pedir cientos de MB de memoria
+ * (lee las cajas ISO-BMFF pensando en HEIC/AVIF). Un «ftyp» solo cuenta como MP4 con una marca de video conocida.
+ */
 function at_av_tipo_contenido(string $ruta): string {
 	if ($ruta === '' || !is_file($ruta)) {
 		return '';
+	}
+	$h = (string) @file_get_contents($ruta, false, null, 0, 16);
+	if (strlen($h) >= 12 && substr($h, 4, 4) === 'ftyp') {
+		return preg_match('/^(isom|iso[0-9a-z]|mp4[0-9a-z]|avc1|M4V |M4VH|M4VP|msnv|dash|qt  |3g[a-z0-9]{2}|f4v )/', substr($h, 8, 4)) ? 'mp4' : '';
+	}
+	if (strncmp($h, "\x1A\x45\xDF\xA3", 4) === 0) {
+		return 'webm';
 	}
 	$info = @getimagesize($ruta);
 	if ($info) {
 		return ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp'][(string) ($info['mime'] ?? '')] ?? '';
 	}
-	$h = (string) @file_get_contents($ruta, false, null, 0, 16);
-	if (strlen($h) >= 12 && substr($h, 4, 4) === 'ftyp') {
-		return 'mp4';
-	}
-	return strncmp($h, "\x1A\x45\xDF\xA3", 4) === 0 ? 'webm' : '';
+	return '';
 }
 
 /**
@@ -95,6 +102,14 @@ function at_av_guardar_archivo(array $a, int $plan_id, string $clase) {
 	}
 	if ($peso > AT_AV_IMAGEN_MAX) {
 		return new WP_Error('at_av_peso', "«{$nombre}» pesa más de 15 MB.");
+	}
+	// Medidas antes de decodificar: un PNG liviano de 9000×9000 ocuparía ~324 MB en GD (fatal en Hostinger).
+	// Mismos topes que el módulo de entregables (inc/entregables/puras.php).
+	$medida = @getimagesize($tmp);
+	$max_lado = defined('AT_EN_MAX_LADO_ENTRADA') ? (int) AT_EN_MAX_LADO_ENTRADA : 12000;
+	$max_px = defined('AT_EN_MAX_PIXELES') ? (int) AT_EN_MAX_PIXELES : 25000000;
+	if (!$medida || (int) $medida[0] > $max_lado || (int) $medida[1] > $max_lado || (int) $medida[0] * (int) $medida[1] > $max_px) {
+		return new WP_Error('at_av_medidas', "«{$nombre}» es demasiado grande (máximo 12.000 px por lado y 25 millones de píxeles).");
 	}
 	$ext = $tipo === 'png' ? 'png' : 'jpg';
 	$archivo = $aleatorio . '.' . $ext;
@@ -143,6 +158,7 @@ function at_av_asignar_archivos(array $avance, string $cierre_id, array $subidos
 		$por_nombre[strtolower((string) ($s['name'] ?? ''))] = $s;
 	}
 	$usados = [];
+	$guardados = []; // nombre en minúsculas => resultado de guardar (dos evidencias pueden pedir el mismo archivo)
 	foreach (array_unique($ids) as $eid) {
 		$e = $avance['evidencias'][$eid] ?? null;
 		if (!is_array($e) || !in_array($e['tipo'] ?? '', ['captura', 'video'], true)) {
@@ -153,10 +169,20 @@ function at_av_asignar_archivos(array $avance, string $cierre_id, array $subidos
 			if ($n === '' || !isset($por_nombre[$n])) {
 				continue;
 			}
+			if ($campo === 'poster_archivo' && $e['tipo'] !== 'video') {
+				continue; // solo un video lleva póster (igual que at_av_subir_una)
+			}
 			$usados[$n] = true;
-			$r = at_av_guardar_archivo($por_nombre[$n], $plan_id, ($campo === 'archivo' && $e['tipo'] === 'video') ? 'video' : 'imagen');
+			$clase = ($campo === 'archivo' && $e['tipo'] === 'video') ? 'video' : 'imagen';
+			$clave = $clase . '|' . $n;
+			if (!isset($guardados[$clave])) {
+				$guardados[$clave] = at_av_guardar_archivo($por_nombre[$n], $plan_id, $clase);
+				if (is_wp_error($guardados[$clave])) {
+					$res['errores'][] = $guardados[$clave]->get_error_message();
+				}
+			}
+			$r = $guardados[$clave];
 			if (is_wp_error($r)) {
-				$res['errores'][] = $r->get_error_message();
 				continue;
 			}
 			$viejo = at_av_nombre_de_url((string) ($e[$destino] ?? ''));

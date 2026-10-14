@@ -12820,8 +12820,8 @@
     "semantic_hash": ""
   },
   "wp-content/themes/automatiza-tech/inc/plan-trabajo/avance-panel.php": {
-    "mtime": 1792001843.4894671,
-    "ast_hash": "068766523813bb602f24cfdbb9905bf3",
+    "mtime": 1792002768.74111,
+    "ast_hash": "17a63f3215ce1a08a20e888146e1bafb",
     "semantic_hash": ""
   },
   "wp-content/themes/automatiza-tech/inc/plan-trabajo/avance-puras.php": {
@@ -12845,8 +12845,8 @@
     "semantic_hash": ""
   },
   "tests/plan/avance-formulario-wp-test.php": {
-    "mtime": 1792002027.4284086,
-    "ast_hash": "355b8027471ea04deb89af80ed82d6ac",
+    "mtime": 1792002781.1768303,
+    "ast_hash": "1c2be2d66be95c15b3eec2a4cf3ac557",
     "semantic_hash": ""
   }
 }

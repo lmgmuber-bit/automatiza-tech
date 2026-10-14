@@ -57,6 +57,7 @@ $nc = [
 $h = $dibujar();
 ok(str_contains($h, 'value="at_av_nuevo"') && str_contains($h, '➕ Nuevo cierre') && substr_count($h, 'class="at-av-ev"') === AT_AV_FORM_FILAS && substr_count($h, 'class="at-av-ev" hidden') === AT_AV_FORM_FILAS - 2 && str_contains($h, 'name="nc[bloques][]" value="Diseño"'), '1) la sección muestra «Nuevo cierre» con los bloques del plan y dos filas de evidencia a la vista');
 ok(str_contains($h, 'value="at_av_importar"') && str_contains($h, 'Importar cierre'), '1) «Importar cierre» sigue disponible');
+ok(substr_count($h, '<details class="at-av-ayuda">') === 4 && str_contains($h, 'Es lo que el cliente ve en la barra de avance') && str_contains($h, 'El plan firmado no se toca'), '1) cada parte de la sección tiene su «ℹ️ ¿Para qué sirve?»');
 
 // 2) Un error no guarda nada y lo escrito vuelve al formulario (una sola vez).
 $malo = $nc;

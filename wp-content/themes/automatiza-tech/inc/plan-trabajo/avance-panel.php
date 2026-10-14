@@ -339,6 +339,11 @@ function at_av_accion_previa(): void {
 	at_pt_volver($crm, $id, at_av_pedir_render($id, true) === '' ? 'av_previa' : 'av_reintento_fallo');
 }
 
+/** «ℹ️ ¿Para qué sirve?» bajo el título de una parte de la sección: se abre y se cierra sin JS. $html es texto fijo del código. */
+function at_av_ayuda(string $html): string {
+	return '<details class="at-av-ayuda"><summary>ℹ️ ¿Para qué sirve?</summary><p>' . $html . '</p></details>';
+}
+
 /** Campos ocultos de cada formulario de la sección (acción, plan, ficha, nonce y extras). */
 function at_av_ocultos(string $accion, int $plan_id, int $crm_id, array $extra = []): string {
 	$h = '<input type="hidden" name="action" value="' . esc_attr($accion) . '">'
@@ -406,7 +411,7 @@ function at_av_render_seccion(object $fila, int $crm_id): void {
 	echo '</div>';
 
 	// Cierres.
-	echo '<h4>Cierres de hito</h4>';
+	echo '<h4>Cierres de hito</h4>' . at_av_ayuda('Cada cierre cuenta un hito terminado: cómo estaba, qué hicimos y cómo quedó, con sus pruebas. Nace en <strong>borrador</strong> (solo lo ves tú). Con «✅ Publicar» entra a la presentación «Estado del proyecto» del cliente; no se le envía nada. «↩️ Volver a borrador» lo saca de la presentación al tiro. Solo un borrador se edita o se quita.');
 	if (!$av['cierres']) {
 		echo '<p class="description">Todavía no hay cierres. Créalo abajo con «Nuevo cierre» (o impórtalo, si te entregaron el archivo .json).</p>';
 	} else {
@@ -473,7 +478,7 @@ function at_av_render_seccion(object $fila, int $crm_id): void {
 
 	// Bloques.
 	$opciones = ['por_venir' => 'Por venir', 'en_curso' => 'En curso', 'listo' => 'Listo'];
-	echo '<h4>Bloques del plan</h4><form method="post" action="' . $accion . '" class="at-av-bloques">' . at_av_ocultos('at_av_bloques', $id, $crm_id)
+	echo '<h4>Bloques del plan</h4>' . at_av_ayuda('Aquí marcas en qué va cada etapa del plan firmado. Es lo que el cliente ve en la barra de avance de «Estado del proyecto». <strong>Por venir</strong> = aún no empieza; <strong>En curso</strong> = estamos trabajando en ella; <strong>Listo</strong> = terminada. <strong>Inicio y fin real</strong> son las fechas en que de verdad empezó y terminó (pueden ser distintas de lo planificado, que no cambia). Un bloque con un cierre publicado se muestra «listo» solo, aunque aquí diga otra cosa. Si ya hay un cierre publicado, guardar rehace la presentación del cliente en unos minutos; si no, lo verá en la primera.') . '<form method="post" action="' . $accion . '" class="at-av-bloques">' . at_av_ocultos('at_av_bloques', $id, $crm_id)
 		. '<table class="widefat striped"><thead><tr><th>Bloque</th><th>Planificado</th><th>Estado</th><th>Inicio real</th><th>Fin real</th></tr></thead><tbody>';
 	foreach (at_av_estado_bloques($plan, $av) as $i => $b) {
 		$g = is_array($av['bloques'][$b['nombre']] ?? null) ? $av['bloques'][$b['nombre']] : ['estado' => 'por_venir', 'inicio_real' => '', 'fin_real' => ''];
@@ -494,7 +499,7 @@ function at_av_render_seccion(object $fila, int $crm_id): void {
 	$bp = at_av_bloques_plan($plan);
 	$fase1_def = implode("\n", array_values(array_unique(array_filter(array_column($bp, 'entregable'), 'strlen'))));
 	$mensual_def = implode("\n", array_map('strval', (array) ($plan['soporte']['mensuales'] ?? [])));
-	echo '<h4>Cambios de plan, «necesitamos de ti» y alcance</h4><form method="post" action="' . $accion . '" class="at-av-listas">' . at_av_ocultos('at_av_listas', $id, $crm_id)
+	echo '<h4>Cambios de plan, «necesitamos de ti» y alcance</h4>' . at_av_ayuda('<strong>Cambios de plan acordados:</strong> lo que cambió respecto del plan firmado, con su fecha (p. ej., «Google Ads pasa al servicio mensual»). El plan firmado no se toca: el cliente ve estos cambios aparte, en «Estado del proyecto». <strong>Lo que necesitamos del cliente:</strong> los pendientes que dependen de él (logo, accesos, una fecha); un «✓ » al inicio lo marca resuelto. <strong>Qué incluye la Fase 1 y el servicio mensual:</strong> el alcance que ve el cliente; vacío = lo que dice el plan. Si ya hay un cierre publicado, guardar rehace la presentación del cliente.') . '<form method="post" action="' . $accion . '" class="at-av-listas">' . at_av_ocultos('at_av_listas', $id, $crm_id)
 		. '<label class="at-pt-campo">Cambios de plan acordados (uno por línea: «2026-10-13 | título | detalle»)<textarea name="cambios_plan" rows="3" class="large-text">' . esc_textarea(at_av_texto_de_cambios($av['cambios_plan'])) . '</textarea></label>'
 		. '<label class="at-pt-campo">Lo que necesitamos del cliente (uno por línea; «✓ » al inicio = resuelto)<textarea name="necesitamos" rows="3" class="large-text">' . esc_textarea(at_av_texto_de_necesitamos($av['necesitamos'])) . '</textarea></label>'
 		. '<label class="at-pt-campo">Qué incluye la Fase 1 (uno por línea; vacío = los entregables del plan)<textarea name="alcance_fase1" rows="3" class="large-text" placeholder="' . esc_attr($fase1_def) . '">' . esc_textarea(implode("\n", $av['alcance']['fase1'])) . '</textarea></label>'
@@ -529,7 +534,7 @@ function at_av_render_formulario(object $fila, int $crm_id, array $av, array $pl
 	$v = fn(string $k): string => is_string($p[$k] ?? null) ? $p[$k] : '';
 	$marcados = array_map(fn($b) => at_av_clave((string) $b), (array) ($p['bloques'] ?? []));
 	$h = '<h4 id="at-av-nuevo">' . ($editar !== '' ? '✏️ Editar el cierre «' . esc_html($v('titulo')) . '»' : '➕ Nuevo cierre') . '</h4>'
-		. '<p class="description">Un cierre cuenta un hito terminado: cómo estaba, qué hicimos y cómo quedó, con sus pruebas. Se guarda como borrador; el cliente no lo ve hasta que lo publiques.</p>'
+		. at_av_ayuda('Aquí armas un cierre sin escribir JSON. Marca el bloque del plan que terminó, cuenta el antes, el durante y el después, y agrega las pruebas: cada evidencia va en «Antes» o en «Después» y se elige su tipo (imagen, cifra medida con fuente y fecha, video con portada opcional o enlace). Los archivos se adjuntan con el nombre que tengan. Se guarda como <strong>borrador</strong>: el cliente no lo ve hasta que lo publiques.')
 		. '<form method="post" action="' . esc_url(admin_url('admin-post.php')) . '" enctype="multipart/form-data" class="at-av-nc">'
 		. at_av_ocultos('at_av_nuevo', $id, $crm_id, $editar !== '' ? ['cierre_id' => $editar] : [])
 		. '<div class="at-av-nc-fila">'

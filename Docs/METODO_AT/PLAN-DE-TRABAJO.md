@@ -279,12 +279,12 @@ Desplegada por SSH con autorización de Luis: 10 archivos (los 4 modificados cot
   los del módulo: carga los nuevos), y `ver-plan.php` en la raíz. Sin migración. Los planes aprobados antes de subir no
   traen «En el sitio web» en el documento: hay que volver a aprobarlos para que lo traigan.
 
-## Estado del proyecto — Etapa 1 (LOCAL, sin desplegar)
+## Estado del proyecto — Etapa 1 (EN PROD desde 2026-10-14)
 
-Rama `claude/estado-proyecto` (commits `6e0aef0` a `b3cb9aa`). 🔴 **Nada de esto está en PROD todavía.** Diseño completo en `Docs/superpowers/specs/2026-10-13-estado-del-proyecto-design.md`; esta etapa deja el camino listo para que el cliente vea el avance de su proyecto, sin mostrar aún un avance real.
+Rama `claude/estado-proyecto` (commits `110e32e` a `b19dcce`). **EN PROD desde el 2026-10-14:** Luis subió el zip del renderer a Easypanel (`/health` ok); Claude desplegó el flujo n8n «3 Render» (25 nodos, activo, igual al local) y, por SSH, los cinco archivos del plan de trabajo más `ver-estado.php` (md5 cotejado, caché vaciada). Respaldos: `~/respaldos/estado-proyecto-e1-antes-20261014.tar.gz` en el servidor (WordPress) y, fuera del repo, en `C:\Users\luis_\respaldos\deploy-scripts\2026-10-13-estado-proyecto\` (flujo n8n anterior y zip del renderer de `main` para volver atrás). Diseño completo en `Docs/superpowers/specs/2026-10-13-estado-del-proyecto-design.md`; esta etapa deja el camino listo para que el cliente vea el avance de su proyecto, sin mostrar aún un avance real.
 
 - **Cronograma con tercer carril** (`renderer/src/template-plan.js`): las etiquetas de los hitos se reparten en hasta tres carriles. Primero se intenta con dos (corriendo las etiquetas hacia la derecha) y el tercero se abre solo si hace falta; recién ahí la fila «Hitos» crece de 72 a 104 px. Los 5 hitos del plan de Orly, medidos en Chromium, quedaron con 0 etiquetas pisadas.
-- **Botón «Ver detalle del avance»** en la lámina «Método AT», junto a «Estás aquí» (abre en la ventana completa con `target="_top"`). Sale **solo** si el cuerpo del render trae un `estado_url` válido (http o https). WordPress lo manda desde ahora en todos los planes (`at_pt_url_ver_estado()`); los planes ya generados no lo traen hasta que se rehaga su vista.
+- **Botón «Ver detalle del avance»** en la lámina «Método AT», junto a «Estás aquí» (abre en la ventana completa con `target="_top"`). Sale **solo** si el cuerpo del render trae un `estado_url` válido (solo https). WordPress lo manda desde ahora en todos los planes (`at_pt_url_ver_estado()`); los planes ya generados no lo traen hasta que se rehaga su vista.
 - **«🔄 Actualizar la vista del plan»** (ficha del CRM › «🗓️ Plan de trabajo», solo con el plan `enviado`): pide a n8n que rehaga la vista que ve el cliente para que tenga el botón nuevo, **sin cambiar nada más**. Detalle:
   - Flujo n8n «Plan de trabajo · 3 Render» con la bandera `mantener` (solo junto a `modo: final`): usa las **mismas fotos** del plan (las toma del manifest del propio renderer) más la portada y el cierre de la propuesta, no genera fotos nuevas (`image_briefs: []`), **no** pasa la revisión de texto con GPT-4o y **no** manda correo a Luis si sale bien (solo si falla).
   - `POST /vista` con `mantener: true` guarda los enlaces y la nota, y **nunca cambia el estado** del plan. La nota nombra las láminas que quedaron sin foto. Se guarda la nota completa de n8n, con sus avisos. Si n8n no puede leer la lista de fotos del plan (error del renderer o sin respuesta; un 404 sí vale, es «sin fotos»), no rehace la vista: avisa a WordPress con `ok: false` (se conservan los enlaces anteriores) y manda el correo de falla a Luis.
@@ -306,8 +306,7 @@ Orden obligatorio: renderer → n8n → WordPress. Después, con un OK aparte de
 
 ### Qué no se ha probado
 
-- Nada corrió contra el n8n ni el renderer reales, solo contra el simulador sin conexión: falta ver el flujo «3 Render» con `mantener` de verdad y medir cuánto tarda en rehacer la vista.
-- Una etiqueta del tercer carril puede sobresalir 1 a 3 px de su fila de 104 px (queda dentro de la lámina).
+- **Probado en PROD el 2026-10-14 con el plan de Orly:** el primer intento falló porque el VPS de Easypanel perdió la conexión un rato (WordPress no alcanzó a n8n: «cURL error 28»); quedó solo la nota, el plan siguió `enviado` y la vista no cambió, como se diseñó. El segundo intento corrió en 16 s (ejecución n8n `440349`): mismas fotos, ninguna lámina sin foto, botón «Ver detalle del avance» en la lámina 02 y cronograma con tercer carril y 0 etiquetas pisadas, medido en Chromium. Detalle de forma: la nota dice dos veces «Vista del plan actualizada» (prefijo de n8n + resumen); queda para la próxima subida del flujo.- Una etiqueta del tercer carril puede sobresalir 1 a 3 px de su fila de 104 px (queda dentro de la lámina).
 - Con entradas extremas (muchos hitos casi en la misma fecha) una etiqueta alineada a la izquierda todavía puede pisar a otra.
 - Fallas anteriores en `main`, ajenas a esta rama: `tests/plan/panel-render-wp-test.php` (1), `datos-contexto-wp-test.php` (1) y `firma-contrato-wp-test.php` (no entrega salida).
 

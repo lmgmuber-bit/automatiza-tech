@@ -87,4 +87,39 @@ function validatePlanPayload(body) {
   return { valid: errors.length === 0, errors };
 }
 
-module.exports = { validatePayload, validatePlanPayload, REQUIRED_STRING_FIELDS, REQUIRED_ARRAY_FIELDS, PLAN_REQUIRED_STRING_FIELDS };
+// «Estado del proyecto» (document_type 'estado'). WordPress ya validó el avance (at_av_validar_import); aquí solo la
+// forma que el renderer necesita para dibujar, con motivos legibles en details (n8n los copia a la nota).
+const ESTADO_REQUIRED_STRING_FIELDS = ['unique_id', 'company_name', 'proyecto'];
+
+function validateEstadoPayload(body) {
+  if (!body || typeof body !== 'object' || Array.isArray(body)) {
+    return { valid: false, errors: ['el cuerpo debe ser un objeto JSON'] };
+  }
+  const errors = [];
+  for (const field of ESTADO_REQUIRED_STRING_FIELDS) {
+    if (typeof body[field] !== 'string' || body[field].trim() === '') {
+      errors.push(`falta o está vacío el campo obligatorio: ${field}`);
+    }
+  }
+  if (typeof body.unique_id === 'string' && body.unique_id.trim() !== '' && !/^[A-Za-z0-9_-]{6,64}$/.test(body.unique_id)) {
+    errors.push('unique_id debe tener de 6 a 64 caracteres, solo letras, números, guion o guion bajo');
+  }
+  if (!esFechaYmd(body.actualizado)) errors.push('actualizado debe ser una fecha AAAA-MM-DD');
+  if (!Array.isArray(body.bloques)) errors.push('bloques debe ser un arreglo');
+  if (!Array.isArray(body.cierres)) {
+    errors.push('cierres debe ser un arreglo');
+  } else {
+    body.cierres.forEach((c, i) => {
+      if (!c || typeof c !== 'object' || typeof c.titulo !== 'string' || c.titulo.trim() === '') {
+        errors.push(`el cierre ${i + 1} no tiene título`);
+      }
+    });
+  }
+  const c = body.cronograma;
+  if (c !== undefined && (!c || typeof c !== 'object' || Array.isArray(c))) {
+    errors.push('cronograma debe ser un objeto si viene');
+  }
+  return { valid: errors.length === 0, errors };
+}
+
+module.exports = { validatePayload, validatePlanPayload, validateEstadoPayload, REQUIRED_STRING_FIELDS, REQUIRED_ARRAY_FIELDS, PLAN_REQUIRED_STRING_FIELDS, ESTADO_REQUIRED_STRING_FIELDS };

@@ -1,10 +1,11 @@
 const crypto = require('node:crypto');
 const path = require('node:path');
 const express = require('express');
-const { validatePayload, validatePlanPayload } = require('./schema');
+const { validatePayload, validatePlanPayload, validateEstadoPayload } = require('./schema');
 const { generateProposalImages } = require('./higgsfield');
 const { renderProposalHtml } = require('./template');
 const { renderPlanHtml } = require('./template-plan');
+const { renderEstadoHtml } = require('./template-estado');
 const { renderToFiles } = require('./render');
 const { persistImages } = require('./images-store');
 const { promptHash, readManifest, writeManifest, reusablePhotos } = require('./photo-manifest');
@@ -39,9 +40,12 @@ function createApp({ publicDir, baseUrl, higgsfieldCredentials, renderKey = '' }
     }
     return res.status(401).json({ error: 'unauthorized' });
   }, async (req, res) => {
-    // Un plan de trabajo llega con document_type 'plan'; sin ese campo es una propuesta, como siempre.
-    const esPlan = Boolean(req.body) && req.body.document_type === 'plan';
-    const { valid, errors } = esPlan ? validatePlanPayload(req.body) : validatePayload(req.body);
+    // Un plan de trabajo llega con document_type 'plan' y «Estado del proyecto» con 'estado'; sin ese campo es una
+    // propuesta, como siempre.
+    const tipo = req.body && typeof req.body === 'object' ? req.body.document_type : '';
+    const esPlan = tipo === 'plan';
+    const esEstado = tipo === 'estado';
+    const { valid, errors } = esEstado ? validateEstadoPayload(req.body) : esPlan ? validatePlanPayload(req.body) : validatePayload(req.body);
     if (!valid) {
       return res.status(400).json({ error: 'invalid payload', details: errors });
     }
@@ -67,7 +71,8 @@ function createApp({ publicDir, baseUrl, higgsfieldCredentials, renderKey = '' }
     // request — a proposal would come back with two photos and five gradients.
     // Passing them in sidesteps the queue entirely and doubles as the manual
     // escape hatch when an automated run degrades.
-    const imageBriefs = Array.isArray(data.image_briefs) ? data.image_briefs : [];
+    // «Estado del proyecto» nunca pide fotos (D9): solo usa las que llegan en data.images (las del plan).
+    const imageBriefs = !esEstado && Array.isArray(data.image_briefs) ? data.image_briefs : [];
     const dataImages = data.images && typeof data.images === 'object' && !Array.isArray(data.images)
       ? data.images
       : {};
@@ -144,7 +149,7 @@ function createApp({ publicDir, baseUrl, higgsfieldCredentials, renderKey = '' }
 
     let html;
     try {
-      html = esPlan ? renderPlanHtml(data, images) : renderProposalHtml(data, images);
+      html = esEstado ? renderEstadoHtml(data, images) : esPlan ? renderPlanHtml(data, images) : renderProposalHtml(data, images);
       await renderToFiles(html, outputDir);
     } catch (err) {
       console.error('POST /render failed:', err.stack || err.message);

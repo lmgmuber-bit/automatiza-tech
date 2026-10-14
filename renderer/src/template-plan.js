@@ -1018,4 +1018,13 @@ module.exports = {
   renderReunionesSlide,
   renderPortalSlide,
   renderCierreSlide,
+  // Piezas que comparte «Estado del proyecto» (template-estado.js). Solo se agregan exportaciones.
+  numero,
+  texto,
+  fondoPanel,
+  porcentaje,
+  FASES,
+  ESTILO_PORTADA,
+  ESTILO_GANTT,
+  ESTILO_CIERRE,
 };

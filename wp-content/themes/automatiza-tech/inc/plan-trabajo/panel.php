@@ -67,6 +67,9 @@ function at_pt_mensajes_panel(): array {
 		'enviado'            => ['ok', 'Plan enviado por correo al cliente, con el PDF adjunto.'],
 		'enviado_sin_pdf'    => ['aviso', 'Plan enviado por correo, pero sin el PDF adjunto: el correo lleva el enlace para verlo.'],
 		'no_listo'           => ['error', 'Solo se envía un plan con la versión final lista.'],
+		'vista_pedida'       => ['ok', 'Pedimos la vista actualizada del plan. Queda lista en unos minutos; recarga la página para ver la nota.'],
+		'vista_fallo'        => ['error', 'No se pudo pedir la vista actualizada del plan. Revisa la nota del plan y reintenta.'],
+		'vista_no_enviado'   => ['aviso', 'Solo se actualiza la vista de un plan ya enviado al cliente.'],
 		'sin_correo'         => ['error', 'El cliente no tiene correo en su ficha ni en el contrato: agrégalo en la ficha y vuelve a enviar.'],
 		'correo_fallo'       => ['error', 'El correo no salió. El plan sigue «listo»: inténtalo de nuevo en un rato.'],
 		'sin_telefono'       => ['error', 'El cliente no tiene teléfono en su ficha ni en el contrato.'],
@@ -383,6 +386,12 @@ function at_pt_render_plan(object $fila, int $crm_id): void {
 					<?php echo $ocultos('at_pt_enviar_whatsapp'); ?>
 					<button type="submit" class="button"<?php echo ($wa_cliente === '' || !$listo_para_enviar) ? ' disabled' : ''; ?>>💬 Enviar por mi WhatsApp</button>
 				</form>
+				<?php if ($estado === 'enviado'): ?>
+				<form method="post" action="<?php echo esc_url($accion); ?>" style="display:inline" onsubmit="return confirm(<?php echo esc_attr(wp_json_encode('Se rehace la presentación con el mismo contenido y las mismas fotos, sin costo. ¿Seguimos?', JSON_UNESCAPED_UNICODE)); ?>);">
+					<?php echo $ocultos('at_pt_actualizar_vista'); ?>
+					<button type="submit" class="button">🔄 Actualizar la vista del plan</button>
+				</form>
+				<?php endif; ?>
 				<?php if ($wa_cliente === ''): ?><p class="description">El cliente no tiene teléfono: el WhatsApp no se puede abrir.</p><?php endif; ?>
 			</div>
 		<?php endif; ?>
@@ -474,6 +483,7 @@ add_action('admin_post_at_pt_destrabar', 'at_pt_accion_destrabar');
 add_action('admin_post_at_pt_reintentar', 'at_pt_accion_reintentar');
 add_action('admin_post_at_pt_enviar', 'at_pt_accion_enviar');
 add_action('admin_post_at_pt_enviar_whatsapp', 'at_pt_accion_enviar_whatsapp');
+add_action('admin_post_at_pt_actualizar_vista', 'at_pt_accion_actualizar_vista');
 
 /** Vuelve a la pestaña del plan con un aviso; siempre termina la petición. */
 function at_pt_volver(int $crm_id, int $plan_id, string $msg): void {
@@ -795,6 +805,17 @@ function at_pt_accion_enviar(): void {
 		at_pt_volver($crm, $id, 'enviado_sin_pdf');
 	}
 	at_pt_volver($crm, $id, 'enviado');
+}
+
+/** «🔄 Actualizar la vista del plan»: rehace la presentación de un plan enviado con el mismo contenido y las mismas fotos. */
+function at_pt_accion_actualizar_vista(): void {
+	[$fila, $crm] = at_pt_accion_plan();
+	$id = (int) $fila->id;
+	if ((string) $fila->estado !== 'enviado') {
+		at_pt_volver($crm, $id, 'vista_no_enviado');
+	}
+	$motivo = at_pt_pedir_render($id, 'final', false, true);
+	at_pt_volver($crm, $id, $motivo === '' ? 'vista_pedida' : 'vista_fallo');
 }
 
 /** «Enviar por mi WhatsApp»: deja el plan enviado y abre el wa.me del cliente (el formulario va en otra pestaña). */

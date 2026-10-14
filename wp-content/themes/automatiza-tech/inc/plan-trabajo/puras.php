@@ -1153,6 +1153,7 @@ function at_pt_armar_render(array $plan, array $datos, bool $final): array {
 			'whatsapp_url' => $telefono === '' ? '' : 'https://wa.me/' . $telefono . '?text=' . rawurlencode(at_pt_texto_whatsapp_agenda($codigo)),
 			'web_url'      => at_pt_url_ver_plan((string) ($datos['sitio'] ?? ''), $codigo, true),
 		],
+		'estado_url'        => at_pt_url_ver_estado((string) ($datos['sitio'] ?? ''), $codigo),
 		'image_briefs'      => $final ? array_values($plan['image_briefs'] ?? []) : [],
 		'images'            => new stdClass(),
 	];
@@ -1168,6 +1169,15 @@ function at_pt_url_ver_plan(string $base, string $codigo, bool $agendar = false)
 		return '';
 	}
 	return $base . '/ver-plan.php?id=' . $codigo . ($agendar ? '&agendar=1' : '');
+}
+
+/** Página pública «Estado del proyecto» del plan: {sitio}/ver-estado.php?id=<código>. '' si el código no sirve. */
+function at_pt_url_ver_estado(string $base, string $codigo): string {
+	$base = rtrim(trim($base), '/');
+	if ($base === '' || !preg_match('/^https?:\/\//i', $base) || !preg_match('/^[A-Za-z0-9]{6,32}$/', $codigo)) {
+		return '';
+	}
+	return $base . '/ver-estado.php?id=' . $codigo;
 }
 
 /** wa.me de Tech con el mensaje para agendar y el código del plan; '' sin número de AT. */

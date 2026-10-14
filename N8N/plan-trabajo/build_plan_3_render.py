@@ -43,6 +43,7 @@ LIB = (JS_LEER_JSON + '\n' + JS_LIMPIAR_FOTOS + '\n' + JS_PLAN + '\n' + JS_RENDE
        + 'const RENDERER_BASE = ' + json.dumps(RENDERER_BASE) + ';\nconst MAX_RENDERS = ' + str(MAX_RENDERS) + ';\n')
 
 JS_AVISO = r"""const avisoPedido = (v) => v === true || v === 1 || v === '1' || v === 'true';
+const mantenerPedido = (v) => v === true || v === 1 || v === '1' || v === 'true';
 """
 
 CODE_PREPARAR = r"""// Arma el cuerpo que va al renderer. Nunca lanza.
@@ -50,12 +51,44 @@ const hook = $('Webhook').first().json.body || {};
 const lr = ($('Leer render').first().json || {}).body || {};
 const id = parseInt(hook.id, 10) || 0;
 const modo = hook.modo === 'final' ? 'final' : 'draft';
+// «Actualizar la vista del plan» (D10): solo en la versión final; nunca cambia el comportamiento del borrador.
+const mantener = modo === 'final' && mantenerPedido(hook.mantener);
 const uid = /^[A-Za-z0-9_-]{6,64}$/.test(String(lr.propuesta_uid || '')) ? String(lr.propuesta_uid) : '';
 let render = esObjetoPlano(lr.render) ? lr.render : {};
 let reutilizadas = [];
 let sin_foto = [];
 let retomadas_antes = [];
-if (modo === 'final') {
+let saltar_render = false;
+if (modo === 'final' && mantener) {
+  // «Actualizar la vista del plan» (D10): mismo contenido, mismas fotos, ninguna nueva. Las fotos que el plan ya tiene
+  // guardadas en el renderer (su propio manifest) pasan como URL absolutas; con image_briefs vacío no se genera ni cobra nada.
+  let previo = null;
+  // Si la lista de fotos del plan no se pudo leer (el nodo no corrió, no hubo respuesta o fue un 5xx) no se sabe qué fotos
+  // tiene: rehacer la vista las dejaría fuera. Se marca para no llamar al renderer. Un 404 (sin manifest) sí es una respuesta.
+  saltar_render = true;
+  if ($('Fotos previas del plan').isExecuted) {
+    const pp = $('Fotos previas del plan').first().json || {};
+    const sc = Number(pp.statusCode);
+    if (sc === 200) previo = pp.body;
+    if (sc > 0 && sc < 500) saltar_render = false;
+  }
+  const propias = fotosPropiasDelPlan(previo, RENDERER_BASE, String(render.unique_id || ''));
+  // Portada y cierre de un plan con propuesta vienen de las fotos de la propuesta y el renderer no las anota en el
+  // manifest del plan: se vuelven a poner igual que en la versión final (sin costo).
+  let manifestPropuesta = null;
+  if ($('Fotos de la propuesta').isExecuted) {
+    const fp = $('Fotos de la propuesta').first().json || {};
+    if (fp.statusCode === 200) manifestPropuesta = fp.body;
+  }
+  const deLaPropuesta = reutilizarFotosPlan(render, manifestPropuesta, RENDERER_BASE, uid);
+  const images = Object.assign({}, deLaPropuesta.render.images, propias.images);
+  // Láminas que WordPress pidió (y portada/cierre si hay propuesta) y que quedan sin foto: se dicen en la nota.
+  const pedidasWp = (Array.isArray(render.image_briefs) ? render.image_briefs : [])
+    .map((b) => (esObjetoPlano(b) ? b.slide : '')).filter((x) => typeof x === 'string' && x);
+  sin_foto = Array.from(new Set(pedidasWp.concat(uid ? ['cover', 'cierre'] : []))).filter((x) => !images[x]);
+  render = Object.assign({}, render, { draft: false, image_briefs: [], images });
+  reutilizadas = Array.from(new Set(deLaPropuesta.reutilizadas.concat(propias.slides)));
+} else if (modo === 'final') {
   let manifest = null;
   if ($('Fotos de la propuesta').isExecuted) {
     const fp = $('Fotos de la propuesta').first().json || {};
@@ -83,7 +116,7 @@ if (modo === 'final') {
   // La vista previa nunca paga fotos, venga lo que venga de WordPress.
   render = Object.assign({}, render, { draft: true, image_briefs: [] });
 }
-return [{ json: { id, modo, aviso: avisoPedido(hook.aviso), render, reutilizadas, sin_foto, retomadas_antes,
+return [{ json: { id, modo, mantener, saltar_render, aviso: avisoPedido(hook.aviso), render, reutilizadas, sin_foto, retomadas_antes,
   crm: parseInt(lr.crm_cliente_id, 10) || 0,
   proyecto: String(render.proyecto || render.company_name || ('plan ' + id)) } }];"""
 
@@ -103,7 +136,7 @@ const lr = leerRespuestaRender(r);
 const final = base.modo === 'final';
 return [{ json: Object.assign({}, base, { resultado: r, intento,
   reintentar: final && lr.reintentable && intento < MAX_RENDERS,
-  revisar_texto: final && lr.status === 200 && !!lr.view_url && lr.missing.length === 0 }) }];"""
+  revisar_texto: final && base.mantener !== true && lr.status === 200 && !!lr.view_url && lr.missing.length === 0 }) }];"""
 
 CODE_PREPARAR_TEXTO = r"""// Arma UNA consulta a GPT-4o con las fotos nuevas del plan que quedaron guardadas (img/manifest.json del plan en el
 // renderer). Nunca lanza: sin fotos que mostrar no se consulta y «Resultado del render» lo avisa.
@@ -149,8 +182,9 @@ CODE_RESULTADO = r"""// Resume lo que pasó para WordPress (POST /vista) y para 
 const hook = $('Webhook').first().json.body || {};
 const id = parseInt(hook.id, 10) || 0;
 const modo = hook.modo === 'final' ? 'final' : 'draft';
+const mantener = modo === 'final' && mantenerPedido(hook.mantener);
 const exec = String($execution.id);
-const vacio = { id, modo, aviso: avisoPedido(hook.aviso), exec, ok: false, view_url: '', pdf_url: '', faltan: [],
+const vacio = { id, modo, mantener, aviso: avisoPedido(hook.aviso), exec, ok: false, view_url: '', pdf_url: '', faltan: [],
   problemas: [], avisos: [], resumen: [], nota: '', crm: 0, proyecto: 'plan ' + id, renders: 0 };
 if (!$('Preparar render').isExecuted) {
   const lr = $('Leer render').first().json || {};
@@ -159,8 +193,16 @@ if (!$('Preparar render').isExecuted) {
     : 'sin respuesta' + (lr.error && lr.error.message ? ': ' + lr.error.message : '')) + ')' + (b.message ? ' — ' + b.message : '');
   return [{ json: Object.assign(vacio, { problemas: [sinUrlInterna(motivo)], nota: sinUrlInterna(motivo) + ' (ejecución ' + exec + ')' }) }];
 }
+// «Actualizar la vista» sin poder leer la lista de fotos del plan: no se llamó al renderer (ver «Preparar render»). Falla como
+// cualquier render fallido: /vista con ok=false (WordPress conserva los enlaces viejos y guarda la nota) y correo a Luis.
+const previa = $('Preparar render').first().json || {};
+if (previa.saltar_render === true) {
+  const motivo = 'no se pudo leer la lista de fotos del plan; no se rehízo la vista para no dejarla sin fotos';
+  return [{ json: Object.assign(vacio, { problemas: [motivo], nota: motivo + ' (ejecución ' + exec + ')',
+    crm: previa.crm || 0, proyecto: previa.proyecto || vacio.proyecto }) }];
+}
 // La última pasada del bucle de renders (llega aquí también desde la revisión de texto).
-const v = $('¿Reintentar render?').first().json || {};
+const v =$('¿Reintentar render?').first().json || {};
 const lr = leerRespuestaRender(v.resultado);
 const img = lr.images;
 const intento = Number(v.intento) || 1;
@@ -180,12 +222,19 @@ if (!lr.view_url) {
 }
 if (modo === 'final' && missing.length) problemas.push('fotos que no se generaron tras ' + veces + ': ' + nombresLaminas(missing));
 if (remotas.length) avisos.push('fotos que no se pudieron guardar junto al plan (quedaron enlazadas): ' + nombresLaminas(remotas));
-if (Array.isArray(v.sin_foto) && v.sin_foto.length) {
+if (mantener) {
+  // «Actualizar la vista»: no se pide ninguna foto nueva. Las láminas que no tienen foto guardada (ni propia ni de la
+  // propuesta) salen sin foto y se nombran; sin ninguna foto guardada, se dice también.
+  const sinFotos = !Array.isArray(v.reutilizadas) || !v.reutilizadas.length;
+  const sf = Array.isArray(v.sin_foto) ? v.sin_foto : [];
+  if (sf.length) avisos.push((sinFotos ? 'no hay fotos guardadas del plan; ' : '') + 'esas láminas van sin foto: ' + nombresLaminas(sf));
+  else if (sinFotos) avisos.push('no hay fotos guardadas del plan: la vista sale sin fotos');
+} else if (Array.isArray(v.sin_foto) && v.sin_foto.length) {
   avisos.push('la propuesta no tiene foto guardada para ' + nombresLaminas(v.sin_foto) + ': esas láminas van sin foto');
 }
 // Revisión de texto en las fotos (D18): nunca pasa el plan a «error»; solo avisa en la nota y en el correo.
 let revisionLimpia = false;
-if (Array.isArray(v.fotos_retomadas) && v.fotos_retomadas.length) {
+if (!mantener && Array.isArray(v.fotos_retomadas) && v.fotos_retomadas.length) {
   avisos.push('Fotos rehechas porque tenían texto: ' + nombresLaminas(v.fotos_retomadas));
 }
 if (modo === 'final' && v.revisar_texto === true) {
@@ -201,7 +250,9 @@ if (modo === 'final' && v.revisar_texto === true) {
 }
 const ok = problemas.length === 0;
 const resumen = [];
-if (ok && modo === 'final') {
+if (ok && mantener) {
+  resumen.push('Vista del plan actualizada con el mismo contenido y las mismas fotos');
+} else if (ok && modo === 'final') {
   resumen.push('Presentación y PDF generados');
   resumen.push((pedidas - missing.length) + ' de ' + pedidas + ' fotos nuevas guardadas junto al plan');
   if (Array.isArray(v.reutilizadas) && v.reutilizadas.length) resumen.push('Con las fotos de la propuesta, sin costo: ' + nombresLaminas(v.reutilizadas));
@@ -211,7 +262,7 @@ if (ok && modo === 'final') {
   resumen.push('Vista previa generada (sin fotos)');
 }
 const extra = avisos.length ? ' · ' + avisos.join(' · ') : '';
-const nota = ok ? (modo === 'final' ? 'Versión final verificada: ' : 'Vista previa lista: ') + resumen.join(' · ') + extra
+const nota = ok ? (mantener ? 'Vista del plan actualizada: ' : modo === 'final' ? 'Versión final verificada: ' : 'Vista previa lista: ') + resumen.join(' · ') + extra
   : problemas.join(' · ') + extra + ' (ejecución ' + exec + ')';
 // Ninguna URL del servidor de Easypanel en la nota ni en el correo (el SMTP de Hostinger los rechaza): se limpia todo lo
 // que se cuenta, venga de la red, del renderer o de la revisión. Los enlaces view_url y pdf_url no se cuentan: los guarda WordPress.
@@ -278,6 +329,8 @@ nodes = [
          "={{ '" + RENDERER_BASE + "/p/' + encodeURIComponent($('Leer render').first().json.body.propuesta_uid) + '/img/manifest.json' }}",
          cred=False),
     node('r6', 'Preparar render', 'n8n-nodes-base.code', 2, [1320, -120], {'jsCode': LIB + JS_AVISO + CODE_PREPARAR}),
+    # «Actualizar la vista» que no pudo leer la lista de fotos del plan: va directo al resultado, sin llamar al renderer.
+    iff('r25', '¿Saltar render?', [1430, -120], '={{ $json.saltar_render === true }}'),
     # Respuesta completa (código HTTP y cuerpo) para distinguir un 400 del esquema, que no se reintenta, de un 5xx (D11).
     node('r7', 'Render', 'n8n-nodes-base.httpRequest', 4.2, [1540, -120],
          {'method': 'POST', 'url': RENDERER, 'authentication': 'genericCredentialType', 'genericAuthType': 'httpHeaderAuth',
@@ -303,7 +356,7 @@ nodes = [
     iff('r24', '¿Rehacer fotos?', [2750, -600], '={{ $json.rehacer === true }}'),
     node('r10', 'Resultado del render', 'n8n-nodes-base.code', 2, [2860, 0], {'jsCode': LIB + JS_AVISO + CODE_RESULTADO}),
     http('r11', 'Guardar vista', [3080, 0], 'POST', f"={WP}/plan/{{{{ $json.id }}}}/vista",
-         "={{ JSON.stringify({ modo: $json.modo, ok: $json.ok, view_url: $json.view_url, pdf_url: $json.pdf_url,"
+         "={{ JSON.stringify({ modo: $json.modo, mantener: $json.mantener === true, ok: $json.ok, view_url: $json.view_url, pdf_url: $json.pdf_url,"
          " faltan: $json.faltan, nota: $json.nota }) }}"),
     node('r12', 'Armar correo', 'n8n-nodes-base.code', 2, [3300, 0], {'jsCode': correo_render()}),
     iff('r13', '¿Avisar a Luis?', [3520, 0], '={{ $json.enviar === true }}'),
@@ -335,7 +388,9 @@ link('Fotos previas del plan', '¿Reutilizar fotos?')
 link('¿Reutilizar fotos?', 'Fotos de la propuesta', 0)
 link('¿Reutilizar fotos?', 'Preparar render', 1)
 link('Fotos de la propuesta', 'Preparar render')
-link('Preparar render', 'Render')
+link('Preparar render', '¿Saltar render?')
+link('¿Saltar render?', 'Resultado del render', 0)
+link('¿Saltar render?', 'Render', 1)
 link('Render', '¿Reintentar render?')
 link('¿Reintentar render?', '¿Faltan fotos?')
 link('¿Faltan fotos?', 'Render', 0)

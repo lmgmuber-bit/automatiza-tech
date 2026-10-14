@@ -237,6 +237,16 @@ function at_pt_rest_vista(WP_REST_Request $r) {
 	}
 	$nota = mb_substr(sanitize_textarea_field((string) ($p['nota'] ?? '')), 0, 500);
 	$id = (int) $f->id;
+	// «Actualizar la vista del plan» (mantener): mismo contenido y mismas fotos; nunca cambia el estado.
+	if ($modo === 'final' && !empty($p['mantener']) && $p['mantener'] !== 'false') {
+		if ($ok && $view !== '') {
+			// La nota de n8n trae los avisos (láminas que van sin foto, plan sin fotos guardadas): se guarda tal cual; si no llega, la fija.
+			at_pt_guardar($id, ['view_url' => $view, 'pdf_url' => $pdf, 'nota' => $nota !== '' ? $nota : 'Vista del plan actualizada (' . current_time('Y-m-d H:i') . ').']);
+		} else {
+			at_pt_guardar($id, ['nota' => 'No se pudo actualizar la vista del plan: ' . ($nota !== '' ? $nota : 'el renderer no respondió') . '.']);
+		}
+		return new WP_REST_Response(['ok' => true, 'estado' => (string) at_pt_plan($id)->estado], 200);
+	}
 	if ($modo === 'draft' && in_array((string) $f->estado, ['aprobando', 'listo', 'enviado'], true)) {
 		return new WP_REST_Response(['ok' => true, 'estado' => (string) $f->estado], 200);
 	}

@@ -75,3 +75,30 @@ function at_pt_html_ver_plan(?object $fila, bool $abrir_agenda): string {
 	}
 	return $html . '</body></html>';
 }
+
+/** El plan de ese código si tiene página de «Estado del proyecto» (Etapa 1: solo planes enviados). null si no. */
+function at_pt_fila_ver_estado(string $codigo): ?object {
+	if (!preg_match('/^[A-Za-z0-9]{6,32}$/', $codigo)) {
+		return null;
+	}
+	$f = at_pt_plan_por_codigo($codigo);
+	return ($f && (string) $f->estado === 'enviado') ? $f : null;
+}
+
+/** Documento HTML de ver-estado.php. Etapa 1: todavía sin presentación de estado, solo el aviso y el enlace al plan. */
+function at_pt_html_ver_estado(?object $fila): string {
+	$tema = get_template_directory_uri();
+	$css = get_template_directory() . '/assets/css/plan-ver.css';
+	$cabeza = '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">'
+		. '<meta name="robots" content="noindex, nofollow"><title>Estado del proyecto — AutomatizaTech</title>'
+		. '<link rel="stylesheet" href="' . esc_url($tema . '/assets/css/plan-ver.css?v=' . (file_exists($css) ? (string) filemtime($css) : '1')) . '"></head>';
+	if (!$fila) {
+		return $cabeza . '<body class="at-pt-ver at-pt-ver--vacio"><main class="at-pt-vacio"><h1>Esta página no está disponible</h1>'
+			. '<p>Revisa el enlace que te enviamos o escríbenos a contacto@automatizatech.cl.</p></main></body></html>';
+	}
+	$plan = at_pt_url_ver_plan(home_url(), (string) $fila->codigo);
+	return $cabeza . '<body class="at-pt-ver at-pt-ver--vacio"><main class="at-pt-vacio"><h1>Pronto verás aquí el avance de tu proyecto</h1>'
+		. '<p>Cada vez que terminemos una parte del plan, te mostraremos aquí qué hicimos y cómo quedó.</p>'
+		. '<p><a class="at-pt-btn at-pt-btn--si" href="' . esc_url($plan) . '">Ver el plan de actividades inicial</a></p>'
+		. '</main></body></html>';
+}

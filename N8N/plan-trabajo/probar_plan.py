@@ -1076,6 +1076,24 @@ console.log(JSON.stringify(R));
        'leerRespuestaRender: un 503 con HTML → se reintenta, sin romperse', x['html'])
     ok(x['clave']['reintentable'] is False and x['nada']['status'] == 0 and x['nada']['reintentable'] is True,
        'leerRespuestaRender: un 401 no se reintenta; una salida vacía cuenta como falla de red')
+    # «Actualizar la vista del plan» (mantener): las fotos del propio plan pasan como URL absolutas.
+    prog = lib() + JS_RENDER + "\nconsole.log(JSON.stringify(fotosPropiasDelPlan(DATOS.m, DATOS.base, DATOS.uid)));"
+    r, err = node_js(prog, {
+        'm': {'metodo': {'file': 'metodo.jpg', 'hash': 'x'}, 'gantt': {'file': 'gantt.png', 'hash': 'y'},
+              'malo': {'file': '../x.jpg'}, 'sin': {}},
+        'base': BASE_R, 'uid': 'Ab3dE5fG7hJ9'})
+    ok(r is not None and r['images'] == {'metodo': BASE_R + '/p/Ab3dE5fG7hJ9/img/metodo.jpg',
+                                         'gantt': BASE_R + '/p/Ab3dE5fG7hJ9/img/gantt.png'}
+       and sorted(r['slides']) == ['gantt', 'metodo'], 'mantener: las fotos del propio plan pasan como URL absolutas', err or r)
+    for caso, m, base, uid in (('manifest ilegible', 'no-json', BASE_R, 'Ab3dE5fG7hJ9'), ('manifest nulo', None, BASE_R, 'Ab3dE5fG7hJ9'),
+                               ('manifest en arreglo', [1], BASE_R, 'Ab3dE5fG7hJ9'),
+                               ('uid raro', {'metodo': {'file': 'metodo.jpg'}}, BASE_R, '../x'),
+                               ('base rara', {'metodo': {'file': 'metodo.jpg'}}, 'javascript:alert(1)', 'Ab3dE5fG7hJ9')):
+        r, err = node_js(prog, {'m': m, 'base': base, 'uid': uid})
+        ok(r == {'images': {}, 'slides': []}, f'mantener: {caso} = sin fotos, sin lanzar', err or r)
+    r, err = node_js(prog, {'m': {'Bad Slide': {'file': 'a.jpg'}, 'x': {'file': 'a.jpg'}, 'ok_1': {'file': '.oculto'}},
+                            'base': BASE_R, 'uid': 'Ab3dE5fG7hJ9'})
+    ok(r == {'images': {}, 'slides': []}, 'mantener: láminas con nombre raro o archivos ocultos no pasan', err or r)
 
 
 @seccion('correos_render')
@@ -1120,6 +1138,20 @@ def prueba_correos_render():
                              'La presentación salió bien'], ['quedó <strong>listo</strong>', '>Listo<']),
         ('borrador sin guardar en WordPress', dict(base, modo='draft', aviso=False, ok=True), {'error': {'message': 'ECONNRESET'}},
          True, sin_guardar, ['No se pudo guardar el resultado en WordPress', 'sin respuesta', 'Con problemas'], ['>Borrador<']),
+        # «Actualizar la vista del plan» (mantener): sin correo si salió bien y se guardó; con correo si no, y sin hablar
+        # de «error» ni «aprobando»: el plan sigue como estaba.
+        ('mantener ok', dict(base, modo='final', mantener=True, aviso=False, ok=True,
+                             resumen=['Vista del plan actualizada con el mismo contenido y las mismas fotos']), g_listo,
+         False, None, [], []),
+        ('mantener ok y el plan sigue enviado', dict(base, modo='final', mantener=True, aviso=False, ok=True),
+         {'statusCode': 200, 'body': {'ok': True, 'estado': 'enviado'}}, False, None, [], []),
+        ('mantener con problemas', dict(base, modo='final', mantener=True, aviso=False, ok=False,
+                                        problemas=['el renderer no devolvió la presentación (HTTP 500) tras 3 intentos']),
+         {'statusCode': 200, 'body': {'ok': True, 'estado': 'enviado'}},
+         True, '⚠️ ' + p + ' · la vista del plan no se pudo actualizar', ['HTTP 500', 'Con problemas', 'sigue como estaba'],
+         ['quedó en <strong>error</strong>', '>Listo<', 'no se vuelven a pagar']),
+        ('mantener sin guardar en WordPress', dict(base, modo='final', mantener=True, aviso=False, ok=True), {'statusCode': 500, 'body': {}},
+         True, sin_guardar, ['No se pudo guardar el resultado en WordPress', 'HTTP 500', 'Con problemas'], ['«aprobando»', 'Destrabar', '>Listo<']),
     ]
     for nombre, v, g, enviar, asunto, frases, ausentes in casos:
         r, err = correr(v, g)
@@ -1361,6 +1393,143 @@ def prueba_render():
     gv = llamadas(t, 'Guardar vista')
     ok(gv and 'easypanel' not in json.dumps(gv) and t['correos'] and 'easypanel' not in t['correos'][0]['html'],
        'R16: si falla la lectura del plan en WordPress (sin respuesta), tampoco', gv)
+
+    # R17. «Actualizar la vista del plan» (mantener): el plan ya está «enviado»; mismo contenido y mismas fotos, ninguna
+    # nueva, sin revisar texto con OpenAI, sin correo si sale bien.
+    manifest_propio = {'statusCode': 200, 'body': {'metodo': {'file': 'metodo.jpg', 'hash': 'e' * 64},
+                                                   'gantt': {'file': 'gantt.png', 'hash': 'f' * 64}}}
+    hook_m = {'id': 7, 'codigo': 'PRUEBAplan01', 'modo': 'final', 'aviso': False, 'mantener': True}
+    t = sim(hook_m, **{'Leer render': leido(cuerpo_render(True), uid='', estado='enviado'), 'Fotos previas del plan': [manifest_propio],
+                       'Render': [renderer_ok(0)]})
+    sin_error(t, 'R17')
+    rc = llamadas(t, 'Render')
+    body = rc[0]['body'] if rc else {}
+    ok(len(rc) == 1 and body.get('image_briefs') == [], 'R17 mantener: el render no pide fotos nuevas', body.get('image_briefs'))
+    ok(body.get('draft') is False and body.get('images', {}).get('metodo', '').endswith('/p/PRUEBAplan01/img/metodo.jpg')
+       and body.get('images', {}).get('gantt', '').endswith('/img/gantt.png'),
+       'R17 mantener: usa las fotos del propio plan (versión final, no borrador)', body.get('images'))
+    ok(all(body.get(k) == cuerpo_render(True)[k] for k in ('document_type', 'unique_id', 'fases', 'cronograma', 'agenda', 'client_name')),
+       'R17 mantener: el resto del cuerpo llega intacto al renderer')
+    ok('Buscar texto en fotos' not in t['pasos'] and 'Leer fotos del plan' not in t['pasos'] and not t['openai'],
+       'R17 mantener: no revisa texto (no consulta a OpenAI)', t['pasos'])
+    gv = llamadas(t, 'Guardar vista')
+    ok(gv and gv[0]['url'] == WP + '/plan/7/vista' and gv[0]['body']['mantener'] is True and gv[0]['body']['modo'] == 'final'
+       and gv[0]['body']['ok'] is True and gv[0]['body']['faltan'] == [] and gv[0]['body']['view_url'] == VISTA
+       and gv[0]['body']['pdf_url'] == PDF
+       and gv[0]['body']['nota'].startswith('Vista del plan actualizada: Vista del plan actualizada con el mismo contenido y las mismas fotos'),
+       'R17 mantener: POST /vista {modo: final, mantener: true, ok: true, …}', gv)
+    ok('Correo a Luis' not in t['pasos'] and not t['correos'], 'R17 mantener: sin correo a Luis si salió bien', t['pasos'])
+
+    # R17b. El manifest del plan no existe (404): la vista sale sin fotos, sin pagar ninguna, y la nota lo avisa.
+    t = sim(hook_m, **{'Leer render': leido(cuerpo_render(True), uid='', estado='enviado'), 'Render': [renderer_ok(0)]})
+    rc = llamadas(t, 'Render')
+    gv = llamadas(t, 'Guardar vista')
+    ok(len(rc) == 1 and rc[0]['body']['image_briefs'] == [] and rc[0]['body']['images'] == {} and gv and gv[0]['body']['ok'] is True
+       and 'no hay fotos guardadas del plan; esas láminas van sin foto: portada, Método AT, carta Gantt' in gv[0]['body']['nota']
+       and not t['correos'],
+       'R17b mantener: sin manifest no se paga ninguna foto y la nota nombra las láminas que van sin foto', gv)
+
+    # R17f. Plan con propuesta: portada y cierre vuelven de las fotos de la propuesta (el renderer no las anota en el manifest
+    # del plan), junto con las del propio plan; ninguna foto se pide. Las pedidas sin foto se nombran en la nota.
+    t = sim(hook_m, **{'Leer render': leido(cuerpo_render(True), estado='enviado'), 'Fotos de la propuesta': [MANIFEST_PROP],
+                       'Fotos previas del plan': [manifest_propio], 'Render': [renderer_ok(0)]})
+    sin_error(t, 'R17f')
+    rc = llamadas(t, 'Render')
+    body = rc[0]['body'] if rc else {}
+    ok(rc and body.get('image_briefs') == [] and body.get('images') == {
+        'cover': BASE_R + '/p/PRUEBAprop01/img/cover.jpg', 'cierre': BASE_R + '/p/PRUEBAprop01/img/next_steps.png',
+        'metodo': BASE_R + '/p/PRUEBAplan01/img/metodo.jpg', 'gantt': BASE_R + '/p/PRUEBAplan01/img/gantt.png'},
+       'R17f mantener: portada y cierre de la propuesta + fotos del plan, sin pedir ninguna', body.get('images'))
+    gv = llamadas(t, 'Guardar vista')
+    nota = gv[0]['body']['nota'] if gv else ''
+    ok(gv and gv[0]['body']['ok'] is True and nota.startswith('Vista del plan actualizada: ')
+       and 'esas láminas van sin foto: fase 1, fase 2, fase 3, qué necesitamos de ti, reuniones y soporte, sigue tu proyecto' in nota
+       and 'portada' not in nota and 'cierre' not in nota and 'no hay fotos guardadas' not in nota and not t['correos'],
+       'R17f mantener: la nota nombra solo las láminas pedidas que quedan sin foto (no la portada ni el cierre)', nota)
+    # …y si la propuesta no tiene manifest (404), portada y cierre también se nombran.
+    t = sim(hook_m, **{'Leer render': leido(cuerpo_render(True), estado='enviado'), 'Fotos de la propuesta': [{'statusCode': 404, 'body': 'Not Found'}],
+                       'Fotos previas del plan': [manifest_propio], 'Render': [renderer_ok(0)]})
+    gv = llamadas(t, 'Guardar vista')
+    ok(gv and 'esas láminas van sin foto: portada, fase 1' in gv[0]['body']['nota'] and gv[0]['body']['nota'].count('van sin foto') == 1,
+       'R17f mantener: sin manifest de la propuesta, portada y cierre salen sin foto y la nota lo dice una sola vez', gv)
+
+    # R17g. El manifest del plan trae «metodo» pero no «gantt», y WordPress pidió las dos: la nota nombra la carta Gantt.
+    t = sim(hook_m, **{'Leer render': leido(cuerpo_render(True, image_briefs=BRIEFS_NUEVAS[:2]), uid='', estado='enviado'),
+                       'Fotos previas del plan': [{'statusCode': 200, 'body': {'metodo': {'file': 'metodo.jpg', 'hash': 'e' * 64}}}],
+                       'Render': [renderer_ok(0)]})
+    rc = llamadas(t, 'Render')
+    gv = llamadas(t, 'Guardar vista')
+    nota = gv[0]['body']['nota'] if gv else ''
+    ok(rc and rc[0]['body']['image_briefs'] == [] and list(rc[0]['body']['images']) == ['metodo']
+       and nota.endswith('esas láminas van sin foto: carta Gantt') and 'Método AT' not in nota.split('van sin foto')[-1]
+       and 'no hay fotos guardadas' not in nota and gv[0]['body']['ok'] is True,
+       'R17g mantener: una lámina pedida sin foto guardada se nombra en la nota', nota)
+
+    # R17c. El renderer falla (500 las tres veces): se reintenta igual, /vista lleva mantener=true y ok=false, y SÍ hay correo.
+    t = sim(hook_m, **{'Leer render': leido(cuerpo_render(True), uid='', estado='enviado'), 'Fotos previas del plan': [manifest_propio],
+                       'Render': [renderer_http(500, {'error': 'boom'})]})
+    sin_error(t, 'R17c')
+    rc = llamadas(t, 'Render')
+    gv = llamadas(t, 'Guardar vista')
+    ok(len(rc) == 3 and all(c['body']['image_briefs'] == [] for c in rc) and rc[0]['body'] == rc[2]['body'],
+       'R17c mantener: tres renders con el mismo cuerpo y ninguna foto nueva', len(rc))
+    ok(gv and gv[0]['body']['mantener'] is True and gv[0]['body']['ok'] is False and gv[0]['body']['modo'] == 'final'
+       and 'HTTP 500' in gv[0]['body']['nota'], 'R17c mantener: /vista lleva mantener=true y ok=false', gv)
+    ok(len(t['correos']) == 1 and t['correos'][0]['asunto'].endswith('la vista del plan no se pudo actualizar')
+       and 'easypanel' not in t['correos'][0]['html'], 'R17c mantener: si falla, sí hay correo a Luis', [c['asunto'] for c in t['correos']])
+    ok('Buscar texto en fotos' not in t['pasos'], 'R17c mantener: ni siquiera un renderer caído dispara la revisión de texto')
+
+    # R17d. Un 200 con fotos faltantes no se revisa por texto con «mantener» y deja el problema a la vista.
+    t = sim(hook_m, **{'Leer render': leido(cuerpo_render(True), uid='', estado='enviado'), 'Fotos previas del plan': [manifest_propio],
+                       'Render': [renderer_ok(2, ['gantt'])]})
+    gv = llamadas(t, 'Guardar vista')
+    ok(len(llamadas(t, 'Render')) == 3 and gv and gv[0]['body']['mantener'] is True and gv[0]['body']['ok'] is False
+       and gv[0]['body']['faltan'] == ['gantt'] and t['correos'], 'R17d mantener: fotos que el renderer no pudo servir = falla y correo', gv)
+
+    # R17e. «mantener» solo vale en la versión final: en una vista previa se ignora (nunca cambia el comportamiento del borrador).
+    t = sim({'id': 9, 'modo': 'draft', 'aviso': False, 'mantener': True},
+            **{'Leer render': leido(cuerpo_render(False), estado='borrador'), 'Render': [renderer_ok(0)]})
+    gv = llamadas(t, 'Guardar vista')
+    ok(gv and gv[0]['body']['mantener'] is False and gv[0]['body']['modo'] == 'draft' and not t['correos'],
+       'R17e: mantener en una vista previa se ignora', gv)
+    # …y la versión final normal manda mantener=false.
+    t = sim({'id': 9, 'modo': 'final', 'aviso': False}, **{'Leer render': leido(render_final), 'Fotos de la propuesta': [MANIFEST_PROP],
+                                                          'Render': [renderer_ok(8)]})
+    gv = llamadas(t, 'Guardar vista')
+    ok(gv and gv[0]['body']['mantener'] is False and 'Buscar texto en fotos' in t['pasos'] and len(t['correos']) == 1,
+       'R17e: sin la bandera, la versión final sigue igual (revisa texto, manda correo, mantener=false)', gv)
+    # El texto 'true' también vale, como con «aviso».
+    t = sim({'id': 7, 'modo': 'final', 'aviso': False, 'mantener': 'true'},
+            **{'Leer render': leido(cuerpo_render(True), uid='', estado='enviado'), 'Fotos previas del plan': [manifest_propio],
+               'Render': [renderer_ok(0)]})
+    ok(llamadas(t, 'Render') and llamadas(t, 'Render')[0]['body']['image_briefs'] == [], 'R17e: mantener="true" como texto también vale')
+
+    # R17h. «Actualizar la vista» sin poder leer la lista de fotos del plan (5xx, sin código de estado): no se llama al
+    # renderer (la vista saldría sin fotos), /vista va con ok=false y Luis recibe el correo de falla.
+    for caso, previa in (('5xx', {'statusCode': 500, 'body': 'Internal Server Error'}),
+                         ('sin respuesta', {'error': {'message': 'The service refused the connection'}})):
+        t = sim(hook_m, **{'Leer render': leido(cuerpo_render(True), uid='', estado='enviado'), 'Fotos previas del plan': [previa],
+                           'Render': [renderer_ok(0)]})
+        sin_error(t, 'R17h ' + caso)
+        gv = llamadas(t, 'Guardar vista')
+        ok(not llamadas(t, 'Render') and 'Render' not in t['pasos'], f'R17h {caso}: no se llama al renderer', t['pasos'])
+        ok(gv and gv[0]['url'] == WP + '/plan/7/vista' and gv[0]['body']['mantener'] is True and gv[0]['body']['ok'] is False
+           and gv[0]['body']['modo'] == 'final' and gv[0]['body']['view_url'] == '' and gv[0]['body']['faltan'] == []
+           and 'no se pudo leer la lista de fotos del plan; no se rehízo la vista para no dejarla sin fotos' in gv[0]['body']['nota'],
+           f'R17h {caso}: POST /vista con mantener=true y ok=false y el motivo en la nota', gv)
+        ok(len(t['correos']) == 1 and t['correos'][0]['asunto'].endswith('la vista del plan no se pudo actualizar')
+           and 'easypanel' not in t['correos'][0]['html'], f'R17h {caso}: Luis recibe el correo de falla', [c['asunto'] for c in t['correos']])
+        ok('Buscar texto en fotos' not in t['pasos'], f'R17h {caso}: no revisa texto')
+    # …y un 404 (todavía no hay manifest) NO es una falla: el render sigue, como en R17b.
+    t = sim(hook_m, **{'Leer render': leido(cuerpo_render(True), uid='', estado='enviado'),
+                       'Fotos previas del plan': [{'statusCode': 404, 'body': 'Not Found'}], 'Render': [renderer_ok(0)]})
+    gv = llamadas(t, 'Guardar vista')
+    ok(len(llamadas(t, 'Render')) == 1 and gv and gv[0]['body']['ok'] is True and not t['correos'],
+       'R17h: con un 404 el manifest simplemente no existe y el render sigue', t['pasos'])
+    # La versión final normal (sin mantener) ignora la bandera: con el manifest roto sigue renderizando como siempre.
+    t = sim({'id': 7, 'modo': 'final', 'aviso': False}, **{'Leer render': leido(cuerpo_render(True), uid='', estado='aprobando'),
+            'Fotos previas del plan': [{'statusCode': 500, 'body': 'x'}], 'Render': [renderer_ok(8)]})
+    ok(len(llamadas(t, 'Render')) == 1, 'R17h: sin mantener, un manifest ilegible no impide el render', t['pasos'])
 
 
 # ---------------------------------------------------------------- M5 (revisión final): nada de *.easypanel.host en la nota ni el correo

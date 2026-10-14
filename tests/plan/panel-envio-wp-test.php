@@ -34,6 +34,7 @@ ok(strpos($h, 'value="at_pt_enviar"') !== false && strpos($h, '📧 Enviar al cl
 ok(strpos($h, 'value="at_pt_enviar_whatsapp"') !== false && strpos($h, 'target="_blank"') !== false && strpos($h, '💬 Enviar por mi WhatsApp') !== false, 'listo: «Enviar por mi WhatsApp» abre otra pestaña');
 ok(strpos($h, 'prueba-plan-panel@example.com') !== false, 'dice a qué correo se envía');
 ok(strpos($h, 'llega en la etapa 2') === false, 'ya no dice que el envío llega en la etapa 2');
+ok(strpos($h, 'value="at_pt_actualizar_vista"') === false, 'listo: sin «Actualizar la vista del plan» (solo se actualiza un plan ya enviado)');
 ptc_estado((int) $a['plan']->id, 'borrador');
 $hb = pestana(at_pt_plan((int) $a['plan']->id), $a['crm']);
 ok(strpos($hb, 'value="at_pt_enviar"') === false && strpos($hb, 'value="at_pt_enviar_whatsapp"') === false, 'borrador: sin botones de envío');
@@ -41,6 +42,7 @@ ptc_estado((int) $a['plan']->id, 'enviado');
 at_pt_guardar((int) $a['plan']->id, ['enviado_at' => '2026-10-01 10:00:00']);
 $he = pestana(at_pt_plan((int) $a['plan']->id), $a['crm']);
 ok(strpos($he, 'value="at_pt_enviar"') !== false && strpos($he, 'Reenviar') !== false && strpos($he, '2026-10-01 10:00:00') !== false, 'enviado: dice cuándo y permite reenviar');
+ok(strpos($he, 'value="at_pt_actualizar_vista"') !== false && strpos($he, '🔄 Actualizar la vista del plan') !== false && strpos($he, 'sin costo') !== false, 'enviado: botón «Actualizar la vista del plan» con confirmación');
 $sin = plan_listo_panel($m . 'b', '');
 $hs = pestana($sin['plan'], $sin['crm']);
 ok(strpos($hs, 'no tiene correo') !== false && preg_match('/<button[^>]*disabled[^>]*>📧 Enviar al cliente/u', $hs) === 1, 'Review Focus 3: sin correo el botón queda deshabilitado y lo explica');

@@ -153,4 +153,22 @@ $solo = (array) (pt_pedir('GET', "/plan/{$pid6}/render", null, true, ['modo' => 
 ok(array_keys($solo) === ['cover'], '6) con solo la portada guardada, solo la portada (también en la vista previa, que no paga fotos)');
 ok(at_pt_fotos_propuesta_wp('../x') === [] && at_pt_fotos_propuesta_wp('') === [], '6) un código raro no busca nada fuera de la carpeta de la propuesta');
 
+// Etapa 1 estado: «Actualizar la vista del plan» (mantener) nunca cambia el estado.
+at_pt_guardar($pid, ['estado' => 'enviado']);
+$nueva = $base . '/index.html?v=2';
+$r = pt_pedir('POST', "/plan/{$pid}/vista", ['modo' => 'final', 'mantener' => true, 'ok' => true, 'view_url' => $nueva, 'pdf_url' => $base . '/presentation.pdf', 'faltan' => [], 'nota' => 'Vista del plan actualizada: Vista del plan actualizada con el mismo contenido · esas láminas van sin foto: carta Gantt']);
+$f = at_pt_plan($pid);
+ok($r->get_status() === 200 && $f->estado === 'enviado' && $f->view_url === $nueva, 'mantener: enviado sigue enviado y guarda los enlaces');
+ok(strpos((string) $f->nota, 'esas láminas van sin foto: carta Gantt') !== false && strpos((string) $f->nota, 'Vista del plan actualizada: ') === 0, 'mantener: guarda la nota de n8n con sus avisos (láminas sin foto)');
+pt_pedir('POST', "/plan/{$pid}/vista", ['modo' => 'final', 'mantener' => true, 'ok' => false, 'view_url' => '', 'pdf_url' => '', 'faltan' => [], 'nota' => 'renderer HTTP 502']);
+$f = at_pt_plan($pid);
+ok($f->estado === 'enviado' && $f->view_url === $nueva && strpos((string) $f->nota, 'No se pudo actualizar la vista del plan') !== false, 'mantener fallido: el estado y los enlaces no cambian, la nota lo dice');
+at_pt_guardar($pid, ['estado' => 'listo']);
+pt_pedir('POST', "/plan/{$pid}/vista", ['modo' => 'final', 'mantener' => true, 'ok' => true, 'view_url' => $base . '/index.html', 'pdf_url' => $base . '/presentation.pdf', 'faltan' => [], 'nota' => '']);
+ok(at_pt_plan($pid)->estado === 'listo', 'Review Focus 5: mantener sobre un plan «listo» tampoco cambia el estado');
+ok(preg_match('/^Vista del plan actualizada \(\d{4}-\d{2}-\d{2} \d{2}:\d{2}\)\.$/', (string) at_pt_plan($pid)->nota) === 1, 'mantener sin nota de n8n: queda el texto fijo con la fecha');
+at_pt_guardar($pid, ['estado' => 'enviado']);
+pt_pedir('POST', "/plan/{$pid}/vista", ['modo' => 'final', 'mantener' => 'false', 'ok' => true, 'view_url' => $base . '/otra.html', 'pdf_url' => '', 'faltan' => [], 'nota' => '']);
+ok(at_pt_plan($pid)->estado === 'enviado' && at_pt_plan($pid)->view_url === $base . '/index.html', 'mantener false: se comporta como antes (una final tardía sobre un plan enviado no guarda nada)');
+
 fin();

@@ -117,12 +117,16 @@ function fondoPanel(imageUrl, index) {
 const GANTT_ALTO = 660;
 const GANTT_ALTO_FASE = 34;
 const GANTT_ALTO_HITOS = 72;
+// Con tres hitos pegados (por ejemplo, entrega, revisión y un bloque después) dos carriles no alcanzan: la fila de
+// hitos crece a tres carriles (dos abajo del rombo) y las barras ceden ese alto.
+const GANTT_ALTO_HITOS_3 = 104;
 // Ancho aproximado (px) de la pista de barras y de una letra de la etiqueta de un hito (16 px, negrita).
 const GANTT_PISTA = 1300;
 const GANTT_LETRA = 9.5;
 
-function medidasGantt(nFilas, nFases, conHitos) {
-  const libre = GANTT_ALTO - nFases * GANTT_ALTO_FASE - (conHitos ? GANTT_ALTO_HITOS : 0);
+function medidasGantt(nFilas, nFases, conHitos, carriles = 2) {
+  const altoHitos = conHitos ? (carriles > 2 ? GANTT_ALTO_HITOS_3 : GANTT_ALTO_HITOS) : 0;
+  const libre = GANTT_ALTO - nFases * GANTT_ALTO_FASE - altoHitos;
   const fila = Math.max(1, Math.min(52, Math.floor(libre / Math.max(1, nFilas))));
   return { fila, denso: fila < 34 };
 }
@@ -174,20 +178,65 @@ function posicion(desde, hasta, lunes0, totalDias) {
   return `left:${porcentaje(ini / totalDias)};width:${porcentaje(Math.max(fin - ini, 0.35) / totalDias)}`;
 }
 
-// Reparte las etiquetas de los hitos en dos carriles (arriba y abajo del rombo) para que no se pisen: cada
-// etiqueta va al primer carril libre en su tramo; si no cabe a la derecha del rombo, va a su izquierda. Si
-// no queda carril libre (tres hitos pegados), se corre a la derecha hasta donde termina la anterior.
+// Reparte las etiquetas de los hitos en carriles para que no se pisen: 0 arriba del rombo, 1 abajo y, solo si hace
+// falta, 2 más abajo (la fila de hitos crece y las barras ceden ese alto, así que el tercero es la última opción).
+// Cada etiqueta va a un carril donde su tramo no toca a otra; si no cabe a la derecha del rombo, va a su izquierda.
+// Se prefiere la etiqueta pegada a su rombo (el carril libre más alto); si así no caben, se prueba correr alguna a
+// la derecha (solo las que van a la derecha). Con dos carriles primero, y con tres si con dos no hay manera. Si
+// ninguna combinación evita el choque, cada etiqueta va al carril menos ocupado (la última salida, y la más fea).
 function carrilesHitos(hitos, xs) {
-  const fin = [-Infinity, -Infinity];
-  return hitos.map((h, i) => {
+  const HOLGURA = 0.008;
+  const caben = (ocupado, carril, desde, hasta) => ocupado[carril].every(([a, b]) => hasta + HOLGURA <= a || b + HOLGURA <= desde);
+  const medidas = hitos.map((h, i) => {
     const ancho = ((texto(h.nombre).length + 9) * GANTT_LETRA) / GANTT_PISTA;
     const izq = xs[i] + ancho + 0.012 > 1;
-    const desde = izq ? xs[i] - ancho : xs[i];
-    const carril = fin[0] <= desde ? 0 : fin[1] <= desde ? 1 : fin[0] <= fin[1] ? 0 : 1;
-    const corrido = izq ? 0 : Math.max(0, Math.min(fin[carril] + 0.008 - desde, 1 - ancho - desde));
-    fin[carril] = Math.max(fin[carril], izq ? xs[i] : desde + corrido + ancho);
-    return { carril, izq, corrido: Math.round(corrido * GANTT_PISTA) };
+    return { ancho, izq, desde: izq ? xs[i] - ancho : xs[i] };
   });
+  // Opciones de una etiqueta, de la mejor a la peor: pegada a su rombo en cada carril libre y, si va a la derecha,
+  // corrida hasta el primer hueco de cada carril que todavía le deja entrar en la pista.
+  const opciones = (ocupado, { ancho, izq, desde }, carriles) => {
+    const pegadas = carriles.filter((c) => caben(ocupado, c, desde, desde + ancho)).map((carril) => ({ carril, corrido: 0 }));
+    if (izq) return pegadas;
+    const corridas = [];
+    for (const carril of carriles) {
+      if (pegadas.some((p) => p.carril === carril)) continue;
+      const hueco = [desde, ...ocupado[carril].map(([, b]) => b + HOLGURA)]
+        .filter((d) => d >= desde && d + ancho <= 1 && caben(ocupado, carril, d, d + ancho))
+        .sort((a, b) => a - b)[0];
+      if (hueco !== undefined) corridas.push({ carril, corrido: hueco - desde });
+    }
+    return pegadas.concat(corridas.sort((a, b) => a.corrido - b.corrido || a.carril - b.carril));
+  };
+  let intentos = 0;
+  const resolver = (i, ocupado, elegidas, carriles) => {
+    if (i === hitos.length) return elegidas;
+    if (intentos++ > 2000) return null;
+    for (const op of opciones(ocupado, medidas[i], carriles)) {
+      const tramo = [medidas[i].desde + op.corrido, medidas[i].desde + op.corrido + medidas[i].ancho];
+      ocupado[op.carril].push(tramo);
+      const r = resolver(i + 1, ocupado, elegidas.concat(op), carriles);
+      ocupado[op.carril].pop();
+      if (r) return r;
+    }
+    return null;
+  };
+  let elegidas = null;
+  for (const carriles of [[0, 1], [0, 1, 2]]) {
+    intentos = 0;
+    elegidas = resolver(0, [[], [], []], [], carriles);
+    if (elegidas) break;
+  }
+  if (!elegidas) {
+    const ocupado = [[], [], []];
+    elegidas = medidas.map(({ ancho, izq, desde }) => {
+      const fin = ocupado.map((l) => (l.length ? Math.max(...l.map((t) => t[1])) : -Infinity));
+      const carril = fin.indexOf(Math.min(...fin));
+      const corrido = izq ? 0 : Math.max(0, Math.min(fin[carril] + HOLGURA - desde, 1 - ancho - desde));
+      ocupado[carril].push([desde + corrido, desde + corrido + ancho]);
+      return { carril, corrido };
+    });
+  }
+  return elegidas.map((e, i) => ({ carril: e.carril, izq: medidas[i].izq, corrido: Math.round(e.corrido * GANTT_PISTA) }));
 }
 
 function renderGantt(cronograma) {
@@ -203,7 +252,11 @@ function renderGantt(cronograma) {
         .sort((a, b) => (a.fecha < b.fecha ? -1 : a.fecha > b.fecha ? 1 : 0))
     : [];
   const nFilas = grupos.reduce((n, g) => n + g.filas.length, 0);
-  const { fila, denso } = medidasGantt(nFilas, grupos.length, hitos.length > 0);
+  const hitoX = (h) => (diasEntre(lunes0, h.fecha) + 1) / totalDias;
+  const xs = hitos.map(hitoX);
+  const carriles = carrilesHitos(hitos, xs);
+  const nCarriles = carriles.reduce((m, c) => Math.max(m, c.carril + 1), 0);
+  const { fila, denso } = medidasGantt(nFilas, grupos.length, hitos.length > 0, nCarriles);
   const largo = semanas > 18;
 
   const cabecera = Array.from({ length: semanas }, (_, i) => {
@@ -212,7 +265,6 @@ function renderGantt(cronograma) {
     return `<span class="gantt-semana"><b>S${i + 1}</b><small>${escapeHtml(fecha)}</small></span>`;
   }).join('');
 
-  const hitoX = (h) => (diasEntre(lunes0, h.fecha) + 1) / totalDias;
   const guias = hitos
     .map((h) => `<span class="gantt-guia${h.nombre === 'Entrega estimada' ? ' is-entrega' : ''}" style="left:${porcentaje(hitoX(h))}"></span>`)
     .join('');
@@ -248,14 +300,12 @@ function renderGantt(cronograma) {
     })
     .join('');
 
-  const xs = hitos.map(hitoX);
-  const carriles = carrilesHitos(hitos, xs);
   const hitosHtml = hitos.length
-    ? `<div class="gantt-fila gantt-fila-hitos"><div class="gantt-etiqueta"><b>Hitos</b></div><div class="gantt-pista">${hitos
+    ? `<div class="gantt-fila gantt-fila-hitos${nCarriles > 2 ? ' is-3carriles' : ''}"><div class="gantt-etiqueta"><b>Hitos</b></div><div class="gantt-pista">${hitos
         .map((h, i) => {
           const x = xs[i];
           const { carril, izq, corrido } = carriles[i];
-          const clases = ['gantt-hito', h.nombre === 'Entrega estimada' ? 'is-entrega' : '', carril ? 'is-abajo' : 'is-arriba', izq ? 'is-izq' : '']
+          const clases = ['gantt-hito', h.nombre === 'Entrega estimada' ? 'is-entrega' : '', ['is-arriba', 'is-abajo', 'is-abajo2'][carril], izq ? 'is-izq' : '']
             .filter(Boolean)
             .join(' ');
           const estilo = `left:${porcentaje(x)}${corrido ? `;--corrido:${corrido}px` : ''}`;
@@ -357,6 +407,9 @@ const ESTILO_GANTT = `
     background: #0a1520; padding: 1px 6px; border-radius: 5px; }
   .gantt-hito.is-arriba em { bottom: 14px; }
   .gantt-hito.is-abajo em { top: 14px; }
+  .gantt-fila-hitos.is-3carriles { height: 104px; }
+  .gantt-fila-hitos.is-3carriles .gantt-hito { top: 40%; }
+  .gantt-hito.is-abajo2 em { top: 40px; }
   .gantt-hito.is-izq em { left: auto; right: 14px; }
   .gantt-hito.is-entrega em { color: #00d9c0; }
   .gantt-rombo { flex: none; width: 13px; height: 13px; transform: rotate(45deg); border: 2px solid #fff; display: inline-block; }
@@ -413,12 +466,18 @@ function renderMetodoSlide(data, index, imageUrl) {
   const hechas = new Set(Array.isArray(m.hechas) ? m.hechas : ['diagnostico', 'priorizacion']);
   const actual = typeof m.actual === 'string' && m.actual ? m.actual : 'propuesta';
   const firma = texto(data && data.fecha_firma_larga).trim();
+  // Página completa del avance (ver-estado.php). Solo https (urlSegura). El plan va dentro de un iframe:
+  // target="_top" abre la página en la ventana entera.
+  const avanceUrl = urlSegura(data && data.estado_url);
+  const boton = avanceUrl
+    ? `<a class="metodo-avance" href="${escapeHtml(avanceUrl)}" target="_top" rel="noopener">Ver detalle del avance</a>`
+    : '';
   const pasos = METODO.map((p, i) => {
     const estado = p.clave === actual ? 'actual' : hechas.has(p.clave) ? 'hecha' : 'proxima';
     const marca = estado === 'hecha' ? '✓' : numero(i + 1);
     const extra =
       estado === 'actual'
-        ? `<span class="metodo-aqui">Estás aquí</span><p class="metodo-firma">${
+        ? `<span class="metodo-aqui">Estás aquí</span>${boton}<p class="metodo-firma">${
             firma ? `Cerrada con tu firma del ${escapeHtml(firma)}` : 'Cerrada con tu firma del contrato'
           }</p>`
         : `<p class="metodo-estado">${estado === 'hecha' ? 'Hecho' : 'Lo que viene'}</p>`;
@@ -630,6 +689,8 @@ const ESTILO_FASES = `
   .metodo-paso.is-hecha .metodo-estado { color: #00d9c0; }
   .metodo-aqui { display: inline-block; margin-top: 18px; padding: 7px 16px; border-radius: 999px; background: #00d9c0; color: #06222a;
     font-size: 16px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
+  .metodo-avance { display: inline-block; margin: 10px 0 0 0; padding: 6px 14px; border-radius: 999px; background: #00d9c0; color: #0a1420; font-weight: 700; font-size: 15px; text-decoration: none; }
+  .metodo-avance:hover { filter: brightness(1.08); }
   .metodo-firma { color: #fff; font-size: 18px; line-height: 1.45; margin-top: 12px; }
   .metodo-pie { position: absolute; left: 72px; right: 72px; bottom: 120px; z-index: 2; color: #c9d4e0; font-size: 24px;
     border-top: 1px solid rgba(255,255,255,.14); padding-top: 26px; }
@@ -946,6 +1007,7 @@ module.exports = {
   diasTexto,
   urlSegura,
   filasGantt,
+  carrilesHitos,
   medidasGantt,
   renderGantt,
   renderGanttSlide,

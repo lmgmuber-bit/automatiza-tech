@@ -1076,6 +1076,13 @@ function at_av_armar_render_estado(array $plan, array $avance, array $datos, boo
 	$fase1 = $avance['alcance']['fase1'] ?: array_values(array_unique(array_filter(array_column($bloques_plan, 'entregable'), 'strlen')));
 	$mensual = $avance['alcance']['mensual'] ?: array_values(array_filter(array_map('strval', (array) ($plan['soporte']['mensuales'] ?? [])), 'strlen'));
 	$crono = is_array($plan['cronograma'] ?? null) ? $plan['cronograma'] : [];
+	// La vista previa muestra cómo quedará al publicar: sus borradores también marcan «listo» los bloques que cubren.
+	$para_bloques = $avance;
+	if ($previa) {
+		foreach ($para_bloques['cierres'] as $k => $c) {
+			$para_bloques['cierres'][$k]['estado'] = 'publicado';
+		}
+	}
 	return [
 		'document_type' => 'estado',
 		'unique_id'     => $previa ? $codigo . '-previa-' . (string) ($datos['previa_token'] ?? '') : $codigo . '-estado',
@@ -1087,7 +1094,7 @@ function at_av_armar_render_estado(array $plan, array $avance, array $datos, boo
 		'plan_url'      => at_pt_url_ver_plan((string) ($datos['sitio'] ?? ''), $codigo),
 		'agenda'        => $base['agenda'],
 		'cronograma'    => ['inicio' => (string) ($crono['inicio'] ?? ''), 'fin' => (string) ($crono['fin'] ?? ''), 'semanas' => (int) ($crono['semanas'] ?? 0)],
-		'bloques'       => at_av_estado_bloques($plan, $avance),
+		'bloques'       => at_av_estado_bloques($plan, $para_bloques),
 		'cierres'       => $cierres,
 		'cambios_plan'  => array_values($avance['cambios_plan']),
 		'necesitamos'   => array_values(array_map(fn($x) => (string) $x['texto'], array_filter($avance['necesitamos'], fn($x) => ($x['estado'] ?? '') !== 'resuelto'))),

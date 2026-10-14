@@ -12800,8 +12800,8 @@
     "semantic_hash": ""
   },
   "tests/plan/avance-render-test.php": {
-    "mtime": 1791993363.4516342,
-    "ast_hash": "17caf46b2e250a4dded10c2bf1949eab",
+    "mtime": 1792008789.2642317,
+    "ast_hash": "556546a38261f5bc19f0adfb3f241c98",
     "semantic_hash": ""
   },
   "tests/plan/rest-estado-wp-test.php": {
@@ -12825,8 +12825,8 @@
     "semantic_hash": ""
   },
   "wp-content/themes/automatiza-tech/inc/plan-trabajo/avance-puras.php": {
-    "mtime": 1792001753.6740725,
-    "ast_hash": "03711fcd83f9c4a51233b968e2b0086b",
+    "mtime": 1792008789.2632325,
+    "ast_hash": "ac842df14f0669eb29f2b10cfa4b3e86",
     "semantic_hash": ""
   },
   "wp-content/themes/automatiza-tech/inc/plan-trabajo/avance-render.php": {

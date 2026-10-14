@@ -60,4 +60,5 @@ ok($r['image_briefs'] === [] && $r['images'] instanceof stdClass && str_contains
 ok($r['cronograma'] === ['inicio' => '2026-10-05', 'fin' => '2026-10-23', 'semanas' => 3], 'cronograma: inicio, fin y semanas del plan');
 $p = at_av_armar_render_estado($plan, $av, $datos, true, '2026-10-14');
 ok($p['unique_id'] === 'AbCdEf123456-previa-abc123def4' && $p['draft'] === true && array_column($p['cierres'], 'titulo') === ['Borrador secreto', 'Sitio web'] && $p['cierres'][0]['borrador'] === true, 'vista previa: también borradores, marcados, en orden de fecha y en su propia ruta (R3)');
+ok(array_column($p['bloques'], 'estado') === ['listo', 'listo', 'listo'] && $p['bloques'][2]['fin_real'] === '2026-10-05' && array_column($r['bloques'], 'estado') === ['listo', 'listo', 'por_venir'], 'vista previa: un borrador marca «listo» su bloque, como quedará al publicar; la del cliente no');
 fin();

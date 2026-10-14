@@ -14,6 +14,7 @@ require_once __DIR__ . '/avance-puras.php';
 require_once __DIR__ . '/datos.php';
 require_once __DIR__ . '/avance-datos.php';
 require_once __DIR__ . '/avance-evidencias.php';
+require_once __DIR__ . '/avance-render.php';
 require_once __DIR__ . '/disparador.php';
 require_once __DIR__ . '/rest.php';
 require_once __DIR__ . '/envio.php';

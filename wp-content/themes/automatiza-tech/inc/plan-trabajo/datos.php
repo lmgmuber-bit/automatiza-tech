@@ -413,6 +413,17 @@ function at_pt_datos_render(object $fila): array {
 	];
 }
 
+/** Código (unique_link_id) de la propuesta del plan, para reutilizar sus fotos. '' sin propuesta o si el renderer no
+ *  lo aceptaría como carpeta (/p/<uid>/). Lo usan el render del plan y el de «Estado del proyecto». */
+function at_pt_uid_propuesta(object $f): string {
+	if ((int) ($f->propuesta_id ?? 0) <= 0) {
+		return '';
+	}
+	global $wpdb;
+	$uid = (string) $wpdb->get_var($wpdb->prepare("SELECT unique_link_id FROM {$wpdb->prefix}automatiza_propuestas WHERE id = %d", (int) $f->propuesta_id));
+	return preg_match('/^[A-Za-z0-9_-]{6,64}$/', $uid) ? $uid : '';
+}
+
 /**
  * Lo que recibe la IA (GET /plan/{id}/contexto). Lo contratado sale del contrato (ya revisado por
  * Luis); la propuesta, si existe, aporta solución, pasos y los primeros 3000 caracteres de la reunión;

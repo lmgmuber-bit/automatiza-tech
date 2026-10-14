@@ -842,3 +842,77 @@ function at_av_bloques_de_post(mixed $post, array $plan, array &$errores): array
 	}
 	return $out;
 }
+
+/* ---------- Cuerpo para el renderer (Task 5) ---------- */
+
+/** Evidencias de un cierre para el renderer. No salen las de captura o video sin archivo, ni un enlace que no pase
+ *  at_av_url_publica (D8). */
+function at_av_evidencias_render(array $avance, array $ids): array {
+	$out = [];
+	foreach ($ids as $id) {
+		$e = $avance['evidencias'][$id] ?? null;
+		if (!is_array($e) || !in_array($e['tipo'] ?? '', AT_AV_TIPOS, true)) {
+			continue;
+		}
+		$url = $e['tipo'] === 'cifra' ? '' : at_av_url_publica($e['url'] ?? '');
+		if ($e['tipo'] !== 'cifra' && $url === '') {
+			continue;
+		}
+		$out[] = ['tipo' => (string) $e['tipo'], 'titulo' => (string) ($e['titulo'] ?? ''), 'url' => $url, 'poster' => at_av_url_publica($e['poster'] ?? ''),
+			'valor' => (string) ($e['valor'] ?? ''), 'unidad' => (string) ($e['unidad'] ?? ''), 'fuente' => (string) ($e['fuente'] ?? ''), 'fecha' => (string) ($e['fecha'] ?? '')];
+	}
+	return $out;
+}
+
+/**
+ * Cuerpo de «Estado del proyecto» para el renderer (document_type 'estado', spec §7). Solo cierres publicados; con
+ * $previa también los borradores (marcados) y la ruta <código>-previa-<token> (R3). $datos: lo de at_pt_datos_render()
+ * más 'previa_token' y 'entregables' (id => URL pública). Sin fotos nuevas (D9): image_briefs vacío e images {} (n8n
+ * pone las del plan). Todos los enlaces son de WordPress (D8).
+ */
+function at_av_armar_render_estado(array $plan, array $avance, array $datos, bool $previa, string $hoy): array {
+	$base = at_pt_armar_render($plan, $datos, true);
+	$codigo = (string) ($datos['codigo'] ?? '');
+	$cierres = [];
+	foreach ($avance['cierres'] as $c) {
+		$publicado = ($c['estado'] ?? '') === 'publicado';
+		if (!$publicado && !$previa) {
+			continue;
+		}
+		$ent = (int) ($c['entregable_id'] ?? 0);
+		$parte = fn(array $p) => ['texto' => (string) ($p['texto'] ?? ''), 'puntos' => array_values((array) ($p['puntos'] ?? [])),
+			'evidencias' => at_av_evidencias_render($avance, (array) ($p['evidencias'] ?? []))];
+		$cierres[] = [
+			'id' => (string) $c['id'], 'titulo' => (string) $c['titulo'], 'bloques' => array_values((array) ($c['bloques'] ?? [])),
+			'fecha_real' => (string) ($c['fecha_real'] ?? ''), 'borrador' => !$publicado,
+			'entregable_url' => $ent > 0 ? at_av_url_publica($datos['entregables'][$ent] ?? '') : '',
+			'antes' => $parte((array) ($c['antes'] ?? [])),
+			'durante' => ['texto' => (string) ($c['durante']['texto'] ?? ''), 'actividades' => array_values((array) ($c['durante']['actividades'] ?? []))],
+			'despues' => $parte((array) ($c['despues'] ?? [])),
+		];
+	}
+	usort($cierres, fn($a, $b) => strcmp($a['fecha_real'], $b['fecha_real']));
+	$bloques_plan = at_av_bloques_plan($plan);
+	$fase1 = $avance['alcance']['fase1'] ?: array_values(array_unique(array_filter(array_column($bloques_plan, 'entregable'), 'strlen')));
+	$mensual = $avance['alcance']['mensual'] ?: array_values(array_filter(array_map('strval', (array) ($plan['soporte']['mensuales'] ?? [])), 'strlen'));
+	$crono = is_array($plan['cronograma'] ?? null) ? $plan['cronograma'] : [];
+	return [
+		'document_type' => 'estado',
+		'unique_id'     => $previa ? $codigo . '-previa-' . (string) ($datos['previa_token'] ?? '') : $codigo . '-estado',
+		'draft'         => $previa,
+		'company_name'  => $base['company_name'],
+		'client_name'   => $base['client_name'],
+		'proyecto'      => $base['proyecto'],
+		'actualizado'   => $hoy,
+		'plan_url'      => at_pt_url_ver_plan((string) ($datos['sitio'] ?? ''), $codigo),
+		'agenda'        => $base['agenda'],
+		'cronograma'    => ['inicio' => (string) ($crono['inicio'] ?? ''), 'fin' => (string) ($crono['fin'] ?? ''), 'semanas' => (int) ($crono['semanas'] ?? 0)],
+		'bloques'       => at_av_estado_bloques($plan, $avance),
+		'cierres'       => $cierres,
+		'cambios_plan'  => array_values($avance['cambios_plan']),
+		'necesitamos'   => array_values(array_map(fn($x) => (string) $x['texto'], array_filter($avance['necesitamos'], fn($x) => ($x['estado'] ?? '') !== 'resuelto'))),
+		'alcance'       => ['fase1' => array_slice($fase1, 0, AT_AV_MAX_ALCANCE), 'mensual' => array_slice($mensual, 0, AT_AV_MAX_ALCANCE)],
+		'image_briefs'  => [],
+		'images'        => new stdClass(),
+	];
+}

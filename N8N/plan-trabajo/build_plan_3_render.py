@@ -19,6 +19,10 @@ Lo llama WordPress (at_pt_pedir_render) con {id, codigo, modo: 'draft'|'final', 
   se pide si queda al menos un render, y sus reintentos gastan del mismo tope.
   Termina SIEMPRE con POST /vista: WordPress pasa el plan a «listo» o a «error»; nunca queda trabado en «aprobando».
   Siempre le escribe a Luis.
+- estado (Estado del proyecto, Etapa 2): WordPress pide {id, codigo, modo: 'estado'[, previa: true]} al publicar o
+  cambiar el avance. Lee GET /render&modo=estado, junta las fotos ya guardadas del plan (manifest de /p/<código>/) y
+  portada/cierre de la propuesta, renderiza UNA vez con image_briefs vacío (nunca paga fotos) y termina en POST /vista
+  {modo: 'estado'}. Sin reintentos ni correo: el panel muestra el resultado (R5).
 Solo referencia credenciales por id; no contiene secretos.
 """
 import json, os, sys
@@ -272,6 +276,50 @@ return [{ json: Object.assign(vacio, { ok, view_url: lr.view_url, pdf_url: lr.pd
   nota: sinUrlInterna(nota), crm: v.crm || 0, proyecto: v.proyecto || vacio.proyecto, renders: intento }) }];"""
 
 
+CODE_ESTADO_PREPARAR = r"""// «Estado del proyecto» (Etapa 2): cuerpo para el renderer con las fotos ya guardadas del plan y portada/cierre
+// de la propuesta. Nunca pide ni paga fotos (D9). Nunca lanza.
+const hook = $('Webhook').first().json.body || {};
+const id = parseInt(hook.id, 10) || 0;
+const previa = mantenerPedido(hook.previa);
+const le = $('Leer estado').first().json || {};
+const b = esObjetoPlano(le.body) ? le.body : {};
+const leido = le.statusCode === 200 && b.ok === true && esObjetoPlano(b.render) && b.render.document_type === 'estado';
+if (!leido) {
+  const motivo = 'No se pudo leer el avance en WordPress (' + (le.statusCode ? 'HTTP ' + le.statusCode
+    : 'sin respuesta' + (le.error && le.error.message ? ': ' + le.error.message : '')) + ')' + (b.message ? ' — ' + b.message : '');
+  return [{ json: { id, previa, saltar_render: true, motivo: sinUrlInterna(motivo), render: {} } }];
+}
+const codigo = /^[A-Za-z0-9]{6,32}$/.test(String(b.plan_codigo || '')) ? String(b.plan_codigo) : '';
+const uid = /^[A-Za-z0-9_-]{6,64}$/.test(String(b.propuesta_uid || '')) ? String(b.propuesta_uid) : '';
+const manifest = (nodo) => {
+  if (!$(nodo).isExecuted) return null;
+  const r = $(nodo).first().json || {};
+  return r.statusCode === 200 ? r.body : null;
+};
+const propias = fotosPropiasDelPlan(manifest('Fotos del plan (estado)'), RENDERER_BASE, codigo);
+const deLaPropuesta = reutilizarFotosPlan({ images: {} }, manifest('Fotos de la propuesta (estado)'), RENDERER_BASE, uid);
+const images = Object.assign({}, deLaPropuesta.render.images, propias.images);
+const render = Object.assign({}, b.render, { image_briefs: [], images });
+return [{ json: { id, previa, saltar_render: false, motivo: '', render } }];"""
+
+CODE_ESTADO_RESULTADO = r"""// Lo que se le cuenta a WordPress (POST /vista, modo estado). Un solo intento: el panel ofrece «Reintentar». Nunca lanza.
+const p = $('Preparar estado').first().json || {};
+const exec = String($execution.id);
+const base = { id: p.id || 0, previa: p.previa === true, ok: false, view_url: '', pdf_url: '', nota: '' };
+if (p.saltar_render === true) {
+  return [{ json: Object.assign(base, { nota: (p.motivo || 'No se pudo leer el avance') + ' (ejecución ' + exec + ')' }) }];
+}
+const lr = leerRespuestaRender($('Render estado').first().json);
+if (!lr.view_url) {
+  const motivo = lr.detalles.length ? lr.detalles.join('; ') : String(lr.cuerpo.error || '').slice(0, 200);
+  const det = lr.status === 0 ? lr.fallo : 'HTTP ' + lr.status + (motivo ? ': ' + motivo : '');
+  return [{ json: Object.assign(base, { nota: sinUrlInterna('el renderer no devolvió la presentación del estado (' + det + ')') + ' (ejecución ' + exec + ')' }) }];
+}
+const remotas = Array.isArray(lr.images.kept_remote) ? lr.images.kept_remote : [];
+const nota = 'Estado del proyecto actualizado' + (remotas.length ? ' · fotos que quedaron enlazadas: ' + nombresLaminas(remotas) : '');
+return [{ json: Object.assign(base, { ok: true, view_url: lr.view_url, pdf_url: lr.pdf_url, nota: sinUrlInterna(nota) }) }];"""
+
+
 def node(id_, name, type_, version, pos, params, **extra):
     n = {'id': id_, 'name': name, 'type': type_, 'typeVersion': version, 'position': pos, 'parameters': params}
     n.update(extra)
@@ -364,6 +412,27 @@ nodes = [
          {'fromEmail': 'contacto@automatizatech.cl', 'toEmail': LUIS,
           'subject': '={{ $json.asunto }}', 'html': '={{ $json.html }}', 'options': {}},
          credentials=CRED_SMTP),
+    # «Estado del proyecto» (Etapa 2, R5): rama propia que sale del Webhook; no toca el camino del plan ni manda correo.
+    iff('r26', '¿Estado del proyecto?', [110, 360], "={{ $json.body.modo === 'estado' }}"),
+    http('r27', 'Leer estado', [330, 360], 'GET',
+         f"={WP}/plan/{{{{ $json.body.id }}}}/render&modo=estado{{{{ [true, 1, '1', 'true'].includes($json.body.previa) ? '&previa=1' : '' }}}}"),
+    # Manifest público del propio plan (sus fotos ya pagadas) y de la propuesta (portada y cierre). Un 404 es «sin fotos».
+    http('r28', 'Fotos del plan (estado)', [550, 360], 'GET',
+         "={{ '" + RENDERER_BASE + "/p/' + encodeURIComponent(String((($json.body || {}).plan_codigo) || 'sin-plan')) + '/img/manifest.json' }}",
+         cred=False),
+    http('r29', 'Fotos de la propuesta (estado)', [770, 360], 'GET',
+         "={{ '" + RENDERER_BASE + "/p/' + encodeURIComponent(String((($('Leer estado').first().json || {}).body || {}).propuesta_uid || 'sin-propuesta')) + '/img/manifest.json' }}",
+         cred=False),
+    node('r30', 'Preparar estado', 'n8n-nodes-base.code', 2, [990, 360], {'jsCode': LIB + JS_AVISO + CODE_ESTADO_PREPARAR}),
+    iff('r31', '¿Saltar estado?', [1210, 360], '={{ $json.saltar_render === true }}'),
+    node('r32', 'Render estado', 'n8n-nodes-base.httpRequest', 4.2, [1430, 480],
+         {'method': 'POST', 'url': RENDERER, 'authentication': 'genericCredentialType', 'genericAuthType': 'httpHeaderAuth',
+          'sendBody': True, 'specifyBody': 'json', 'jsonBody': '={{ JSON.stringify($json.render) }}',
+          'options': dict(FULL, timeout=290000)},
+         onError='continueRegularOutput', credentials=CRED_RENDER),
+    node('r33', 'Resultado estado', 'n8n-nodes-base.code', 2, [1650, 360], {'jsCode': LIB + JS_AVISO + CODE_ESTADO_RESULTADO}),
+    http('r34', 'Guardar estado', [1870, 360], 'POST', f"={WP}/plan/{{{{ $json.id }}}}/vista",
+         "={{ JSON.stringify({ modo: 'estado', previa: $json.previa === true, ok: $json.ok, view_url: $json.view_url, pdf_url: $json.pdf_url, nota: $json.nota }) }}"),
 ]
 
 connections = {}
@@ -376,7 +445,9 @@ def link(a, b, output=0):
     connections[a]['main'][output].append({'node': b, 'type': 'main', 'index': 0})
 
 
-link('Webhook', 'Leer render')
+link('Webhook', '¿Estado del proyecto?')
+link('¿Estado del proyecto?', 'Leer estado', 0)
+link('¿Estado del proyecto?', 'Leer render', 1)
 link('Leer render', '¿Render leído?')
 link('¿Render leído?', '¿Toca renderizar?', 0)
 link('¿Render leído?', 'Resultado del render', 1)
@@ -409,6 +480,14 @@ link('Resultado del render', 'Guardar vista')
 link('Guardar vista', 'Armar correo')
 link('Armar correo', '¿Avisar a Luis?')
 link('¿Avisar a Luis?', 'Correo a Luis', 0)
+link('Leer estado', 'Fotos del plan (estado)')
+link('Fotos del plan (estado)', 'Fotos de la propuesta (estado)')
+link('Fotos de la propuesta (estado)', 'Preparar estado')
+link('Preparar estado', '¿Saltar estado?')
+link('¿Saltar estado?', 'Resultado estado', 0)
+link('¿Saltar estado?', 'Render estado', 1)
+link('Render estado', 'Resultado estado')
+link('Resultado estado', 'Guardar estado')
 
 wf = {'name': 'Plan de trabajo · 3 Render', 'nodes': nodes, 'connections': connections,
       # Si el flujo se cae sin llegar a su propio aviso, «Propuestas v3 · 0 Avisar error» le escribe a Luis.

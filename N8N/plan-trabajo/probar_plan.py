@@ -1572,6 +1572,84 @@ console.log(JSON.stringify(R));
     ok('easypanel' not in r['modelo'] and '(servidor interno)' in r['modelo'], 'leerPlanModelo: el motivo del modelo no trae la URL del servidor', r['modelo'])
 
 
+@seccion('estado')
+def prueba_estado():
+    """Task 6 de la Etapa 2 del Estado del proyecto: rama modo «estado» (spec §7, R5). Datos inventados."""
+    import build_plan_3_render  # noqa: F401  (vuelve a escribir plan-3-render.json)
+    wf = revisar_workflow('plan-3-render.json', 'Plan de trabajo · 3 Render', 'plan-v1-render')
+    nombres = {n['name']: n for n in wf['nodes']}
+    re_ = nombres.get('Render estado', {})
+    ok(re_.get('credentials', {}).get('httpHeaderAuth', {}).get('id') == 'fj2orzbsjlnHaiLd' and re_.get('parameters', {}).get('url') == BASE_R + '/render'
+       and re_.get('onError') == 'continueRegularOutput', 'estado: «Render estado» va con X-AT-Render-Key y nunca corta el flujo')
+    for n in ('Fotos del plan (estado)', 'Fotos de la propuesta (estado)'):
+        ok('credentials' not in nombres.get(n, {'credentials': 1}), f'estado: «{n}» lee el manifest público sin credenciales')
+
+    COD = 'AbCdEf123456'
+    CUERPO = {'document_type': 'estado', 'unique_id': COD + '-estado', 'draft': False, 'company_name': '[PRUEBA] Panadería',
+              'proyecto': '[PRUEBA] Sitio', 'actualizado': '2026-10-14', 'bloques': [], 'cierres': [{'titulo': 'Sitio web'}],
+              'image_briefs': [], 'images': {}}
+    LEIDO = [{'statusCode': 200, 'body': {'ok': True, 'render': CUERPO, 'plan_codigo': COD, 'propuesta_uid': 'PRUEBAprop01', 'crm_cliente_id': 5, 'estado': 'enviado'}}]
+    MAN_PLAN = {'statusCode': 200, 'body': {'metodo': {'file': 'metodo.jpg', 'hash': 'd' * 64}, 'gantt': {'file': 'gantt.png', 'hash': 'd' * 64}}}
+    VISTA_E = 'https://n8n-propuesta-renderer.kchiba.easypanel.host/p/' + COD + '-estado/index.html'
+    OK_RENDER = {'statusCode': 200, 'body': {'view_url': VISTA_E, 'pdf_url': VISTA_E.replace('index.html', 'presentation.pdf'),
+                                             'images': {'requested': 0, 'stored_local': 4, 'kept_remote': [], 'missing': [], 'reused': 0}}}
+
+    def sim(webhook, **http):
+        http.setdefault('Leer estado', LEIDO)
+        http.setdefault('Fotos del plan (estado)', [MAN_PLAN])
+        http.setdefault('Fotos de la propuesta (estado)', [MANIFEST_PROP])
+        http.setdefault('Render estado', [OK_RENDER])
+        http.setdefault('Guardar estado', [{'statusCode': 200, 'body': {'ok': True, 'estado': 'enviado'}}])
+        return simular('plan-3-render.json', webhook=webhook, http=http, openai={})
+
+    # E1. Camino feliz: lee el cuerpo, junta las fotos del plan y de la propuesta, un render sin fotos nuevas y /vista estado.
+    t = sim({'id': 9, 'codigo': COD, 'modo': 'estado'})
+    sin_error(t, 'E1')
+    ok(llamadas(t, 'Leer estado')[0]['url'] == WP + '/plan/9/render&modo=estado', 'E1: GET /plan/9/render&modo=estado', llamadas(t, 'Leer estado'))
+    ok(llamadas(t, 'Fotos del plan (estado)')[0]['url'] == BASE_R + '/p/' + COD + '/img/manifest.json', 'E1: lee las fotos guardadas del plan')
+    rc = llamadas(t, 'Render estado')
+    imgs = rc[0]['body']['images'] if rc else {}
+    ok(len(rc) == 1 and rc[0]['body']['document_type'] == 'estado' and rc[0]['body']['image_briefs'] == []
+       and imgs.get('metodo') == BASE_R + '/p/' + COD + '/img/metodo.jpg' and imgs.get('cover') == BASE_R + '/p/PRUEBAprop01/img/cover.jpg'
+       and imgs.get('cierre') == BASE_R + '/p/PRUEBAprop01/img/next_steps.png', 'E1: un render de estado con las fotos del plan y portada/cierre de la propuesta, sin pedir ninguna', imgs)
+    gv = llamadas(t, 'Guardar estado')
+    ok(gv and gv[0]['url'] == WP + '/plan/9/vista' and gv[0]['body']['modo'] == 'estado' and gv[0]['body']['ok'] is True and gv[0]['body']['previa'] is False
+       and gv[0]['body']['view_url'] == VISTA_E and gv[0]['body']['nota'].startswith('Estado del proyecto actualizado'), 'E1: POST /vista {modo: estado, ok: true, …}', gv)
+    ok(not t['correos'] and not llamadas(t, 'Leer render') and not llamadas(t, 'Render') and not t['openai'], 'E1: no toca el camino del plan, no manda correo ni consulta a OpenAI')
+
+    # E2. Vista previa: la URL lleva &previa=1 y /vista va con previa true.
+    t = sim({'id': 9, 'codigo': COD, 'modo': 'estado', 'previa': True})
+    ok(llamadas(t, 'Leer estado')[0]['url'].endswith('&modo=estado&previa=1') and llamadas(t, 'Guardar estado')[0]['body']['previa'] is True, 'E2: vista previa con &previa=1 y previa true')
+
+    # E3. WordPress no entrega el cuerpo (409 de un plan no enviado): sin render; /vista estado con ok false y el motivo.
+    t = sim({'id': 9, 'codigo': COD, 'modo': 'estado'}, **{'Leer estado': [{'statusCode': 409, 'body': {'message': 'El estado del proyecto existe solo para planes enviados.'}}]})
+    sin_error(t, 'E3')
+    gv = llamadas(t, 'Guardar estado')
+    ok(not llamadas(t, 'Render estado') and gv and gv[0]['body']['ok'] is False and 'HTTP 409' in gv[0]['body']['nota'] and 'solo para planes enviados' in gv[0]['body']['nota'],
+       'E3: sin cuerpo no hay render; la nota dice por qué', gv)
+
+    # E4. El renderer falla (502 o red cortada): /vista con ok false, la nota sin URL interna; nunca reintenta ni manda correo.
+    for caso, resp in (('502', {'statusCode': 502, 'body': {'error': 'render failed', 'details': 'Chromium cayó en https://n8n-propuesta-renderer.kchiba.easypanel.host/x'}}),
+                       ('red', {'error': {'message': 'socket hang up'}})):
+        t = sim({'id': 9, 'codigo': COD, 'modo': 'estado'}, **{'Render estado': [resp]})
+        gv = llamadas(t, 'Guardar estado')
+        ok(len(llamadas(t, 'Render estado')) == 1 and gv and gv[0]['body']['ok'] is False and 'easypanel' not in gv[0]['body']['nota']
+           and not t['correos'], f'E4 {caso}: un solo intento, ok false, nota limpia y sin correo', gv)
+
+    # E5. Sin propuesta y sin fotos guardadas: el render sale igual, sin fotos.
+    leido = [{'statusCode': 200, 'body': dict(LEIDO[0]['body'], propuesta_uid='')}]
+    t = sim({'id': 9, 'codigo': COD, 'modo': 'estado'}, **{'Leer estado': leido, 'Fotos del plan (estado)': [{'statusCode': 404, 'body': 'Not Found'}],
+                                                          'Fotos de la propuesta (estado)': [{'statusCode': 404, 'body': 'Not Found'}]})
+    rc = llamadas(t, 'Render estado')
+    ok(rc and rc[0]['body']['images'] == {} and llamadas(t, 'Guardar estado')[0]['body']['ok'] is True, 'E5: sin propuesta ni manifest el estado se dibuja sin fotos')
+
+    # E6. Los modos del plan no pasan por la rama de estado.
+    for modo in ('draft', 'final'):
+        t = simular('plan-3-render.json', webhook={'id': 9, 'modo': modo, 'aviso': False},
+                    http={'Leer render': [{'statusCode': 500, 'body': {}}], 'Guardar vista': VISTA_BORRADOR}, openai={})
+        ok(not llamadas(t, 'Leer estado') and llamadas(t, 'Leer render'), f'E6 {modo}: va por el camino del plan')
+
+
 # ==== Las tareas siguientes agregan sus secciones justo antes de esta línea ====
 
 if __name__ == '__main__':

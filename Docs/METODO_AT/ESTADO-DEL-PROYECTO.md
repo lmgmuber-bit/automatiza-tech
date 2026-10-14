@@ -1,6 +1,6 @@
 # Estado del proyecto: guía de uso, formato `at-cierre-v1` y despliegue (Etapa 2)
 
-> **Estado: LOCAL.** Rama `claude/estado-proyecto-e2`, sin desplegar. La Etapa 1 (botón «Ver detalle del avance», cronograma con tercer carril, «Actualizar la vista del plan» y un `ver-estado.php` mínimo) ya está EN PROD desde el 2026-10-14; ver `PLAN-DE-TRABAJO.md`. Diseño completo: `Docs/superpowers/specs/2026-10-13-estado-del-proyecto-design.md`.
+> **Estado: EN PROD desde el 2026-10-14** (rama `claude/estado-proyecto-e2`, PR #89 sin merge). Renderer subido por Luis (`/health` ok); flujo n8n «3 Render» con 34 nodos, activo e igual al local (respaldo del anterior fuera del repo); WordPress por SSH: 12 archivos con md5 cotejado, migración hecha (`at_plan_schema` = 2) y caché vaciada. Respaldo de WordPress: `~/respaldos/estado-proyecto-e2-antes-20261014.tar.gz`. Todavía no se ha publicado ningún cierre real. La Etapa 1 está EN PROD desde la misma fecha; ver `PLAN-DE-TRABAJO.md`. Diseño completo: `Docs/superpowers/specs/2026-10-13-estado-del-proyecto-design.md`.
 > Los datos de esta guía son inventados (código de plan `AbCdEf123456`, `example.com`): el repositorio es público, no se pegan códigos ni nombres reales de clientes.
 
 ## 1. Qué es

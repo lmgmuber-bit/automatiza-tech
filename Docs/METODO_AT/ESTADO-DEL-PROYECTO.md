@@ -161,7 +161,7 @@ Verificación desde afuera tras el despliegue: `ver-estado.php?id=<código>` con
 Todo lo de esta etapa corrió en local (pruebas automáticas, WordPress local, renderer y flujo n8n contra datos de prueba). **No se ha probado:**
 
 - El **flujo n8n real** y el **renderer** en producción (Easypanel): solo el generador y las pruebas locales.
-- Un **video real de 13 MB subido por el navegador** a producción, ni los topes de `upload_max_filesize` y `post_max_size` de PHP en Hostinger (si son menores que el video, la subida falla antes de llegar a nuestro código).
+- Un **video real de 13 MB subido por el navegador** a producción. Los topes de PHP en Hostinger se midieron el 13-oct (acepta subidas de hasta 2 GB, según la especificación), pero nunca se subió un video de verdad por este panel.
 - Que LiteSpeed **respete el `.htaccess`** de `uploads/at-estado/` (`mod_headers`: `noindex`, `no-transform`, caché) y que el **CDN de Hostinger respete `no-transform`** (hoy recodifica y achica imágenes si no se le dice).
 - La **presentación vista en un celular** real.
 - La **Etapa 3** (correo de cierre de hito, texto de WhatsApp, registro en el historial del CRM) y la Etapa 4 (piloto con un cliente) **no están construidas**.

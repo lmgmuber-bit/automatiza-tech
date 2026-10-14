@@ -18,7 +18,7 @@ function at_av_mensajes(): array {
 		'av_subido'               => ['ok', 'Archivo subido.'],
 		'av_subida_error'         => ['error', 'No se subió el archivo (detalle abajo).'],
 		'av_publicado'            => ['ok', 'Cierre publicado. Estamos rehaciendo «Estado del proyecto»: queda listo en unos minutos. Al cliente no se le envió nada.'],
-		'av_publicado_sin_render' => ['aviso', 'Cierre publicado, pero n8n no recibió el pedido de la presentación. Usa «Reintentar» en un rato.'],
+		'av_publicado_sin_render' => ['aviso', 'Cierre publicado, pero n8n no recibió el pedido de la presentación. Usa «Rehacer la presentación» en un rato.'],
 		'av_no_publicable'        => ['error', 'No se publicó (detalle abajo).'],
 		'av_borrador'             => ['ok', 'El cierre volvió a borrador: el cliente ya no lo ve.'],
 		'av_quitado'              => ['ok', 'Cierre quitado, con sus archivos.'],
@@ -132,6 +132,14 @@ function at_av_accion_subir(): void {
 	$f = $_FILES['archivo'] ?? null;
 	if (!preg_match('/^c[a-z0-9]{6}-[a-z0-9-]{1,40}$/', $eid) || !isset($avance['evidencias'][$eid]) || !is_array($f)) {
 		at_pt_volver($crm, $id, 'av_sin_cierre');
+	}
+	// Un cierre publicado lo está viendo el cliente: subir ahora reemplazaría y borraría su archivo en el acto.
+	foreach ($avance['cierres'] as $c) {
+		$refs = array_merge((array) ($c['antes']['evidencias'] ?? []), (array) ($c['despues']['evidencias'] ?? []));
+		if (($c['estado'] ?? '') === 'publicado' && in_array($eid, $refs, true)) {
+			at_pt_guardar_detalles($id, ['Ese cierre está publicado: vuelve a borrador para cambiar sus archivos.']);
+			at_pt_volver($crm, $id, 'av_subida_error');
+		}
 	}
 	$r = at_av_subir_una($avance, $eid, $campo, $f, $id);
 	if ($r['error'] !== '') {
@@ -328,7 +336,8 @@ function at_av_render_seccion(object $fila, int $crm_id): void {
 			echo '</td></tr><tr class="at-av-detalle"><td colspan="5"><details><summary>Archivos y edición</summary>';
 			foreach (array_merge((array) ($c['antes']['evidencias'] ?? []), (array) ($c['despues']['evidencias'] ?? [])) as $eid) {
 				$e = $av['evidencias'][$eid] ?? null;
-				if (!is_array($e) || !in_array($e['tipo'] ?? '', ['captura', 'video'], true)) {
+				// Publicado: sin formularios de subida (el cliente lo está viendo; primero se vuelve a borrador).
+				if ($pub || !is_array($e) || !in_array($e['tipo'] ?? '', ['captura', 'video'], true)) {
 					continue;
 				}
 				$campos = $e['tipo'] === 'video' ? ['archivo' => 'Video', 'poster' => 'Póster (opcional)'] : ['archivo' => 'Imagen'];

@@ -109,9 +109,63 @@ ok($msg($r) === 'av_quitado' && $leer()['cierres'] === [] && $foto !== '' && !is
 $r = pt_correr_accion('at_av_importar', 0, 'at_pt_plan_' . $id, ['cierre_texto' => wp_json_encode($archivo), 'plan_id' => (string) $id, 'crm_id' => (string) $crm]);
 ok($r['redirect'] === '' && $leer()['cierres'] === [], '13) sin sesión ni nonce válido: no hace nada');
 
+// --- Subir sobre un cierre publicado, volver a borrador con otro publicado y la sección dibujada con dos cierres.
+$subida = ['name' => 'portada.png', 'type' => 'image/png', 'tmp_name' => $tmp . 'portada.png', 'error' => 0, 'size' => filesize($tmp . 'portada.png')];
+$hostil = '"><script>alert(1)</script>';
+$otro = $archivo;
+$otro['cierre']['titulo'] = 'Cierre ya publicado';
+$otro['cierre']['bloques'] = ['Desarrollo'];
+$otro['cierre']['fecha_real'] = '2026-10-11';
+$r = $correr('at_av_importar', ['cierre_texto' => wp_json_encode($otro), '__files' => $files]);
+$todos = $leer()['cierres'];
+$cid_p = (string) (end($todos)['id'] ?? '');
+$r = $correr('at_av_publicar', ['cierre_id' => $cid_p]);
+ok($msg($r) === 'av_publicado' && $cid_p !== '', '15) un primer cierre queda publicado (el que se mantiene publicado)');
+
+$hostilito = $archivo;
+$hostilito['cierre']['titulo'] = $hostil;
+$r = $correr('at_av_importar', ['cierre_texto' => wp_json_encode($hostilito)]);
+$cid_h = '';
+foreach ($leer()['cierres'] as $c) {
+	if ($c['id'] !== $cid_p) { $cid_h = (string) $c['id']; }
+}
+$eid_h = $cid_h . '-portada';
+ok($msg($r) === 'av_importado_faltan' && $cid_h !== '' && ($leer()['evidencias'][$eid_h]['url'] ?? '') === '', '16) segundo cierre en borrador con la portada pendiente');
+ok(!str_contains(implode('|', array_column($leer()['cierres'], 'titulo')), '<script'), '16) la importación le quita las etiquetas al título (y el panel igual lo escapa: ver 14)');
+$r = $correr('at_av_subir', ['evidencia_id' => $eid_h, 'campo' => 'archivo', '__files' => ['archivo' => $subida]]);
+$url_h = (string) ($leer()['evidencias'][$eid_h]['url'] ?? '');
+$nombre_h = at_av_nombre_de_url($url_h);
+ok($msg($r) === 'av_subido' && $url_h !== '' && $nombre_h !== '' && is_file(at_av_dir($id)['dir'] . $nombre_h), '17) subir una captura a un borrador: guarda el archivo y la evidencia recibe su URL');
+
+$r = $correr('at_av_publicar', ['cierre_id' => $cid_h]);
+$md5_h = md5_file(at_av_dir($id)['dir'] . $nombre_h);
+$r = $correr('at_av_subir', ['evidencia_id' => $eid_h, 'campo' => 'archivo', '__files' => ['archivo' => $subida]]);
+ok($msg($r) === 'av_subida_error' && ($leer()['evidencias'][$eid_h]['url'] ?? '') === $url_h && is_file(at_av_dir($id)['dir'] . $nombre_h) && md5_file(at_av_dir($id)['dir'] . $nombre_h) === $md5_h && $r['n8n'] === [], '18) subir sobre un cierre publicado: no sube, no reemplaza ni borra el archivo que ve el cliente');
+
+$av = $leer();
+$av['render'] = array_merge(at_av_registro_vacio(), ['estado' => 'listo', 'view_url' => 'https://example.com/presentacion']);
+at_av_guardar($id, $av);
+$r = $correr('at_av_borrador', ['cierre_id' => $cid_h]);
+$rr = $leer()['render'];
+ok($msg($r) === 'av_borrador' && $rr['estado'] === 'pendiente' && $rr['view_url'] === '' && count($r['n8n']) === 1 && (($r['n8n'][0]['cuerpo']['modo'] ?? '') === 'estado'), '19) volver a borrador con otro cierre publicado: la presentación queda «pendiente», sin enlace viejo, y se pide una vez (modo estado)');
+
 ob_start();
 at_pt_render_plan(at_pt_plan($id), $crm);
 $h = (string) ob_get_clean();
+// El título hostil se guarda a mano (la importación ya lo limpia): así se prueba el escape de la propia sección.
+$av = $leer();
+foreach ($av['cierres'] as $k => $c) {
+	if ($c['id'] === $cid_h) { $av['cierres'][$k]['titulo'] = $hostil; }
+}
+at_av_guardar($id, $av);
+ob_start();
+at_pt_render_plan(at_pt_plan($id), $crm);
+$h = (string) ob_get_clean();
+$pos_pub = (int) strpos($h, 'Cierre ya publicado');
+ok(str_contains($h, esc_html($hostil)) && !str_contains($h, '<script>alert(1)</script>') && $pos_pub > 0, '14) el título del cierre sale escapado: nunca como HTML');
+ok(substr_count($h, 'Publicado</span>') === 1 && substr_count($h, 'Borrador</span>') === 1 && str_contains($h, 'Para editar un cierre publicado, primero vuelve a borrador.'), '14) la lista marca un cierre «Publicado» y otro «Borrador»');
+ok(substr_count($h, 'value="at_av_subir"') === 1 && str_contains($h, 'name="evidencia_id" value="' . $eid_h . '"') && !str_contains($h, 'value="' . $cid_p . '-portada"'), '14) el formulario de subir archivos solo está en el borrador');
+ok(substr_count($h, 'Editar el cierre (formato at-cierre-v1)') === 1, '14) «Editar el cierre» solo está en el borrador');
 ok(str_contains($h, 'id="at-av"') && str_contains($h, 'value="at_av_importar"') && str_contains($h, 'value="at_av_bloques"') && str_contains($h, 'value="at_av_listas"') && str_contains($h, 'Importar cierre') && str_contains($h, esc_url(at_pt_url_ver_estado(home_url(), $cod))), '14) la pestaña de un plan enviado muestra la sección «Avance»');
 ptc_estado($id, 'listo');
 ob_start();

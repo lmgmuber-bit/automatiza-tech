@@ -79,3 +79,13 @@
   .at-pt-botones .button { width: 100%; text-align: center; }
   .at-pt-campo input[type="date"] { max-width: 100%; }
 }
+
+/* Estado del proyecto (Etapa 2): sección «Avance» de un plan enviado. */
+.at-av { margin-top: 28px; padding-top: 18px; border-top: 2px solid #00d9c0; }
+.at-av h4 { margin: 22px 0 8px; }
+.at-av-chip { display: inline-block; padding: 2px 10px; border-radius: 999px; background: #f0f0f1; font-weight: 600; }
+.at-av-chip.is-pub { background: #d1fae5; color: #065f46; }
+.at-av-form-boton { display: inline-block; margin: 2px 6px 2px 0; }
+.at-av-subir { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 6px 0; }
+.at-av textarea.code { font-family: Consolas, monospace; font-size: 12px; }
+.at-av-detalle details { margin: 4px 0 8px; }

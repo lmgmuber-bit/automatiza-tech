@@ -22,3 +22,4 @@ require_once __DIR__ . '/agenda.php';
 require_once __DIR__ . '/vista.php';
 require_once __DIR__ . '/ajustes.php';
 require_once __DIR__ . '/panel.php';
+require_once __DIR__ . '/avance-panel.php';

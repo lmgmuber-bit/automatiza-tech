@@ -507,7 +507,7 @@ function at_av_validar_import(mixed $d, string $codigo, array $plan, array $avan
 	if ($reemplaza === null && count($avance['cierres'] ?? []) >= AT_AV_MAX_CIERRES) {
 		$errores[] = 'El plan ya tiene ' . AT_AV_MAX_CIERRES . ' cierres (el máximo).';
 	}
-	$viejas = $reemplaza ? count(array_merge((array) ($reemplaza['antes']['evidencias'] ?? []), (array) ($reemplaza['despues']['evidencias'] ?? []))) : 0;
+	$viejas = $reemplaza ? count(array_unique(array_merge((array) ($reemplaza['antes']['evidencias'] ?? []), (array) ($reemplaza['despues']['evidencias'] ?? [])))) : 0;
 	if (count($avance['evidencias'] ?? []) - $viejas + count($evidencias) > AT_AV_MAX_EVIDENCIAS) {
 		$errores[] = 'Con este cierre el plan pasaría las ' . AT_AV_MAX_EVIDENCIAS . ' evidencias.';
 	}
@@ -579,7 +579,12 @@ function at_av_aplicar_import(array $avance, array $v, string $nuevo_id, string 
 	}
 	$mapa = [];
 	$conservados = [];
+	// Solo se guardan las evidencias que «Antes» o «Después» nombran (el validador ya avisó de las demás).
+	$usadas = array_merge($v['cierre']['antes']['evidencias'], $v['cierre']['despues']['evidencias']);
 	foreach ($v['evidencias'] as $ref => $ev) {
+		if (!in_array($ref, $usadas, true)) {
+			continue;
+		}
 		$eid = $id . '-' . $ref;
 		$mapa[$ref] = $eid;
 		unset($ev['ref']);
@@ -759,8 +764,13 @@ function at_av_exportar_cierre(array $avance, string $id, string $codigo): array
 
 /* ---------- Textos del panel (sección «Avance», Task 7) ---------- */
 
-/** «Cambios de plan»: una línea por cambio, «AAAA-MM-DD | título | detalle». Las líneas vacías se ignoran. */
-function at_av_cambios_de_texto(string $t, array $bloques_plan, array &$errores): array {
+/** «Cambios de plan»: una línea por cambio, «AAAA-MM-DD | título | detalle». Las líneas vacías se ignoran. El cuadro no
+ *  trae los bloques: un cambio que ya estaba (misma fecha y mismo título) conserva los suyos. */
+function at_av_cambios_de_texto(string $t, array $bloques_plan, array $anteriores, array &$errores): array {
+	$bloques_de = [];
+	foreach ($anteriores as $a) {
+		$bloques_de[(string) ($a['fecha'] ?? '') . '|' . at_av_clave((string) ($a['titulo'] ?? ''))] = (array) ($a['bloques'] ?? []);
+	}
 	$lista = [];
 	foreach (preg_split('/\r\n|\n|\r/', $t) as $i => $linea) {
 		if (trim($linea) === '') {
@@ -771,7 +781,12 @@ function at_av_cambios_de_texto(string $t, array $bloques_plan, array &$errores)
 			$errores[] = 'Cambios de plan, línea ' . ($i + 1) . ': empieza con la fecha AAAA-MM-DD («2026-10-13 | título | detalle»).';
 			continue;
 		}
-		$lista[] = ['fecha' => $p[0], 'titulo' => $p[1] ?? '', 'detalle' => $p[2] ?? '', 'bloques' => []];
+		$titulo = $p[1] ?? '';
+		if ($titulo === '') {
+			$errores[] = 'Cambios de plan, línea ' . ($i + 1) . ': falta el título después de la fecha.';
+			continue;
+		}
+		$lista[] = ['fecha' => $p[0], 'titulo' => $titulo, 'detalle' => $p[2] ?? '', 'bloques' => $bloques_de[$p[0] . '|' . at_av_clave($titulo)] ?? []];
 	}
 	return at_av_validar_cambios($lista, $bloques_plan, $errores);
 }

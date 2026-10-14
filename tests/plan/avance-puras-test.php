@@ -153,8 +153,34 @@ $q = at_av_quitar_cierre($bor, 'cabc123');
 ok(is_array($q) && $q['avance']['cierres'] === [] && $q['avance']['evidencias'] === [] && $q['archivos'] === ['aaaaaaaaaaaaaaaaaaaa.png', 'bbbbbbbbbbbbbbbbbbbb.mp4'], 'quitar un borrador saca sus evidencias y devuelve sus archivos');
 ok(at_av_cambiar_estado_cierre($av, 'nada', 'publicado', 'x') === 'Ese cierre no existe.', 'cierre inexistente: motivo');
 
+// --- solo se guardan las evidencias que «Antes» o «Después» nombran
+$suelta = archivo();
+$suelta['evidencias'][] = ['ref' => 'suelta', 'tipo' => 'enlace', 'titulo' => 'Nadie la nombra', 'url' => 'https://example.com/otra'];
+$vs = at_av_validar_import($suelta, COD, $plan, $vacio);
+$as = at_av_aplicar_import($vacio, $vs, 'cabc123', '2026-10-13 18:00:00');
+ok($vs['ok'] && $vs['avisos'] !== [] && !isset($as['avance']['evidencias']['cabc123-suelta']) && count($as['avance']['evidencias']) === 5, 'una evidencia que nadie nombra no se guarda (el validador ya avisó)');
+
+// --- tope de evidencias al reemplazar un borrador
+$tres = fn(string $titulo) => archivo(['cierre.titulo' => $titulo, 'evidencias' => [
+	['ref' => 'a', 'tipo' => 'enlace', 'titulo' => 'A', 'url' => 'https://a.cl'], ['ref' => 'b', 'tipo' => 'enlace', 'titulo' => 'B', 'url' => 'https://b.cl'], ['ref' => 'c', 'tipo' => 'enlace', 'titulo' => 'C', 'url' => 'https://c.cl']],
+	'cierre.antes' => ['evidencias' => ['a']], 'cierre.despues' => ['evidencias' => ['b', 'c']]]);
+$lleno = $vacio;
+for ($i = 1; $i <= 58; $i++) {
+	$lleno['evidencias']["z{$i}"] = ['tipo' => 'enlace', 'titulo' => "Z{$i}", 'url' => 'https://z.cl'];
+}
+$tope = at_av_validar_import($tres('Otro cierre'), COD, $plan, $lleno);
+ok($tope['ok'] === false && stripos(implode(' ', $tope['errores']), 'Con este cierre el plan pasaría las 60 evidencias') !== false, 'con 58 evidencias y un cierre nuevo de 3, pasa el tope de 60');
+// Un borrador existente cuya misma evidencia está en «Antes» y en «Después» cuenta una sola vez: 59 - 1 + 3 = 61.
+$dup = $vacio;
+for ($i = 1; $i <= 59; $i++) {
+	$dup['evidencias']["z{$i}"] = ['tipo' => 'enlace', 'titulo' => "Z{$i}", 'url' => 'https://z.cl'];
+}
+$dup['cierres'][] = ['id' => 'cdup001', 'titulo' => 'Sitio web', 'estado' => 'borrador', 'antes' => ['evidencias' => ['z1']], 'despues' => ['evidencias' => ['z1']]];
+$tope2 = at_av_validar_import($tres('Sitio web'), COD, $plan, $dup);
+ok($tope2['ok'] === false && stripos(implode(' ', $tope2['errores']), 'pasaría las 60 evidencias') !== false, 'reemplazar un borrador con una evidencia en Antes y Después no la cuenta dos veces (59 - 1 + 3 = 61)');
+
 // --- estado de los bloques
-$eb = at_av_estado_bloques($plan, $pub);
+$eb =at_av_estado_bloques($plan, $pub);
 ok($eb[0]['estado'] === 'listo' && $eb[0]['fin_real'] === '2026-10-10' && $eb[1]['estado'] === 'listo' && $eb[2]['estado'] === 'en_curso' && $eb[2]['inicio_real'] === '2026-10-13', 'bloques cubiertos por un cierre publicado: listos con la fecha del cierre');
 $eb2 = at_av_estado_bloques($plan, $bor);
 ok($eb2[0]['estado'] === 'por_venir' && $eb2[0]['fin_real'] === '', 'un cierre en borrador no marca nada como listo (Review Focus 2)');
@@ -167,12 +193,19 @@ ok($exp['formato'] === 'at-cierre-v1' && $exp['plan'] === COD && $ve['ok'] && $v
 
 // --- textos del panel
 $e = [];
-$cam = at_av_cambios_de_texto("2026-10-13 | Publicidad al mensual | Acordado por correo\n\n2026-10-20 | Otro cambio", $bp, $e);
+$cam = at_av_cambios_de_texto("2026-10-13 | Publicidad al mensual | Acordado por correo\n\n2026-10-20 | Otro cambio", $bp, [], $e);
 ok($e === [] && count($cam) === 2 && $cam[0] === ['fecha' => '2026-10-13', 'titulo' => 'Publicidad al mensual', 'detalle' => 'Acordado por correo', 'bloques' => []], 'cambios de plan desde el panel: «fecha | título | detalle»');
 ok(at_av_texto_de_cambios($cam) === "2026-10-13 | Publicidad al mensual | Acordado por correo\n2026-10-20 | Otro cambio |", 'y de vuelta al cuadro de texto');
 $e = [];
-at_av_cambios_de_texto('13-10-2026 | Mal', $bp, $e);
+at_av_cambios_de_texto('13-10-2026 | Mal', $bp, [], $e);
 ok(count($e) === 1 && str_contains($e[0], 'línea 1'), 'cambio con fecha mal escrita: error que dice la línea');
+$e = [];
+at_av_cambios_de_texto("2026-10-13 | Uno\n\n2026-10-13 |", $bp, [], $e);
+ok(count($e) === 1 && str_contains($e[0], 'línea 3'), 'cambio sin título: el error dice la línea del cuadro de texto, no la de la lista filtrada');
+$e = [];
+$prev = [['fecha' => '2026-10-13', 'titulo' => 'Publicidad al mensual', 'detalle' => 'x', 'bloques' => ['Puesta en marcha']]];
+$cam2 = at_av_cambios_de_texto("2026-10-13 |  publicidad al   mensual | Acordado por correo\n2026-10-14 | Publicidad al mensual", $bp, $prev, $e);
+ok($e === [] && $cam2[0]['bloques'] === ['Puesta en marcha'] && $cam2[0]['detalle'] === 'Acordado por correo' && $cam2[1]['bloques'] === [], 'editar el cuadro conserva los bloques del cambio con la misma fecha y título (y no de otro)');
 $e = [];
 $nec = at_av_necesitamos_de_texto("Logo en alta\n✓ Acceso al dominio", [['texto' => 'Logo en alta', 'estado' => 'abierto', 'fecha' => '2026-10-01']], '2026-10-14', $e);
 ok($e === [] && $nec === [['texto' => 'Logo en alta', 'estado' => 'abierto', 'fecha' => '2026-10-01'], ['texto' => 'Acceso al dominio', 'estado' => 'resuelto', 'fecha' => '2026-10-14']], 'necesitamos: «✓ » marca resuelto y se conserva la fecha de lo que ya estaba');

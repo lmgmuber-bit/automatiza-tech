@@ -14,11 +14,11 @@ function at_pt_tabla(): string {
 }
 
 /**
- * Crea la tabla con dbDelta. Idempotente (opción at_plan_schema = '1'). Si falla (tabla bloqueada,
+ * Crea la tabla con dbDelta. Idempotente (opción at_plan_schema '1' o '2'). Si falla (tabla bloqueada,
  * sin privilegio en el hosting), espera 5 minutos antes de reintentar, igual que at_cc_migrar_esquema().
  */
 function at_pt_migrar_esquema(): void {
-	if (get_option('at_plan_schema') === '1' || get_transient('at_pt_migrar_intento')) {
+	if (in_array(get_option('at_plan_schema'), ['1', '2'], true) || get_transient('at_pt_migrar_intento')) {
 		return;
 	}
 	global $wpdb;
@@ -39,6 +39,7 @@ function at_pt_migrar_esquema(): void {
   nota TEXT NULL,
   view_url VARCHAR(500) NULL,
   pdf_url VARCHAR(500) NULL,
+  avance LONGTEXT NULL,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   enviado_at DATETIME NULL,

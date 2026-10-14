@@ -130,5 +130,27 @@
   }
   Array.prototype.forEach.call(document.querySelectorAll('.at-pt-form-plan'), iniciarFormulario);
 
+  /* «Nuevo cierre»: «＋ Agregar otra evidencia» muestra la siguiente fila oculta; sin más filas, el botón se va. */
+  Array.prototype.forEach.call(document.querySelectorAll('.at-av-nc'), function (form) {
+    var mas = form.querySelector('.at-av-nc-mas');
+    if (!mas) { return; }
+    var actualizar = function () { mas.hidden = !form.querySelector('.at-av-ev[hidden]'); };
+    mas.addEventListener('click', function () {
+      var fila = form.querySelector('.at-av-ev[hidden]');
+      if (fila) {
+        fila.hidden = false;
+        var titulo = fila.querySelector('input[type="text"]');
+        if (titulo) { titulo.focus(); }
+      }
+      actualizar();
+    });
+    actualizar();
+  });
+  /* «✏️ Editar» llega con #at-av-nuevo: la pestaña se abre recién ahora, así que el salto se hace a mano. */
+  if (window.location.hash === '#at-av-nuevo' || window.location.hash === '#at-av') {
+    var destino = document.getElementById(window.location.hash.slice(1));
+    if (destino) { destino.scrollIntoView(); }
+  }
+
   window.atPlanTrabajo = { serializar: serializar, abrirPestanaPlan: abrirPestanaPlan };
 }());

@@ -767,6 +767,181 @@ function at_av_exportar_cierre(array $avance, string $id, string $codigo): array
 	return [];
 }
 
+/* ---------- Formulario «Nuevo cierre» del panel ---------- */
+
+const AT_AV_FORM_FILAS = 12; // filas de evidencia del formulario
+
+/** Extensión de un nombre de archivo, en minúsculas y con jpeg como jpg; '' si no tiene. */
+function at_av_ext_de(string $nombre): string {
+	$e = strtolower((string) pathinfo($nombre, PATHINFO_EXTENSION));
+	return $e === 'jpeg' ? 'jpg' : $e;
+}
+
+/** Puntos escritos uno por línea: sin viñetas al inicio ni líneas vacías. */
+function at_av_puntos_de_texto(string $t): array {
+	$out = [];
+	foreach (preg_split('/\R/u', $t) ?: [] as $l) {
+		$l = trim((string) preg_replace('/^\s*[-•*·]\s*/u', '', $l));
+		if ($l !== '') {
+			$out[] = $l;
+		}
+	}
+	return $out;
+}
+
+function at_av_ref_valida(string $r): bool {
+	return (bool) preg_match('/^(?=[a-z0-9-]*[a-z])[a-z0-9][a-z0-9-]{0,39}$/', $r);
+}
+
+/**
+ * «Nuevo cierre» desde el formulario del panel: arma el mismo archivo at-cierre-v1 que valida at_av_validar_import, así
+ * las reglas son una sola. $p = lo enviado: titulo, fecha_real, bloques[], antes_texto, antes_puntos, durante_texto,
+ * despues_texto, despues_puntos y ev[fila] = {ref, tipo, donde, titulo, valor, unidad, fuente, fecha, url,
+ * archivo_actual, poster_actual}. $subidos[fila] = ['archivo' => nombre original, 'poster' => nombre original], solo los
+ * que vinieron. Una fila sin nada escrito ni adjunto se ignora. Cada archivo nuevo se renombra a «<ref>.<ext>» (la
+ * portada, «<ref>-portada.<ext>») para que calce con su evidencia aunque el original traiga espacios; sin archivo nuevo
+ * se conserva el que ya estaba (mismo nombre: at_av_aplicar_import lo mantiene). $base = el cierre que se edita
+ * (at_av_exportar_cierre): conserva su entregable y, si no cambian los bloques, sus actividades; con otros bloques las
+ * actividades se vuelven a tomar del plan. Devuelve ['datos', 'nombres' => [fila => ['archivo' => nombre nuevo,
+ * 'poster' => nombre nuevo]], 'errores'] con los errores propios del formulario; los demás los da la validación.
+ */
+function at_av_cierre_de_formulario(array $p, string $codigo, array $subidos, ?array $base = null): array {
+	$errores = [];
+	$nombres = [];
+	$txt = fn(string $k): string => is_string($p[$k] ?? null) ? (string) $p[$k] : '';
+	$bloques = array_values(array_filter(array_map(fn($b) => is_string($b) ? trim($b) : '', (array) ($p['bloques'] ?? [])), 'strlen'));
+	$filas = is_array($p['ev'] ?? null) ? $p['ev'] : [];
+	$campo = fn($f, string $k): string => is_array($f) && is_string($f[$k] ?? null) ? trim((string) $f[$k]) : '';
+
+	// Refs que ya traen las filas (al editar): las nuevas se numeran sin repetirlas.
+	$reservadas = [];
+	foreach ($filas as $f) {
+		$r = strtolower($campo($f, 'ref'));
+		if (at_av_ref_valida($r)) {
+			$reservadas[$r] = true;
+		}
+	}
+	$asignadas = [];
+	$siguiente = 1;
+	$evidencias = [];
+	$partes = ['antes' => [], 'despues' => []];
+	$n = 0;
+	foreach ($filas as $i => $f) {
+		if (!is_array($f)) {
+			continue;
+		}
+		$sub = is_array($subidos[$i] ?? null) ? array_filter($subidos[$i], fn($x) => is_string($x) && $x !== '') : [];
+		$escrito = implode('', array_map(fn($k) => $campo($f, $k), ['titulo', 'valor', 'unidad', 'fuente', 'fecha', 'url']));
+		if ($escrito === '' && !$sub) {
+			continue;
+		}
+		$n++;
+		$tipo = in_array($campo($f, 'tipo'), AT_AV_TIPOS, true) ? $campo($f, 'tipo') : 'captura';
+		$titulo = $campo($f, 'titulo');
+		if ($titulo === '') {
+			$errores[] = "A la evidencia {$n} le falta el título.";
+			continue;
+		}
+		$ref = strtolower($campo($f, 'ref'));
+		if (!at_av_ref_valida($ref) || isset($asignadas[$ref])) {
+			do {
+				$ref = 'evidencia-' . $siguiente++;
+			} while (isset($reservadas[$ref]) || isset($asignadas[$ref]));
+		}
+		$asignadas[$ref] = true;
+		$ev = ['ref' => $ref, 'tipo' => $tipo, 'titulo' => $titulo];
+		foreach (['fuente', 'fecha'] as $k) {
+			if ($campo($f, $k) !== '' || $tipo === 'cifra') {
+				$ev[$k] = $campo($f, $k);
+			}
+		}
+		if ($tipo === 'cifra') {
+			$ev['valor'] = $campo($f, 'valor');
+			$ev['unidad'] = $campo($f, 'unidad');
+		} elseif ($tipo === 'enlace') {
+			$ev['url'] = $campo($f, 'url');
+		} else {
+			$imagenes = ['jpg', 'png', 'webp'];
+			$validas = $tipo === 'video' ? ['mp4', 'webm'] : $imagenes;
+			if (isset($sub['archivo'])) {
+				$ext = at_av_ext_de($sub['archivo']);
+				if (!in_array($ext, $validas, true)) {
+					$errores[] = $tipo === 'video' ? "El video de «{$titulo}» debe ser MP4 o WebM." : "La imagen de «{$titulo}» debe ser JPG, PNG o WebP.";
+					continue;
+				}
+				$ev['archivo'] = "{$ref}.{$ext}";
+				$nombres[$i]['archivo'] = $ev['archivo'];
+			} else {
+				$actual = $campo($f, 'archivo_actual');
+				$ev['archivo'] = $actual !== '' && in_array(at_av_ext_de($actual), $validas, true) ? $actual : $ref . ($tipo === 'video' ? '.mp4' : '.jpg');
+			}
+			if ($tipo === 'video') {
+				if (isset($sub['poster'])) {
+					$ext = at_av_ext_de($sub['poster']);
+					if (!in_array($ext, $imagenes, true)) {
+						$errores[] = "La portada del video «{$titulo}» debe ser JPG, PNG o WebP.";
+						continue;
+					}
+					$ev['poster'] = "{$ref}-portada.{$ext}";
+					$nombres[$i]['poster'] = $ev['poster'];
+				} elseif ($campo($f, 'poster_actual') !== '') {
+					$ev['poster'] = $campo($f, 'poster_actual');
+				}
+			}
+		}
+		$evidencias[] = $ev;
+		$partes[$campo($f, 'donde') === 'antes' ? 'antes' : 'despues'][] = $ref;
+	}
+
+	$durante = ['texto' => $txt('durante_texto')];
+	$entregable = 0;
+	if (is_array($base)) {
+		$entregable = (int) ($base['cierre']['entregable_id'] ?? 0);
+		$claves = fn(array $l): array => (function (array $x) { sort($x); return $x; })(array_map(fn($b) => at_av_clave((string) $b), $l));
+		if ($claves((array) ($base['cierre']['bloques'] ?? [])) === $claves($bloques)) {
+			$durante['actividades'] = (array) ($base['cierre']['durante']['actividades'] ?? []);
+		}
+	}
+	$datos = [
+		'formato' => 'at-cierre-v1', 'plan' => $codigo,
+		'cierre' => [
+			'titulo' => trim($txt('titulo')), 'bloques' => $bloques, 'fecha_real' => trim($txt('fecha_real')), 'entregable_id' => $entregable,
+			'antes' => ['texto' => $txt('antes_texto'), 'puntos' => at_av_puntos_de_texto($txt('antes_puntos')), 'evidencias' => $partes['antes']],
+			'durante' => $durante,
+			'despues' => ['texto' => $txt('despues_texto'), 'puntos' => at_av_puntos_de_texto($txt('despues_puntos')), 'evidencias' => $partes['despues']],
+		],
+		'evidencias' => $evidencias,
+	];
+	return ['datos' => $datos, 'nombres' => $nombres, 'errores' => $errores];
+}
+
+/** Lo contrario: los valores del formulario a partir de un cierre exportado (at_av_exportar_cierre), para editarlo. Una
+ *  evidencia que estuviera en «Antes» y en «Después» a la vez queda en «Después» (el formulario elige una). */
+function at_av_formulario_de_cierre(array $x): array {
+	$c = is_array($x['cierre'] ?? null) ? $x['cierre'] : [];
+	$donde = [];
+	foreach ((array) ($c['antes']['evidencias'] ?? []) as $r) {
+		$donde[(string) $r] = 'antes';
+	}
+	foreach ((array) ($c['despues']['evidencias'] ?? []) as $r) {
+		$donde[(string) $r] = 'despues';
+	}
+	$ev = [];
+	foreach ((array) ($x['evidencias'] ?? []) as $e) {
+		$ref = (string) ($e['ref'] ?? '');
+		$ev[] = ['ref' => $ref, 'tipo' => (string) ($e['tipo'] ?? 'captura'), 'donde' => $donde[$ref] ?? 'despues', 'titulo' => (string) ($e['titulo'] ?? ''),
+			'valor' => (string) ($e['valor'] ?? ''), 'unidad' => (string) ($e['unidad'] ?? ''), 'fuente' => (string) ($e['fuente'] ?? ''), 'fecha' => (string) ($e['fecha'] ?? ''),
+			'url' => (string) ($e['url'] ?? ''), 'archivo_actual' => (string) ($e['archivo'] ?? ''), 'poster_actual' => (string) ($e['poster'] ?? '')];
+	}
+	return [
+		'titulo' => (string) ($c['titulo'] ?? ''), 'fecha_real' => (string) ($c['fecha_real'] ?? ''), 'bloques' => array_map('strval', (array) ($c['bloques'] ?? [])),
+		'antes_texto' => (string) ($c['antes']['texto'] ?? ''), 'antes_puntos' => implode("\n", (array) ($c['antes']['puntos'] ?? [])),
+		'durante_texto' => (string) ($c['durante']['texto'] ?? ''),
+		'despues_texto' => (string) ($c['despues']['texto'] ?? ''), 'despues_puntos' => implode("\n", (array) ($c['despues']['puntos'] ?? [])),
+		'ev' => $ev,
+	];
+}
+
 /* ---------- Textos del panel (sección «Avance», Task 7) ---------- */
 
 /** «Cambios de plan»: una línea por cambio, «AAAA-MM-DD | título | detalle». Las líneas vacías se ignoran. El cuadro no

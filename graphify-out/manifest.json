@@ -4700,8 +4700,8 @@
     "semantic_hash": ""
   },
   "AGENTS.md": {
-    "mtime": 1791994720.5240605,
-    "ast_hash": "7437a9dc656bf9fa818de00210e65555",
+    "mtime": 1791999907.8107963,
+    "ast_hash": "ed426a07d0a64a8a2032e2d5fd7aa5e3",
     "semantic_hash": ""
   },
   "AUDITORIA_OPENAI_N8N.md": {
@@ -4710,8 +4710,8 @@
     "semantic_hash": ""
   },
   "CLAUDE.md": {
-    "mtime": 1791994720.5240605,
-    "ast_hash": "ed8b9a5d0096f959b852cfc1ec27492b",
+    "mtime": 1791999907.8087866,
+    "ast_hash": "3592965f009f20cab02e043b6ebb77b1",
     "semantic_hash": ""
   },
   "CONTEXTO_COMPLETO.md": {
@@ -11245,8 +11245,8 @@
     "semantic_hash": ""
   },
   "wp-content/themes/automatiza-tech/assets/js/plan-trabajo.js": {
-    "mtime": 1791984830.162731,
-    "ast_hash": "652cdddc512dc5ee2469e13fcdac8620",
+    "mtime": 1792001869.886888,
+    "ast_hash": "73e0d6e8785352b1af44528fe9224049",
     "semantic_hash": ""
   },
   "wp-content/themes/automatiza-tech/assets/js/plan-ver.js": {
@@ -11365,8 +11365,8 @@
     "semantic_hash": ""
   },
   "Docs/METODO_AT/PLAN-DE-TRABAJO.md": {
-    "mtime": 1791994729.372322,
-    "ast_hash": "2e003a102e6917342a4c90cdf0cdd694",
+    "mtime": 1791999907.8137827,
+    "ast_hash": "3902dbc7ba454b1b02ddbb97c46d590e",
     "semantic_hash": ""
   },
   "Docs/superpowers/plans/2026-09-25-cierre-de-cliente.md": {
@@ -12795,8 +12795,8 @@
     "semantic_hash": ""
   },
   "tests/plan/avance-puras-test.php": {
-    "mtime": 1791996117.365769,
-    "ast_hash": "0998768234c4adef2a84315cc9272b51",
+    "mtime": 1792001913.612213,
+    "ast_hash": "5c0a1e00f6d9a6433068e960722f588b",
     "semantic_hash": ""
   },
   "tests/plan/avance-render-test.php": {
@@ -12820,13 +12820,13 @@
     "semantic_hash": ""
   },
   "wp-content/themes/automatiza-tech/inc/plan-trabajo/avance-panel.php": {
-    "mtime": 1791996382.9928274,
-    "ast_hash": "3b8551053d24e84b75f0ff9e0a7b7897",
+    "mtime": 1792001843.4894671,
+    "ast_hash": "068766523813bb602f24cfdbb9905bf3",
     "semantic_hash": ""
   },
   "wp-content/themes/automatiza-tech/inc/plan-trabajo/avance-puras.php": {
-    "mtime": 1791996140.085149,
-    "ast_hash": "4cab606a475058f2d56c6ad0504eeadd",
+    "mtime": 1792001753.6740725,
+    "ast_hash": "03711fcd83f9c4a51233b968e2b0086b",
     "semantic_hash": ""
   },
   "wp-content/themes/automatiza-tech/inc/plan-trabajo/avance-render.php": {
@@ -12835,13 +12835,18 @@
     "semantic_hash": ""
   },
   "Docs/METODO_AT/ESTADO-DEL-PROYECTO.md": {
-    "mtime": 1791996657.6422615,
-    "ast_hash": "be9b7b894fffc890b656870b1810a546",
+    "mtime": 1792002280.388507,
+    "ast_hash": "801d0859e7ea3447cf5bee2b4c42a3fd",
     "semantic_hash": ""
   },
   "Docs/superpowers/plans/2026-10-14-estado-proyecto-etapa-2.md": {
     "mtime": 1791987031.0981178,
     "ast_hash": "0612fcb866c6c80b5190a24b826bd04b",
+    "semantic_hash": ""
+  },
+  "tests/plan/avance-formulario-wp-test.php": {
+    "mtime": 1792002027.4284086,
+    "ast_hash": "355b8027471ea04deb89af80ed82d6ac",
     "semantic_hash": ""
   }
 }

@@ -231,4 +231,53 @@ ok(array_keys($b) === ['Diseño', 'Desarrollo'] && $b['Diseño']['fin_real'] ===
 $e = [];
 at_av_bloques_de_post([['nombre' => 'Diseño', 'estado' => 'listo', 'inicio_real' => '2026-10-09', 'fin_real' => '2026-10-03']], $plan, $e);
 ok(count($e) === 1 && str_contains($e[0], 'antes'), 'fin real antes del inicio real: error');
+
+// --- Formulario «Nuevo cierre»: arma el mismo archivo at-cierre-v1 y pasa la misma validación.
+$fila_ev = fn(array $x) => $x + ['ref' => '', 'tipo' => 'captura', 'donde' => 'despues', 'titulo' => '', 'valor' => '', 'unidad' => '', 'fuente' => '', 'fecha' => '', 'url' => '', 'archivo_actual' => '', 'poster_actual' => ''];
+$form = [
+	'titulo' => ' Fotos antiguas retiradas ', 'fecha_real' => '2026-10-08', 'bloques' => ['diseño', ''],
+	'antes_texto' => 'Se veían fotos de personal antiguo.', 'antes_puntos' => "- Fotos viejas\n\n• Sin permiso de uso ",
+	'durante_texto' => 'Las retiramos.', 'despues_texto' => 'Ya no aparecen.', 'despues_puntos' => '',
+	'ev' => [
+		$fila_ev(['tipo' => 'cifra', 'donde' => 'antes', 'titulo' => 'Fotos de personal antiguo', 'valor' => '7', 'unidad' => 'fotos', 'fuente' => 'Revisión del sitio', 'fecha' => '2026-10-07']),
+		$fila_ev(['tipo' => 'captura', 'titulo' => 'Portada sin las fotos']),
+		$fila_ev([]),
+		$fila_ev(['tipo' => 'video', 'titulo' => 'Recorrido']),
+		$fila_ev(['tipo' => 'enlace', 'titulo' => 'El sitio', 'url' => 'https://example.com/']),
+	],
+];
+$subidos = [1 => ['archivo' => 'Captura de pantalla 2026-10-08 a las 10.30.JPEG'], 3 => ['archivo' => 'grabacion final.MP4', 'poster' => 'portada video.png']];
+$f = at_av_cierre_de_formulario($form, COD, $subidos);
+$v = at_av_validar_import($f['datos'], COD, $plan, at_av_vacio());
+ok($f['errores'] === [] && $v['ok'] && $v['cierre']['titulo'] === 'Fotos antiguas retiradas' && $v['cierre']['bloques'] === ['Diseño'], 'formulario: el cierre pasa la misma validación del archivo (bloque sin distinguir mayúsculas)');
+ok($v['cierre']['antes']['puntos'] === ['Fotos viejas', 'Sin permiso de uso'] && $v['cierre']['antes']['evidencias'] === ['evidencia-1'] && $v['cierre']['despues']['evidencias'] === ['evidencia-2', 'evidencia-3', 'evidencia-4'], 'formulario: puntos sin viñetas y cada evidencia en su parte; la fila vacía no cuenta');
+ok($f['nombres'] === [1 => ['archivo' => 'evidencia-2.jpg'], 3 => ['archivo' => 'evidencia-3.mp4', 'poster' => 'evidencia-3-portada.png']] && $v['evidencias']['evidencia-3']['poster_archivo'] === 'evidencia-3-portada.png', 'formulario: los archivos se renombran a la ref (los nombres del celular traen espacios)');
+ok($v['cierre']['durante']['actividades'] !== [] && $v['cierre']['entregable_id'] === 0, 'formulario: las actividades del bloque se precargan del plan');
+
+$sin_titulo = $form;
+$sin_titulo['ev'][0]['titulo'] = '';
+ok(at_av_cierre_de_formulario($sin_titulo, COD, [])['errores'] === ['A la evidencia 1 le falta el título.'], 'formulario: evidencia con datos pero sin título = error claro');
+$heic = at_av_cierre_de_formulario($form, COD, [1 => ['archivo' => 'IMG_1234.HEIC']]);
+ok($heic['errores'] === ['La imagen de «Portada sin las fotos» debe ser JPG, PNG o WebP.'], 'formulario: una foto HEIC del iPhone se rechaza con un mensaje claro');
+$sin_archivo = at_av_cierre_de_formulario($form, COD, []);
+$v2 = at_av_validar_import($sin_archivo['datos'], COD, $plan, at_av_vacio());
+ok($v2['ok'] && $v2['evidencias']['evidencia-2']['archivo'] === 'evidencia-2.jpg' && $v2['evidencias']['evidencia-3']['archivo'] === 'evidencia-3.mp4', 'formulario: sin archivo se guarda igual y queda «falta» (se sube después)');
+$dup = $form;
+$dup['ev'][0]['ref'] = 'velocidad';
+$dup['ev'][1]['ref'] = 'velocidad';
+$rd = at_av_cierre_de_formulario($dup, COD, []);
+ok(array_column($rd['datos']['evidencias'], 'ref') === ['velocidad', 'evidencia-1', 'evidencia-2', 'evidencia-3'], 'formulario: una ref repetida recibe otra nueva');
+
+// Editar: del cierre guardado al formulario y de vuelta, conservando refs, archivos y actividades.
+$ap = at_av_aplicar_import(at_av_vacio(), $v, 'cabc123', '2026-10-08 10:00:00');
+$exp = at_av_exportar_cierre($ap['avance'], 'cabc123', COD);
+$pf = at_av_formulario_de_cierre($exp);
+ok($pf['titulo'] === 'Fotos antiguas retiradas' && $pf['antes_puntos'] === "Fotos viejas\nSin permiso de uso" && $pf['ev'][1]['archivo_actual'] === 'evidencia-2.jpg' && $pf['ev'][2]['poster_actual'] === 'evidencia-3-portada.png' && $pf['ev'][0]['donde'] === 'antes', 'editar: el formulario se llena con el cierre guardado');
+$vuelta = at_av_cierre_de_formulario($pf, COD, [], $exp);
+ok($vuelta['datos']['evidencias'] == $exp['evidencias'] && $vuelta['datos']['cierre']['durante']['actividades'] === $exp['cierre']['durante']['actividades'] && $vuelta['nombres'] === [], 'editar sin tocar nada: mismas evidencias, archivos y actividades');
+$pf2 = $pf;
+$pf2['bloques'] = ['Diseño', 'Desarrollo'];
+ok(!array_key_exists('actividades', at_av_cierre_de_formulario($pf2, COD, [], $exp)['datos']['cierre']['durante']), 'editar con otros bloques: las actividades se vuelven a tomar del plan');
+$nueva = at_av_cierre_de_formulario($pf, COD, [1 => ['archivo' => 'otra.png']], $exp);
+ok($nueva['datos']['evidencias'][1]['archivo'] === 'evidencia-2.png' && $nueva['nombres'] === [1 => ['archivo' => 'evidencia-2.png']], 'editar con una imagen nueva: reemplaza la anterior');
 fin();

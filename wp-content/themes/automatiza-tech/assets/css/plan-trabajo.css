@@ -89,3 +89,27 @@
 .at-av-subir { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 6px 0; }
 .at-av textarea.code { font-family: Consolas, monospace; font-size: 12px; }
 .at-av-detalle details { margin: 4px 0 8px; }
+/* Formulario «Nuevo cierre»: cada evidencia muestra solo los campos de su tipo. */
+.at-av-nc { background: #f8fafc; border: 1px solid #dcdcde; border-radius: 6px; padding: 12px 16px; }
+.at-av-nc label { display: flex; flex-direction: column; gap: 4px; font-weight: 600; }
+.at-av-nc input[type="text"], .at-av-nc input[type="url"], .at-av-nc select, .at-av-nc textarea { font-weight: 400; }
+.at-av-nc-fila { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 10px; }
+.at-av-nc-titulo { flex: 1 1 320px; }
+.at-av-nc-bloques { margin: 6px 0 10px; }
+.at-av-nc-bloques label { display: inline-flex; flex-direction: row; align-items: center; gap: 6px; margin: 4px 14px 4px 0; font-weight: 400; }
+.at-av-nc-partes { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+.at-av-nc-partes h5, .at-av-nc h5 { margin: 10px 0 4px; font-size: 13px; }
+.at-av-nc-partes label { margin-bottom: 8px; }
+.at-av-ev { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; border: 1px solid #dcdcde; border-radius: 6px; padding: 8px 12px; margin: 8px 0; background: #fff; }
+.at-av-ev[hidden] { display: none; }
+.at-av-ev legend { font-weight: 600; padding: 0 4px; }
+.at-av-ev-largo { flex: 1 1 260px; }
+.at-av-ev .at-av-c, .at-av-ev span.t-captura, .at-av-ev span.t-video { display: none; }
+.at-av-ev:has(.at-av-ev-tipo option[value="cifra"]:checked) .t-cifra,
+.at-av-ev:has(.at-av-ev-tipo option[value="captura"]:checked) .t-captura,
+.at-av-ev:has(.at-av-ev-tipo option[value="video"]:checked) .t-video,
+.at-av-ev:has(.at-av-ev-tipo option[value="enlace"]:checked) .t-enlace { display: flex; }
+.at-av-ev:has(.at-av-ev-tipo option[value="captura"]:checked) span.t-captura,
+.at-av-ev:has(.at-av-ev-tipo option[value="video"]:checked) span.t-video { display: inline; }
+.at-av-importar-caja { margin: 16px 0; }
+.at-av-importar-caja summary { cursor: pointer; }

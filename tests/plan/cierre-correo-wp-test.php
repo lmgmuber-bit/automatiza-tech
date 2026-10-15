@@ -110,6 +110,54 @@ $r = at_av_enviar_cierre($id, 'cprueba', 'cliente', '', true);
 ok($r['ok'] && $r['sin_pdf'] !== '' && end($correos)['attachments'] === [], '8) PDF de más de 15 MB: va solo el enlace y se avisa');
 $pdf_resp = '%PDF-1.4 prueba';
 
+// Fix round 1 · D8 también en el texto: el mensaje de Luis y los textos del cierre llegan al correo del cliente.
+$guardado = $leer();
+$n = count($correos);
+$p0 = count($pedidas);
+$r = at_av_enviar_cierre($id, 'cprueba', 'cliente', 'Mira https://x.kchiba.easypanel.host/p/a', true);
+$r2 = at_av_enviar_cierre($id, 'cprueba', 'prueba', 'Mira https://x.kchiba.easypanel.host/p/a', false);
+ok(!$r['ok'] && $r['motivo'] === 'interno' && str_contains($r['detalle'], 'el mensaje') && !$r2['ok'] && $r2['motivo'] === 'interno' && count($correos) === $n && count($pedidas) === $p0 && $envio()['correo']['enviando'] === null, '10) D8: un mensaje con easypanel no sale (cliente ni prueba), sin descarga ni reclamo');
+$av = $leer();
+foreach ($av['cierres'] as $k => $x) { if ($x['id'] === 'cprueba') { $av['cierres'][$k]['despues']['puntos'][0] = 'Míralo en https://x.kchiba.easypanel.host/'; } }
+at_av_guardar($id, $av);
+$r = at_av_enviar_cierre($id, 'cprueba', 'cliente', '', true);
+ok(!$r['ok'] && $r['motivo'] === 'interno' && str_contains($r['detalle'], 'Después') && count($correos) === $n && count($pedidas) === $p0 && $envio()['correo']['enviando'] === null, '10) D8: un punto del cierre con easypanel no sale y dice en qué parte');
+at_av_guardar($id, $guardado);
+
+// Reclamado el envío, todo se recalcula del avance releído: si entre la primera lectura y el reclamo alguien metió un
+// enlace interno en el cierre, no sale y el reclamo se suelta (se simula en la primera consulta de home_url).
+$gatillo = true;
+add_filter('home_url', function ($u) use (&$gatillo, $id, $leer) {
+	if ($gatillo) {
+		$gatillo = false;
+		$x = $leer();
+		foreach ($x['cierres'] as $k => $c2) { if ($c2['id'] === 'cprueba') { $x['cierres'][$k]['despues']['puntos'][0] = 'Míralo en https://x.kchiba.easypanel.host/'; } }
+		at_av_guardar($id, $x);
+	}
+	return $u;
+}, 100);
+$r = at_av_enviar_cierre($id, 'cprueba', 'cliente', '', true);
+ok(!$gatillo && !$r['ok'] && $r['motivo'] === 'interno' && count($correos) === $n && count($pedidas) === $p0 && $envio()['correo']['enviando'] === null, '10) lo que cambia entre la lectura y el reclamo se vuelve a revisar y el reclamo se suelta');
+at_av_guardar($id, $guardado);
+
+// Render viejo: el cierre se republicó después de la presentación.
+$av = $leer();
+foreach ($av['cierres'] as $k => $x) { if ($x['id'] === 'cprueba') { $av['cierres'][$k]['publicado_at'] = '2026-10-14 10:10:00'; } }
+at_av_guardar($id, $av);
+$r = at_av_enviar_cierre($id, 'cprueba', 'cliente', '', true);
+ok(!$r['ok'] && $r['motivo'] === 'render_no_listo' && count($correos) === $n && count($pedidas) === $p0 && $envio()['correo']['enviando'] === null, '11) presentación anterior a la republicación: al cliente no, sin descarga ni reclamo (Review Focus 2)');
+$r = at_av_enviar_cierre($id, 'cprueba', 'prueba', '', false);
+ok($r['ok'] && count($correos) === $n + 1 && end($correos)['attachments'] === [] && $r['sin_pdf'] !== '' && count($pedidas) === $p0, '11) la prueba sí sale, sin PDF');
+at_av_guardar($id, $guardado);
+$n = count($correos);
+
+// Un fallo inesperado al armar o enviar suelta el reclamo y dice qué pasó.
+$boom = true;
+add_filter('wp_mail', function ($a) use (&$boom) { if ($boom) { throw new RuntimeException('boom'); } return $a; }, PHP_INT_MIN + 1);
+$r = at_av_enviar_cierre($id, 'cprueba', 'cliente', '', true);
+$boom = false;
+ok(!$r['ok'] && $r['motivo'] === 'correo_fallo' && str_starts_with($r['detalle'], 'error interno al armar o enviar el correo: RuntimeException: boom') && $envio()['correo']['enviando'] === null, '12) una excepción suelta el reclamo y queda dicha en el detalle');
+
 // Sin correo del cliente.
 global $wpdb;
 $sin_ph = function (array $claves) use ($id, $wpdb) { // la ficha manda; si falta, el contrato: se quitan los dos para probar «sin dato»

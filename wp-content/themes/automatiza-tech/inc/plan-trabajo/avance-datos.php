@@ -73,16 +73,31 @@ function at_av_guardar_si_igual(int $plan_id, string $json_antes, array $avance)
 	return (int) $n === 1;
 }
 
-/** Cambia solo el registro de un render ('render' o 'render_previa'), sobre el avance recién leído. */
+/**
+ * Cambia solo el registro de un render ('render' o 'render_previa'), sobre el avance recién leído. Se guarda con
+ * at_av_guardar_si_igual: si entretanto cambió otra cosa (un envío reclamado o anotado, p. ej.), se relee y se vuelve a
+ * intentar hasta 3 veces, así que la devolución del renderer nunca borra lo que otro proceso escribió. false solo si
+ * las 3 veces fallan (o el plan o la clave no existen).
+ */
 function at_av_guardar_render(int $plan_id, string $clave, array $campos): bool {
 	if (!in_array($clave, ['render', 'render_previa'], true)) {
 		return false;
 	}
-	$f = at_pt_plan($plan_id);
-	if (!$f) {
-		return false;
+	for ($i = 0; $i < 3; $i++) {
+		$f = at_pt_plan($plan_id);
+		if (!$f) {
+			return false;
+		}
+		$antes = (string) $f->avance; // tal cual salió de la base: es la condición del guardado
+		$a = at_av_leer($f);
+		$nuevo = array_merge($a[$clave], array_intersect_key($campos, at_av_registro_vacio()));
+		if ($nuevo === $a[$clave] && at_av_columna_lista()) {
+			return true; // ya está así: guardar lo mismo no cambia la fila y no es un fallo
+		}
+		$a[$clave] = $nuevo;
+		if (at_av_guardar_si_igual($plan_id, $antes, $a)) {
+			return true;
+		}
 	}
-	$a = at_av_leer($f);
-	$a[$clave] = array_merge($a[$clave], array_intersect_key($campos, at_av_registro_vacio()));
-	return at_av_guardar($plan_id, $a);
+	return false;
 }

@@ -47,4 +47,20 @@ $a_si = at_av_leer($f_si);
 $a_si['necesitamos'] = [['texto' => 'Uno', 'estado' => 'abierto', 'fecha' => '2026-10-15']];
 ok(at_av_guardar_si_igual($id, $antes_si, $a_si) === true, 'guarda si nadie cambió el avance');
 ok(at_av_guardar_si_igual($id, $antes_si, at_av_vacio()) === false && count(at_av_leer(at_pt_plan($id))['necesitamos']) === 1, 'no pisa si el avance cambió entretanto');
+// Fix round 1: la respuesta del renderer no pisa lo que otro proceso escribió entre la lectura y la escritura
+// (un envío reclamado o anotado en cierres[*].correo). Se simula cambiando la fila justo antes del UPDATE.
+$concurrente = true;
+add_filter('query', function ($q) use (&$concurrente, $wpdb, $t, $id) {
+	if ($concurrente && strpos($q, 'UPDATE') === 0 && strpos($q, 'SET avance') !== false) {
+		$concurrente = false; // la llamada anidada de abajo ya no vuelve a entrar
+		$x = at_av_leer(at_pt_plan($id));
+		$x['cierres'] = [['id' => 'cx0001', 'titulo' => 'Prueba', 'estado' => 'publicado', 'correo' => ['enviado_at' => null, 'prueba_at' => null, 'mensaje' => '', 'enviando' => '2026-10-15 09:00:00', 'a' => '']]];
+		$wpdb->query($wpdb->prepare("UPDATE {$t} SET avance = %s WHERE id = %d", wp_json_encode(at_av_normalizar($x), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), $id));
+	}
+	return $q;
+});
+ok(at_av_guardar_render($id, 'render', ['estado' => 'pendiente']) && !$concurrente, 'guardar un render con un cambio concurrente: se reintenta y guarda');
+$l = at_av_leer(at_pt_plan($id));
+ok($l['render']['estado'] === 'pendiente' && count($l['cierres']) === 1 && $l['cierres'][0]['correo']['enviando'] === '2026-10-15 09:00:00', 'guardar un render no borra el reclamo que otro proceso escribió entretanto');
+ok(at_av_guardar_render($id, 'render', ['estado' => 'pendiente']), 'guardar el mismo render otra vez es un éxito, no un fallo');
 fin();

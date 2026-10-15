@@ -37,6 +37,7 @@ register_shutdown_function(function () use ($tmp, $id) {
 $correr = fn(string $accion, array $post, string $n8n = 'ok') => pt_correr_accion($accion, $admin, 'at_pt_plan_' . $id, $post + ['plan_id' => (string) $id, 'crm_id' => (string) $crm], $n8n);
 $msg = fn(array $r): string => (string) (pt_query($r['redirect'])['pt_msg'] ?? '');
 $leer = fn(): array => at_av_leer(at_pt_plan($id));
+$hist = fn(string $tipo): int => (int) $GLOBALS['wpdb']->get_var($GLOBALS['wpdb']->prepare("SELECT COUNT(*) FROM {$GLOBALS['wpdb']->prefix}crm_historial WHERE cliente_id = %d AND tipo_evento = %s", $crm, $tipo));
 $archivo = [
 	'formato' => 'at-cierre-v1', 'plan' => $cod,
 	'cierre' => ['titulo' => 'Diseño terminado', 'bloques' => ['Diseño'], 'fecha_real' => '2026-10-10',
@@ -68,6 +69,7 @@ $cid = (string) ($av['cierres'][0]['id'] ?? '');
 ok($msg($r) === 'av_importado_faltan' && count($av['cierres']) === 1 && $av['cierres'][0]['estado'] === 'borrador' && $r['n8n'] === [], '3) importado en borrador, falta la portada y no se pide render (R4)');
 $r = $correr('at_av_publicar', ['cierre_id' => $cid]);
 ok($msg($r) === 'av_no_publicable' && $leer()['cierres'][0]['estado'] === 'borrador', '4) con archivos pendientes no se publica');
+ok($hist('hito_cierre_publicado') === 0, '21) un cierre que no se pudo publicar no deja «hito_cierre_publicado» en el historial');
 
 $files = ['archivos' => ['name' => ['portada.png'], 'type' => ['image/png'], 'tmp_name' => [$tmp . 'portada.png'], 'error' => [0], 'size' => [filesize($tmp . 'portada.png')]]];
 $r = $correr('at_av_importar', ['cierre_texto' => wp_json_encode($archivo), '__files' => $files]);
@@ -87,6 +89,46 @@ $r = $correr('at_av_reintentar', []);
 ok($msg($r) === 'av_reintento' && (($r['n8n'][0]['cuerpo']['modo'] ?? '') === 'estado'), '8) «Reintentar» vuelve a pedir el render');
 $r = $correr('at_av_previa', []);
 ok($msg($r) === 'av_previa' && (($r['n8n'][0]['cuerpo']['previa'] ?? null) === true), '9) la vista previa va con previa: true (R3)');
+
+// --- Avisar al cliente: correo de cierre (prueba y cliente) y WhatsApp. El proceso hijo nunca envía un correo (pre_wp_mail).
+$r = $correr('at_av_correo', ['cierre_id' => $cid, 'destino' => 'prueba', 'mensaje' => 'Hola']);
+ok($msg($r) === 'av_correo_prueba' && $leer()['cierres'][0]['correo']['prueba_at'] !== null && $leer()['cierres'][0]['correo']['enviado_at'] === null, '20) «Enviarme una prueba» desde el panel: anota la prueba y no el envío al cliente');
+$r = $correr('at_av_correo', ['cierre_id' => $cid, 'destino' => 'cliente']);
+ok($msg($r) === 'av_correo_render_no_listo' && $leer()['cierres'][0]['correo']['enviado_at'] === null, '20) «Enviar al cliente» con la presentación sin terminar: no sale y lo dice');
+at_pt_tomar_detalles($id);
+$r = $correr('at_av_correo', ['cierre_id' => $cid, 'destino' => 'prueba', 'mensaje' => 'Mira http://sitio.easypanel.host/x']);
+$det = implode(' | ', at_pt_tomar_detalles($id));
+ok($msg($r) === 'av_correo_interno' && str_contains($det, 'Enlace o texto interno: '), '20) un enlace al servidor interno: no se envía y el detalle dice dónde (D8)');
+$r = $correr('at_av_correo', ['cierre_id' => 'cXXXXXX', 'destino' => 'prueba']);
+ok($msg($r) === 'av_correo_sin_cierre', '20) un cierre que no existe: mensaje propio');
+$r = $correr('at_av_correo', ['cierre_id' => 'no-es-un-id', 'destino' => 'cliente']);
+ok($msg($r) === 'av_correo_sin_cierre', '20) un id mal formado: se trata como cierre inexistente');
+$todas = at_av_mensajes();
+$faltan_msgs = array_filter(['av_correo_prueba', 'av_correo_cliente', 'av_correo_cliente_sin_pdf', 'av_correo_cliente_aviso', 'av_correo_no_publicado', 'av_correo_render_no_listo', 'av_correo_sin_correo', 'av_correo_interno', 'av_correo_ya_enviado', 'av_correo_enviando', 'av_correo_correo_fallo', 'av_correo_sin_cierre', 'av_correo_sin_plan', 'av_whatsapp_sin_telefono'], fn($k) => !isset($todas[$k]));
+ok($faltan_msgs === [], '20) hay mensaje para cada motivo del correo y del WhatsApp' . ($faltan_msgs ? ' (faltan: ' . implode(', ', $faltan_msgs) . ')' : ''));
+
+// Con la presentación lista (rehecha después de publicar), el envío al cliente sale; el PDF no se baja en la prueba.
+$av = $leer();
+$av['render'] = array_merge(at_av_registro_vacio(), ['estado' => 'listo', 'at' => current_time('mysql'), 'view_url' => 'https://example.com/presentacion']);
+at_av_guardar($id, $av);
+$r = $correr('at_av_correo', ['cierre_id' => $cid, 'destino' => 'cliente', 'mensaje' => 'Gracias']);
+$e1 = $leer()['cierres'][0]['correo'];
+$det = implode(' | ', at_pt_tomar_detalles($id));
+ok($msg($r) === 'av_correo_cliente_sin_pdf' && $e1['enviado_at'] !== null && $e1['a'] === 'prueba-avance-panel@example.com' && str_contains($det, 'Motivo: '), '20) «Enviar al cliente» sale, anota el envío y dice por qué fue sin PDF');
+ok($hist('hito_cierre_correo') === 1, '20) el envío al cliente queda en el historial del CRM');
+$r = $correr('at_av_correo', ['cierre_id' => $cid, 'destino' => 'cliente']);
+ok($msg($r) === 'av_correo_ya_enviado' && $hist('hito_cierre_correo') === 1, '20) sin «Reenviar», un cierre ya enviado no se manda otra vez');
+$r = $correr('at_av_correo', ['cierre_id' => $cid, 'destino' => 'cliente', 'reenviar' => '1']);
+ok($msg($r) === 'av_correo_cliente_sin_pdf' && $hist('hito_cierre_correo') === 2, '20) con «Reenviar» sí sale otra vez');
+at_pt_tomar_detalles($id);
+
+$r = $correr('at_av_whatsapp', ['cierre_id' => $cid]);
+ok(str_starts_with($r['redirect'], 'https://wa.me/') && $leer()['cierres'][0]['whatsapp']['abierto_at'] !== null && $hist('hito_cierre_whatsapp') === 1, '20) «Enviar por mi WhatsApp» abre wa.me y anota que se abrió');
+$r = $correr('at_av_whatsapp', ['cierre_id' => 'cXXXXXX']);
+ok($msg($r) === 'av_correo_sin_cierre' && !str_contains($r['redirect'], 'wa.me'), '20) WhatsApp de un cierre inexistente: vuelve a la ficha con aviso');
+$r = pt_correr_accion('at_av_correo', 0, 'at_pt_plan_' . $id, ['cierre_id' => $cid, 'destino' => 'cliente', 'reenviar' => '1', 'plan_id' => (string) $id, 'crm_id' => (string) $crm]);
+ok($r['redirect'] === '' && $hist('hito_cierre_correo') === 2, '20) sin sesión ni nonce válido el correo no sale');
+ok($hist('hito_cierre_publicado') >= 1, '21) publicar deja «hito_cierre_publicado» en el historial del CRM');
 
 $r = $correr('at_av_bloques', ['bloques' => [['nombre' => 'Desarrollo', 'estado' => 'en_curso', 'inicio_real' => '2026-10-12', 'fin_real' => '']]]);
 ok($msg($r) === 'av_bloques' && ($leer()['bloques']['Desarrollo']['estado'] ?? '') === 'en_curso' && count($r['n8n']) === 1, '10) bloques guardados y presentación pedida');
@@ -190,6 +232,10 @@ foreach ($leer()['cierres'] as $c) {
 }
 $eid_h = $cid_h . '-portada';
 ok($msg($r) === 'av_importado_faltan' && $cid_h !== '' && ($leer()['evidencias'][$eid_h]['url'] ?? '') === '', '16) segundo cierre en borrador con la portada pendiente');
+$r = $correr('at_av_correo', ['cierre_id' => $cid_h, 'destino' => 'cliente']);
+ok($msg($r) === 'av_correo_no_publicado', '20) un cierre en borrador no se envía al cliente');
+$r = $correr('at_av_whatsapp', ['cierre_id' => $cid_h]);
+ok($msg($r) === 'av_correo_no_publicado' && !str_contains($r['redirect'], 'wa.me'), '20) ni se abre su WhatsApp');
 $r = $correr('at_av_subir', ['evidencia_id' => $eid_h, 'campo' => 'archivo', '__files' => ['archivo' => $subida]]);
 $url_h = (string) ($leer()['evidencias'][$eid_h]['url'] ?? '');
 $nombre_h = at_av_nombre_de_url($url_h);
@@ -222,9 +268,51 @@ $h = (string) ob_get_clean();
 $pos_pub = (int) strpos($h, 'Cierre ya publicado');
 ok(str_contains($h, esc_html($hostil)) && !str_contains($h, '<script>alert(1)</script>') && $pos_pub > 0, '14) el título del cierre sale escapado: nunca como HTML');
 ok(substr_count($h, 'Publicado</span>') === 1 && substr_count($h, 'Borrador</span>') === 1 && str_contains($h, 'Para editar un cierre publicado, primero vuelve a borrador.'), '14) la lista marca un cierre «Publicado» y otro «Borrador»');
+ok(str_contains($h, 'value="at_av_correo"') && str_contains($h, 'Enviarme una prueba') && str_contains($h, 'Enviar al cliente'), '22) el cierre publicado muestra el correo de cierre');
+ok(substr_count($h, 'value="at_av_correo"') === 1 && substr_count($h, 'value="at_av_whatsapp"') === 1, '22) solo el publicado tiene correo y WhatsApp (el borrador no)');
+ok(str_contains($h, 'Se enviará el correo de cierre a prueba-avance-panel@example.com. ¿Enviar?') && !str_contains($h, 'name="reenviar"'), '22) antes del primer envío, la confirmación muestra el correo del cliente y no hay «Reenviar»');
+ok(str_contains($h, 'Correo al cliente: aún no') && str_contains($h, 'Prueba: aún no') && str_contains($h, 'WhatsApp: aún no'), '22) el estado de los envíos dice «aún no»');
 ok(substr_count($h, 'value="at_av_subir"') === 1 && str_contains($h, 'name="evidencia_id" value="' . $eid_h . '"') && !str_contains($h, 'value="' . $cid_p . '-portada"'), '14) el formulario de subir archivos solo está en el borrador');
 ok(substr_count($h, 'Editar el cierre (formato at-cierre-v1)') === 1, '14) «Editar el cierre» solo está en el borrador');
 ok(str_contains($h, 'id="at-av"') && str_contains($h, 'value="at_av_importar"') && str_contains($h, 'value="at_av_bloques"') && str_contains($h, 'value="at_av_listas"') && str_contains($h, 'Importar cierre') && str_contains($h, esc_url(at_pt_url_ver_estado(home_url(), $cod))), '14) la pestaña de un plan enviado muestra la sección «Avance»');
+// Cierre ya enviado: «Reenviar», con la fecha y el correo del envío; videos solo si son de nuestro sitio.
+$av = $leer();
+foreach ($av['cierres'] as $k => $cx) {
+	if ($cx['id'] === $cid_p) {
+		$av['cierres'][$k]['correo'] = ['enviado_at' => '2026-10-12 10:30:00', 'prueba_at' => '2026-10-12 10:00:00', 'mensaje' => '', 'enviando' => null, 'a' => 'cliente@example.com'];
+		$av['cierres'][$k]['whatsapp'] = ['abierto_at' => '2026-10-12 10:45:00'];
+		$av['cierres'][$k]['despues']['evidencias'][] = 'v-propio';
+		$av['cierres'][$k]['despues']['evidencias'][] = 'v-ajeno';
+	}
+}
+$av['evidencias']['v-propio'] = ['tipo' => 'video', 'titulo' => 'Recorrido propio', 'url' => home_url('/wp-content/uploads/at-estado/recorrido.mp4'), 'poster' => '', 'archivo' => 'recorrido.mp4'];
+$av['evidencias']['v-ajeno'] = ['tipo' => 'video', 'titulo' => 'Video ajeno', 'url' => 'https://ajeno.example.org/video.mp4', 'poster' => '', 'archivo' => 'ajeno.mp4'];
+at_av_guardar($id, $av);
+ob_start();
+at_pt_render_plan(at_pt_plan($id), $crm);
+$h = (string) ob_get_clean();
+ok(str_contains($h, 'Reenviar al cliente') && str_contains($h, 'name="reenviar" value="1"') && str_contains($h, 'ya se envió') && str_contains($h, 'cliente@example.com'), '22) un cierre ya enviado ofrece «Reenviar» y la confirmación dice cuándo se envió');
+ok(str_contains($h, 'Correo al cliente: enviado el') && str_contains($h, 'WhatsApp: abierto el') && !str_contains($h, 'WhatsApp: aún no'), '22) el estado de los envíos muestra las fechas');
+ok(str_contains($h, 'href="' . esc_url(home_url('/wp-content/uploads/at-estado/recorrido.mp4')) . '" download') && !str_contains($h, 'href="https://ajeno.example.org/video.mp4" download'), '23) «Descargar el video» solo para videos de nuestro sitio');
+$bloque = preg_match('/<div class="at-av-envio">(.*?)<\/div>/s', $h, $mb) ? $mb[1] : '';
+ok(str_contains($bloque, 'Enviar por mi WhatsApp') && str_contains($bloque, 'readonly') && str_contains($bloque, 'target="_blank"'), '22) el WhatsApp ofrece el botón (otra pestaña) y el texto para copiar');
+
+// Sin correo del cliente: el botón al cliente queda deshabilitado y dice por qué.
+global $wpdb;
+$ct = $wpdb->get_row($wpdb->prepare("SELECT id, placeholders FROM {$wpdb->prefix}automatiza_contracts WHERE id = %d", (int) at_pt_plan($id)->contrato_id));
+$ph0 = (string) $ct->placeholders;
+$ph1 = json_decode($ph0, true);
+$ph1['email_cliente'] = '';
+$wpdb->update($wpdb->prefix . 'automatiza_contracts', ['placeholders' => wp_json_encode($ph1)], ['id' => (int) $ct->id]);
+$wpdb->update($wpdb->prefix . 'crm_clientes', ['email' => ''], ['id' => $crm]);
+ob_start();
+at_pt_render_plan(at_pt_plan($id), $crm);
+$h = (string) ob_get_clean();
+$wpdb->update($wpdb->prefix . 'automatiza_contracts', ['placeholders' => $ph0], ['id' => (int) $ct->id]);
+$wpdb->update($wpdb->prefix . 'crm_clientes', ['email' => 'prueba-avance-panel@example.com'], ['id' => $crm]);
+$bloque = preg_match('/<div class="at-av-envio">(.*?)<\/div>/s', $h, $mb) ? $mb[1] : '';
+ok(preg_match('/<button[^>]*disabled[^>]*>[^<]*Reenviar al cliente/u', $bloque) === 1 && str_contains($bloque, 'no tiene correo'), '22) sin correo del cliente: «Reenviar al cliente» deshabilitado, con el motivo');
+
 ptc_estado($id, 'listo');
 ob_start();
 at_pt_render_plan(at_pt_plan($id), $crm);

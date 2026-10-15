@@ -1,6 +1,6 @@
 # Estado del proyecto: guía de uso, formato `at-cierre-v1` y despliegue (Etapas 2 y 3)
 
-> **Estado.** Etapa 2: EN PROD desde el 2026-10-14 y **mergeada a `main` el 2026-10-15** (rama `claude/estado-proyecto-e2`, PR #89). Renderer subido por Luis (`/health` ok); flujo n8n «3 Render» con 34 nodos, activo e igual al local (respaldo del anterior fuera del repo); WordPress por SSH: 12 archivos con md5 cotejado, migración hecha (`at_plan_schema` = 2) y caché vaciada. Respaldo de WordPress: `~/respaldos/estado-proyecto-e2-antes-20261014.tar.gz`. Todavía no se ha publicado ningún cierre real. **Etapa 3 (avisar al cliente de un cierre: correo, WhatsApp, descarga del video e historial): LOCAL en la rama `claude/estado-proyecto-e3`, no desplegada**; su lista de subida está en la sección 6. La Etapa 1 está EN PROD desde el 2026-10-14; ver `PLAN-DE-TRABAJO.md`. Diseño completo: `Docs/superpowers/specs/2026-10-13-estado-del-proyecto-design.md`.
+> **Estado.** Etapa 2: EN PROD desde el 2026-10-14 y **mergeada a `main` el 2026-10-15** (rama `claude/estado-proyecto-e2`, PR #89). Renderer subido por Luis (`/health` ok); flujo n8n «3 Render» con 34 nodos, activo e igual al local (respaldo del anterior fuera del repo); WordPress por SSH: 12 archivos con md5 cotejado, migración hecha (`at_plan_schema` = 2) y caché vaciada. Respaldo de WordPress: `~/respaldos/estado-proyecto-e2-antes-20261014.tar.gz`. Todavía no se ha publicado ningún cierre real. **Etapa 3 (avisar al cliente de un cierre: correo, WhatsApp, descarga del video e historial): EN PROD desde el 2026-10-15** (rama `claude/estado-proyecto-e3`, PR #90): 10 archivos de WordPress por SSH en el orden de la sección 6, con `php -l` y md5 cotejado, y caché vaciada; respaldo `~/respaldos/estado-e3-antes-20261015.tar.gz`. Verificado en PROD: el panel del plan piloto dibuja «📣 Avisar al cliente» en los 3 cierres publicados, sin errores. Todavía no se ha enviado ningún correo de cierre. La Etapa 1 está EN PROD desde el 2026-10-14; ver `PLAN-DE-TRABAJO.md`. Diseño completo: `Docs/superpowers/specs/2026-10-13-estado-del-proyecto-design.md`.
 > Los datos de esta guía son inventados (código de plan `AbCdEf123456`, `example.com`): el repositorio es público, no se pegan códigos ni nombres reales de clientes.
 
 ## 1. Qué es
@@ -183,7 +183,7 @@ Verificación desde afuera tras el despliegue: `ver-estado.php?id=<código>` con
 | 2 | `inc/plan-trabajo/avance-panel.php` | misma ruta | OBLIGATORIO |
 | 3 | `assets/css/plan-trabajo.css` y `assets/js/plan-trabajo.js` | mismas rutas | OBLIGATORIO (sin el CSS, cada fila muestra todos sus campos; sin el JS, «＋ Agregar otra evidencia» no abre filas) |
 
-**Etapa 3 — avisar al cliente de un cierre (LOCAL en `claude/estado-proyecto-e3`, no desplegada; sin migración, sin n8n y sin renderer):**
+**Etapa 3 — avisar al cliente de un cierre (EN PROD desde el 2026-10-15; sin migración, sin n8n y sin renderer):**
 
 | Orden | Local | Destino | Clase |
 |---|---|---|---|

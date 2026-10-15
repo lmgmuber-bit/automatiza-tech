@@ -137,4 +137,66 @@ $motivo = at_av_pedir_render($id);
 $l = at_av_leer(at_pt_plan($id));
 ok($motivo !== '' && $l['render']['estado'] === 'error' && str_starts_with($l['render']['nota'], 'No se pudo pedir la presentación') && $l['render']['view_url'] === $vista, '9) n8n caído: queda en error con el motivo y conserva la última presentación (Review Focus 5)');
 ok(at_av_refrescar($id) !== '', '9) con publicados, refrescar sí pide el render');
+
+// 10) Render público serializado (Etapa 3, revisión final): nunca dos pedidos en vuelo; «listo» solo lo deja la devolución del último.
+$llamadas = [];
+$n8n_ok = true;
+add_filter('pre_http_request', function ($pre, $args, $url) use (&$llamadas, &$n8n_ok) {
+	if ($url !== AT_N8N_PLAN_RENDER) {
+		return $pre;
+	}
+	$llamadas[] = json_decode((string) $args['body'], true);
+	return $n8n_ok ? ['headers' => [], 'body' => '', 'response' => ['code' => 200, 'message' => 'OK'], 'cookies' => [], 'filename' => null] : new WP_Error('sin_red_en_pruebas', 'n8n caído');
+}, PHP_INT_MAX, 3);
+$reg = fn(string $clave = 'render'): array => at_av_leer(at_pt_plan($id))[$clave];
+$hace = fn(int $seg): string => date('Y-m-d H:i:s', strtotime(current_time('mysql')) - $seg);
+$ok_cb = ['modo' => 'estado', 'ok' => true, 'view_url' => $vista, 'pdf_url' => $pdf, 'nota' => 'listo'];
+
+ok(at_av_pedir_render($id) === '' && count($llamadas) === 1 && $reg()['estado'] === 'pendiente' && $reg()['pedido_at'] !== '' && $reg()['repetir'] === false, '10) con nada en vuelo el pedido sale a n8n, queda «pendiente» con su hora y sin cola');
+ok(($llamadas[0]['modo'] ?? '') === 'estado' && ($llamadas[0]['codigo'] ?? '') === $cod && !isset($llamadas[0]['previa']), '10) el aviso a n8n es de modo estado y público');
+ok(at_av_pedir_render($id) === '' && count($llamadas) === 1 && $reg()['estado'] === 'pendiente' && $reg()['repetir'] === true, '10) otro pedido con uno reciente en vuelo: no llama a n8n, queda en cola (repetir) y devuelve éxito');
+ok(at_av_pedir_render($id) === '' && count($llamadas) === 1 && $reg()['repetir'] === true, '10) un tercero con la cola ya anotada tampoco llama a n8n');
+$pedido_en_vuelo = $reg()['pedido_at'];
+pedir('POST', "/plan/{$id}/vista", $ok_cb);
+$r1 = $reg();
+ok($r1['estado'] === 'pendiente' && $r1['repetir'] === false && $r1['view_url'] === $vista && $r1['pdf_url'] === $pdf && count($llamadas) === 2 && $r1['pedido_at'] >= $pedido_en_vuelo, '10) llega la devolución del pedido en curso: guarda los enlaces pero sigue «pendiente», saca la cola y manda el siguiente pedido (una vez)');
+ok(!at_av_render_listo_para(at_av_leer(at_pt_plan($id)), ['publicado_at' => '2000-01-01 00:00:00']), '10) mientras sigue «pendiente» nunca cuenta como lista para enviar al cliente');
+pedir('POST', "/plan/{$id}/vista", $ok_cb);
+$r2 = $reg();
+ok($r2['estado'] === 'listo' && $r2['repetir'] === false && count($llamadas) === 2 && at_av_vista_publica(at_pt_plan($id)) === $vista, '10) la devolución del último pedido sí la deja «lista» y no se pide nada más');
+ok(at_av_pedir_render($id) === '' && count($llamadas) === 3 && $reg()['estado'] === 'pendiente' && $reg()['repetir'] === false, '10) con la presentación ya lista, un pedido nuevo sale a n8n');
+
+// Un pedido en vuelo de hace más de 10 minutos se da por perdido: el nuevo sale normal.
+at_av_guardar_render($id, 'render', ['estado' => 'pendiente', 'pedido_at' => $hace(AT_AV_RENDER_VIGENCIA + 5), 'repetir' => false]);
+ok(at_av_pedir_render($id) === '' && count($llamadas) === 4 && $reg()['pedido_at'] > $hace(60) && $reg()['repetir'] === false, '10) un pedido «pendiente» de hace más de 10 minutos no bloquea: el nuevo llama a n8n');
+// Uno de hace poco, justo por debajo del tope, sí bloquea; y un «pendiente» sin hora (de antes de esta versión) no.
+at_av_guardar_render($id, 'render', ['estado' => 'pendiente', 'pedido_at' => $hace(AT_AV_RENDER_VIGENCIA - 30), 'repetir' => false]);
+ok(at_av_pedir_render($id) === '' && count($llamadas) === 4 && $reg()['repetir'] === true, '10) uno de hace 9,5 minutos todavía bloquea');
+at_av_guardar_render($id, 'render', ['estado' => 'pendiente', 'pedido_at' => '', 'repetir' => false]);
+ok(at_av_pedir_render($id) === '' && count($llamadas) === 5, '10) un «pendiente» sin hora (anterior a esta versión) no bloquea');
+
+// La vista previa no se serializa.
+$antes_p = count($llamadas);
+at_av_pedir_render($id, true);
+at_av_pedir_render($id, true);
+ok(count($llamadas) === $antes_p + 2 && ($llamadas[$antes_p]['previa'] ?? null) === true && $reg('render_previa')['repetir'] === false, '10) la vista previa pide cada vez a n8n y no usa la cola');
+
+// Si el siguiente pedido no se puede mandar, queda en error con la nota de siempre y sin cola.
+at_av_guardar_render($id, 'render', ['estado' => 'pendiente', 'pedido_at' => current_time('mysql'), 'repetir' => true]);
+$n8n_ok = false;
+$antes_c = count($llamadas);
+pedir('POST', "/plan/{$id}/vista", $ok_cb);
+$n8n_ok = true;
+$r3 = $reg();
+ok(count($llamadas) === $antes_c + 1 && $r3['estado'] === 'error' && str_starts_with($r3['nota'], 'No se pudo pedir la presentación') && $r3['repetir'] === false && $r3['view_url'] === $vista, '10) si el pedido siguiente no llega a n8n: «error» con la nota, sin cola y con la última presentación guardada');
+// Una devolución con error mientras hay cola: tampoco deja «error» ni «listo»; se manda el pedido en cola y no se pierde el enlace anterior.
+at_av_guardar_render($id, 'render', ['estado' => 'pendiente', 'pedido_at' => current_time('mysql'), 'repetir' => true]);
+$antes_c = count($llamadas);
+pedir('POST', "/plan/{$id}/vista", ['modo' => 'estado', 'ok' => false, 'nota' => 'falló el anterior']);
+$r4 = $reg();
+ok(count($llamadas) === $antes_c + 1 && $r4['estado'] === 'pendiente' && $r4['repetir'] === false && $r4['view_url'] === $vista, '10) un error del pedido anterior con cola: sigue «pendiente», manda el siguiente y conserva el enlace');
+// Una devolución sin cola con la vista previa se guarda tal cual.
+$antes_c = count($llamadas);
+pedir('POST', "/plan/{$id}/vista", ['modo' => 'estado', 'previa' => true, 'ok' => true, 'view_url' => $prev]);
+ok(count($llamadas) === $antes_c && $reg('render_previa')['estado'] === 'listo', '10) la devolución de la vista previa no manda pedidos');
 fin();

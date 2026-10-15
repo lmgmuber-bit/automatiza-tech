@@ -63,4 +63,19 @@ ok(at_av_guardar_render($id, 'render', ['estado' => 'pendiente']) && !$concurren
 $l = at_av_leer(at_pt_plan($id));
 ok($l['render']['estado'] === 'pendiente' && count($l['cierres']) === 1 && $l['cierres'][0]['correo']['enviando'] === '2026-10-15 09:00:00', 'guardar un render no borra el reclamo que otro proceso escribió entretanto');
 ok(at_av_guardar_render($id, 'render', ['estado' => 'pendiente']), 'guardar el mismo render otra vez es un éxito, no un fallo');
+remove_all_filters('query');
+// La condición compara bytes exactos: un avance que solo difiere en mayúsculas o tildes de lo leído NO es el mismo.
+$guardado_bin = at_av_vacio();
+$guardado_bin['necesitamos'] = [['texto' => 'Logo en alta', 'estado' => 'abierto', 'fecha' => '2026-10-15']];
+$js = fn(array $x): string => (string) wp_json_encode(at_av_normalizar($x), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+$wpdb->query($wpdb->prepare("UPDATE {$t} SET avance = %s WHERE id = %d", $js($guardado_bin), $id));
+$leido_otro = $guardado_bin;
+$leido_otro['necesitamos'][0]['texto'] = 'LOGO en alta';
+$leido_acento = $guardado_bin;
+$leido_acento['necesitamos'][0]['texto'] = 'Logó en alta';
+$nuevo_bin = $guardado_bin;
+$nuevo_bin['necesitamos'][0]['texto'] = 'Cambiado';
+ok(at_av_guardar_si_igual($id, $js($leido_otro), $nuevo_bin) === false && at_av_leer(at_pt_plan($id))['necesitamos'][0]['texto'] === 'Logo en alta', 'guardar_si_igual: lo leído que solo difiere en mayúsculas no cuenta como igual y no se escribe');
+ok(at_av_guardar_si_igual($id, $js($leido_acento), $nuevo_bin) === false && at_av_leer(at_pt_plan($id))['necesitamos'][0]['texto'] === 'Logo en alta', 'guardar_si_igual: ni la que solo difiere en una tilde');
+ok(at_av_guardar_si_igual($id, $js($guardado_bin), $nuevo_bin) === true && at_av_leer(at_pt_plan($id))['necesitamos'][0]['texto'] === 'Cambiado', 'guardar_si_igual: con los bytes exactos sí escribe');
 fin();

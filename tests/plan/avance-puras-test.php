@@ -75,6 +75,9 @@ ok(at_av_normalizar(null) === $vacio && at_av_normalizar('') === $vacio && at_av
 $n = at_av_normalizar('{"cierres":[{"id":"c1"},"basura"],"alcance":{"fase1":["A",3]},"render":{"estado":"listo","otra":1}}');
 ok(count($n['cierres']) === 1 && $n['alcance']['fase1'] === ['A'] && $n['render']['estado'] === 'listo' && !isset($n['render']['otra']) && $n['render_previa'] === at_av_registro_vacio(), 'normalizar descarta lo que no tiene la forma esperada');
 
+$n = at_av_normalizar('{"render":{"estado":"pendiente","repetir":true,"pedido_at":"2026-10-15 10:00:00"},"render_previa":{"repetir":"x","pedido_at":5}}');
+ok($n['render']['repetir'] === true && $n['render']['pedido_at'] === '2026-10-15 10:00:00' && $n['render_previa']['repetir'] === false && $n['render_previa']['pedido_at'] === '' && at_av_registro_vacio()['repetir'] === false && at_av_registro_vacio()['pedido_at'] === '', 'normalizar conserva repetir y pedido_at del render y los deja en falso y vacío si no son del tipo esperado');
+
 // --- ayudas
 ok(at_av_url_publica('https://example.com/a?b=1') === 'https://example.com/a?b=1', 'enlace https: sirve');
 ok(at_av_url_publica('http://example.com/') === '' && at_av_url_publica('https://n8n-propuesta-renderer.kchiba.easypanel.host/p/x') === '' && at_av_url_publica('https://ex ample.com') === '' && at_av_url_publica('javascript:alert(1)') === '', 'http, easypanel, espacios o javascript: no sirven (D8)');

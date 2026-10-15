@@ -18,9 +18,13 @@ const AT_AV_MAX_ACTIVIDADES = 30;
 const AT_AV_ESTADOS_BLOQUE = ['listo', 'en_curso', 'por_venir'];
 const AT_AV_TIPOS = ['captura', 'enlace', 'cifra', 'video'];
 
-/** Registro de un render de «Estado del proyecto» (público o vista previa). */
+/**
+ * Registro de un render de «Estado del proyecto» (público o vista previa). `pedido_at` es cuándo se avisó a n8n por
+ * última vez y `repetir` que, mientras ese pedido seguía en curso, llegó otro: el render público se serializa con
+ * ellos (at_av_pedir_render y at_av_rest_vista_estado).
+ */
 function at_av_registro_vacio(): array {
-	return ['estado' => '', 'view_url' => '', 'pdf_url' => '', 'nota' => '', 'at' => ''];
+	return ['estado' => '', 'view_url' => '', 'pdf_url' => '', 'nota' => '', 'at' => '', 'repetir' => false, 'pedido_at' => ''];
 }
 
 function at_av_vacio(): array {
@@ -57,6 +61,8 @@ function at_av_normalizar(mixed $guardado): array {
 	foreach (['render', 'render_previa'] as $k) {
 		if (is_array($guardado[$k] ?? null)) {
 			$a[$k] = array_merge(at_av_registro_vacio(), array_intersect_key($guardado[$k], at_av_registro_vacio()));
+			$a[$k]['repetir'] = $a[$k]['repetir'] === true || $a[$k]['repetir'] === 1 || $a[$k]['repetir'] === '1';
+			$a[$k]['pedido_at'] = is_string($a[$k]['pedido_at']) ? $a[$k]['pedido_at'] : '';
 		}
 	}
 	return $a;

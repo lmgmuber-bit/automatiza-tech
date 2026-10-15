@@ -12780,8 +12780,8 @@
     "semantic_hash": ""
   },
   "tests/plan/avance-datos-wp-test.php": {
-    "mtime": 1792065275.460707,
-    "ast_hash": "d4ac577d0088d8972bf04b6fae4759f9",
+    "mtime": 1792067735.5697303,
+    "ast_hash": "e515de76d41542f354e9dd4e588a9b59",
     "semantic_hash": ""
   },
   "tests/plan/avance-evidencias-wp-test.php": {
@@ -12790,13 +12790,13 @@
     "semantic_hash": ""
   },
   "tests/plan/avance-panel-wp-test.php": {
-    "mtime": 1792065804.46983,
-    "ast_hash": "66fa0c9f4f24caa7363e72773a47b18a",
+    "mtime": 1792068000.9447443,
+    "ast_hash": "f6145f6156d63211c893016816def23b",
     "semantic_hash": ""
   },
   "tests/plan/avance-puras-test.php": {
-    "mtime": 1792064245.407458,
-    "ast_hash": "0c2e3a63ed3b8a7231bea397a47b4f6f",
+    "mtime": 1792067715.8349235,
+    "ast_hash": "118b5a016af034a788d01b6b23a841f1",
     "semantic_hash": ""
   },
   "tests/plan/avance-render-test.php": {
@@ -12805,13 +12805,13 @@
     "semantic_hash": ""
   },
   "tests/plan/rest-estado-wp-test.php": {
-    "mtime": 1792062281.6908638,
-    "ast_hash": "ee362b615a7ef8b3d6d38ffc9fa7ca36",
+    "mtime": 1792067701.2866602,
+    "ast_hash": "0a474b070fa0218d802702f3ac111d33",
     "semantic_hash": ""
   },
   "wp-content/themes/automatiza-tech/inc/plan-trabajo/avance-datos.php": {
-    "mtime": 1792065287.3867793,
-    "ast_hash": "f559add08e2acf0290b49b6b2b914a0c",
+    "mtime": 1792067748.355856,
+    "ast_hash": "dfc356e3da6845d56b06d55ac8c8d9de",
     "semantic_hash": ""
   },
   "wp-content/themes/automatiza-tech/inc/plan-trabajo/avance-evidencias.php": {
@@ -12820,23 +12820,23 @@
     "semantic_hash": ""
   },
   "wp-content/themes/automatiza-tech/inc/plan-trabajo/avance-panel.php": {
-    "mtime": 1792065913.273481,
-    "ast_hash": "f4af9b88a3697f9c405b4c18875f5b42",
+    "mtime": 1792067958.4311917,
+    "ast_hash": "99c73c184d635f4583ed5f3e320e2c86",
     "semantic_hash": ""
   },
   "wp-content/themes/automatiza-tech/inc/plan-trabajo/avance-puras.php": {
-    "mtime": 1792064259.4541776,
-    "ast_hash": "6087854de25e2dd8da04ef107f3abee5",
+    "mtime": 1792067450.381476,
+    "ast_hash": "c852615839db5d1348d89f266a9a0aff",
     "semantic_hash": ""
   },
   "wp-content/themes/automatiza-tech/inc/plan-trabajo/avance-render.php": {
-    "mtime": 1792062282.855064,
-    "ast_hash": "dec53b318159f1ee5fd9c13d7877c5de",
+    "mtime": 1792067491.755647,
+    "ast_hash": "55e96e3cb65a61b3267c9227c730e21e",
     "semantic_hash": ""
   },
   "Docs/METODO_AT/ESTADO-DEL-PROYECTO.md": {
-    "mtime": 1792066412.2203417,
-    "ast_hash": "571ccc3c9b8f4600e054568f88e9068d",
+    "mtime": 1792068062.271263,
+    "ast_hash": "57f4d2fc83067f3702cd81d6094bf00e",
     "semantic_hash": ""
   },
   "Docs/superpowers/plans/2026-10-14-estado-proyecto-etapa-2.md": {
@@ -12850,23 +12850,23 @@
     "semantic_hash": ""
   },
   "tests/plan/cierre-correo-wp-test.php": {
-    "mtime": 1792065275.4596899,
-    "ast_hash": "b9fd086f601bf2503b5d1bd847d83334",
+    "mtime": 1792067870.312652,
+    "ast_hash": "4a07a394a907f36c6b9c9c12334bb9e3",
     "semantic_hash": ""
   },
   "tests/plan/cierre-puras-test.php": {
-    "mtime": 1792064091.6869853,
-    "ast_hash": "cbe411489c60c60a4086e6a883fcc1f4",
+    "mtime": 1792067589.4840255,
+    "ast_hash": "0677cb3c4d96ec4e2d503abacc866eb6",
     "semantic_hash": ""
   },
   "wp-content/themes/automatiza-tech/inc/plan-trabajo/cierre-correo.php": {
-    "mtime": 1792065299.322731,
-    "ast_hash": "b0b4e1e10d42a4d38e3e76e46311035c",
+    "mtime": 1792067570.5960581,
+    "ast_hash": "c1944b53b06407558a16dcb4968b1721",
     "semantic_hash": ""
   },
   "wp-content/themes/automatiza-tech/inc/plan-trabajo/cierre-puras.php": {
-    "mtime": 1792064091.6869853,
-    "ast_hash": "8962945731b527a3cab04b1e1a843388",
+    "mtime": 1792067582.267146,
+    "ast_hash": "0e9fc75397a6818d8a0a1e8db4ba16d7",
     "semantic_hash": ""
   },
   "Docs/superpowers/plans/2026-10-15-estado-proyecto-etapa-3.md": {

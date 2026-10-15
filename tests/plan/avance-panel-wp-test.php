@@ -91,8 +91,17 @@ $r = $correr('at_av_previa', []);
 ok($msg($r) === 'av_previa' && (($r['n8n'][0]['cuerpo']['previa'] ?? null) === true), '9) la vista previa va con previa: true (R3)');
 
 // --- Avisar al cliente: correo de cierre (prueba y cliente) y WhatsApp. El proceso hijo nunca envía un correo (pre_wp_mail).
-$r = $correr('at_av_correo', ['cierre_id' => $cid, 'destino' => 'prueba', 'mensaje' => 'Hola']);
-ok($msg($r) === 'av_correo_prueba' && $leer()['cierres'][0]['correo']['prueba_at'] !== null && $leer()['cierres'][0]['correo']['enviado_at'] === null, '20) «Enviarme una prueba» desde el panel: anota la prueba y no el envío al cliente');
+at_pt_tomar_detalles($id);
+$r = $correr('at_av_correo', ['cierre_id' => $cid, 'destino' => 'prueba', 'mensaje' => 'Hola X & Y']);
+$det_prueba = implode(' | ', at_pt_tomar_detalles($id));
+ok($msg($r) === 'av_correo_prueba_sin_pdf' && $leer()['cierres'][0]['correo']['prueba_at'] !== null && $leer()['cierres'][0]['correo']['enviado_at'] === null, '20) «Enviarme una prueba» desde el panel: anota la prueba y no el envío al cliente');
+ok(str_contains($det_prueba, 'Motivo: la presentación todavía no está lista'), '20) una prueba que salió sin PDF dice por qué en el detalle y el mensaje lo avisa (no el «ok» de siempre)');
+ok($leer()['cierres'][0]['correo']['mensaje'] === 'Hola X & Y', '20) la prueba guarda el mensaje de Luis en el cierre');
+ob_start();
+at_pt_render_plan(at_pt_plan($id), $crm);
+$h = (string) ob_get_clean();
+ok(preg_match('/<textarea name="mensaje"[^>]*>Hola X &amp; Y<\/textarea>/u', $h) === 1, '20) el recuadro del mensaje del correo viene con el mensaje de la prueba, escapado (Luis lo manda al cliente sin reescribirlo)');
+ok(str_contains($h, 'Ojo: la presentación del cliente todavía no incluye este cierre; espera el «Lista» antes de mandarlo.'), '20) WhatsApp: con la presentación sin terminar avisa con «Ojo…» (sin bloquear el botón)');
 $r = $correr('at_av_correo', ['cierre_id' => $cid, 'destino' => 'cliente']);
 ok($msg($r) === 'av_correo_render_no_listo' && $leer()['cierres'][0]['correo']['enviado_at'] === null, '20) «Enviar al cliente» con la presentación sin terminar: no sale y lo dice');
 at_pt_tomar_detalles($id);
@@ -104,13 +113,17 @@ ok($msg($r) === 'av_correo_sin_cierre', '20) un cierre que no existe: mensaje pr
 $r = $correr('at_av_correo', ['cierre_id' => 'no-es-un-id', 'destino' => 'cliente']);
 ok($msg($r) === 'av_correo_sin_cierre', '20) un id mal formado: se trata como cierre inexistente');
 $todas = at_av_mensajes();
-$faltan_msgs = array_filter(['av_correo_prueba', 'av_correo_cliente', 'av_correo_cliente_sin_pdf', 'av_correo_cliente_aviso', 'av_correo_no_publicado', 'av_correo_render_no_listo', 'av_correo_sin_correo', 'av_correo_interno', 'av_correo_ya_enviado', 'av_correo_enviando', 'av_correo_correo_fallo', 'av_correo_sin_cierre', 'av_correo_sin_plan', 'av_whatsapp_sin_telefono'], fn($k) => !isset($todas[$k]));
+$faltan_msgs = array_filter(['av_correo_prueba', 'av_correo_prueba_sin_pdf', 'av_correo_cliente', 'av_correo_cliente_sin_pdf', 'av_correo_cliente_aviso', 'av_correo_no_publicado', 'av_correo_render_no_listo', 'av_correo_sin_correo', 'av_correo_interno', 'av_correo_ya_enviado', 'av_correo_enviando', 'av_correo_correo_fallo', 'av_correo_sin_cierre', 'av_correo_sin_plan', 'av_whatsapp_sin_telefono'], fn($k) => !isset($todas[$k]));
 ok($faltan_msgs === [], '20) hay mensaje para cada motivo del correo y del WhatsApp' . ($faltan_msgs ? ' (faltan: ' . implode(', ', $faltan_msgs) . ')' : ''));
 
 // Con la presentación lista (rehecha después de publicar), el envío al cliente sale; el PDF no se baja en la prueba.
 $av = $leer();
 $av['render'] = array_merge(at_av_registro_vacio(), ['estado' => 'listo', 'at' => current_time('mysql'), 'view_url' => 'https://example.com/presentacion']);
 at_av_guardar($id, $av);
+ob_start();
+at_pt_render_plan(at_pt_plan($id), $crm);
+$h = (string) ob_get_clean();
+ok(!str_contains($h, 'Ojo: la presentación del cliente todavía no incluye este cierre') && str_contains($h, 'Enviar por mi WhatsApp'), '20) WhatsApp: con la presentación lista y posterior a la publicación no hay «Ojo…» y el botón sigue');
 $r = $correr('at_av_correo', ['cierre_id' => $cid, 'destino' => 'cliente', 'mensaje' => 'Gracias']);
 $e1 = $leer()['cierres'][0]['correo'];
 $det = implode(' | ', at_pt_tomar_detalles($id));
@@ -253,6 +266,13 @@ $r = $correr('at_av_borrador', ['cierre_id' => $cid_h]);
 $rr = $leer()['render'];
 ok($msg($r) === 'av_borrador' && $rr['estado'] === 'pendiente' && $rr['view_url'] === '' && count($r['n8n']) === 1 && (($r['n8n'][0]['cuerpo']['modo'] ?? '') === 'estado'), '19) volver a borrador con otro cierre publicado: la presentación queda «pendiente», sin enlace viejo, y se pide una vez (modo estado)');
 
+// 19b) El render público está serializado también desde el panel: con uno «pendiente» reciente, publicar o volver a borrador no llama a n8n; queda en cola.
+$pedido_prev = $leer()['render']['pedido_at'];
+$r = $correr('at_av_publicar', ['cierre_id' => $cid_h]);
+ok($msg($r) === 'av_publicado' && $r['n8n'] === [] && $leer()['render']['estado'] === 'pendiente' && $leer()['render']['repetir'] === true && $leer()['render']['pedido_at'] === $pedido_prev, '19b) publicar con una presentación ya pedida y sin terminar: no se llama a n8n, queda en cola');
+$r = $correr('at_av_borrador', ['cierre_id' => $cid_h]);
+ok($msg($r) === 'av_borrador' && $r['n8n'] === [] && $leer()['render']['estado'] === 'pendiente' && $leer()['render']['view_url'] === '' && $leer()['render']['pedido_at'] === $pedido_prev && $leer()['render']['repetir'] === true, '19b) volver a borrador con un pedido en curso: sigue «pendiente», conserva su hora y su cola y no llama a n8n');
+
 ob_start();
 at_pt_render_plan(at_pt_plan($id), $crm);
 $h = (string) ob_get_clean();
@@ -312,6 +332,57 @@ $wpdb->update($wpdb->prefix . 'automatiza_contracts', ['placeholders' => $ph0], 
 $wpdb->update($wpdb->prefix . 'crm_clientes', ['email' => 'prueba-avance-panel@example.com'], ['id' => $crm]);
 $bloque = preg_match('/<div class="at-av-envio">(.*?)<\/div>/s', $h, $mb) ? $mb[1] : '';
 ok(preg_match('/<button[^>]*disabled[^>]*>[^<]*Reenviar al cliente/u', $bloque) === 1 && str_contains($bloque, 'no tiene correo'), '22) sin correo del cliente: «Reenviar al cliente» deshabilitado, con el motivo');
+
+// --- Guardar sin borrar lo que otro proceso escribió desde que la acción leyó el avance (marcas de envío y render).
+$pub_x = array_values(array_filter($leer()['cierres'], fn($x) => ($x['estado'] ?? '') === 'publicado'))[0] ?? null;
+ok($pub_x !== null, '24) hay un cierre publicado para probar el guardado');
+$pid = (string) $pub_x['id'];
+$marca = function (string $texto) use ($id, $pid, $wpdb): void { // lo que escribiría un envío (correo reclamado/anotado, WhatsApp) y un render que vuelve
+	$x = at_av_leer(at_pt_plan($id));
+	foreach ($x['cierres'] as $k => $cx) {
+		if ($cx['id'] === $pid) {
+			$x['cierres'][$k]['correo'] = ['enviado_at' => '2026-10-15 11:00:00', 'prueba_at' => '2026-10-15 10:00:00', 'mensaje' => $texto, 'enviando' => null, 'a' => 'cliente@example.com'];
+			$x['cierres'][$k]['whatsapp'] = ['abierto_at' => '2026-10-15 11:05:00'];
+		}
+	}
+	$x['render'] = array_merge(at_av_registro_vacio(), ['estado' => 'pendiente', 'at' => '2026-10-15 11:06:00', 'pedido_at' => '2026-10-15 11:06:00', 'repetir' => true]);
+	$wpdb->query($wpdb->prepare("UPDATE {$wpdb->prefix}automatiza_planes_trabajo SET avance = %s WHERE id = %d", wp_json_encode(at_av_normalizar($x), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), $id));
+};
+$envio_x = fn(): array => (array) (at_av_cierre_de_avance($leer(), $pid) ?? []);
+// A) la marca se escribe DESPUÉS de que la acción leyó el avance y ANTES de que lo guarde («Guardar bloques», publicar…).
+$leido = $leer();
+$marca('Mensaje A');
+$leido['alcance']['fase1'] = ['Cambio de la acción A'];
+at_av_guardar_o_volver($id, $crm, $leido);
+$x = $envio_x();
+ok($leer()['alcance']['fase1'] === ['Cambio de la acción A'] && ($x['correo']['enviado_at'] ?? null) === '2026-10-15 11:00:00' && ($x['correo']['mensaje'] ?? '') === 'Mensaje A' && ($x['whatsapp']['abierto_at'] ?? null) === '2026-10-15 11:05:00', '24) lo que guarda una acción no borra las marcas de envío escritas entretanto');
+ok($leer()['render']['estado'] === 'pendiente' && $leer()['render']['repetir'] === true && $leer()['render']['pedido_at'] === '2026-10-15 11:06:00', '24) ni la cola ni la hora del render público que otro proceso dejó');
+// B) la marca llega entre la relectura y el UPDATE: el guardado condicional falla, se relee y se reintenta.
+$leido = $leer();
+$concurrente_b = true;
+$filtro_b = function ($q) use (&$concurrente_b, $marca) {
+	if ($concurrente_b && strpos($q, 'UPDATE') === 0 && strpos($q, 'SET avance') !== false) {
+		$concurrente_b = false;
+		$marca('Mensaje B');
+	}
+	return $q;
+};
+add_filter('query', $filtro_b);
+$leido['alcance']['fase1'] = ['Cambio de la acción B'];
+at_av_guardar_o_volver($id, $crm, $leido);
+remove_filter('query', $filtro_b);
+$x = $envio_x();
+ok(!$concurrente_b && $leer()['alcance']['fase1'] === ['Cambio de la acción B'] && ($x['correo']['mensaje'] ?? '') === 'Mensaje B' && ($x['correo']['enviado_at'] ?? null) === '2026-10-15 11:00:00', '24) si la marca llega entre la relectura y la escritura, se reintenta y tampoco se pierde');
+// C) $render_propio: la acción que decide el render (volver a borrador) lo deja como lo armó, pero las marcas de envío siguen intactas.
+$leido = $leer();
+$leido['render'] = array_merge(at_av_registro_vacio(), ['estado' => 'pendiente', 'at' => '2026-10-15 12:00:00']);
+at_av_guardar_o_volver($id, $crm, $leido, true);
+ok($leer()['render']['pedido_at'] === '' && $leer()['render']['repetir'] === false && ($envio_x()['correo']['mensaje'] ?? '') === 'Mensaje B', '24) una acción que decide el render lo guarda como lo armó y conserva igual las marcas de envío');
+// D) un cierre quitado no reaparece por la marca de la fila.
+$leido = $leer();
+$leido['cierres'] = array_values(array_filter($leido['cierres'], fn($cx) => $cx['id'] !== $pid));
+at_av_guardar_o_volver($id, $crm, $leido, true);
+ok(at_av_cierre_de_avance($leer(), $pid) === null, '24) quitar un cierre lo quita aunque la fila tuviera sus marcas');
 
 ptc_estado($id, 'listo');
 ob_start();

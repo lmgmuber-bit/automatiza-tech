@@ -56,6 +56,7 @@ $ultimo = end($correos);
 ok($r['ok'] && count($correos) === 1 && str_starts_with($ultimo['subject'], '[Prueba] Terminamos: Diseño terminado') && $ultimo['to'] === at_cc_correo_avisos() && $ultimo['attachments'] === [], '3) la prueba va a Luis, sin PDF si no hay presentación');
 ok(str_contains($ultimo['message'], 'Hola equipo') && str_contains($ultimo['message'], 'ver-estado.php?id=' . $cod), '3) la prueba lleva el mensaje y el enlace al estado');
 ok($envio()['correo']['prueba_at'] !== null && $envio()['correo']['enviado_at'] === null, '3) la prueba anota prueba_at y no enviado_at');
+ok($envio()['correo']['mensaje'] === 'Hola equipo', '3) la prueba guarda el mensaje de Luis para traerlo al enviar al cliente');
 
 $av = $leer();
 $av['render'] = array_merge(at_av_registro_vacio(), ['estado' => 'listo', 'at' => '2026-10-14 10:06:00', 'view_url' => 'https://n8n-propuesta-renderer.kchiba.easypanel.host/p/' . $cod . '-estado/index.html', 'pdf_url' => 'https://n8n-propuesta-renderer.kchiba.easypanel.host/p/' . $cod . '-estado/presentation.pdf']);
@@ -110,6 +111,23 @@ $r = at_av_enviar_cierre($id, 'cprueba', 'cliente', '', true);
 ok($r['ok'] && $r['sin_pdf'] !== '' && end($correos)['attachments'] === [], '8) PDF de más de 15 MB: va solo el enlace y se avisa');
 $pdf_resp = '%PDF-1.4 prueba';
 
+// Copia oculta: el correo al cliente lleva el Bcc de los ajustes; la prueba (a nosotros) no. Sin escribir la opción en la base.
+$copia = fn() => 'copia-prueba@example.com';
+add_filter('pre_option_at_cc_correo_copia', $copia);
+$r_cli = at_av_enviar_cierre($id, 'cprueba', 'cliente', 'Mensaje enviado', true);
+$h_cli = (array) end($correos)['headers'];
+$r_pru = at_av_enviar_cierre($id, 'cprueba', 'prueba', 'Mensaje de prueba', false);
+$h_pru = (array) end($correos)['headers'];
+remove_filter('pre_option_at_cc_correo_copia', $copia);
+ok($r_cli['ok'] && in_array('Bcc: copia-prueba@example.com', $h_cli, true), '9b) el correo al cliente lleva la copia oculta de los ajustes');
+ok($r_pru['ok'] && !preg_grep('/^Bcc:/i', $h_pru), '9b) la prueba no lleva copia oculta');
+ok($envio()['correo']['mensaje'] === 'Mensaje enviado', '9b) una prueba posterior al envío al cliente no pisa el mensaje que de verdad se mandó');
+$sin_copia = fn() => '';
+add_filter('pre_option_at_cc_correo_copia', $sin_copia);
+$r_sin = at_av_enviar_cierre($id, 'cprueba', 'cliente', 'Sin copia', true);
+remove_filter('pre_option_at_cc_correo_copia', $sin_copia);
+ok($r_sin['ok'] && !preg_grep('/^Bcc:/i', (array) end($correos)['headers']), '9b) sin copia configurada no hay Bcc');
+
 // Fix round 1 · D8 también en el texto: el mensaje de Luis y los textos del cierre llegan al correo del cliente.
 $guardado = $leer();
 $n = count($correos);
@@ -157,6 +175,21 @@ add_filter('wp_mail', function ($a) use (&$boom) { if ($boom) { throw new Runtim
 $r = at_av_enviar_cierre($id, 'cprueba', 'cliente', '', true);
 $boom = false;
 ok(!$r['ok'] && $r['motivo'] === 'correo_fallo' && str_starts_with($r['detalle'], 'error interno al armar o enviar el correo: RuntimeException: boom') && $envio()['correo']['enviando'] === null, '12) una excepción suelta el reclamo y queda dicha en el detalle');
+
+// Una excepción al recalcular lo que usa el correo, ya reclamado el envío, también suelta el reclamo y se dice (se tira solo mientras el reclamo existe).
+$tira = true;
+$n_antes = count($correos);
+$filtro_tira = function ($u) use (&$tira, $leer) {
+	if ($tira && at_av_envio_de_cierre((array) at_av_cierre_de_avance($leer(), 'cprueba'))['correo']['enviando'] !== null) {
+		throw new LogicException('boom2');
+	}
+	return $u;
+};
+add_filter('home_url', $filtro_tira, 101);
+$r = at_av_enviar_cierre($id, 'cprueba', 'cliente', '', true);
+$tira = false;
+remove_filter('home_url', $filtro_tira, 101);
+ok(!$r['ok'] && $r['motivo'] === 'correo_fallo' && str_contains($r['detalle'], 'LogicException: boom2') && $envio()['correo']['enviando'] === null && count($correos) === $n_antes, '12b) una excepción tras reclamar, al recalcular el correo, suelta el reclamo, no envía y dice qué pasó');
 
 // Sin correo del cliente.
 global $wpdb;

@@ -72,7 +72,11 @@ function at_av_preparar_envio(int $plan_id, string $cierre_id): array|string {
 	return $f ? at_av_preparar_envio_de($f, at_av_leer($f), $cierre_id) : 'sin_plan';
 }
 
-/** La presentación «Estado del proyecto» está lista y se rehízo después de publicar el cierre (Review Focus 2). */
+/**
+ * La presentación «Estado del proyecto» está lista y se rehízo después de publicar el cierre (Review Focus 2). Como el
+ * render público se serializa (at_av_pedir_render: nunca hay dos en vuelo, y «listo» solo lo deja la devolución del
+ * último pedido), un «listo» posterior a la publicación ya trae todo lo publicado hasta el último pedido.
+ */
 function at_av_render_listo_para(array $avance, array $cierre): bool {
 	$render = (array) ($avance['render'] ?? []);
 	return ($render['estado'] ?? '') === 'listo' && ($render['at'] ?? '') !== '' && (string) $render['at'] >= (string) ($cierre['publicado_at'] ?? '');
@@ -188,7 +192,12 @@ function at_av_enviar_cierre(int $plan_id, string $cierre_id, string $destino, s
 			return $no('enviando'); // otro proceso se adelantó: false = «reintenta», nunca «enviado»
 		}
 		// Reclamado: todo lo que usa el correo sale de este avance, no del anterior. Si ya no se puede, se suelta el reclamo.
-		$x = at_av_contexto_envio($f2, $av2, $cierre_id, false, $mensaje);
+		try {
+			$x = at_av_contexto_envio($f2, $av2, $cierre_id, false, $mensaje);
+		} catch (Throwable $e) {
+			at_av_anotar_envio($plan_id, $cierre_id, ['enviando' => null]);
+			return $no('correo_fallo', 'error interno al revisar el cierre antes de enviar: ' . get_class($e) . ': ' . $e->getMessage());
+		}
 		if ($x['motivo'] !== '') {
 			at_av_anotar_envio($plan_id, $cierre_id, ['enviando' => null]);
 			return $no($x['motivo'], $x['detalle']);
@@ -233,7 +242,14 @@ function at_av_enviar_cierre(int $plan_id, string $cierre_id, string $destino, s
 
 	if ($prueba) {
 		if ($enviado) {
-			at_av_anotar_envio($plan_id, $cierre_id, ['prueba_at' => current_time('mysql')]);
+			// Guarda el mensaje de la prueba para que el panel lo traiga al enviar al cliente; si el cierre ya salió al
+			// cliente, ahí queda el mensaje que se mandó de verdad y no se pisa.
+			$f_ahora = at_pt_plan($plan_id);
+			$va = ['prueba_at' => current_time('mysql')];
+			if ($f_ahora && at_av_envio_de_cierre((array) at_av_cierre_de_avance(at_av_leer($f_ahora), $cierre_id))['correo']['enviado_at'] === null) {
+				$va['mensaje'] = $mensaje;
+			}
+			at_av_anotar_envio($plan_id, $cierre_id, $va);
 		}
 		return ['ok' => $enviado, 'motivo' => $enviado ? '' : 'correo_fallo', 'detalle' => $detalle, 'sin_pdf' => $sin_pdf];
 	}

@@ -62,6 +62,7 @@ ok(str_contains($html, 'Antes · <strong>Velocidad:</strong> 56 de 100') && str_
 $rs = $r; $rs['cifras'] = [['titulo' => 'Velocidad', 'valor' => '98', 'unidad' => 'de 100', 'fuente' => 'Lighthouse', 'fecha' => '', 'parte' => 'despues']];
 $h2 = at_av_correo_cierre_html(['resumen' => $rs]);
 ok(str_contains($h2, '(Lighthouse)') && !str_contains($h2, 'Lighthouse,') && !str_contains($h2, '(, '), 'correo: cifra sin fecha, solo la fuente entre paréntesis');
+ok(str_contains($h2, '<p>Hola,</p>') && !str_contains($h2, 'cliente</strong>') && !str_contains($h2, 'Hola <strong>'), 'correo: sin nombre el saludo es «Hola,», sin «cliente» en negrita');
 $rs['cifras'][0]['fuente'] = ''; $rs['cifras'][0]['fecha'] = '2026-10-14';
 ok(str_contains(at_av_correo_cierre_html(['resumen' => $rs]), '(14 de octubre de 2026)'), 'correo: cifra sin fuente, solo la fecha');
 $rs['cifras'][0]['fecha'] = '';

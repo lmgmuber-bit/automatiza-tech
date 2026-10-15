@@ -156,7 +156,7 @@ function at_av_correo_cierre_html(array $v): string {
 		. ($logo !== '' ? '<img src="' . $h($logo) . '" alt="AutomatizaTech" style="max-height:64px"><br>' : '')
 		. '<h1 style="margin:12px 0 0;font-size:22px">Terminamos: ' . $h($r['titulo'] ?? '') . '</h1></div>'
 		. '<div style="padding:26px;line-height:1.6">'
-		. '<p>Hola <strong>' . $h($nombre !== '' ? $nombre : 'cliente') . '</strong>,</p>'
+		. '<p>' . ($nombre !== '' ? 'Hola <strong>' . $h($nombre) . '</strong>,' : 'Hola,') . '</p>'
 		. '<p>Terminamos <strong>' . $h($r['titulo'] ?? '') . '</strong>' . (trim((string) ($v['proyecto'] ?? '')) !== '' ? ' de ' . $h($v['proyecto']) : '') . '. ' . $h($r['frase'] ?? '') . '</p>'
 		. ($mensaje !== '' ? '<div style="background:#f0f6fc;border-left:3px solid #1e40af;padding:10px 14px;margin:14px 0">' . nl2br($h($mensaje), false) . '</div>' : '')
 		. $lista('Cómo estaba', (array) ($r['antes'] ?? []))

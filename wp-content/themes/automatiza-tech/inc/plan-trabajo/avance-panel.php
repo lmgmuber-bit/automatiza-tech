@@ -38,6 +38,7 @@ function at_av_mensajes(): array {
 		'av_error_guardar'        => ['error', 'No se pudo guardar el avance en la base. Inténtalo de nuevo.'],
 		'av_sin_cierre'           => ['error', 'Esa acción no se pudo hacer con ese cierre (detalle abajo, si hay).'],
 		'av_correo_prueba'          => ['ok', 'Te enviamos la prueba del correo de cierre a tu correo. Al cliente no le llegó nada.'],
+		'av_correo_prueba_sin_pdf'  => ['aviso', 'Te enviamos la prueba, pero sin el PDF (detalle abajo): la presentación todavía no está lista.'],
 		'av_correo_cliente'         => ['ok', 'Correo de cierre enviado al cliente. Quedó en el historial del CRM.'],
 		'av_correo_cliente_sin_pdf' => ['aviso', 'Correo de cierre enviado al cliente, pero sin el PDF (detalle abajo): lleva el enlace al estado.'],
 		'av_correo_cliente_aviso'   => ['aviso', 'Correo de cierre enviado al cliente, pero no quedó anotado (detalle abajo). No lo reenvíes sin revisar.'],
@@ -80,10 +81,52 @@ function at_av_accion_inicio(): array {
 	return [$fila, $crm, at_av_leer($fila)];
 }
 
-function at_av_guardar_o_volver(int $id, int $crm, array $avance): void {
-	if (!at_av_guardar($id, $avance)) {
-		at_pt_volver($crm, $id, 'av_error_guardar');
+/**
+ * Guarda el avance que armó una acción sin borrar lo que otro proceso escribió desde que la acción lo leyó: se relee
+ * la fila, se pasan al avance a guardar las marcas de envío (correo y WhatsApp) de cada cierre que está en los dos y
+ * los dos registros de render (salvo $render_propio: la acción los decidió ella), y se guarda solo si la fila sigue
+ * siendo la releída (at_av_guardar_si_igual), con hasta 3 intentos. Si no se logra, vuelve a la ficha con el error.
+ */
+function at_av_guardar_o_volver(int $id, int $crm, array $avance, bool $render_propio = false): void {
+	for ($i = 0; $i < 3; $i++) {
+		$f = at_pt_plan($id);
+		if (!$f) {
+			break;
+		}
+		$antes = (string) $f->avance; // tal cual salió de la base: es la condición del guardado
+		$fresco = at_av_leer($f);
+		$nuevo = at_av_con_lo_ajeno($avance, $fresco, $render_propio);
+		if (at_av_normalizar($nuevo) === $fresco || at_av_guardar_si_igual($id, $antes, $nuevo)) {
+			return; // nada que escribir (ya está así) o guardado
+		}
 	}
+	at_pt_volver($crm, $id, 'av_error_guardar');
+}
+
+/** El avance $avance con lo que escriben otros procesos tomado del $fresco: envíos de cada cierre (por id) y, salvo $render_propio, los renders. */
+function at_av_con_lo_ajeno(array $avance, array $fresco, bool $render_propio): array {
+	$vigentes = [];
+	foreach ($fresco['cierres'] as $c) {
+		$vigentes[(string) ($c['id'] ?? '')] = $c;
+	}
+	foreach ($avance['cierres'] as $k => $c) {
+		$v = $vigentes[(string) ($c['id'] ?? '')] ?? null;
+		if ($v === null) {
+			continue;
+		}
+		foreach (['correo', 'whatsapp'] as $campo) {
+			if (array_key_exists($campo, $v)) {
+				$avance['cierres'][$k][$campo] = $v[$campo];
+			} else {
+				unset($avance['cierres'][$k][$campo]);
+			}
+		}
+	}
+	if (!$render_propio) {
+		$avance['render'] = $fresco['render'];
+		$avance['render_previa'] = $fresco['render_previa'];
+	}
+	return $avance;
 }
 
 function at_av_cierre_post(): string {
@@ -286,8 +329,11 @@ function at_av_accion_borrador(): void {
 		at_pt_guardar_detalles($id, [$r]);
 		at_pt_volver($crm, $id, 'av_sin_cierre');
 	}
-	$r['render'] = at_av_publicados($r) ? array_merge(at_av_registro_vacio(), ['estado' => 'pendiente', 'at' => current_time('mysql')]) : at_av_registro_vacio();
-	at_av_guardar_o_volver($id, $crm, $r);
+	// Si quedan publicados, la presentación queda «pendiente» y sin enlace viejo. Un pedido que de verdad está en curso
+	// conserva su hora y su cola, para que el pedido de abajo se serialice con él (at_av_pedir_render).
+	$en_curso = ($avance['render']['estado'] ?? '') === 'pendiente' ? ['pedido_at' => $avance['render']['pedido_at'], 'repetir' => $avance['render']['repetir']] : [];
+	$r['render'] = at_av_publicados($r) ? array_merge(at_av_registro_vacio(), ['estado' => 'pendiente', 'at' => current_time('mysql')], $en_curso) : at_av_registro_vacio();
+	at_av_guardar_o_volver($id, $crm, $r, true);
 	at_av_refrescar($id);
 	at_pt_volver($crm, $id, 'av_borrador');
 }
@@ -383,11 +429,17 @@ function at_av_accion_correo(): void {
 	if ($r['detalle'] !== '') {
 		$lineas[] = $r['detalle']; // salió, pero no quedó anotado: que nadie lo reenvíe sin mirar
 	}
+	if ($destino !== 'cliente' && $r['sin_pdf'] !== '') {
+		$lineas[] = 'Motivo: ' . $r['sin_pdf'] . '.'; // la prueba salió sin el PDF: que quien la revisa sepa por qué
+	}
 	if ($lineas) {
 		at_pt_guardar_detalles($id, $lineas);
 	}
 	if ($r['detalle'] !== '') {
 		at_pt_volver($crm, $id, 'av_correo_cliente_aviso');
+	}
+	if ($destino !== 'cliente' && $r['sin_pdf'] !== '') {
+		at_pt_volver($crm, $id, 'av_correo_prueba_sin_pdf');
 	}
 	if ($destino === 'cliente' && $r['sin_pdf'] !== '') {
 		at_pt_volver($crm, $id, 'av_correo_cliente_sin_pdf');
@@ -455,7 +507,7 @@ function at_av_render_envio(object $fila, int $crm_id, array $av, string $cid): 
 		: 'Se enviará el correo de cierre a ' . $para . '. ¿Enviar?';
 	$h .= '<form method="post" action="' . esc_url(admin_url('admin-post.php')) . '" class="at-av-correo">'
 		. at_av_ocultos('at_av_correo', $id, $crm_id, ['cierre_id' => $cid])
-		. '<textarea name="mensaje" rows="3" maxlength="1500" placeholder="Mensaje opcional para el cliente (va arriba del resumen)"></textarea>'
+		. '<textarea name="mensaje" rows="3" maxlength="1500" placeholder="Mensaje opcional para el cliente (va arriba del resumen)">' . esc_textarea($co['mensaje']) . '</textarea>'
 		. ($enviado ? '<input type="hidden" name="reenviar" value="1">' : '')
 		. '<p><button type="submit" name="destino" value="prueba" class="button">📧 Enviarme una prueba</button> ';
 	if ($para === '') {
@@ -471,7 +523,9 @@ function at_av_render_envio(object $fila, int $crm_id, array $av, string $cid): 
 	if (at_av_url_whatsapp_cierre($fila, $cid) !== '') {
 		$h .= '<form method="post" action="' . esc_url(admin_url('admin-post.php')) . '" target="_blank" class="at-av-whatsapp">'
 			. at_av_ocultos('at_av_whatsapp', $id, $crm_id, ['cierre_id' => $cid])
-			. '<p><button type="submit" class="button">💬 Enviar por mi WhatsApp</button></p>'
+			. '<p><button type="submit" class="button">💬 Enviar por mi WhatsApp</button>'
+			. (at_av_render_listo_para($av, $c) ? '' : ' <span class="description">Ojo: la presentación del cliente todavía no incluye este cierre; espera el «Lista» antes de mandarlo.</span>')
+			. '</p>'
 			. '<textarea readonly rows="3">' . esc_textarea(at_av_texto_whatsapp_cierre((string) ($d['client_name'] ?? ''), $r, $url_estado)) . '</textarea></form>';
 	} else {
 		$h .= '<p class="description">La ficha no tiene teléfono para WhatsApp.</p>';

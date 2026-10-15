@@ -66,7 +66,7 @@ function at_av_rest_render_estado(object $f, bool $previa) {
 	if (!at_av_columna_lista()) {
 		return new WP_Error('at_av_sin_columna', 'Falta la migración del avance (columna avance).', ['status' => 409]);
 	}
-	$avance = at_av_leer($f);
+	$avance = at_av_con_medidas((int) $f->id, at_av_leer($f));
 	$datos = at_pt_datos_render($f) + ['previa_token' => at_av_token_previa((string) $f->codigo), 'entregables' => at_av_urls_entregables($f, $avance)];
 	return new WP_REST_Response([
 		'ok'             => true,

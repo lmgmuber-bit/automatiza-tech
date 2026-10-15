@@ -199,4 +199,30 @@ ok(count($llamadas) === $antes_c + 1 && $r4['estado'] === 'pendiente' && $r4['re
 $antes_c = count($llamadas);
 pedir('POST', "/plan/{$id}/vista", ['modo' => 'estado', 'previa' => true, 'ok' => true, 'view_url' => $prev]);
 ok(count($llamadas) === $antes_c && $reg('render_previa')['estado'] === 'listo', '10) la devolución de la vista previa no manda pedidos');
+// 11) Las capturas llevan su ancho y alto, leídos del archivo, para que la presentación dibuje entera la de celular.
+$dir_ev = at_av_dir($id)['dir'];
+$n_cel = str_repeat('q', 20) . '.png';
+$n_pc = str_repeat('w', 20) . '.png';
+imagepng(imagecreatetruecolor(390, 844), $dir_ev . $n_cel);
+imagepng(imagecreatetruecolor(1440, 900), $dir_ev . $n_pc);
+$a = at_av_leer(at_pt_plan($id));
+$ip = array_search('publicado', array_column($a['cierres'], 'estado'), true);
+foreach ([['qq', $n_cel, 'Celular vertical'], ['ww', $n_pc, 'Computador'], ['zz', str_repeat('z', 20) . '.png', 'Sin archivo']] as [$k, $arch, $t]) {
+	$a['evidencias'][$k] = ['tipo' => 'captura', 'titulo' => $t, 'url' => "https://example.com/wp-content/uploads/at-estado/{$id}/{$arch}", 'archivo' => $arch,
+		'poster' => '', 'valor' => '', 'unidad' => '', 'fuente' => '', 'fecha' => ''];
+	$a['cierres'][$ip]['despues']['evidencias'][] = $k;
+}
+ok($ip !== false && at_av_guardar($id, $a), '11) cierre publicado con tres capturas');
+$evs = [];
+foreach (pedir('GET', "/plan/{$id}/render", null, ['modo' => 'estado'])->get_data()['render']['cierres'] as $ci) {
+	foreach ($ci['despues']['evidencias'] as $e) {
+		$evs[$e['titulo']] = $e;
+	}
+}
+ok(($evs['Celular vertical']['ancho'] ?? 0) === 390 && ($evs['Celular vertical']['alto'] ?? 0) === 844, '11) la captura de celular trae 390×844');
+ok(($evs['Computador']['ancho'] ?? 0) === 1440 && ($evs['Computador']['alto'] ?? 0) === 900, '11) la de computador trae 1440×900');
+ok(isset($evs['Sin archivo']) && $evs['Sin archivo']['ancho'] === 0 && $evs['Sin archivo']['alto'] === 0, '11) sin archivo en disco: 0 y 0, sin error');
+ok(!array_key_exists('ancho', at_av_leer(at_pt_plan($id))['evidencias']['qq']), '11) las medidas no se guardan en el avance');
+@unlink($dir_ev . $n_cel);
+@unlink($dir_ev . $n_pc);
 fin();

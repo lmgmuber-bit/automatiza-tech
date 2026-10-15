@@ -232,6 +232,16 @@ function renderActividades(durante) {
   return `<ul class="cierre-acts">${vis.map(fila).join('')}${mas}</ul>`;
 }
 
+/** Captura de celular (más alta que ancha, medida por WordPress): proporción «ancho / alto» para dibujarla entera dentro
+ *  de un marco de teléfono; '' si es de computador o no trae medidas. Una captura de página completa (muy larga) se
+ *  dibuja con la forma de una pantalla de celular (9 / 19,5) y se recorta desde arriba. */
+function formaCelular(ancho, alto) {
+  const w = Number(ancho);
+  const h = Number(alto);
+  if (!(w > 0 && h > 0) || h < w * 1.2) return '';
+  return w / h < 9 / 19.5 ? '9 / 19.5' : `${Math.round(w)} / ${Math.round(h)}`;
+}
+
 /** Una evidencia como tarjeta; '' si no se puede mostrar (enlace o archivo que no es https). */
 function renderEvidencia(e, cuando) {
   const t = escapeHtml(texto(e.titulo));
@@ -245,7 +255,10 @@ function renderEvidencia(e, cuando) {
   const url = urlSegura(e.url);
   if (!url) return '';
   if (e.tipo === 'captura') {
-    return `<figure class="ev ev-captura">${marca}<a href="${escapeHtml(url)}" target="_blank" rel="noopener"><img src="${escapeHtml(url)}" alt="${t}" loading="lazy" /></a><figcaption>${t}</figcaption>${pie}</figure>`;
+    const forma = formaCelular(e.ancho, e.alto);
+    const clase = forma ? 'ev ev-captura ev-celular' : 'ev ev-captura';
+    const estilo = forma ? ` style="aspect-ratio: ${forma}"` : '';
+    return `<figure class="${clase}">${marca}<a href="${escapeHtml(url)}" target="_blank" rel="noopener"><img src="${escapeHtml(url)}" alt="${t}" loading="lazy"${estilo} /></a><figcaption>${t}</figcaption>${pie}</figure>`;
   }
   if (e.tipo === 'video') {
     const poster = urlSegura(e.poster);
@@ -485,6 +498,10 @@ const ESTILO_ESTADO = `
   .ev-captura img, .ev-video video, .ev-video-pdf img { display: block; width: 100%; height: 150px; object-fit: cover; border-radius: 10px; background: #0a1420; flex: none; }
   /* Capturas de un sitio: lo importante está arriba (menú, título y botones); recortar al centro dejaba solo un botón. */
   .ev-captura img { object-position: top center; }
+  /* Captura de celular: entera, con marco de teléfono, a todo el alto que deja la tarjeta (antes salía una tira). */
+  .ev-celular > a { flex: 1 1 0; min-height: 0; display: flex; justify-content: center; }
+  .ev-celular img { height: 100%; width: auto; max-width: 100%; object-fit: cover; box-sizing: border-box;
+    border: 5px solid #1f2b38; border-radius: 18px; box-shadow: 0 0 0 1px rgba(255,255,255,.18), 0 8px 18px rgba(0,0,0,.45); }
   .ev-video-pdf { display: none; position: relative; color: #fff; text-decoration: none; flex: none; }
   .ev-video-pdf i { display: flex; align-items: center; justify-content: center; width: 100%; height: 150px; border-radius: 10px; background: #0a1420; font-size: 48px; font-style: normal; color: #00d9c0; }
   .ev-video-pdf span { position: absolute; left: 10px; bottom: 10px; padding: 4px 10px; border-radius: 999px; background: #00d9c0; color: #06222a; font-size: 13px; font-weight: 800; }

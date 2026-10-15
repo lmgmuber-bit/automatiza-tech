@@ -1053,7 +1053,7 @@ function at_av_bloques_de_post(mixed $post, array $plan, array &$errores): array
 /* ---------- Cuerpo para el renderer (Task 5) ---------- */
 
 /** Evidencias de un cierre para el renderer. No salen las de captura o video sin archivo, ni un enlace que no pase
- *  at_av_url_publica (D8). */
+ *  at_av_url_publica (D8). 'ancho'/'alto': medidas de la captura (at_av_con_medidas); 0 si no se conocen. */
 function at_av_evidencias_render(array $avance, array $ids): array {
 	$out = [];
 	foreach ($ids as $id) {
@@ -1066,7 +1066,8 @@ function at_av_evidencias_render(array $avance, array $ids): array {
 			continue;
 		}
 		$out[] = ['tipo' => (string) $e['tipo'], 'titulo' => (string) ($e['titulo'] ?? ''), 'url' => $url, 'poster' => at_av_url_publica($e['poster'] ?? ''),
-			'valor' => (string) ($e['valor'] ?? ''), 'unidad' => (string) ($e['unidad'] ?? ''), 'fuente' => (string) ($e['fuente'] ?? ''), 'fecha' => (string) ($e['fecha'] ?? '')];
+			'valor' => (string) ($e['valor'] ?? ''), 'unidad' => (string) ($e['unidad'] ?? ''), 'fuente' => (string) ($e['fuente'] ?? ''), 'fecha' => (string) ($e['fecha'] ?? ''),
+			'ancho' => max(0, (int) ($e['ancho'] ?? 0)), 'alto' => max(0, (int) ($e['alto'] ?? 0))];
 	}
 	return $out;
 }

@@ -235,3 +235,23 @@ function at_av_borrar_archivos(int $plan_id, array $nombres): void {
 		}
 	}
 }
+
+/** Ancho y alto de cada captura con archivo propio, leídos del archivo (getimagesize lee solo la cabecera). La
+ *  presentación los usa para dibujar entera, con marco de teléfono, una captura de celular (más alta que ancha). No se
+ *  guardan: sirven también para las capturas subidas antes de este cambio. */
+function at_av_con_medidas(int $plan_id, array $avance): array {
+	$dir = '';
+	foreach ((array) ($avance['evidencias'] ?? []) as $id => $e) {
+		$n = (string) ($e['archivo'] ?? '');
+		if (($e['tipo'] ?? '') !== 'captura' || !preg_match('/^[a-z0-9]{20}\.(jpg|png)$/', $n)) {
+			continue;
+		}
+		$dir = $dir !== '' ? $dir : at_av_dir($plan_id)['dir'];
+		$m = is_file($dir . $n) ? @getimagesize($dir . $n) : false;
+		if ($m && (int) $m[0] > 0 && (int) $m[1] > 0) {
+			$avance['evidencias'][$id]['ancho'] = (int) $m[0];
+			$avance['evidencias'][$id]['alto'] = (int) $m[1];
+		}
+	}
+	return $avance;
+}

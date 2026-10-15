@@ -570,9 +570,18 @@ function at_av_archivos_de(array $evidencias): array {
 function at_av_aplicar_import(array $avance, array $v, string $nuevo_id, string $ahora): array {
 	$id = $nuevo_id;
 	$viejas = [];
+	$correo = ['enviado_at' => null, 'prueba_at' => null, 'mensaje' => ''];
+	$whatsapp = ['abierto_at' => null];
 	foreach ($avance['cierres'] as $i => $x) {
 		if (at_av_clave((string) ($x['titulo'] ?? '')) === at_av_clave($v['cierre']['titulo'])) {
 			$id = (string) $x['id'];
+			// Lo ya enviado al cliente sobrevive a reimportar el borrador: el estado de envío no viene en el archivo.
+			if (is_array($x['correo'] ?? null)) {
+				$correo = $x['correo'];
+			}
+			if (is_array($x['whatsapp'] ?? null)) {
+				$whatsapp = $x['whatsapp'];
+			}
 			foreach (array_merge((array) ($x['antes']['evidencias'] ?? []), (array) ($x['despues']['evidencias'] ?? [])) as $eid) {
 				if (isset($avance['evidencias'][$eid])) {
 					$viejas[$eid] = $avance['evidencias'][$eid];
@@ -612,8 +621,8 @@ function at_av_aplicar_import(array $avance, array $v, string $nuevo_id, string 
 	$avance['cierres'][] = [
 		'id' => $id, 'titulo' => $c['titulo'], 'bloques' => $c['bloques'], 'fecha_real' => $c['fecha_real'], 'estado' => 'borrador',
 		'publicado_at' => '', 'entregable_id' => $c['entregable_id'], 'antes' => $parte($c['antes']), 'durante' => $c['durante'],
-		'despues' => $parte($c['despues']), 'correo' => ['enviado_at' => null, 'prueba_at' => null, 'mensaje' => ''],
-		'whatsapp' => ['abierto_at' => null], 'importado_at' => $ahora,
+		'despues' => $parte($c['despues']), 'correo' => $correo,
+		'whatsapp' => $whatsapp, 'importado_at' => $ahora,
 	];
 	$avance['cierres'] = array_values($avance['cierres']);
 	foreach ($v['bloques'] as $n => $b) {

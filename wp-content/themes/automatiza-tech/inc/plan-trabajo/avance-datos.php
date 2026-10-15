@@ -55,6 +55,24 @@ function at_av_guardar(int $plan_id, array $avance): bool {
 	return $wpdb->update(at_pt_tabla(), ['avance' => $json], ['id' => $plan_id]) !== false;
 }
 
+/** Guarda el avance solo si la columna sigue valiendo $json_antes (lo leído antes): para reclamar un envío sin que dos
+ *  pedidos casi juntos manden dos correos. false si cambió, si no hay migración o si el JSON es muy grande. */
+function at_av_guardar_si_igual(int $plan_id, string $json_antes, array $avance): bool {
+	if (!at_av_columna_lista()) {
+		return false;
+	}
+	$json = wp_json_encode(at_av_normalizar($avance), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+	if (!is_string($json) || strlen($json) > 1572864) {
+		return false;
+	}
+	global $wpdb;
+	$t = at_pt_tabla();
+	$n = $json_antes === ''
+		? $wpdb->query($wpdb->prepare("UPDATE {$t} SET avance = %s WHERE id = %d AND (avance IS NULL OR avance = '')", $json, $plan_id))
+		: $wpdb->query($wpdb->prepare("UPDATE {$t} SET avance = %s WHERE id = %d AND avance = %s", $json, $plan_id, $json_antes));
+	return (int) $n === 1;
+}
+
 /** Cambia solo el registro de un render ('render' o 'render_previa'), sobre el avance recién leído. */
 function at_av_guardar_render(int $plan_id, string $clave, array $campos): bool {
 	if (!in_array($clave, ['render', 'render_previa'], true)) {

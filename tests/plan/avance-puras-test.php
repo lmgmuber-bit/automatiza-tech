@@ -280,4 +280,11 @@ $pf2['bloques'] = ['Diseño', 'Desarrollo'];
 ok(!array_key_exists('actividades', at_av_cierre_de_formulario($pf2, COD, [], $exp)['datos']['cierre']['durante']), 'editar con otros bloques: las actividades se vuelven a tomar del plan');
 $nueva = at_av_cierre_de_formulario($pf, COD, [1 => ['archivo' => 'otra.png']], $exp);
 ok($nueva['datos']['evidencias'][1]['archivo'] === 'evidencia-2.png' && $nueva['nombres'] === [1 => ['archivo' => 'evidencia-2.png']], 'editar con una imagen nueva: reemplaza la anterior');
+// Etapa 3: reimportar un borrador que ya se envió no olvida sus envíos; un cierre nuevo parte sin envíos.
+$base_env = at_av_aplicar_import(at_av_vacio(), at_av_validar_import(archivo(), COD, $plan, at_av_vacio()), 'cenv001', '2026-10-14 10:00:00')['avance'];
+ok(array_key_exists('enviado_at', $base_env['cierres'][0]['correo']) && $base_env['cierres'][0]['correo']['enviado_at'] === null && array_key_exists('abierto_at', $base_env['cierres'][0]['whatsapp']) && $base_env['cierres'][0]['whatsapp']['abierto_at'] === null, 'un cierre nuevo no trae envíos');
+$base_env['cierres'][0]['correo'] = ['enviado_at' => '2026-10-14 11:00:00', 'prueba_at' => null, 'mensaje' => 'Hola', 'enviando' => null, 'a' => 'cliente@example.com'];
+$base_env['cierres'][0]['whatsapp'] = ['abierto_at' => '2026-10-14 12:00:00'];
+$re = at_av_aplicar_import($base_env, at_av_validar_import(archivo(), COD, $plan, $base_env), 'cotro01', '2026-10-15 10:00:00')['avance'];
+ok(($re['cierres'][0]['correo']['enviado_at'] ?? '') === '2026-10-14 11:00:00' && ($re['cierres'][0]['correo']['a'] ?? '') === 'cliente@example.com' && ($re['cierres'][0]['whatsapp']['abierto_at'] ?? '') === '2026-10-14 12:00:00', 'reimportar el mismo cierre conserva cuándo se envió el correo, a quién y el WhatsApp');
 fin();

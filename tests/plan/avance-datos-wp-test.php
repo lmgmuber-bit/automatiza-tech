@@ -3,7 +3,7 @@
 // Estado del proyecto, Etapa 2 — Task 2: columna avance (migración idempotente), leer y guardar sin tocar el plan firmado.
 require __DIR__ . '/wp-bootstrap.php';
 require __DIR__ . '/fixtures-panel.php';
-exigir('at_av_migrar_esquema', 'at_av_columna_lista', 'at_av_leer', 'at_av_guardar', 'at_av_guardar_render');
+exigir('at_av_migrar_esquema', 'at_av_columna_lista', 'at_av_leer', 'at_av_guardar', 'at_av_guardar_render', 'at_av_guardar_si_igual');
 global $wpdb;
 $t = at_pt_tabla();
 $hay_columna = fn() => $wpdb->get_var($wpdb->prepare("SHOW COLUMNS FROM {$t} LIKE %s", 'avance')) === 'avance';
@@ -40,4 +40,11 @@ ok(!at_av_guardar($id, $enorme) && at_av_leer(at_pt_plan($id))['cambios_plan'] =
 update_option('at_plan_schema', '1');
 ok(!at_av_columna_lista() && !at_av_guardar($id, $a), 'sin la migración marcada no se guarda');
 update_option('at_plan_schema', '2');
+// Etapa 3: guardado condicional (reclamar un envío sin que dos pedidos casi juntos manden dos correos).
+$f_si = at_pt_plan($id);
+$antes_si = (string) $f_si->avance;
+$a_si = at_av_leer($f_si);
+$a_si['necesitamos'] = [['texto' => 'Uno', 'estado' => 'abierto', 'fecha' => '2026-10-15']];
+ok(at_av_guardar_si_igual($id, $antes_si, $a_si) === true, 'guarda si nadie cambió el avance');
+ok(at_av_guardar_si_igual($id, $antes_si, at_av_vacio()) === false && count(at_av_leer(at_pt_plan($id))['necesitamos']) === 1, 'no pisa si el avance cambió entretanto');
 fin();

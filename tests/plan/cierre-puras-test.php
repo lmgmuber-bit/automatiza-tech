@@ -41,6 +41,7 @@ ok(at_av_frase_plan_real('', '2026-10-10') === 'Quedó listo el 10 de octubre de
 $r = at_av_resumen_cierre($plan, $av, 'c111111');
 ok($r['antes'] === ['Tardaba 17 s', 'Sucursales cerradas', 'Fotos viejas'], 'antes: hasta 3 puntos');
 ok($r['durante'] === ['Construcción'] && $r['despues'] === ['Carga en 2,1 s'], 'durante: las actividades; después: sus puntos');
+ok($r['cifras'][0]['parte'] === 'antes' && $r['cifras'][1]['parte'] === 'despues', 'cada cifra dice si es del antes o del después');
 ok(count($r['cifras']) === 2 && $r['cifras'][1]['valor'] === '98' && $r['cifras'][1]['fuente'] === 'Lighthouse', 'cifras del antes y del después con fuente y fecha');
 ok($r['linea_despues'] === 'Carga en 2,1 s', 'una línea del después: su primer punto');
 ok(str_contains($r['frase'], '21 de octubre') && str_contains($r['frase'], '11 días antes'), 'la frase usa el fin planificado del bloque del cierre');
@@ -57,6 +58,14 @@ $html = at_av_correo_cierre_html(['nombre' => 'Ana', 'proyecto' => '[PRUEBA] Pan
 ok(str_contains($html, 'Terminamos: Sitio publicado') && str_contains($html, 'Hola <strong>Ana</strong>'), 'correo: título y saludo');
 ok(str_contains($html, 'Ver el estado del proyecto') && str_contains($html, 'ver-estado.php?id=AbCdEf123456'), 'correo: botón al estado');
 ok(str_contains($html, '98 de 100') && str_contains($html, 'Lighthouse') && str_contains($html, '14 de octubre de 2026'), 'correo: cifra con fuente y fecha');
+ok(str_contains($html, 'Antes · <strong>Velocidad:</strong> 56 de 100') && str_contains($html, 'Después · <strong>Velocidad:</strong> 98 de 100') && strpos($html, 'Antes · <strong>') < strpos($html, 'Después · <strong>'), 'correo: cada cifra dice Antes o Después, en ese orden');
+$rs = $r; $rs['cifras'] = [['titulo' => 'Velocidad', 'valor' => '98', 'unidad' => 'de 100', 'fuente' => 'Lighthouse', 'fecha' => '', 'parte' => 'despues']];
+$h2 = at_av_correo_cierre_html(['resumen' => $rs]);
+ok(str_contains($h2, '(Lighthouse)') && !str_contains($h2, 'Lighthouse,') && !str_contains($h2, '(, '), 'correo: cifra sin fecha, solo la fuente entre paréntesis');
+$rs['cifras'][0]['fuente'] = ''; $rs['cifras'][0]['fecha'] = '2026-10-14';
+ok(str_contains(at_av_correo_cierre_html(['resumen' => $rs]), '(14 de octubre de 2026)'), 'correo: cifra sin fuente, solo la fecha');
+$rs['cifras'][0]['fecha'] = '';
+ok(!str_contains(at_av_correo_cierre_html(['resumen' => $rs]), '<span style="color:#64748b">'), 'correo: cifra sin fuente ni fecha, sin paréntesis');
 ok(str_contains($html, 'Gracias por tu paciencia.<br>') && str_contains($html, '&lt;b&gt;hola&lt;/b&gt;') && !str_contains($html, '<b>hola</b>'), 'correo: el mensaje de Luis va escapado y con saltos de línea');
 ok(str_contains($html, 'Lo que sigue') && str_contains($html, 'Puesta en marcha') && str_contains($html, 'Lo que necesitamos de ti') && str_contains($html, 'Logo en alta'), 'correo: lo que sigue y lo que necesitamos');
 ok(str_contains($html, 'adjunto en PDF'), 'correo: avisa el PDF adjunto');
@@ -67,5 +76,9 @@ $wa = at_av_texto_whatsapp_cierre('Ana', $r, 'https://automatizatech.cl/ver-esta
 ok($wa === "Hola Ana, terminamos Sitio publicado 🎉 Carga en 2,1 s. Te dejamos el detalle y el video aquí: https://automatizatech.cl/ver-estado.php?id=AbCdEf123456", 'WhatsApp: con video');
 $rv = $r; $rv['videos'] = [];
 ok(at_av_texto_whatsapp_cierre('', $rv, 'https://automatizatech.cl/e') === 'Hola, terminamos Sitio publicado 🎉 Carga en 2,1 s. Te dejamos el detalle aquí: https://automatizatech.cl/e', 'WhatsApp: sin video y sin nombre');
-ok(at_av_envios_vacio() === ['correo_at' => '', 'correo_enviando' => '', 'correo_a' => '', 'prueba_at' => '', 'whatsapp_at' => ''], 'registro de envíos vacío');
+$ev = at_av_envio_de_cierre(['id' => 'x']);
+ok($ev === ['correo' => ['enviado_at' => null, 'prueba_at' => null, 'mensaje' => '', 'enviando' => null, 'a' => ''], 'whatsapp' => ['abierto_at' => null]], 'envío: un cierre sin esas claves da los valores por defecto');
+$ev = at_av_envio_de_cierre(['correo' => ['enviado_at' => '2026-10-14 11:00:00', 'a' => 'x@example.com']]);
+ok($ev['correo']['enviado_at'] === '2026-10-14 11:00:00' && $ev['correo']['a'] === 'x@example.com' && $ev['correo']['prueba_at'] === null && $ev['correo']['mensaje'] === '' && $ev['whatsapp']['abierto_at'] === null, 'envío: conserva lo que trae el cierre y completa el resto');
+ok(at_av_envio_de_cierre(['correo' => ['enviado_at' => '', 'prueba_at' => 5], 'whatsapp' => ['abierto_at' => '']])['correo']['enviado_at'] === null && at_av_envio_de_cierre(['correo' => ['prueba_at' => 5]])['correo']['prueba_at'] === null && at_av_envio_de_cierre(['whatsapp' => ['abierto_at' => '']])['whatsapp']['abierto_at'] === null, 'envío: vacío o inválido pasa a null');
 fin();

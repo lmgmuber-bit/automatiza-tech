@@ -4,9 +4,22 @@
  * puras: no tocan la base ni envían. El envío vive en cierre-correo.php.
  */
 
-/** Registro de envíos de un cierre (vive dentro del cierre, en la columna avance). */
-function at_av_envios_vacio(): array {
-	return ['correo_at' => '', 'correo_enviando' => '', 'correo_a' => '', 'prueba_at' => '', 'whatsapp_at' => ''];
+/**
+ * Estado de envío de un cierre, con la forma del spec §3: lo que el cierre ya trae (correo, whatsapp) sobre los valores
+ * por defecto. Lo vacío o inválido queda en null (fechas) o '' (mensaje, destinatario).
+ */
+function at_av_envio_de_cierre(array $cierre): array {
+	$fecha = fn($v): ?string => (is_string($v) && trim($v) !== '') ? $v : null;
+	$texto = fn($v): string => is_string($v) ? $v : '';
+	$co = is_array($cierre['correo'] ?? null) ? $cierre['correo'] : [];
+	$wa = is_array($cierre['whatsapp'] ?? null) ? $cierre['whatsapp'] : [];
+	return [
+		'correo' => [
+			'enviado_at' => $fecha($co['enviado_at'] ?? null), 'prueba_at' => $fecha($co['prueba_at'] ?? null),
+			'mensaje' => $texto($co['mensaje'] ?? ''), 'enviando' => $fecha($co['enviando'] ?? null), 'a' => $texto($co['a'] ?? ''),
+		],
+		'whatsapp' => ['abierto_at' => $fecha($wa['abierto_at'] ?? null)],
+	];
 }
 
 function at_av_cierre_de_avance(array $avance, string $id): ?array {
@@ -69,7 +82,8 @@ function at_av_resumen_cierre(array $plan, array $avance, string $id): array {
 	$cifras = [];
 	$videos = [];
 	$urls = [];
-	foreach (array_unique(array_merge((array) ($c['antes']['evidencias'] ?? []), (array) ($c['despues']['evidencias'] ?? []))) as $eid) {
+	$ev_despues = (array) ($c['despues']['evidencias'] ?? []);
+	foreach (array_unique(array_merge((array) ($c['antes']['evidencias'] ?? []), $ev_despues)) as $eid) {
 		$e = $avance['evidencias'][$eid] ?? null;
 		if (!is_array($e)) {
 			continue;
@@ -80,7 +94,8 @@ function at_av_resumen_cierre(array $plan, array $avance, string $id): array {
 			}
 		}
 		if (($e['tipo'] ?? '') === 'cifra') {
-			$cifras[] = ['titulo' => (string) $e['titulo'], 'valor' => (string) $e['valor'], 'unidad' => (string) $e['unidad'], 'fuente' => (string) $e['fuente'], 'fecha' => (string) $e['fecha']];
+			$cifras[] = ['titulo' => (string) $e['titulo'], 'valor' => (string) $e['valor'], 'unidad' => (string) $e['unidad'], 'fuente' => (string) $e['fuente'], 'fecha' => (string) $e['fecha'],
+				'parte' => in_array($eid, $ev_despues, true) ? 'despues' : 'antes'];
 		} elseif (($e['tipo'] ?? '') === 'video' && (string) ($e['url'] ?? '') !== '') {
 			$videos[] = ['titulo' => (string) $e['titulo'], 'url' => (string) $e['url']];
 		}
@@ -129,8 +144,9 @@ function at_av_correo_cierre_html(array $v): string {
 	};
 	$cifras = '';
 	foreach ((array) ($r['cifras'] ?? []) as $x) {
-		$cifras .= '<li><strong>' . $h($x['titulo']) . ':</strong> ' . $h(trim($x['valor'] . ' ' . $x['unidad']))
-			. ' <span style="color:#64748b">(' . $h($x['fuente']) . ', ' . $h(at_pt_fecha_larga((string) $x['fecha'])) . ')</span></li>';
+		$origen = array_values(array_filter([(string) $x['fuente'], at_pt_fecha_larga((string) $x['fecha'])], 'strlen'));
+		$cifras .= '<li>' . ($x['parte'] === 'antes' ? 'Antes' : 'Después') . ' · <strong>' . $h($x['titulo']) . ':</strong> ' . $h(trim($x['valor'] . ' ' . $x['unidad']))
+			. ($origen ? ' <span style="color:#64748b">(' . $h(implode(', ', $origen)) . ')</span>' : '') . '</li>';
 	}
 	$mensaje = trim((string) ($v['mensaje'] ?? ''));
 	$sigue = array_map(fn($s) => $s['nombre'] . ' — ' . $s['cuando'], (array) ($r['sigue'] ?? []));

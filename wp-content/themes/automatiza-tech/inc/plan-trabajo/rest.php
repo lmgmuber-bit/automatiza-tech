@@ -5,9 +5,10 @@
  * inc/rest-proposals.php; sin clave 401, clave mala 403).
  *   GET  /plan/{id}/contexto        lo que recibe la IA
  *   POST /plan/{id}/borrador        {plan, origen: borrador|cambios} → valida, tabla, fechas, guarda, vista previa
- *   GET  /plan/{id}/render&modo=    cuerpo para el renderer + propuesta_uid (fotos a reutilizar), crm_cliente_id y estado
+ *   GET  /plan/{id}/render&modo=    draft|final: cuerpo para el renderer + propuesta_uid, crm_cliente_id y estado;
+ *                                   estado[&previa=1]: «Estado del proyecto» (avance-render.php), solo planes enviados
  *                                   (la base ya trae ?rest_route=: el modo va con &modo=)
- *   POST /plan/{id}/vista           {modo, ok, view_url, pdf_url, faltan, nota} → enlaces y estado
+ *   POST /plan/{id}/vista           {modo, ok, view_url, pdf_url, faltan, nota}; con modo estado guarda avance.render
  *   POST /plan/{id}/error           {nota} → estado «error»
  */
 if (!defined('ABSPATH')) {
@@ -173,22 +174,17 @@ function at_pt_rest_render(WP_REST_Request $r) {
 		return $f;
 	}
 	$modo = (string) ($r->get_param('modo') ?? 'draft');
-	if (!in_array($modo, ['draft', 'final'], true)) {
-		return new WP_Error('at_pt_modo', 'modo debe ser draft o final.', ['status' => 400]);
+	if (!in_array($modo, ['draft', 'final', 'estado'], true)) {
+		return new WP_Error('at_pt_modo', 'modo debe ser draft, final o estado.', ['status' => 400]);
+	}
+	if ($modo === 'estado') {
+		return at_av_rest_render_estado($f, (string) $r->get_param('previa') === '1');
 	}
 	$plan = at_pt_payload($f);
 	if (empty($plan['fases'])) {
 		return new WP_Error('at_pt_sin_contenido', 'El plan todavía no tiene contenido.', ['status' => 409]);
 	}
-	$uid = '';
-	if ((int) $f->propuesta_id > 0) {
-		global $wpdb;
-		$uid = (string) $wpdb->get_var($wpdb->prepare("SELECT unique_link_id FROM {$wpdb->prefix}automatiza_propuestas WHERE id = %d", (int) $f->propuesta_id));
-	}
-	// El renderer arma la ruta /p/<uid>/ con esto: solo códigos que él mismo acepta.
-	if (!preg_match('/^[A-Za-z0-9_-]{6,64}$/', $uid)) {
-		$uid = '';
-	}
+	$uid = at_pt_uid_propuesta($f);
 	$render = at_pt_armar_render($plan, at_pt_datos_render($f), $modo === 'final');
 	// Propuesta del flujo anterior: su portada y su cierre viven en WordPress, no en el almacén del renderer. Van en
 	// images para que esas láminas del plan no queden sin foto; si el renderer tiene las suyas, n8n las pone encima.
@@ -222,8 +218,11 @@ function at_pt_rest_vista(WP_REST_Request $r) {
 	}
 	$p = at_pt_rest_cuerpo($r);
 	$modo = (string) ($p['modo'] ?? '');
-	if (!in_array($modo, ['draft', 'final'], true)) {
-		return new WP_Error('at_pt_modo', 'modo debe ser draft o final.', ['status' => 400]);
+	if (!in_array($modo, ['draft', 'final', 'estado'], true)) {
+		return new WP_Error('at_pt_modo', 'modo debe ser draft, final o estado.', ['status' => 400]);
+	}
+	if ($modo === 'estado') {
+		return at_av_rest_vista_estado($f, $p);
 	}
 	$ok = !empty($p['ok']) && $p['ok'] !== 'false';
 	$view = at_pt_db_url($p['view_url'] ?? '');

@@ -47,7 +47,7 @@ function at_pt_estados_etiqueta(): array {
 
 /** Avisos que vuelven en pt_msg: clave => [tipo, texto]. */
 function at_pt_mensajes_panel(): array {
-	return [
+	return array_merge([
 		'creado'             => ['ok', 'Plan creado. La IA está armando el borrador; te llegará un correo cuando esté la vista previa.'],
 		'ya_existe'          => ['aviso', 'Ese contrato ya tiene plan de trabajo: no se creó otro.'],
 		'no_se_pudo'         => ['error', 'No se pudo crear el plan: el contrato debe ser de servicios, estar firmado y ser de este cliente.'],
@@ -75,7 +75,7 @@ function at_pt_mensajes_panel(): array {
 		'sin_telefono'       => ['error', 'El cliente no tiene teléfono en su ficha ni en el contrato.'],
 		'transicion'         => ['error', 'Esa acción no corresponde al estado actual del plan.'],
 		'sin_plan'           => ['error', 'Ese plan de trabajo no existe.'],
-	];
+	], function_exists('at_av_mensajes') ? at_av_mensajes() : []);
 }
 
 /** Detalle de la última acción (errores de validación o avisos), una sola vez, por usuario. */
@@ -467,6 +467,7 @@ function at_pt_render_plan(object $fila, int $crm_id): void {
 			<p class="description">Abre «Reuniones de seguimiento» con los datos del cliente; el evento, el correo y el WhatsApp salen solo si dejas sus casillas marcadas.</p>
 		</div>
 		<?php endif; ?>
+		<?php if ($estado === 'enviado' && function_exists('at_av_render_seccion')) { at_av_render_seccion($fila, $crm_id); } ?>
 	</div>
 	<?php
 }

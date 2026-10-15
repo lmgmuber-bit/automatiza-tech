@@ -12,7 +12,9 @@ delete_transient('at_pt_migrar_intento');
 at_pt_migrar_esquema();
 $esperadas = ['id', 'contrato_id', 'crm_cliente_id', 'tech_id', 'propuesta_id', 'codigo', 'estado', 'fecha_inicio', 'payload', 'comentarios', 'nota', 'view_url', 'pdf_url', 'created_at', 'updated_at', 'enviado_at'];
 ok(get_option('at_plan_schema') === '1', '1) la migración deja at_plan_schema = 1');
-ok($wpdb->get_col('SHOW COLUMNS FROM ' . at_pt_tabla()) === $esperadas, '1) la tabla tiene las 16 columnas del contrato de interfaces, en orden');
+// La columna avance (Estado del proyecto, Etapa 2) puede o no estar según la instalación (nueva o migrada): no cuenta aquí.
+$columnas = function () use ($wpdb): array { return array_values(array_diff($wpdb->get_col('SHOW COLUMNS FROM ' . at_pt_tabla()), ['avance'])); };
+ok($columnas() === $esperadas, '1) la tabla tiene las 16 columnas del contrato de interfaces, en orden');
 $indices = [];
 foreach ((array) $wpdb->get_results('SHOW INDEX FROM ' . at_pt_tabla()) as $i) {
 	$indices[$i->Key_name] = (int) $i->Non_unique === 0 ? 'unico' : 'normal';
@@ -22,7 +24,7 @@ $col_estado = $wpdb->get_row('SHOW COLUMNS FROM ' . at_pt_tabla() . " LIKE 'esta
 ok($col_estado && $col_estado->Default === 'generando', '1) un plan nace en «generando»');
 delete_option('at_plan_schema');
 at_pt_migrar_esquema();
-ok(get_option('at_plan_schema') === '1' && $wpdb->get_col('SHOW COLUMNS FROM ' . at_pt_tabla()) === $esperadas, '1) correr la migración otra vez no cambia la tabla');
+ok(get_option('at_plan_schema') === '1' && $columnas() === $esperadas, '1) correr la migración otra vez no cambia la tabla');
 ok(has_action('admin_init', 'at_pt_migrar_esquema') !== false, '1) la migración cuelga de admin_init');
 
 // 2) Crear el plan de un contrato de servicios firmado.

@@ -14,11 +14,11 @@ function at_pt_tabla(): string {
 }
 
 /**
- * Crea la tabla con dbDelta. Idempotente (opción at_plan_schema = '1'). Si falla (tabla bloqueada,
+ * Crea la tabla con dbDelta. Idempotente (opción at_plan_schema '1' o '2'). Si falla (tabla bloqueada,
  * sin privilegio en el hosting), espera 5 minutos antes de reintentar, igual que at_cc_migrar_esquema().
  */
 function at_pt_migrar_esquema(): void {
-	if (get_option('at_plan_schema') === '1' || get_transient('at_pt_migrar_intento')) {
+	if (in_array(get_option('at_plan_schema'), ['1', '2'], true) || get_transient('at_pt_migrar_intento')) {
 		return;
 	}
 	global $wpdb;
@@ -39,6 +39,7 @@ function at_pt_migrar_esquema(): void {
   nota TEXT NULL,
   view_url VARCHAR(500) NULL,
   pdf_url VARCHAR(500) NULL,
+  avance LONGTEXT NULL,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   enviado_at DATETIME NULL,
@@ -410,6 +411,17 @@ function at_pt_datos_render(object $fila): array {
 		'garantia_meses' => $x['garantia_meses'],
 		'sitio'          => home_url(),
 	];
+}
+
+/** Código (unique_link_id) de la propuesta del plan, para reutilizar sus fotos. '' sin propuesta o si el renderer no
+ *  lo aceptaría como carpeta (/p/<uid>/). Lo usan el render del plan y el de «Estado del proyecto». */
+function at_pt_uid_propuesta(object $f): string {
+	if ((int) ($f->propuesta_id ?? 0) <= 0) {
+		return '';
+	}
+	global $wpdb;
+	$uid = (string) $wpdb->get_var($wpdb->prepare("SELECT unique_link_id FROM {$wpdb->prefix}automatiza_propuestas WHERE id = %d", (int) $f->propuesta_id));
+	return preg_match('/^[A-Za-z0-9_-]{6,64}$/', $uid) ? $uid : '';
 }
 
 /**

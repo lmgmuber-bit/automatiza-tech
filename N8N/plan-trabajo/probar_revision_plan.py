@@ -241,7 +241,7 @@ ok(g.get('credentials', {}).get('openAiApi', {}).get('id') == 'g52IEXpRfN5r7jKw'
    '0: «Buscar texto en fotos» usa la credencial de OpenAI de las propuestas (g52IEXpRfN5r7jKw), 120 s y nunca corta el flujo')
 ok(all('credentials' not in nd[x] and nd[x].get('onError') == 'continueRegularOutput' for x in ('Fotos previas del plan', 'Leer fotos del plan')),
    '0: los manifest del plan se leen sin credenciales y nunca cortan el flujo')
-ok(len(WF['nodes']) == 25 and MAX_R == 3, '0: 25 nodos y MAX_RENDERS = 3 (tope total, retoma incluida)', len(WF['nodes']))
+ok(len(WF['nodes']) == 34 and MAX_R == 3, '0: 34 nodos (25 del plan + 9 de la rama «estado») y MAX_RENDERS = 3 (tope total, retoma incluida)', len(WF['nodes']))
 w_prep = nd['Preparar render']['parameters']['jsCode']
 ok(JS_SHA256 in w_prep and json.dumps(RETOMA) in w_prep and json.dumps(INSTRUCCION_TEXTO) in nd['Preparar revisión de texto']['parameters']['jsCode'],
    '0: los nodos publicados llevan el sha256, la RETOMA y la instrucción de build_3_final.py (las de las propuestas)')

@@ -28,6 +28,16 @@ foreach (['AT_N8N_PLAN_BORRADOR' => 'plan-v1-borrador', 'AT_N8N_PLAN_CAMBIOS' =>
 		define($at_pt_c, 'http://127.0.0.1:9/' . $at_pt_p);
 	}
 }
+// Archivos «subidos» de la prueba: vienen en la clave __files del POST (formato de $_FILES). Solo en pruebas:
+// AT_AV_PRUEBAS deja que el módulo del avance acepte archivos que no llegan por una subida HTTP.
+$archivos = [];
+if (isset($post['__files']) && is_array($post['__files'])) {
+	$archivos = $post['__files'];
+	unset($post['__files']);
+}
+if (!defined('AT_AV_PRUEBAS')) {
+	define('AT_AV_PRUEBAS', true);
+}
 define('WP_USE_THEMES', false);
 define('WP_ADMIN', true); // admin-post.php real corre en contexto de admin.
 require $at_pt_wp_load;
@@ -57,5 +67,6 @@ $nonce = wp_create_nonce($accion_nonce);
 $_POST = wp_slash($post + ['action' => $accion, '_wpnonce' => $nonce]);
 $_REQUEST = $_POST;
 $_SERVER['REQUEST_METHOD'] = 'POST';
+$_FILES = $archivos;
 do_action('admin_post_' . $accion);
 fwrite(STDOUT, "SIN_EXIT\n");

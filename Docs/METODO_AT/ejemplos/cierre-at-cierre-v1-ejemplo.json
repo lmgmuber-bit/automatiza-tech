@@ -1,0 +1,39 @@
+{
+  "formato": "at-cierre-v1",
+  "plan": "AbCdEf123456",
+  "cierre": {
+    "titulo": "Diseño del sitio",
+    "bloques": ["Diseño"],
+    "fecha_real": "2026-10-09",
+    "entregable_id": 0,
+    "antes": {
+      "texto": "El sitio usaba una plantilla genérica, sin las fotos del equipo actual.",
+      "puntos": ["Plantilla genérica", "Fotos de personal que ya no trabaja ahí"],
+      "evidencias": ["velocidad-antes"]
+    },
+    "durante": {
+      "texto": "Diseñamos la portada y las páginas internas, y las revisamos contigo.",
+      "actividades": [
+        { "bloque": "Diseño", "nombre": "Maqueta de la portada", "real": "2026-10-06", "nota": "" }
+      ]
+    },
+    "despues": {
+      "texto": "Quedó aprobada la maqueta del sitio nuevo.",
+      "puntos": ["Maqueta aprobada el 9 de octubre"],
+      "evidencias": ["velocidad-despues", "portada", "recorrido", "maqueta"]
+    }
+  },
+  "evidencias": [
+    { "ref": "velocidad-antes", "tipo": "cifra", "titulo": "Velocidad en celular", "valor": "56", "unidad": "puntos de 100", "fuente": "PageSpeed Insights", "fecha": "2026-10-06" },
+    { "ref": "velocidad-despues", "tipo": "cifra", "titulo": "Velocidad en celular", "valor": "92", "unidad": "puntos de 100", "fuente": "medición local", "fecha": "2026-10-09" },
+    { "ref": "portada", "tipo": "captura", "titulo": "Portada nueva", "archivo": "portada-nueva.png" },
+    { "ref": "recorrido", "tipo": "video", "titulo": "Recorrido de la maqueta", "archivo": "recorrido.mp4", "poster": "recorrido-poster.jpg" },
+    { "ref": "maqueta", "tipo": "enlace", "titulo": "La maqueta en línea", "url": "https://example.com/maqueta" }
+  ],
+  "bloques": { "Desarrollo": { "estado": "en_curso", "inicio_real": "2026-10-12", "fin_real": "" } },
+  "cambios_plan": [
+    { "fecha": "2026-10-08", "titulo": "La publicidad pasa al servicio mensual", "detalle": "Lo acordamos por correo.", "bloques": [] }
+  ],
+  "necesitamos": [ { "texto": "Logo en alta resolución", "estado": "abierto", "fecha": "2026-10-08" } ],
+  "alcance": { "fase1": ["Sitio web publicado"], "mensual": ["Publicidad y visibilidad"] }
+}

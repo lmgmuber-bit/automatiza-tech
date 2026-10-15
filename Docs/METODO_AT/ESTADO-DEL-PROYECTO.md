@@ -43,7 +43,10 @@ Cuando un cierre ya está **publicado**, su fila del panel trae, a la vista (no 
 - **Bloqueo por enlaces internos.** Si cualquier enlace o texto del correo (el mensaje opcional incluido) apunta al servidor interno, **no se envía nada** y el panel dice dónde está el problema.
 - **«💬 Enviar por mi WhatsApp».** Abre nuestro WhatsApp con el texto ya escrito (también se muestra aparte para copiarlo) y deja anotado en el cierre que se abrió. Lo mandamos nosotros desde el teléfono; el sistema no escribe al cliente por su cuenta.
 - **«⬇️ Descargar el video».** Aparece solo para los videos guardados en `automatizatech.cl`; los que viven en otro sitio se ven por su enlace.
-- **Historial.** Cada publicación y cada aviso (prueba, envío al cliente, WhatsApp) queda en el historial del CRM con 🏁 y «Equipo AutomatizaTech», y esos cierres se ven con nombre propio en la línea de tiempo.
+- **Historial.** Cada publicación, cada correo al cliente y cada WhatsApp quedan en el historial del CRM con 🏁 y «Equipo AutomatizaTech», y esos cierres se ven con nombre propio en la línea de tiempo. **La prueba no se escribe en el historial del CRM**: solo deja su fecha (`prueba_at`) en el propio cierre, que el panel muestra en «Prueba: enviada el…».
+- **El mensaje de la prueba pasa al envío.** Al mandar una prueba con un mensaje, ese mensaje queda guardado en el cierre y el recuadro del correo lo trae ya escrito, para enviarlo al cliente sin reescribirlo. Si el cierre ya salió al cliente, ahí queda el mensaje que de verdad se mandó y una prueba posterior no lo pisa. Una prueba que sale sin PDF (la presentación todavía no está lista) lo avisa con su propio mensaje y el motivo en el detalle.
+- **Aviso en el WhatsApp.** Si la presentación todavía no incluye el cierre, junto al botón aparece «Ojo: … espera el «Lista» antes de mandarlo». No bloquea el botón: el texto de WhatsApp solo lleva el enlace.
+- **La presentación pública se rehace de a una.** Si ya hay un pedido «pendiente» de hace menos de 10 minutos, un pedido nuevo (publicar otro cierre, guardar bloques, «Rehacer…») no llama a n8n: queda en cola y sale solo cuando llega la devolución del que está en curso. Solo la devolución del último pedido deja la presentación «Lista»; así un «Lista» posterior a publicar un cierre siempre trae ese cierre. Pasados 10 minutos sin respuesta el pedido se da por perdido y el siguiente sale normal. La vista previa no usa cola.
 
 Dónde queda lo enviado: en cada cierre, `correo` (`enviado_at`, `prueba_at`, `mensaje`, `enviando`, `a`) y `whatsapp` (`abierto_at`). Reimportar un borrador con el mismo título **conserva** esas marcas, y la presentación que vuelve del renderer nunca las borra.
 
@@ -184,11 +187,13 @@ Verificación desde afuera tras el despliegue: `ver-estado.php?id=<código>` con
 
 | Orden | Local | Destino | Clase |
 |---|---|---|---|
-| 1 | `inc/plan-trabajo/cierre-puras.php` y `cierre-correo.php` (nuevos) | mismas rutas en `wp-content/themes/automatiza-tech/` | OBLIGATORIO, **antes** que `cargar.php` (el panel y `cargar.php` los necesitan) |
-| 2 | `inc/plan-trabajo/avance-datos.php`, `avance-puras.php`, `envio.php`, `avance-panel.php` y `assets/css/plan-trabajo.css` | mismas rutas | OBLIGATORIO (respaldar y cotejar md5 contra `main`) |
-| 3 | `inc/plan-trabajo/cargar.php` | misma ruta | OBLIGATORIO, **al final** del tema |
+| 1 | `inc/plan-trabajo/cierre-puras.php` y `cierre-correo.php` (nuevos) | mismas rutas en `wp-content/themes/automatiza-tech/` | OBLIGATORIO, **primero** (`cargar.php` los exige: sin ellos el tema se cae) |
+| 2 | `inc/plan-trabajo/cargar.php` | misma ruta | OBLIGATORIO, **justo después** del paso 1 |
+| 3 | `inc/plan-trabajo/avance-datos.php`, `avance-puras.php`, `envio.php`, `avance-render.php`, `avance-panel.php` y `assets/css/plan-trabajo.css` | mismas rutas | OBLIGATORIO (respaldar y cotejar md5 contra `main`). Dentro del paso: `avance-datos.php` y `avance-puras.php` antes que `avance-render.php` y `avance-panel.php` (estos llaman funciones de aquellos) |
 | 4 | `wp-content/mu-plugins/at-timeline-origen.php` | misma ruta (`wp-content/mu-plugins/`) | OBLIGATORIO (sin él la línea de tiempo no muestra los 🏁) |
 | — | `tests/`, `Docs/`, `.superpowers/` | — | NO subir |
+
+**Por qué este orden:** el panel nuevo (paso 3) llama funciones que solo existen cuando `cargar.php` ya carga los archivos nuevos (paso 2), y `cargar.php` falla si los archivos del paso 1 todavía no están; subirlos al revés deja una ventana con errores fatales en la ficha del CRM.
 
 Verificación desde afuera tras subir: abrir el panel de un plan con un cierre publicado y comprobar el bloque «📣 Avisar al cliente»; «📧 Enviarme una prueba» y revisar que el correo llegue con «[Prueba]»; recién entonces, con nuestro OK, el envío al cliente.
 

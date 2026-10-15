@@ -50,6 +50,7 @@ ok($c['borrador'] === false && $c['entregable_url'] === 'https://automatizatech.
 ok(array_column($c['despues']['evidencias'], 'titulo') === ['Portada', 'Sitio'] && $c['antes']['evidencias'][0]['valor'] === '98', 'evidencias sin archivo o con enlace interno no salen (D8); la cifra sí');
 ok(!str_contains($json, 'easypanel'), 'ningún enlace al servidor interno en el cuerpo');
 ok(array_column($r['bloques'], 'estado') === ['listo', 'listo', 'por_venir'] && $r['bloques'][0]['fin_real'] === '2026-10-10', 'bloques con su estado (el borrador no marca nada)');
+ok($r['bloques'][0]['inicio_real'] === '2026-10-08' && $r['bloques'][1]['inicio_real'] === '2026-10-10' && $r['bloques'][2]['inicio_real'] === '', 'sin inicio real cargado, un bloque cerrado toma la primera fecha real de sus actividades (o el día del cierre)');
 ok($r['necesitamos'] === ['Logo'], 'necesitamos: solo lo abierto, como texto');
 ok($r['alcance'] === ['fase1' => ['Maqueta aprobada', 'Sitio en pruebas', 'Sitio publicado'], 'mensual' => ['Mantención mensual del sitio']], 'alcance vacío: entregables del plan y servicios mensuales del plan');
 $av2 = $av;

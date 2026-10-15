@@ -299,6 +299,14 @@ const manifest = (nodo) => {
 const propias = fotosPropiasDelPlan(manifest('Fotos del plan (estado)'), RENDERER_BASE, codigo);
 const deLaPropuesta = reutilizarFotosPlan({ images: {} }, manifest('Fotos de la propuesta (estado)'), RENDERER_BASE, uid);
 const images = Object.assign({}, deLaPropuesta.render.images, propias.images);
+// Portada y cierre de un plan con propuesta: si la propuesta guardó sus fotos fuera del renderer (en WordPress), no hay
+// manifest que leer; se usan las copias que dejó la presentación del plan en /p/<código>/img/. Si no existieran, la
+// lámina queda sin foto, como antes.
+if (uid && codigo && /^https?:\/\/[A-Za-z0-9.-]+(:\d+)?$/.test(RENDERER_BASE)) {
+  for (const l of ['cover', 'cierre']) {
+    if (!images[l]) images[l] = RENDERER_BASE + '/p/' + codigo + '/img/' + l + '.jpg';
+  }
+}
 const render = Object.assign({}, b.render, { image_briefs: [], images });
 return [{ json: { id, previa, saltar_render: false, motivo: '', render } }];"""
 

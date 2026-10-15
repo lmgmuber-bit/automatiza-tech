@@ -132,6 +132,8 @@ function renderCronogramaReal(d, index, foto) {
     const e = estadoDe(b);
     const desde = esFecha(b.inicio_real) ? b.inicio_real : e === 'listo' ? b.plan_desde : '';
     const hasta = esFecha(b.fin_real) ? b.fin_real : e === 'en_curso' ? hoy : '';
+    // Terminado antes de lo planificado y sin inicio real: un punto en el día real, no una barra al revés que no se dibuja.
+    if (desde && hasta && hasta < desde && e === 'listo' && !esFecha(b.inicio_real)) return { desde: hasta, hasta };
     return desde && hasta && hasta >= desde ? { desde, hasta } : null;
   });
   const fechas = [c.inicio, c.fin, hoy, ...bloques.flatMap((b) => [b.plan_desde, b.plan_hasta]), ...reales.filter(Boolean).flatMap((r) => [r.desde, r.hasta])]
@@ -481,6 +483,8 @@ const ESTILO_ESTADO = `
   .ev p, .ev figcaption, .ev-enlace b { font-size: 16px; font-weight: 600; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; flex: none; }
   .ev-fuente { margin-top: auto; color: #9fb3c8; font-size: 12px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
   .ev-captura img, .ev-video video, .ev-video-pdf img { display: block; width: 100%; height: 150px; object-fit: cover; border-radius: 10px; background: #0a1420; flex: none; }
+  /* Capturas de un sitio: lo importante está arriba (menú, título y botones); recortar al centro dejaba solo un botón. */
+  .ev-captura img { object-position: top center; }
   .ev-video-pdf { display: none; position: relative; color: #fff; text-decoration: none; flex: none; }
   .ev-video-pdf i { display: flex; align-items: center; justify-content: center; width: 100%; height: 150px; border-radius: 10px; background: #0a1420; font-size: 48px; font-style: normal; color: #00d9c0; }
   .ev-video-pdf span { position: absolute; left: 10px; bottom: 10px; padding: 4px 10px; border-radius: 999px; background: #00d9c0; color: #06222a; font-size: 13px; font-weight: 800; }

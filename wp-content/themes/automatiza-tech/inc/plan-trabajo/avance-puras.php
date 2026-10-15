@@ -715,6 +715,18 @@ function at_av_estado_bloques(array $plan, array $avance): array {
 				if ($fila['fin_real'] === '') {
 					$fila['fin_real'] = (string) $c['fecha_real'];
 				}
+				// Sin inicio real cargado, el gráfico no tendría desde dónde dibujar la barra real: se toma la primera fecha
+				// real de las actividades del cierre en ese bloque (o el día del cierre), nunca después del fin.
+				if ($fila['inicio_real'] === '') {
+					$reales = [];
+					foreach ((array) ($c['durante']['actividades'] ?? []) as $a) {
+						if (($a['bloque'] ?? '') === $b['nombre'] && at_av_fecha_valida($a['real'] ?? '')) {
+							$reales[] = (string) $a['real'];
+						}
+					}
+					$inicio = $reales ? min($reales) : (string) $c['fecha_real'];
+					$fila['inicio_real'] = ($fila['fin_real'] !== '' && $inicio > $fila['fin_real']) ? $fila['fin_real'] : $inicio;
+				}
 			}
 		}
 		$out[] = $fila;

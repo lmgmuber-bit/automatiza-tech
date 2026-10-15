@@ -104,3 +104,17 @@ test('una evidencia de tipo enlace es una tarjeta que abre en otra pestaña', ()
   assert.ok(html.includes('<a class="ev ev-enlace" href="https://example.com/" target="_blank" rel="noopener">'));
   assert.ok(html.includes('El sitio publicado') && html.includes('example.com/'));
 });
+
+test('un bloque terminado antes de lo planificado y sin inicio real se dibuja como un punto en su día real', () => {
+  const e = estadoCorto();
+  const b = e.bloques[0];
+  b.estado = 'listo';
+  b.inicio_real = '';
+  b.fin_real = '2026-10-01'; // antes de que empezara lo planificado
+  const html = renderEstadoHtml(e);
+  assert.ok(html.includes('title="Real 1 oct"'), 'falta el punto real del bloque terminado antes de tiempo');
+});
+
+test('las capturas se recortan desde arriba (menú, título y botones del sitio)', () => {
+  assert.ok(renderEstadoHtml(estadoCorto()).includes('.ev-captura img { object-position: top center; }'));
+});

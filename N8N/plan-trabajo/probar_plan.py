@@ -1642,6 +1642,11 @@ def prueba_estado():
                                                           'Fotos de la propuesta (estado)': [{'statusCode': 404, 'body': 'Not Found'}]})
     rc = llamadas(t, 'Render estado')
     ok(rc and rc[0]['body']['images'] == {} and llamadas(t, 'Guardar estado')[0]['body']['ok'] is True, 'E5: sin propuesta ni manifest el estado se dibuja sin fotos')
+    # E5b. Con propuesta cuyas fotos viven fuera del renderer (manifest 404): portada y cierre salen de la copia del plan.
+    t = sim({'id': 9, 'codigo': COD, 'modo': 'estado'}, **{'Fotos de la propuesta (estado)': [{'statusCode': 404, 'body': 'Not Found'}]})
+    img = (llamadas(t, 'Render estado') or [{'body': {}}])[0]['body'].get('images', {})
+    ok(img.get('cover') == BASE_R + '/p/' + COD + '/img/cover.jpg' and img.get('cierre') == BASE_R + '/p/' + COD + '/img/cierre.jpg',
+       'E5b: propuesta sin manifest en el renderer: portada y cierre desde la copia del plan', img)
 
     # E6. Los modos del plan no pasan por la rama de estado.
     for modo in ('draft', 'final'):

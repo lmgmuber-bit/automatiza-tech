@@ -10830,8 +10830,8 @@
     "semantic_hash": ""
   },
   "N8N/plan-trabajo/build_plan_3_render.py": {
-    "mtime": 1791992171.979941,
-    "ast_hash": "549099fc28cfd8f32feed1bb79f0852f",
+    "mtime": 1792036447.5832808,
+    "ast_hash": "51f2f4617c70cfa91159d52a400ac2ca",
     "semantic_hash": ""
   },
   "N8N/plan-trabajo/correos_plan.py": {
@@ -10840,18 +10840,18 @@
     "semantic_hash": ""
   },
   "N8N/plan-trabajo/plan-1-borrador.json": {
-    "mtime": 1791997332.0629025,
+    "mtime": 1792036469.5080757,
     "ast_hash": "54eaf2298dd4a0c90ed81920d63270c3",
     "semantic_hash": ""
   },
   "N8N/plan-trabajo/plan-2-cambios.json": {
-    "mtime": 1791997359.6848774,
+    "mtime": 1792036495.818413,
     "ast_hash": "976657f556046db481c3a16450e2dd9f",
     "semantic_hash": ""
   },
   "N8N/plan-trabajo/plan-3-render.json": {
-    "mtime": 1791997446.2387297,
-    "ast_hash": "49654cfd55cfa71d03b707203fe37b78",
+    "mtime": 1792036603.5697505,
+    "ast_hash": "2850a859f6c8449dc045b8d80b457df3",
     "semantic_hash": ""
   },
   "N8N/plan-trabajo/plan_js.py": {
@@ -10860,8 +10860,8 @@
     "semantic_hash": ""
   },
   "N8N/plan-trabajo/probar_plan.py": {
-    "mtime": 1791992159.6461058,
-    "ast_hash": "62bc3dd0866bcf876ccd3801304e04c8",
+    "mtime": 1792036087.5810192,
+    "ast_hash": "d07769b464f5a862ae92a94d208bceca",
     "semantic_hash": ""
   },
   "N8N/plan-trabajo/probar_revision_plan.py": {
@@ -12755,8 +12755,8 @@
     "semantic_hash": ""
   },
   "renderer/src/template-estado.js": {
-    "mtime": 1791996546.7754226,
-    "ast_hash": "0f1b7b2c1f80f67612432d21c0fbaa20",
+    "mtime": 1792035466.2343845,
+    "ast_hash": "e2b91e0541440157cefae1dfedb26cb6",
     "semantic_hash": ""
   },
   "renderer/test/fixtures/estado-ejemplo.js": {
@@ -12775,8 +12775,8 @@
     "semantic_hash": ""
   },
   "renderer/test/template-estado.test.js": {
-    "mtime": 1791996566.0162003,
-    "ast_hash": "37e9340320aa66f9f395a6421646f058",
+    "mtime": 1792035699.858006,
+    "ast_hash": "13adcb1181c34cda15d0ec6e018e8123",
     "semantic_hash": ""
   },
   "tests/plan/avance-datos-wp-test.php": {
@@ -12800,8 +12800,8 @@
     "semantic_hash": ""
   },
   "tests/plan/avance-render-test.php": {
-    "mtime": 1792008789.2642317,
-    "ast_hash": "556546a38261f5bc19f0adfb3f241c98",
+    "mtime": 1792035699.8590617,
+    "ast_hash": "b20fde6eb3707e056a60b81e52c38672",
     "semantic_hash": ""
   },
   "tests/plan/rest-estado-wp-test.php": {
@@ -12825,8 +12825,8 @@
     "semantic_hash": ""
   },
   "wp-content/themes/automatiza-tech/inc/plan-trabajo/avance-puras.php": {
-    "mtime": 1792008789.2632325,
-    "ast_hash": "ac842df14f0669eb29f2b10cfa4b3e86",
+    "mtime": 1792035466.2323792,
+    "ast_hash": "9dbccf466b1102196b9813192e1a719f",
     "semantic_hash": ""
   },
   "wp-content/themes/automatiza-tech/inc/plan-trabajo/avance-render.php": {

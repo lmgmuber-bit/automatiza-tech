@@ -165,3 +165,29 @@ test('CX-30: el reloj se monta de nuevo por tarjeta (key), así el cero de la an
   // La presentación espera el tiempo de lectura cuando la voz no sonó (false), no solo cuando no hay clip.
   assert.match(src, /if \(!sono && vivo\) await esperar/)
 })
+
+// --- Transición hablada al cambiar de tarjeta (Luis, 16-oct): «Paso esta» y «Siguiente» ---
+import { TRANSICIONES, claveTransicion } from '../../src/animador/vocesGuion.js'
+
+test('las frases de «Paso esta» y «Siguiente» están grabadas en las dos voces y se turnan', () => {
+  for (const tipo of ['pasar', 'siguiente']) {
+    assert.equal(TRANSICIONES[tipo].length, 3)
+    for (const voz of ['fem', 'masc']) {
+      for (let n = 0; n < 3; n++) {
+        const x = porClave[claveTransicion(tipo, voz, n)]
+        assert.ok(x, `${tipo} ${voz} ${n}`)
+        assert.equal(x.voz, voz)
+        assert.equal(x.texto, TRANSICIONES[tipo][n])
+      }
+    }
+  }
+  assert.equal(claveTransicion('pasar', 'fem', 4), claveTransicion('pasar', 'fem', 1)) // se turnan por ronda
+  assert.match(TRANSICIONES.pasar[0], /esa no nos gustó/i)
+})
+
+test('los botones dicen la transición antes de leer la tarjeta nueva', () => {
+  const src = readFileSync(new URL('../../src/animador/Animador.jsx', import.meta.url), 'utf8')
+  assert.match(src, /onClick=\{una\(\(\) => avanzar\('siguiente'\)\)\}>Siguiente ➜/)
+  assert.match(src, /onClick=\{una\(\(\) => avanzar\('pasar'\)\)\}>🙅 Paso esta/)
+  assert.match(src, /claveTransicion\(tipo, vozJuego, sesion\.ronda\)/)
+})

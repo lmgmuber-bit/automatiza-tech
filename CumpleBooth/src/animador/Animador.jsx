@@ -7,7 +7,7 @@ import {
   deshacer, ganadores, juegosActivos, juegosDelNivel, marcador, necesitaPreparacion, nivelesDelJuego, nuevaRonda,
   nuevaSesion, pasar, reiniciarMazo, restaurarSesion, revelar, serializarSesion, siguiente, yaAnoto,
 } from './motor.js'
-import { claveCarta, claveRespuesta, claveTiempo, presentacion, seLee, tieneRespuesta, vozDelJuego } from './vocesGuion.js'
+import { claveCarta, claveRespuesta, claveTiempo, claveTransicion, presentacion, seLee, tieneRespuesta, vozDelJuego } from './vocesGuion.js'
 import { useVoz } from './voz.js'
 
 /**
@@ -499,12 +499,19 @@ function Ronda({ sesion, setSesion, juego, t, onVolver, onInfo, baseImagenes = '
   const carta = juego.cartas.find((c) => c.id === sesion.carta) || null
   const vozJuego = vozDelJuego(JUEGOS, juego)
   const sinTarjetaVoz = Boolean(sesion.agotado || sesion.categoriaAgotada)
+  // Cómo se llegó a la tarjeta: con «Paso esta» o «Siguiente» la voz reacciona antes de leerla («¡Uy, esa no nos
+  // gustó! Vamos a la siguiente pregunta»). Al entrar al juego o al cambiar de categoría, no.
+  const transicion = useRef(null)
   // Cada tarjeta nueva se lee al aparecer (las privadas nunca). Al revelarse, la otra voz da la respuesta.
   useEffect(() => {
-    if (!carta || sinTarjetaVoz || !seLee(juego, carta)) return
-    voz.decir(claveCarta(carta))
+    const tipo = transicion.current
+    transicion.current = null
+    if (!carta || sinTarjetaVoz) return
+    const claves = [tipo ? claveTransicion(tipo, vozJuego, sesion.ronda) : null, seLee(juego, carta) ? claveCarta(carta) : null].filter(Boolean)
+    if (claves.length) voz.decir(claves)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [carta?.id, sinTarjetaVoz])
+  const avanzar = (tipo) => { transicion.current = tipo; setSesion(tipo === 'pasar' ? pasar : siguiente) }
   const revelada = Boolean(sesion.revelada)
   const yaLeida = useRef(null)
   useEffect(() => {
@@ -617,8 +624,8 @@ function Ronda({ sesion, setSesion, juego, t, onVolver, onInfo, baseImagenes = '
           <button type="button" className="cta" onClick={una(() => setSesion(nuevaRonda))}>Siguiente lanzamiento ➜</button>
         ) : (
           <>
-            <button type="button" className="cta" disabled={sinTarjeta} onClick={una(() => setSesion(siguiente))}>Siguiente ➜</button>
-            <button type="button" className="cta ghost" disabled={sinTarjeta} onClick={una(() => setSesion(pasar))}>🙅 Paso esta</button>
+            <button type="button" className="cta" disabled={sinTarjeta} onClick={una(() => avanzar('siguiente'))}>Siguiente ➜</button>
+            <button type="button" className="cta ghost" disabled={sinTarjeta} onClick={una(() => avanzar('pasar'))}>🙅 Paso esta</button>
           </>
         )}
         <button type="button" className="cta ghost" onClick={onVolver}>☰ Otros juegos</button>

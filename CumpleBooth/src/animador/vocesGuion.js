@@ -47,6 +47,23 @@ export const TEXTO_COMENZAR = '¡Presionemos comenzar!'
 export const TEXTO_TIEMPO = '¡Se acabó el tiempo!'
 
 /**
+ * Lo que dice la voz al cambiar de tarjeta, antes de leer la nueva (pedido de Luis, 16-oct): «Paso esta» = esa no
+ * gustó; «Siguiente» = seguimos. Tres variantes de cada una que se turnan, para no repetir siempre la misma.
+ */
+export const TRANSICIONES = Object.freeze({
+  pasar: [
+    '¡Uy, esa no nos gustó! Vamos a la siguiente pregunta.',
+    '¡Paso! Esa la dejamos pa\' otro día. ¡Siguiente!',
+    'Mejor no… ¡vamos con otra!',
+  ],
+  siguiente: [
+    '¡Muy bien! Vamos a la siguiente pregunta.',
+    '¡Eso! Seguimos con la que viene.',
+    '¡Bueno, bueno! Vamos con la siguiente.',
+  ],
+})
+
+/**
  * El texto de una tarjeta tal como se lee. Sin comillas angulares (algunas voces las leen como pausa rara); «A + B»
  * se dice «A y B» (se leía «A más B»); y el paréntesis pasa a coma, porque la voz se lo saltaba («Me fui (Reymar
  * Perdomo)» sonaba «Me fui»). Lo que se ve en pantalla no cambia: sale de mazos.js.
@@ -65,6 +82,7 @@ export const claveComenzar = (voz) => `comenzar:${voz}`
 export const claveTiempo = (voz) => `tiempo:${voz}`
 export const claveCarta = (carta) => `carta:${carta.id}`
 export const claveRespuesta = (carta) => `resp:${carta.id}`
+export const claveTransicion = (tipo, voz, n) => `${tipo}:${voz}:${n % TRANSICIONES[tipo].length}`
 
 /** ¿La tarjeta se lee en voz alta? Las privadas (Mímica) nunca: solo las ve quien actúa. */
 export const seLee = (juego, carta) => Boolean(carta) && !juego.privado
@@ -91,6 +109,9 @@ export function guionCompleto(juegos, datos) {
   for (const voz of VOCES) {
     out.push({ clave: claveComenzar(voz), voz, texto: TEXTO_COMENZAR })
     out.push({ clave: claveTiempo(voz), voz, texto: TEXTO_TIEMPO })
+    for (const tipo of Object.keys(TRANSICIONES)) {
+      TRANSICIONES[tipo].forEach((texto, n) => out.push({ clave: claveTransicion(tipo, voz, n), voz, texto }))
+    }
   }
   return out
 }

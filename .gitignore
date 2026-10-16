@@ -175,3 +175,4 @@ graphify-out/2*/
 CumpleBooth/public/themes/*/musica-album-*.mp3
 # Despedida propia de una fiesta (cara de la persona festejada): solo en el servidor.
 CumpleBooth/public/themes/*/despedida-fiesta-*.mp4
+CumpleBooth/public/themes/*/voces-fiesta-*/

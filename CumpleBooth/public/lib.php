@@ -907,6 +907,7 @@ function cb_animador_juegos(): array
         'venezolano-politica' => '¿Quién es más venezolano? Edición política',
         'expediente'     => 'Expediente «Se busca»',
         'atrevidas'      => 'Preguntas sin vergüenza',
+        'ruleta-baile'   => '¿Quién baila? La ruleta',
     ];
 }
 

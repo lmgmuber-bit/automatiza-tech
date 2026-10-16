@@ -7,7 +7,10 @@ import {
   deshacer, ganadores, juegosActivos, juegosDelNivel, marcador, necesitaPreparacion, nivelesDelJuego, nuevaRonda,
   nuevaSesion, pasar, reiniciarMazo, restaurarSesion, revelar, serializarSesion, siguiente, yaAnoto,
 } from './motor.js'
-import { claveCarta, claveRespuesta, claveTiempo, claveTransicion, presentacion, seLee, tieneRespuesta, vozDelJuego } from './vocesGuion.js'
+import {
+  RULETA, RULETA_EMOJIS, RULETA_SIN_LISTA, claveCarta, claveRespuesta, claveRuleta, claveTiempo, claveTransicion, presentacion, seLee,
+  tieneRespuesta, vozDelJuego,
+} from './vocesGuion.js'
 import { useVoz } from './voz.js'
 
 /**
@@ -38,7 +41,7 @@ function leerGuardada(clave) {
  * presentación hablada (intro, equipos y «presionemos comenzar», con «Omitir») y cada tarjeta se lee.
  * Sin índice, la presentación igual se muestra en texto y todo lo demás queda como antes.
  */
-export default function Animador({ nombre = '', edad = null, clave = 'animador', apagados = [], baseImagenes = '', voces = null, onSalir, onFotoGrupal }) {
+export default function Animador({ nombre = '', edad = null, clave = 'animador', apagados = [], baseImagenes = '', voces = null, invitados = [], onSalir, onFotoGrupal }) {
   const datos = { nombre, edad }
   const t = (texto) => rellenar(texto, datos)
   const activos = useMemo(() => juegosActivos(JUEGOS, apagados), [apagados])
@@ -93,7 +96,7 @@ export default function Animador({ nombre = '', edad = null, clave = 'animador',
     return (
       <>
         <Ronda sesion={sesion} setSesion={setSesion} juego={juego} t={t} onVolver={() => { voz.callar(); setPantalla('juegos') }}
-          onInfo={abrirFicha(juego)} baseImagenes={baseImagenes} voz={voz} />
+          onInfo={abrirFicha(juego)} baseImagenes={baseImagenes} voz={voz} invitados={invitados} />
         {ficha}
       </>
     )
@@ -495,7 +498,73 @@ function ImagenDeTarjeta({ src }) {
   )
 }
 
-function Ronda({ sesion, setSesion, juego, t, onVolver, onInfo, baseImagenes = '', voz }) {
+/**
+ * La ruleta del baile: al tocar «¡Girar!» pasan los nombres de los invitados (o frases, sin lista) cada vez más lento
+ * hasta detenerse; sale si baila sin pareja o en pareja (y con quién) y la canción que pone el DJ, y la voz lo anuncia.
+ * «Otra persona» gira de nuevo con la misma canción. Evita repetir a quien bailó hace poco.
+ */
+function RuletaBaile({ carta, t, voz, invitados, recientes }) {
+  const nombres = invitados.length ? invitados : RULETA_SIN_LISTA
+  const [fase, setFase] = useState('listo') // listo | girando | resultado
+  const [visor, setVisor] = useState(null)
+  const [res, setRes] = useState(null)
+  const relojes = useRef([])
+  const vueltas = useRef(0)
+  const limpiar = () => { relojes.current.forEach(clearTimeout); relojes.current = [] }
+  useEffect(() => limpiar, [])
+  const azar = (lista) => lista[Math.floor(Math.random() * lista.length)]
+  const emoji = () => (invitados.length ? azar(RULETA_EMOJIS) : '')
+  const girar = (otra) => {
+    limpiar()
+    const n = vueltas.current++
+    setFase('girando')
+    setRes(null)
+    voz.decir(otra ? [claveRuleta('otra'), claveRuleta('gira', n)] : claveRuleta('gira', n))
+    const libres = nombres.filter((x) => !recientes.current.includes(x))
+    const persona = azar(libres.length ? libres : nombres)
+    const otros = nombres.filter((x) => x !== persona)
+    const pareja = invitados.length > 1 && Math.random() < 0.5 ? azar(otros) : null
+    recientes.current = [persona, ...recientes.current].slice(0, Math.max(0, Math.min(nombres.length - 1, Math.floor(nombres.length / 2))))
+    const pasos = REDUCE_MOVIMIENTO() ? 3 : 22
+    let tiempo = 0
+    for (let i = 0; i < pasos; i++) {
+      tiempo += 60 + i * i * 0.6 // cada vez más lento, como una ruleta que frena (unos 3,5 s en total)
+      relojes.current.push(setTimeout(() => setVisor({ nombre: azar(nombres), emoji: emoji(), k: i }), tiempo))
+    }
+    relojes.current.push(setTimeout(() => {
+      setVisor({ nombre: persona, emoji: emoji() || '💃', k: 'fin' })
+      setRes({ persona, pareja })
+      setFase('resultado')
+      voz.decir([claveRuleta(pareja ? 'pareja' : 'solo'), claveCarta(carta)])
+    }, tiempo + 350))
+  }
+  return (
+    <div className={`anim-ruleta${fase === 'resultado' ? ' is-listo' : ''}`}>
+      <div className={`anim-ruleta__visor${fase === 'girando' ? ' is-gira' : ''}`} aria-live="polite">
+        {visor
+          ? <>{visor.emoji && <span className="anim-ruleta__emoji" aria-hidden="true">{visor.emoji}</span>}<b key={visor.k} className="anim-ruleta__nombre">{visor.nombre}</b></>
+          : <span className="anim-ruleta__espera">🎡 ¿A quién le toca bailar?</span>}
+      </div>
+      {fase === 'resultado' && res && (
+        <>
+          <p className="anim-ruleta__modo">{res.pareja ? `💃🕺 Baila en pareja con ${res.pareja}` : '💃 ¡Baila sin pareja, pura actitud!'}</p>
+          <p className="anim-carta__texto">{t(carta.texto)}</p>
+          <p className="anim-carta__pista"><span aria-hidden="true">🎵</span> Pídele al DJ {carta.pista}. La app no trae audio.</p>
+        </>
+      )}
+      <div className="anim-pie">
+        {fase === 'listo' && <button type="button" className="cta" onClick={() => girar(false)}>🎡 ¡Girar!</button>}
+        {fase === 'resultado' && <button type="button" className="cta ghost" onClick={() => girar(true)}>🔄 Otra persona</button>}
+      </div>
+    </div>
+  )
+}
+
+const REDUCE_MOVIMIENTO = () => {
+  try { return window.matchMedia('(prefers-reduced-motion: reduce)').matches } catch { return false }
+}
+
+function Ronda({ sesion, setSesion, juego, t, onVolver, onInfo, baseImagenes = '', voz, invitados = [] }) {
   const carta = juego.cartas.find((c) => c.id === sesion.carta) || null
   const vozJuego = vozDelJuego(JUEGOS, juego)
   const sinTarjetaVoz = Boolean(sesion.agotado || sesion.categoriaAgotada)
@@ -506,12 +575,13 @@ function Ronda({ sesion, setSesion, juego, t, onVolver, onInfo, baseImagenes = '
   useEffect(() => {
     const tipo = transicion.current
     transicion.current = null
-    if (!carta || sinTarjetaVoz) return
+    if (!carta || sinTarjetaVoz || juego.ruleta) return
     const claves = [tipo ? claveTransicion(tipo, vozJuego, sesion.ronda) : null, seLee(juego, carta) ? claveCarta(carta) : null].filter(Boolean)
     if (claves.length) voz.decir(claves)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [carta?.id, sinTarjetaVoz])
   const avanzar = (tipo) => { transicion.current = tipo; setSesion(tipo === 'pasar' ? pasar : siguiente) }
+  const recientes = useRef([]) // la ruleta evita repetir a quien acaba de bailar
   const revelada = Boolean(sesion.revelada)
   const yaLeida = useRef(null)
   useEffect(() => {
@@ -575,6 +645,8 @@ function Ronda({ sesion, setSesion, juego, t, onVolver, onInfo, baseImagenes = '
           <p className="anim-carta__agotada">Ya salieron todas las de {sesion.categoria}.</p>
           <button type="button" className="cta" onClick={una(() => setSesion((s) => elegirCategoria(s, null)))}>Volver a «Todas»</button>
         </div>
+      ) : carta && juego.ruleta ? (
+        <RuletaBaile key={carta.id} carta={carta} t={t} voz={voz} invitados={invitados} recientes={recientes} />
       ) : carta && juego.privado ? (
         <CartaPrivada llave={`${carta.id}|${sesion.nivel}`} texto={t(carta.texto)} />
       ) : carta ? (
@@ -624,8 +696,8 @@ function Ronda({ sesion, setSesion, juego, t, onVolver, onInfo, baseImagenes = '
           <button type="button" className="cta" onClick={una(() => setSesion(nuevaRonda))}>Siguiente lanzamiento ➜</button>
         ) : (
           <>
-            <button type="button" className="cta" disabled={sinTarjeta} onClick={una(() => avanzar('siguiente'))}>Siguiente ➜</button>
-            <button type="button" className="cta ghost" disabled={sinTarjeta} onClick={una(() => avanzar('pasar'))}>🙅 Paso esta</button>
+            <button type="button" className="cta" disabled={sinTarjeta} onClick={una(() => avanzar('siguiente'))}>{juego.ruleta ? 'Siguiente canción ➜' : 'Siguiente ➜'}</button>
+            {!juego.ruleta && <button type="button" className="cta ghost" disabled={sinTarjeta} onClick={una(() => avanzar('pasar'))}>🙅 Paso esta</button>}
           </>
         )}
         <button type="button" className="cta ghost" onClick={onVolver}>☰ Otros juegos</button>

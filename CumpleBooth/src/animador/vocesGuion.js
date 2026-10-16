@@ -84,6 +84,26 @@ export const claveCarta = (carta) => `carta:${carta.id}`
 export const claveRespuesta = (carta) => `resp:${carta.id}`
 export const claveTransicion = (tipo, voz, n) => `${tipo}:${voz}:${n % TRANSICIONES[tipo].length}`
 
+/**
+ * La ruleta del baile: lo que dice la voz al girar, al detenerse (sin pareja o en pareja) y al girar de nuevo. El
+ * nombre de quien baila no se dice (cambia en cada fiesta): sale gigante en pantalla. La canción la dice la tarjeta.
+ */
+export const RULETA = Object.freeze({
+  gira: ['¡La ruleta está girando… ¿a quién le tocará bailar?', '¡Atención, mi gente! ¿Quién será la estrella de la pista?'],
+  solo: ['¡Te toca bailar sin pareja! Pura actitud… ¡pa\' la pista!'],
+  pareja: ['¡Te toca bailar en pareja! Agarra a tu compañía… ¡y pa\' la pista!'],
+  otra: ['¿No quiere? ¡Tranquilos, giramos otra vez!'],
+})
+export const claveRuleta = (tipo, n = 0) => `ruleta:${tipo}:${n % RULETA[tipo].length}`
+
+/** Si no hay lista de invitados, la ruleta gira con frases y la sala decide quién es. */
+export const RULETA_SIN_LISTA = Object.freeze([
+  '👠 La más elegante', '🕶️ El de lentes', '⏰ Quien llegó último', '😂 La que más se ríe', '😐 El más serio',
+  '❤️ Quien tenga algo rojo', '🎂 Quien está de cumpleaños', '🕺 El que más baila', '📱 Quien más mira el celular',
+  '💄 La de los labios más rojos',
+])
+export const RULETA_EMOJIS = Object.freeze(['💃', '🕺', '🎉', '🔥', '✨', '🎶', '🥳', '🎤', '🌶️', '🪇'])
+
 /** ¿La tarjeta se lee en voz alta? Las privadas (Mímica) nunca: solo las ve quien actúa. */
 export const seLee = (juego, carta) => Boolean(carta) && !juego.privado
 
@@ -99,6 +119,9 @@ export function guionCompleto(juegos, datos) {
   for (const j of juegos) {
     const voz = vozDelJuego(juegos, j)
     out.push({ clave: claveIntro(j), voz, texto: textoIntro(juegos, j, datos) })
+    if (j.ruleta) {
+      for (const tipo of Object.keys(RULETA)) RULETA[tipo].forEach((texto, n) => out.push({ clave: claveRuleta(tipo, n), voz, texto }))
+    }
     for (const c of j.cartas) {
       if (!seLee(j, c)) continue
       out.push({ clave: claveCarta(c), voz, texto: textoLeible(rellenar(c.texto, datos)) })

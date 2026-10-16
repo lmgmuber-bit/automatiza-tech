@@ -187,7 +187,26 @@ test('las frases de «Paso esta» y «Siguiente» están grabadas en las dos voc
 
 test('los botones dicen la transición antes de leer la tarjeta nueva', () => {
   const src = readFileSync(new URL('../../src/animador/Animador.jsx', import.meta.url), 'utf8')
-  assert.match(src, /onClick=\{una\(\(\) => avanzar\('siguiente'\)\)\}>Siguiente ➜/)
+  assert.match(src, /onClick=\{una\(\(\) => avanzar\('siguiente'\)\)\}>\{juego\.ruleta \? 'Siguiente canción ➜' : 'Siguiente ➜'\}/)
   assert.match(src, /onClick=\{una\(\(\) => avanzar\('pasar'\)\)\}>🙅 Paso esta/)
   assert.match(src, /claveTransicion\(tipo, vozJuego, sesion\.ronda\)/)
+})
+
+// --- La ruleta del baile (Luis, 16-oct) ---
+import { RULETA, RULETA_SIN_LISTA, claveRuleta } from '../../src/animador/vocesGuion.js'
+
+test('la ruleta: su voz al girar, sin pareja, en pareja y otra vez, y sus 12 canciones leídas', () => {
+  const ruleta = JUEGOS.find((j) => j.id === 'ruleta-baile')
+  assert.ok(ruleta?.ruleta)
+  const voz = vozDelJuego(JUEGOS, ruleta)
+  for (const tipo of Object.keys(RULETA)) RULETA[tipo].forEach((_, n) => assert.equal(porClave[claveRuleta(tipo, n)]?.voz, voz, `${tipo} ${n}`))
+  for (const c of ruleta.cartas) assert.match(porClave[claveCarta(c)].texto, /^¡DJ, que suene /)
+  assert.ok(RULETA_SIN_LISTA.length >= 8, 'sin lista de invitados gira con frases')
+  const src = readFileSync(new URL('../../src/animador/Animador.jsx', import.meta.url), 'utf8')
+  assert.match(src, /🎡 ¡Girar!/)
+  assert.match(src, /🔄 Otra persona/)
+  assert.match(src, /<RuletaBaile key=\{carta\.id\}/)
+  assert.match(src, /!juego\.ruleta && <button[^\n]*🙅 Paso esta/)
+  const app = readFileSync(new URL('../../src/App.jsx', import.meta.url), 'utf8')
+  assert.match(app, /invitados=\{invitadosList\.map/)
 })

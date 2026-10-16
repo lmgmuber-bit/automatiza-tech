@@ -460,6 +460,36 @@ JUEGOS.push({
   ],
 })
 
+// La ruleta del baile (pedido de Luis, 16-oct): gira entre los nombres de la lista de invitados, elige a alguien
+// (solo o en pareja) y una canción venezolana bailable que pone el DJ: la app solo la nombra, no trae audio.
+// Cada tarjeta es una canción; la ruleta (`ruleta: true`) la revela recién cuando se detiene.
+const cancion = (id, titulo, autor, ritmo) =>
+  musica(id, 'coqueto', `¡DJ, que suene «${titulo}»${autor ? `, de ${autor}` : ''}!`, '', '', `«${titulo}»${autor ? ` (${autor}, ${ritmo})` : ` (${ritmo})`}`)
+JUEGOS.push({
+  id: 'ruleta-baile',
+  nombre: '¿Quién baila? La ruleta',
+  emoji: '💃',
+  segundos: 30,
+  puntos: 'rubrica',
+  ruleta: true,
+  instrucciones: 'Toca «¡Girar!»: la ruleta elige entre los invitados a quién le toca bailar, solo o en pareja, y la canción que pone el DJ. Treinta segundos de baile y el público da 0 a 3 puntos. «Otra persona» vuelve a girar.',
+  premio: 'Rey o reina de la pista',
+  cartas: [
+    cancion('rb01', 'Llorarás', "Oscar D'León", 'salsa'),
+    cancion('rb02', 'Mi bajo y yo', "Oscar D'León", 'salsa'),
+    cancion('rb03', 'Persona ideal', "Adolescent's Orquesta", 'salsa'),
+    cancion('rb04', 'Una fan enamorada', 'Servando y Florentino', 'salsa'),
+    cancion('rb05', 'Mi niña bonita', 'Chino y Nacho', 'merengue'),
+    cancion('rb06', 'Andas en mi cabeza', 'Chino y Nacho', 'urbano'),
+    cancion('rb07', 'Epa Isidoro', "Billo's Caracas Boys", 'merengue caraqueño'),
+    cancion('rb08', 'Sentir zuliano', 'Ricardo Aguirre', 'gaita'),
+    cancion('rb09', 'Alma llanera', '', 'joropo'),
+    cancion('rb10', 'Woman del Callao', '', 'calipso de El Callao'),
+    cancion('rb11', "San Juan to' lo tiene", '', 'tambor'),
+    cancion('rb12', 'Pídeme', 'Guaco', 'gaita'),
+  ],
+})
+
 /**
  * Guía de cada juego para quien conduce: se abre con el botón ℹ️ de la lista y de la ronda.
  * Resumen, pasos, duración aproximada, quiénes juegan, cómo se puntúa y qué preparar. Los niveles
@@ -711,6 +741,19 @@ const GUIAS = {
     jugadores: 'Voluntarios.',
     puntaje: '0 a 3 puntos por gracia.',
     preparar: 'Nada. No se pregunta por parejas, mensajes ni experiencias de nadie.',
+  },
+  'ruleta-baile': {
+    resumen: 'Una ruleta elige entre los invitados a quién le toca bailar una canción venezolana, solo o en pareja.',
+    pasos: [
+      'Toca «¡Girar!»: pasan los nombres de los invitados hasta que la ruleta se detiene.',
+      'La pantalla dice si baila solo o en pareja (y con quién) y qué canción pone el DJ.',
+      'Pídele al DJ la canción y toca «Iniciar» en el reloj: 30 segundos de baile.',
+      'El público da 0 a 3 puntos al equipo de quien bailó. Si no quiere, «Otra persona» vuelve a girar.',
+    ],
+    duracion: '10 a 15 minutos.',
+    jugadores: 'Los invitados cargados en la lista de la fiesta.',
+    puntaje: '0 a 3 puntos por baile, por aplauso.',
+    preparar: 'La lista de invitados cargada en el admin y las canciones a mano del DJ. Sin lista, la ruleta gira con frases («la más elegante», «el de lentes»).',
   },
 }
 for (const j of JUEGOS) j.guia = GUIAS[j.id] || null

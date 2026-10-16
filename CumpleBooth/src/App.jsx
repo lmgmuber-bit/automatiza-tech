@@ -786,7 +786,7 @@ function BoothApp() {
             <button className="cta" onClick={() => volverA('spinner')}>🎡 Volver a la ruleta</button>
           )}
           {screen !== 'invitados' && (
-            <button className="cta" onClick={() => volverA('invitados')}>🧒 Elegir otro niño</button>
+            <button className="cta" onClick={() => volverA('invitados')}>{CABINA_ADULTO ? '👥 Elegir otro invitado' : '🧒 Elegir otro niño'}</button>
           )}
           <button className="cta" onClick={() => volverA('intro')}>🏠 Volver al inicio</button>
           <button className="cta ghost" onClick={() => setVolverAbierto(false)}>Seguir aquí ✖</button>
@@ -1638,8 +1638,9 @@ function ListaInvitados({ invitados, onStart, etiqueta = 'Toca para girar la rul
         <p>Elige tu nombre 🎉</p>
       </div>
       <div className="invitados-scroll">
-        {renderGroup('Niñas', ninas)}
-        {renderGroup('Varones', varones)}
+        {/* En un cumpleaños de adulto: mujeres y hombres, nunca niñas y varones. */}
+        {renderGroup(CABINA_ADULTO ? 'Mujeres' : 'Niñas', ninas)}
+        {renderGroup(CABINA_ADULTO ? 'Hombres' : 'Varones', varones)}
       </div>
       {!welcome && !readyToSpin && selected && (
         <div className="selected-hint">
@@ -1721,13 +1722,13 @@ function GestionInvitados({ list, onSave, onClose }) {
             className={`gen-btn ${genero === 'f' ? 'on' : ''}`}
             onClick={() => setGenero('f')}
           >
-            👧 Niña
+            {CABINA_ADULTO ? '👩 Mujer' : '👧 Niña'}
           </button>
           <button
             className={`gen-btn ${genero === 'm' ? 'on' : ''}`}
             onClick={() => setGenero('m')}
           >
-            👦 Varón
+            {CABINA_ADULTO ? '👨 Hombre' : '👦 Varón'}
           </button>
         </div>
         <button className="cta gestion-addbtn" onClick={add}>
@@ -1736,8 +1737,8 @@ function GestionInvitados({ list, onSave, onClose }) {
       </div>
 
       <div className="gestion-scroll">
-        {grupo('Niñas', ninas)}
-        {grupo('Varones', varones)}
+        {grupo(CABINA_ADULTO ? 'Mujeres' : 'Niñas', ninas)}
+        {grupo(CABINA_ADULTO ? 'Hombres' : 'Varones', varones)}
       </div>
 
       <div className="gestion-foot">

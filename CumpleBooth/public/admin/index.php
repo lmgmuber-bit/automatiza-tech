@@ -1896,7 +1896,8 @@ if ($formValues === null && $action === 'editar') {
                   <input type="hidden" name="action" value="invitados_agregar">
                   <input type="hidden" name="slug" value="<?= h($publicSlug) ?>">
                   <input type="text" name="nombre" required maxlength="60" placeholder="Nombre del invitado" aria-label="Nombre del invitado">
-                  <select name="genero" aria-label="Niño o niña"><option value="f">Niña</option><option value="m">Niño</option></select>
+                  <?php $invAdulto = cb_party_event_type($p['event_type'] ?? '') === 'adult_birthday'; // adultos: mujer u hombre ?>
+                  <select name="genero" aria-label="<?= $invAdulto ? 'Mujer u hombre' : 'Niño o niña' ?>"><option value="f"><?= $invAdulto ? 'Mujer' : 'Niña' ?></option><option value="m"><?= $invAdulto ? 'Hombre' : 'Niño' ?></option></select>
                   <button type="submit" class="btn btn-primary"><?= admin_icon('plus') ?> Agregar</button>
                 </form>
               </details>

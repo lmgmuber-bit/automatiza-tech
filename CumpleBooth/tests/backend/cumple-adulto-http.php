@@ -187,6 +187,10 @@ $apiVoces = json_decode($luis->pedir('GET', '/api.php?p=' . rawurlencode($slug))
 a_check(str_starts_with((string) ($apiVoces['party']['vocesAnimador'] ?? ''), 'themes/adulto-coqueteria-pop/voces-fiesta-' . $slug . '/indice.json?v='), 'con carpeta de voces, el kiosco recibe el índice de la fiesta');
 @unlink($dirVoces . '/indice.json'); @rmdir($dirVoces);
 
+// En la lista de fiestas, agregar un invitado a una fiesta adulta dice Mujer/Hombre, nunca Niña/Niño.
+$lista = $luis->pedir('GET', '/admin/index.php')['html'];
+a_check(str_contains($lista, '<option value="f">Mujer</option><option value="m">Hombre</option>'), 'fiesta adulta: el invitado se agrega como mujer u hombre');
+
 // La invitación de un cumpleaños de adulto: tarjeta + video del evento (subidos y aprobados),
 // sin la voz de Alice (le habla a un niño) y con un formulario de asistencia para adultos.
 $tokenInv = cb_opaque_token(16);

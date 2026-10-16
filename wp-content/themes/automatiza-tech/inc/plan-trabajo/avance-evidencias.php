@@ -242,8 +242,9 @@ function at_av_borrar_archivos(int $plan_id, array $nombres): void {
 function at_av_con_medidas(int $plan_id, array $avance): array {
 	$dir = '';
 	foreach ((array) ($avance['evidencias'] ?? []) as $id => $e) {
-		$n = (string) ($e['archivo'] ?? '');
-		if (($e['tipo'] ?? '') !== 'captura' || !preg_match('/^[a-z0-9]{20}\.(jpg|png)$/', $n)) {
+		// «archivo» es el nombre original que puso Luis; el guardado (aleatorio) está en la URL.
+		$n = at_av_nombre_de_url((string) ($e['url'] ?? ''));
+		if (($e['tipo'] ?? '') !== 'captura' || !preg_match('/\.(jpg|png)$/', $n)) {
 			continue;
 		}
 		$dir = $dir !== '' ? $dir : at_av_dir($plan_id)['dir'];

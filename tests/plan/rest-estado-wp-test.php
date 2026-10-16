@@ -208,7 +208,8 @@ imagepng(imagecreatetruecolor(1440, 900), $dir_ev . $n_pc);
 $a = at_av_leer(at_pt_plan($id));
 $ip = array_search('publicado', array_column($a['cierres'], 'estado'), true);
 foreach ([['qq', $n_cel, 'Celular vertical'], ['ww', $n_pc, 'Computador'], ['zz', str_repeat('z', 20) . '.png', 'Sin archivo']] as [$k, $arch, $t]) {
-	$a['evidencias'][$k] = ['tipo' => 'captura', 'titulo' => $t, 'url' => "https://example.com/wp-content/uploads/at-estado/{$id}/{$arch}", 'archivo' => $arch,
+	$a['evidencias'][$k] = ['tipo' => 'captura', 'titulo' => $t, 'url' => "https://example.com/wp-content/uploads/at-estado/{$id}/{$arch}",
+		'archivo' => 'nombre-original-' . $k . '.png', // como en PROD: el nombre que puso Luis, no el guardado
 		'poster' => '', 'valor' => '', 'unidad' => '', 'fuente' => '', 'fecha' => ''];
 	$a['cierres'][$ip]['despues']['evidencias'][] = $k;
 }

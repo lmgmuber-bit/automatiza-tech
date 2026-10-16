@@ -500,7 +500,7 @@ if (!$sectionIndex) {
       </section>
 
       <section class="card privacy-card">
-        <div class="privacy-icon"><?= admin_icon('warn') ?></div><div><h2>Privacidad de niños y familias</h2><p>No publiques dirección, teléfono, colegio, rutinas, horarios, documentos, correo ni otros datos sensibles. El sistema también bloqueará patrones riesgosos aunque marques el campo como privado.</p><label class="checkbox-field"><input type="checkbox" name="privacy_ack" value="1" <?= !empty($profile['privacy_confirmed_at']) ? 'checked' : '' ?>> Confirmo que revisé el contenido y tengo autorización para publicarlo.</label></div>
+        <div class="privacy-icon"><?= admin_icon('warn') ?></div><div><h2><?= cb_party_event_type($party['event_type'] ?? '') === 'adult_birthday' ? 'Privacidad de la persona homenajeada y sus invitados' : 'Privacidad de niños y familias' ?></h2><p>No publiques dirección, teléfono, colegio, rutinas, horarios, documentos, correo ni otros datos sensibles. El sistema también bloqueará patrones riesgosos aunque marques el campo como privado.</p><label class="checkbox-field"><input type="checkbox" name="privacy_ack" value="1" <?= !empty($profile['privacy_confirmed_at']) ? 'checked' : '' ?>> Confirmo que revisé el contenido y tengo autorización para publicarlo.</label></div>
       </section>
 
       <div class="profile-savebar"><button type="submit" class="btn btn-cta">Guardar Perfil del protagonista</button><span class="muted small">Los cambios no se ven públicamente hasta activar el perfil y tener contenido visible.</span></div>

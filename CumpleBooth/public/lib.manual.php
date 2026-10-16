@@ -184,6 +184,7 @@ function cb_manual_datos(string $slug, array $extra = []): ?array
 
     return [
         'slug' => $slug,
+        'event_type' => cb_party_event_type($fiesta['event_type'] ?? ''),
         'nombre' => $nombre,
         'edad' => $edad,
         'fecha' => (string) ($fiesta['fecha'] ?? ''),
@@ -269,6 +270,8 @@ function cb_manual_secciones(array $d): array
 {
     $n = $d['nombre'];
     $t = $d['tema_nombre'];
+    $esAdulto = ($d['event_type'] ?? '') === 'adult_birthday';
+    $invitados = $esAdulto ? 'los invitados' : 'los niños';
     $conPersonajes = $d['personajes'] ? ': ' . implode(', ', $d['personajes']) : '';
     $llegamos = $d['anticipacion_min'] > 0
         ? "Llegamos {$d['anticipacion_min']} minutos antes de la hora de inicio."
@@ -304,7 +307,7 @@ function cb_manual_secciones(array $d): array
             ['Firma los Términos y Condiciones',
              'Te llega un enlace personal por correo. Se revisa el resumen del plan, se marcan tres casillas y se firma con el dedo en la pantalla. Toma dos minutos, y sin esa firma no podemos activar la fiesta.'],
             ['Revisa la lista de invitados',
-             "Los nombres de los invitados aparecen dentro de la cabina, en los juegos y en la tabla de posiciones. Mándanos la lista actualizada de los niños de $n por WhatsApp o a {$d['correo']}, $plazoLista." . ($d['invitados'] > 0 ? " Hoy tenemos {$d['invitados']} nombres cargados." : '')],
+             "Los nombres de los invitados aparecen dentro de la cabina, en los juegos y en la tabla de posiciones. Mándanos la lista actualizada de $invitados de $n por WhatsApp o a {$d['correo']}, $plazoLista." . ($d['invitados'] > 0 ? " Hoy tenemos {$d['invitados']} nombres cargados." : '')],
             ['Comparte la invitación',
              'Te enviamos el enlace de la invitación digital para que la mandes por WhatsApp. Se abre en el celular, con música y la historia de la fiesta. Cada invitado puede confirmar desde ahí.'],
         ]],
@@ -313,19 +316,27 @@ function cb_manual_secciones(array $d): array
             'Un enchufe cerca de donde va la cabina: la impresora de fotos funciona con corriente.',
             'Una mesa o superficie firme para la tablet, la impresora y los carteles con los códigos QR.',
             'Conexión a internet: WiFi de la casa o datos. Los juegos y la galería la necesitan.',
-            'Un rincón con buena luz para la cabina de fotos, con espacio para que los niños se muevan.',
+            "Un rincón con buena luz para la cabina de fotos, con espacio para que $invitados se muevan.",
         ]],
 
         ['titulo' => 'Cómo funciona, paso a paso', 'tipo' => 'pasos', 'cuerpo' => [
             ['Llegamos y armamos', "$llegamos Necesitamos unos 15 minutos para instalar la cabina y probar todo."],
-            ['Cada niño pasa por la cabina', "El niño toca la pantalla, elige o le toca uno de los personajes de $t, ve su video de saludo, juega un momento con él y se toma la foto."],
-            ['La foto sale con la temática', "La foto se compone al instante con el marco y el personaje de $t, y queda guardada en la galería de la fiesta."],
-            ['Se llevan su recuerdo', 'Cada invitado recibe su diploma en pantalla y su foto impresa con imán para el refrigerador, lista para llevarse a casa.'],
+            [$esAdulto ? 'Cada invitado pasa por la cabina' : 'Cada niño pasa por la cabina', $esAdulto
+                ? 'Cada persona toca la pantalla, elige su escena y se toma la foto.'
+                : "El niño toca la pantalla, elige o le toca uno de los personajes de $t, ve su video de saludo, juega un momento con él y se toma la foto."],
+            ['La foto sale con la temática', $esAdulto
+                ? "La foto se compone al instante con el marco y la escena de $t, y queda guardada en la galería de la fiesta."
+                : "La foto se compone al instante con el marco y el personaje de $t, y queda guardada en la galería de la fiesta."],
+            ['Se llevan su recuerdo', $esAdulto
+                ? 'Cada invitado puede guardar su foto como recuerdo de la fiesta.'
+                : 'Cada invitado recibe su diploma en pantalla y su foto impresa con imán para el refrigerador, lista para llevarse a casa.'],
         ]],
 
         ['titulo' => 'Los juegos 3D', 'tipo' => 'texto', 'cuerpo' => trim(
             "Desde el cartel con el código QR o desde la tablet se abre el menú de juegos de la fiesta. $juegosTexto "
-            . "Antes de jugar, cada niño toca su nombre en la lista para que su puntaje quede registrado.\n\n"
+            . ($esAdulto
+                ? "Antes de jugar, cada persona toca su nombre en la lista para que su puntaje quede registrado.\n\n"
+                : "Antes de jugar, cada niño toca su nombre en la lista para que su puntaje quede registrado.\n\n")
             . "Los puntajes se juntan en la tabla de Posiciones, con medallas de oro, plata y bronce por juego y un podio general de la fiesta. "
             . "Nadie queda eliminado: todos juegan cuantas veces quieran y cuenta su mejor intento.\n\n"
             . "Los juegos se ven mucho mejor con la tablet o el celular apaisados. Al abrirlos aparece el aviso de girar el aparato."

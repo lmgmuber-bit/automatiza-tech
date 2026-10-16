@@ -246,7 +246,9 @@ if ($loggedIn && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '
                 $partiesJ[$slugJ]['juegos3d'] = $prender;
                 cb_save_parties(['parties' => $partiesJ]);
                 $_SESSION['envio_flash'] = $prender
-                    ? 'Juegos 3D prendidos: los niños ya pueden entrar con el QR.'
+                    ? (cb_party_event_type($partiesJ[$slugJ]['event_type'] ?? '') === 'adult_birthday'
+                        ? 'Juegos 3D prendidos: los invitados ya pueden entrar con el QR.'
+                        : 'Juegos 3D prendidos: los niños ya pueden entrar con el QR.')
                     : 'Juegos 3D apagados. Quien entre con el QR verá que se acabó la hora de juego.';
                 header('Location: index.php?ok=envio');
                 exit;
@@ -1861,7 +1863,7 @@ if ($formValues === null && $action === 'editar') {
               <?php $juegosOn = cb_juegos3d_activos($publicSlug); ?>
               <?php if (admin_puede('juegos', $publicSlug)): ?>
               <form method="post" action="index.php" class="inline-form"
-                    <?= $juegosOn ? 'data-confirm="Los niños que entren con el QR verán que se acabó la hora de juego. ¿Apagar los juegos 3D?"' : '' ?>>
+                    <?= $juegosOn ? 'data-confirm="' . (cb_party_event_type($p['event_type'] ?? '') === 'adult_birthday' ? 'Los invitados' : 'Los niños') . ' que entren con el QR verán que se acabó la hora de juego. ¿Apagar los juegos 3D?"' : '' ?>>
                 <?= admin_csrf_field() ?>
                 <input type="hidden" name="action" value="juegos3d">
                 <input type="hidden" name="slug" value="<?= h($publicSlug) ?>">

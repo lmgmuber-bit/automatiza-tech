@@ -21,6 +21,9 @@ function at_tl_mapa_historial(): array {
 		'email_bienvenida'     => 'email_bienvenida',
 		'proyecto_creado'      => 'item_proyecto',
 		'conversion'           => 'conversion',
+		'hito_cierre_publicado' => 'hito_cierre_publicado',
+		'hito_cierre_correo'   => 'hito_cierre_correo',
+		'hito_cierre_whatsapp' => 'hito_cierre_whatsapp',
 	];
 }
 
@@ -33,6 +36,9 @@ function at_tl_tipos_extra(): array {
 		'whatsapp'             => ['label' => 'WhatsApp', 'icon' => '💬', 'color' => '#16a34a', 'bg' => '#dcfce7'],
 		'email_bienvenida'     => ['label' => 'Correo de bienvenida', 'icon' => '📧', 'color' => '#8b5cf6', 'bg' => '#f5f3ff'],
 		'conversion'           => ['label' => 'Conversión', 'icon' => '🎯', 'color' => '#7c3aed', 'bg' => '#f5f3ff'],
+		'hito_cierre_publicado' => ['label' => 'Cierre de hito publicado', 'icon' => '🏁', 'color' => '#0f766e', 'bg' => '#ccfbf1'],
+		'hito_cierre_correo'    => ['label' => 'Cierre de hito enviado por correo', 'icon' => '🏁', 'color' => '#0f766e', 'bg' => '#ccfbf1'],
+		'hito_cierre_whatsapp'  => ['label' => 'Cierre de hito enviado por WhatsApp', 'icon' => '🏁', 'color' => '#0f766e', 'bg' => '#ccfbf1'],
 		// Antes «🤖 Sistema» para todo evento sin tipo propio: ahora quién lo hizo lo dice la etiqueta de origen.
 		'legacy'               => ['label' => 'Evento', 'icon' => '📌', 'color' => '#64748b', 'bg' => '#f8fafc'],
 	];
@@ -71,7 +77,7 @@ function at_tl_origen(array $h): string {
 		}
 		// Sin usuario con sesión: lo que solo hace una persona (reuniones, notas, envíos manuales) lo anotó el equipo por fuera
 		// del panel; lo demás (bienvenida al firmar, conversión al aceptar) lo hizo el sistema solo.
-		$humanos = ['reunion', 'llamada', 'nota', 'email', 'whatsapp', 'proyecto_update', 'proyecto_creado', 'update', 'entregable_version', 'entregable_respuesta'];
+		$humanos = ['reunion', 'llamada', 'nota', 'email', 'whatsapp', 'proyecto_update', 'proyecto_creado', 'update', 'entregable_version', 'entregable_respuesta', 'hito_cierre_publicado', 'hito_cierre_correo', 'hito_cierre_whatsapp'];
 		return in_array($tipo, $humanos, true) ? 'equipo' : 'automatico';
 	}
 	if ($fuente === 'client' || $fuente === 'prospect') {

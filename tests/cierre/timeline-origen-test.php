@@ -57,5 +57,12 @@ ok(strpos($h, 'Equipo AutomatizaTech') !== false && stripos($h, 'Luis') === fals
 ok(strpos(at_tl_origen_html(hist('entregable_nota', '<script>', 0, '<b>')), '<script>') === false, 'la etiqueta no copia el título ni la descripción');
 ok(strpos(at_tl_origen_html(hist('email_bienvenida', 'x', 0)), 'Automático') !== false && strpos(at_tl_origen_html(hist('entregable_nota', 'x', 0)), '👤 Cliente') !== false, 'etiquetas Cliente y Automático');
 
+// Cierres de hito (Etapa 3 del Estado del proyecto): nombre propio y origen equipo aunque no haya sesión
+foreach (['hito_cierre_publicado' => '🏁 Cierre de hito publicado', 'hito_cierre_correo' => '🏁 Cierre de hito enviado por correo', 'hito_cierre_whatsapp' => '🏁 Cierre de hito enviado por WhatsApp'] as $t => $etiqueta) {
+	$x = at_tl_tipos_extra()[at_tl_mapa_historial()[$t] ?? ''] ?? null;
+	ok(is_array($x) && $x['icon'] . ' ' . $x['label'] === $etiqueta, "$t: «{$etiqueta}»");
+	ok(at_tl_origen(hist($t, 'x', 1)) === 'equipo' && at_tl_origen(hist($t, 'x', 0)) === 'equipo', "$t: lo hizo el Equipo AutomatizaTech");
+}
+
 echo $fallas ? "\n$fallas FALLAS\n" : "\nTODO OK\n";
 exit($fallas ? 1 : 0);

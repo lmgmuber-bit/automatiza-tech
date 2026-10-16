@@ -86,6 +86,9 @@
 .at-av-chip { display: inline-block; padding: 2px 10px; border-radius: 999px; background: #f0f0f1; font-weight: 600; }
 .at-av-chip.is-pub { background: #d1fae5; color: #065f46; }
 .at-av-form-boton { display: inline-block; margin: 2px 6px 2px 0; }
+.at-av-envio { margin: 10px 0; padding: 10px 14px; background: #f0f6fc; border-left: 3px solid #2271b1; }
+.at-av-envio textarea { width: 100%; max-width: 640px; }
+.at-av-envio ul { margin: 6px 0 10px 18px; list-style: disc; }
 .at-av-subir { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 6px 0; }
 .at-av textarea.code { font-family: Consolas, monospace; font-size: 12px; }
 .at-av-detalle details { margin: 4px 0 8px; }
@@ -116,3 +119,68 @@
 .at-av-ayuda { margin: -2px 0 10px; }
 .at-av-ayuda summary { cursor: pointer; color: #2271b1; font-size: 13px; display: inline-block; }
 .at-av-ayuda p { margin: 6px 0 0; padding: 8px 12px; background: #f0f6fc; border-left: 3px solid #2271b1; max-width: 820px; }
+
+/* AT-CRM-001: resumen operativo e índice antes de las secciones del plan. */
+.at-pt, .at-pt-plan, .at-av, .at-pt-seccion, .at-pt-seccion-contenido { min-width: 0; max-width: 100%; box-sizing: border-box; }
+.at-pt-ahora { padding: 16px; margin-bottom: 14px; border: 1px solid #c3c4c7; border-radius: 6px; background: #fff; }
+.at-pt-ahora > h4 { margin: 0 0 12px; font-size: 16px; }
+.at-pt-indice { display: flex; flex-wrap: wrap; gap: 4px 14px; margin: 0 0 16px; padding: 8px 12px; background: #f0f0f1; border-radius: 4px; }
+.at-pt-indice a { display: inline-flex; align-items: center; min-height: 40px; overflow-wrap: anywhere; }
+.at-pt-seccion { margin: 0 0 12px; border: 1px solid #c3c4c7; border-radius: 6px; background: #fff; scroll-margin-top: 48px; }
+.at-pt-seccion > summary { box-sizing: border-box; min-height: 48px; padding: 12px 16px; cursor: pointer; color: #1d2327; background: #f6f7f7; border-radius: 6px; }
+.at-pt-seccion > summary h4 { display: inline; margin: 0; font-size: 14px; line-height: 1.5; }
+.at-pt-seccion[open] > summary { border-bottom: 1px solid #dcdcde; border-radius: 6px 6px 0 0; }
+.at-pt-seccion > summary:focus-visible, .at-pt summary:focus-visible, .at-pt-tabla-scroll:focus-visible { outline: 2px solid #2271b1; outline-offset: 2px; }
+.at-pt-seccion-contenido { padding: 14px 16px; overflow-wrap: anywhere; }
+.at-pt-editor, .at-pt-pedir-cambios { margin: 12px 0; padding: 10px 12px; border: 1px solid #dcdcde; border-radius: 4px; }
+.at-pt-editor > summary, .at-pt-pedir-cambios > summary, .at-av-importar-caja > summary, .at-av-detalle summary { min-height: 40px; line-height: 1.5; padding: 8px 0; box-sizing: border-box; cursor: pointer; }
+.at-av-ayuda > summary { min-height: 40px; padding: 8px 0; box-sizing: border-box; line-height: 1.5; }
+.at-pt-editor[open] > summary, .at-pt-pedir-cambios[open] > summary { margin-bottom: 12px; }
+.at-pt .button, .at-pt .button.button-small { box-sizing: border-box; min-height: 40px; height: auto; max-width: 100%; padding: 8px 12px; line-height: 1.45; white-space: normal; overflow-wrap: anywhere; text-align: center; vertical-align: middle; }
+.at-pt-quitar { min-height: 40px; min-width: 40px; }
+.at-pt input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]), .at-pt select, .at-pt textarea { box-sizing: border-box; min-width: 0; max-width: 100%; }
+.at-pt input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]), .at-pt select { min-height: 40px; }
+.at-pt .at-pt-check, .at-av-nc-bloques label { min-height: 40px; }
+.at-pt .notice.inline form { margin-right: 6px; }
+.at-pt-tabla-scroll { width: 100%; max-width: 100%; overflow-x: auto; overscroll-behavior-x: contain; }
+.at-pt-tabla-scroll > table { min-width: 680px; }
+.at-av-cierres th, .at-av-cierres td { overflow-wrap: anywhere; }
+.at-av-cierres > thead th:first-child { width: 25%; }
+.at-av-cierres > thead th:last-child { width: 30%; }
+.at-av-nc, .at-av-nc-fila > *, .at-av-nc-partes > *, .at-av-ev, .at-av-ev > * { min-width: 0; box-sizing: border-box; }
+.at-av-nc input:not([type="checkbox"]), .at-av-nc select, .at-av-nc textarea { width: 100%; }
+.at-av .at-av-nc-bloques label { display: inline-flex; }
+.at-av-nc-bloques input[type="checkbox"] { flex: 0 0 auto; }
+.at-av-envio p:last-child { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.at-av-envio .at-av-correo, .at-av-envio .at-av-whatsapp { max-width: 100%; }
+.at-av-render .at-av-form-boton { margin: 0; }
+#at-av-nuevo, .at-av-envio[id] { scroll-margin-top: 48px; }
+
+@media screen and (max-width: 767px) {
+  .at-pt-ahora, .at-pt-seccion-contenido { padding: 12px; }
+  .at-pt-resumen, .at-av-nc-partes { grid-template-columns: minmax(0, 1fr); }
+  .at-pt-bloque-cab { grid-template-columns: minmax(0, 1fr); }
+  .at-pt-act-l2, .at-av-nc-fila, .at-av-ev, .at-av-subir { flex-direction: column; align-items: stretch; }
+  .at-pt-act-l2 label { display: flex; justify-content: space-between; }
+  .at-av-nc-titulo, .at-av-ev-largo { flex-basis: auto; }
+  .at-av-nc { padding: 10px; }
+  .at-av-ev { padding: 8px; }
+  .at-av-ev .at-av-c, .at-av-ev select, .at-av-nc input[type="date"] { width: 100%; }
+  .at-av-nc-bloques label { margin-right: 0; width: 100%; }
+  .at-av-envio { padding: 10px; }
+  .at-av-envio .button { width: 100%; }
+  .at-pt .at-av-form-boton { max-width: 100%; }
+  .at-pt-editor { padding: 8px; }
+  .at-pt-tabla-scroll > .at-av-tabla-bloques, .at-pt-tabla-scroll > .at-av-cierres { min-width: 0; }
+  .at-av-tabla-bloques, .at-av-tabla-bloques tbody, .at-av-tabla-bloques tr, .at-av-tabla-bloques td,
+  .at-av-cierres, .at-av-cierres tbody, .at-av-cierres tr, .at-av-cierres td { display: block; width: 100%; box-sizing: border-box; }
+  .at-av-tabla-bloques thead, .at-av-cierres thead { position: absolute; width: 1px; height: 1px; clip-path: inset(50%); overflow: hidden; }
+  .at-av-tabla-bloques tr { padding: 8px 0; border-bottom: 1px solid #dcdcde; }
+  .at-av-tabla-bloques td::before, .at-av-cierres td[data-label]::before { content: attr(data-label); display: block; margin-bottom: 4px; font-weight: 600; }
+  .at-av-tabla-bloques select, .at-av-tabla-bloques input[type="date"] { width: 100%; }
+  .at-av-cierres tr:not(.at-av-detalle) { padding-top: 8px; }
+  .at-av-cierres .at-av-detalle { border-bottom: 1px solid #c3c4c7; padding-bottom: 8px; }
+  .at-av-cierres .at-av-envio { margin: 0; }
+  .at-av-cierres .at-av-form-boton, .at-av-cierres .at-av-correo, .at-av-cierres .at-av-whatsapp,
+  .at-av-cierres .at-av-editar, .at-av-cierres .button { width: 100%; }
+}

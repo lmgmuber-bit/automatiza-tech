@@ -2795,7 +2795,7 @@ class AutomatizaTech_CRM_AI {
             <?php if (!$is_designer_only): ?>
             <!-- Timeline / Historial Unificado con Pestañas -->
             <div class="ficha-card full-width">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0;">
+                <div class="ficha-timeline-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0;">
                     <h3 style="margin-bottom:0;">📜 Historial / Timeline (Prospecto + Cliente)</h3>
                     <div style="display:flex; gap:8px;">
                         <button class="button" onclick="abrirModalNota(<?php echo $cliente_id; ?>)">📝 Agregar Nota</button>
@@ -8173,7 +8173,40 @@ class AutomatizaTech_CRM_AI {
         .crm-table-box h3 { margin-top: 0; }
         
         /* Ficha cliente */
-        .ficha-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .ficha-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; }
+        /* AT-CRM-001: the two large tabs span the grid; metrics remain below. */
+        .ficha-grid > .ficha-col { min-width: 0; }
+        .ficha-grid:has(#tab-plan.active, #tab-entregables.active) > .ficha-col { grid-column: 1 / -1; }
+        .ficha-grid .ficha-card { min-width: 0; box-sizing: border-box; }
+        .ficha-grid .ficha-tabs { flex-wrap: wrap; }
+        .ficha-grid .ficha-tab, .ficha-grid .button, .ficha-timeline-actions .button { min-height: 40px; }
+        .ficha-timeline-header, .ficha-timeline-actions { flex-wrap: wrap; gap: 8px; }
+        .ficha-timeline-actions { max-width: 100%; }
+        .ficha-timeline-actions .button { max-width: 100%; white-space: normal; height: auto; }
+        .ficha-grid .ficha-tab:focus-visible { outline: 2px solid #2271b1; outline-offset: -3px; }
+        #tab-plan, #tab-entregables { min-width: 0; overflow-wrap: anywhere; }
+        #tab-entregables .at-en-card { border: 1px solid #dcdcde; border-radius: 8px; padding: 20px; margin: 16px 0; background: #fff; }
+        #tab-entregables summary { cursor: pointer; min-height: 40px; padding: 10px 12px; box-sizing: border-box; font-weight: 600; }
+        #tab-entregables details { border: 1px solid #dcdcde; border-radius: 6px; margin: 12px 0; }
+        #tab-entregables details[open] > summary { border-bottom: 1px solid #dcdcde; background: #f6f7f7; }
+        #tab-entregables details > :not(summary) { margin-left: 12px; margin-right: 12px; }
+        #tab-entregables .button { min-height: 40px; white-space: normal; line-height: 1.5; padding: 8px 12px; height: auto; }
+        #tab-entregables form, #tab-entregables label, #tab-entregables input, #tab-entregables textarea, #tab-entregables iframe { max-width: 100%; box-sizing: border-box; }
+        #tab-entregables input[type="text"], #tab-entregables input[type="url"], #tab-entregables textarea { width: 100%; }
+        #tab-entregables iframe { display: block; width: calc(100% - 24px) !important; }
+        #tab-entregables .at-en-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+        #tab-entregables .at-en-actions form { margin: 0; }
+        #tab-entregables .at-en-header h4 { margin: 0 0 8px; font-size: 16px; }
+        #tab-entregables .at-en-meta { margin-top: 0; color: #50575e; }
+        #tab-entregables .at-en-fold-body { padding: 12px 0; }
+        #tab-entregables input:not([type="checkbox"]):not([type="hidden"]), #tab-entregables select { min-height: 40px; }
+        @media screen and (max-width: 767px) {
+            .ficha-grid .ficha-tabs { flex-wrap: nowrap; overflow-x: auto; max-width: 100%; }
+            #tab-entregables .at-en-card { padding: 12px; }
+            #tab-entregables form { display: flex !important; flex-direction: column; gap: 8px; width: 100%; }
+            #tab-entregables .at-en-actions { align-items: stretch; }
+            #tab-entregables .at-en-actions > * { width: 100%; }
+        }
         .ficha-card { background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 20px; }
         .ficha-card h3 { margin-top: 0; border-bottom: 1px solid #eee; padding-bottom: 10px; }
         .ficha-card.highlight { border-left: 4px solid #46b450; }

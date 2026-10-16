@@ -16,10 +16,11 @@ function at_pt_host_renderer(): string {
 	return defined('AT_PA_RENDERER_HOST') ? (string) AT_PA_RENDERER_HOST : 'n8n-propuesta-renderer.kchiba.easypanel.host';
 }
 
-/** Baja el PDF de la versión final a un archivo temporal propio. Solo desde https://<renderer>/p/<código>/presentation.pdf.
+/** Baja el PDF de la versión final a un archivo temporal propio. Solo desde https://<renderer>/p/<código>/presentation.pdf
+ *  (o /p/<código>-estado/presentation.pdf, la presentación «Estado del proyecto»). $nombre: nombre del archivo adjunto.
  *  WP_Error con el motivo legible si no se pudo. Quien lo use borra el archivo y su carpeta. */
-function at_pt_descargar_pdf(string $url, string $codigo) {
-	if (!preg_match('#^https://' . preg_quote(at_pt_host_renderer(), '#') . '/p/[A-Za-z0-9]{6,32}/presentation\.pdf$#', trim($url))) {
+function at_pt_descargar_pdf(string $url, string $codigo, string $nombre = 'Plan-de-trabajo.pdf') {
+	if (!preg_match('#^https://' . preg_quote(at_pt_host_renderer(), '#') . '/p/[A-Za-z0-9]{6,32}(-estado)?/presentation\.pdf$#', trim($url))) {
 		return new WP_Error('pdf_url', 'el PDF no es del renderer');
 	}
 	$r = wp_remote_get(trim($url), ['timeout' => 60, 'limit_response_size' => AT_PT_PDF_MAX_BYTES + 1, 'redirection' => 0]);
@@ -36,7 +37,7 @@ function at_pt_descargar_pdf(string $url, string $codigo) {
 	// Carpeta única por envío: dos envíos a la vez no se pisan el archivo.
 	$dir = trailingslashit(get_temp_dir()) . 'at-plan-' . preg_replace('/[^A-Za-z0-9]/', '', $codigo) . '-' . wp_generate_password(8, false, false) . '/';
 	wp_mkdir_p($dir);
-	$archivo = $dir . 'Plan-de-trabajo.pdf';
+	$archivo = $dir . (preg_match('/^[A-Za-z0-9._-]{1,80}\.pdf$/', $nombre) ? $nombre : 'Plan-de-trabajo.pdf');
 	if (file_put_contents($archivo, $cuerpo) === false) {
 		@rmdir($dir);
 		return new WP_Error('pdf_descarga', 'no se pudo guardar el PDF');

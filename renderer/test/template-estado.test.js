@@ -118,3 +118,21 @@ test('un bloque terminado antes de lo planificado y sin inicio real se dibuja co
 test('las capturas se recortan desde arriba (menú, título y botones del sitio)', () => {
   assert.ok(renderEstadoHtml(estadoCorto()).includes('.ev-captura img { object-position: top center; }'));
 });
+
+test('una captura de celular sale entera, con marco de teléfono; la de computador sigue recortada desde arriba', () => {
+  const e = estadoCorto();
+  const evs = e.cierres[0].despues.evidencias;
+  evs.push({ tipo: 'captura', titulo: 'Portada nueva en el celular', url: 'https://automatizatech.cl/wp-content/uploads/at-estado/7/dddddddddddddddddddd.png', ancho: 780, alto: 1688 });
+  const html = renderEstadoHtml(e);
+  assert.ok(html.includes('class="ev ev-captura ev-celular"'), 'la captura de celular no lleva su clase');
+  assert.ok(html.includes('style="aspect-ratio: 780 / 1688"'), 'falta la proporción de la captura de celular');
+  assert.ok(html.includes('class="ev ev-captura"><'), 'la captura de computador cambió');
+  const celular = evs.find((x) => x.alto === 1688);
+  for (const [ancho, alto, esperado] of [[1440, 900, null], [800, 900, null], [0, 0, null], ['x', 1688, null], [780, 8000, '9 / 19.5']]) {
+    celular.ancho = ancho;
+    celular.alto = alto;
+    const h = renderEstadoHtml(e);
+    if (esperado) assert.ok(h.includes(`style="aspect-ratio: ${esperado}"`), `${ancho}×${alto}`);
+    else assert.ok(!h.includes('ev-celular"'), `${ancho}×${alto} no es de celular`);
+  }
+});

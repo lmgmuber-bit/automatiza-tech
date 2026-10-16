@@ -37,6 +37,21 @@ function at_av_mensajes(): array {
 		'av_sin_columna'          => ['error', 'Falta preparar la base para el avance: vuelve a entrar al escritorio de WordPress e inténtalo de nuevo.'],
 		'av_error_guardar'        => ['error', 'No se pudo guardar el avance en la base. Inténtalo de nuevo.'],
 		'av_sin_cierre'           => ['error', 'Esa acción no se pudo hacer con ese cierre (detalle abajo, si hay).'],
+		'av_correo_prueba'          => ['ok', 'Te enviamos la prueba del correo de cierre a tu correo. Al cliente no le llegó nada.'],
+		'av_correo_prueba_sin_pdf'  => ['aviso', 'Te enviamos la prueba, pero sin el PDF (detalle abajo): la presentación todavía no está lista.'],
+		'av_correo_cliente'         => ['ok', 'Correo de cierre enviado al cliente. Quedó en el historial del CRM.'],
+		'av_correo_cliente_sin_pdf' => ['aviso', 'Correo de cierre enviado al cliente, pero sin el PDF (detalle abajo): lleva el enlace al estado.'],
+		'av_correo_cliente_aviso'   => ['aviso', 'Correo de cierre enviado al cliente, pero no quedó anotado (detalle abajo). No lo reenvíes sin revisar.'],
+		'av_correo_no_publicado'    => ['error', 'Primero publica el cierre: solo se envía un cierre publicado.'],
+		'av_correo_render_no_listo' => ['error', 'Todavía no está lista la presentación con este cierre. Espera el «Lista» (o usa «Rehacer la presentación») y vuelve a enviar.'],
+		'av_correo_sin_correo'      => ['error', 'No hay a qué correo enviarlo: la ficha del cliente no tiene correo (o falta el correo principal en «Ajustes del cierre», para la prueba).'],
+		'av_correo_interno'         => ['error', 'No se envió: hay un enlace al servidor interno (detalle abajo). El correo de Hostinger lo rechazaría.'],
+		'av_correo_ya_enviado'      => ['aviso', 'Este cierre ya se envió al cliente. Para mandarlo otra vez usa «Reenviar» y confírmalo.'],
+		'av_correo_enviando'        => ['aviso', 'Ese correo ya se está enviando. Recarga en un minuto.'],
+		'av_correo_correo_fallo'    => ['error', 'El servidor de correo no aceptó el envío (detalle abajo, si hay). Inténtalo de nuevo en un rato.'],
+		'av_correo_sin_cierre'      => ['error', 'Ese cierre no existe.'],
+		'av_correo_sin_plan'        => ['error', 'Ese plan no existe.'],
+		'av_whatsapp_sin_telefono'  => ['error', 'La ficha del cliente no tiene un teléfono para WhatsApp.'],
 	];
 }
 
@@ -50,6 +65,8 @@ add_action('admin_post_at_av_bloques', 'at_av_accion_bloques');
 add_action('admin_post_at_av_listas', 'at_av_accion_listas');
 add_action('admin_post_at_av_reintentar', 'at_av_accion_reintentar');
 add_action('admin_post_at_av_previa', 'at_av_accion_previa');
+add_action('admin_post_at_av_correo', 'at_av_accion_correo');
+add_action('admin_post_at_av_whatsapp', 'at_av_accion_whatsapp');
 
 /** Permiso, nonce, plan enviado y migración hecha; si no, vuelve a la ficha. Devuelve [fila, crm, avance]. */
 function at_av_accion_inicio(): array {
@@ -64,10 +81,52 @@ function at_av_accion_inicio(): array {
 	return [$fila, $crm, at_av_leer($fila)];
 }
 
-function at_av_guardar_o_volver(int $id, int $crm, array $avance): void {
-	if (!at_av_guardar($id, $avance)) {
-		at_pt_volver($crm, $id, 'av_error_guardar');
+/**
+ * Guarda el avance que armó una acción sin borrar lo que otro proceso escribió desde que la acción lo leyó: se relee
+ * la fila, se pasan al avance a guardar las marcas de envío (correo y WhatsApp) de cada cierre que está en los dos y
+ * los dos registros de render (salvo $render_propio: la acción los decidió ella), y se guarda solo si la fila sigue
+ * siendo la releída (at_av_guardar_si_igual), con hasta 3 intentos. Si no se logra, vuelve a la ficha con el error.
+ */
+function at_av_guardar_o_volver(int $id, int $crm, array $avance, bool $render_propio = false): void {
+	for ($i = 0; $i < 3; $i++) {
+		$f = at_pt_plan($id);
+		if (!$f) {
+			break;
+		}
+		$antes = (string) $f->avance; // tal cual salió de la base: es la condición del guardado
+		$fresco = at_av_leer($f);
+		$nuevo = at_av_con_lo_ajeno($avance, $fresco, $render_propio);
+		if (at_av_normalizar($nuevo) === $fresco || at_av_guardar_si_igual($id, $antes, $nuevo)) {
+			return; // nada que escribir (ya está así) o guardado
+		}
 	}
+	at_pt_volver($crm, $id, 'av_error_guardar');
+}
+
+/** El avance $avance con lo que escriben otros procesos tomado del $fresco: envíos de cada cierre (por id) y, salvo $render_propio, los renders. */
+function at_av_con_lo_ajeno(array $avance, array $fresco, bool $render_propio): array {
+	$vigentes = [];
+	foreach ($fresco['cierres'] as $c) {
+		$vigentes[(string) ($c['id'] ?? '')] = $c;
+	}
+	foreach ($avance['cierres'] as $k => $c) {
+		$v = $vigentes[(string) ($c['id'] ?? '')] ?? null;
+		if ($v === null) {
+			continue;
+		}
+		foreach (['correo', 'whatsapp'] as $campo) {
+			if (array_key_exists($campo, $v)) {
+				$avance['cierres'][$k][$campo] = $v[$campo];
+			} else {
+				unset($avance['cierres'][$k][$campo]);
+			}
+		}
+	}
+	if (!$render_propio) {
+		$avance['render'] = $fresco['render'];
+		$avance['render_previa'] = $fresco['render_previa'];
+	}
+	return $avance;
 }
 
 function at_av_cierre_post(): string {
@@ -253,6 +312,9 @@ function at_av_accion_publicar(): void {
 		at_pt_volver($crm, $id, $r === 'Ese cierre no existe.' ? 'av_sin_cierre' : 'av_no_publicable');
 	}
 	at_av_guardar_o_volver($id, $crm, $r);
+	// Solo con el cierre ya guardado como publicado: un intento fallido no deja nada en el historial del CRM.
+	$pub = at_av_cierre_de_avance($r, at_av_cierre_post());
+	at_pt_historial($fila, 'hito_cierre_publicado', 'Cierre de hito publicado', 'Publicamos el cierre «' . (string) ($pub['titulo'] ?? '') . '» en el estado del proyecto. No se le envió nada al cliente.');
 	$motivo = at_av_refrescar($id);
 	at_pt_volver($crm, $id, $motivo === '' ? 'av_publicado' : 'av_publicado_sin_render');
 }
@@ -267,8 +329,11 @@ function at_av_accion_borrador(): void {
 		at_pt_guardar_detalles($id, [$r]);
 		at_pt_volver($crm, $id, 'av_sin_cierre');
 	}
-	$r['render'] = at_av_publicados($r) ? array_merge(at_av_registro_vacio(), ['estado' => 'pendiente', 'at' => current_time('mysql')]) : at_av_registro_vacio();
-	at_av_guardar_o_volver($id, $crm, $r);
+	// Si quedan publicados, la presentación queda «pendiente» y sin enlace viejo. Un pedido que de verdad está en curso
+	// conserva su hora y su cola, para que el pedido de abajo se serialice con él (at_av_pedir_render).
+	$en_curso = ($avance['render']['estado'] ?? '') === 'pendiente' ? ['pedido_at' => $avance['render']['pedido_at'], 'repetir' => $avance['render']['repetir']] : [];
+	$r['render'] = at_av_publicados($r) ? array_merge(at_av_registro_vacio(), ['estado' => 'pendiente', 'at' => current_time('mysql')], $en_curso) : at_av_registro_vacio();
+	at_av_guardar_o_volver($id, $crm, $r, true);
 	at_av_refrescar($id);
 	at_pt_volver($crm, $id, 'av_borrador');
 }
@@ -339,6 +404,142 @@ function at_av_accion_previa(): void {
 	at_pt_volver($crm, $id, at_av_pedir_render($id, true) === '' ? 'av_previa' : 'av_reintento_fallo');
 }
 
+/**
+ * «Enviarme una prueba» / «Enviar al cliente» / «Reenviar»: el envío lo hace at_av_enviar_cierre(). Todo detalle que
+ * traiga (el enlace interno, el error del servidor, el PDF que faltó, un envío que no quedó anotado) va al aviso de la
+ * ficha, que es lo que lee quien hace el clic; el mensaje dice qué pasó.
+ */
+function at_av_accion_correo(): void {
+	[$fila, $crm] = at_av_accion_inicio();
+	$id = (int) $fila->id;
+	$destino = ($_POST['destino'] ?? '') === 'cliente' ? 'cliente' : 'prueba';
+	$mensaje = mb_substr(sanitize_textarea_field(wp_unslash($_POST['mensaje'] ?? '')), 0, 1500);
+	$r = at_av_enviar_cierre($id, at_av_cierre_post(), $destino, $mensaje, ($_POST['reenviar'] ?? '') === '1');
+	if (!$r['ok']) {
+		if ($r['detalle'] !== '') {
+			$prefijo = ['interno' => 'Enlace o texto interno: ', 'correo_fallo' => 'Error: '][$r['motivo']] ?? '';
+			at_pt_guardar_detalles($id, [$prefijo . $r['detalle']]);
+		}
+		at_pt_volver($crm, $id, 'av_correo_' . $r['motivo']);
+	}
+	$lineas = [];
+	if ($destino === 'cliente' && $r['sin_pdf'] !== '') {
+		$lineas[] = 'Motivo: ' . $r['sin_pdf'] . '.';
+	}
+	if ($r['detalle'] !== '') {
+		$lineas[] = $r['detalle']; // salió, pero no quedó anotado: que nadie lo reenvíe sin mirar
+	}
+	if ($destino !== 'cliente' && $r['sin_pdf'] !== '') {
+		$lineas[] = 'Motivo: ' . $r['sin_pdf'] . '.'; // la prueba salió sin el PDF: que quien la revisa sepa por qué
+	}
+	if ($lineas) {
+		at_pt_guardar_detalles($id, $lineas);
+	}
+	if ($r['detalle'] !== '') {
+		at_pt_volver($crm, $id, 'av_correo_cliente_aviso');
+	}
+	if ($destino !== 'cliente' && $r['sin_pdf'] !== '') {
+		at_pt_volver($crm, $id, 'av_correo_prueba_sin_pdf');
+	}
+	if ($destino === 'cliente' && $r['sin_pdf'] !== '') {
+		at_pt_volver($crm, $id, 'av_correo_cliente_sin_pdf');
+	}
+	at_pt_volver($crm, $id, $destino === 'cliente' ? 'av_correo_cliente' : 'av_correo_prueba');
+}
+
+/** «Enviar por mi WhatsApp»: anota que se abrió y manda a wa.me (el formulario abre otra pestaña). */
+function at_av_accion_whatsapp(): void {
+	[$fila, $crm] = at_av_accion_inicio();
+	$id = (int) $fila->id;
+	$r = at_av_registrar_whatsapp_cierre($id, at_av_cierre_post());
+	if (!$r['ok']) {
+		at_pt_volver($crm, $id, $r['motivo'] === 'sin_telefono' ? 'av_whatsapp_sin_telefono' : 'av_correo_' . $r['motivo']);
+	}
+	if ($r['motivo'] === 'no_anotado') {
+		at_pt_guardar_detalles($id, ['Abrimos el WhatsApp, pero no quedó anotado en el cierre. Revisa el historial antes de volver a enviarlo.']);
+	}
+	wp_redirect($r['url']); // wa.me no es del sitio: wp_safe_redirect lo cambiaría por el escritorio
+	exit;
+}
+
+/** Fecha y hora de un envío («2026-10-12 10:30:00» → «12 oct 2026 10:30»). */
+function at_av_fecha_envio(string $mysql): string {
+	$dia = at_pt_panel_fecha(substr($mysql, 0, 10), true);
+	return $dia === '' ? $mysql : $dia . (preg_match('/^\d{4}-\d{2}-\d{2} (\d{2}:\d{2})/', $mysql, $m) ? ' ' . $m[1] : '');
+}
+
+/** El video es de nuestro propio sitio (el de la carpeta de uploads o cualquier URL del sitio): solo esos se ofrecen para descargar. */
+function at_av_url_propia(string $url): bool {
+	$up = wp_upload_dir(null, false);
+	foreach ([home_url('/'), trailingslashit((string) $up['baseurl'])] as $base) {
+		if ($url !== '' && str_starts_with($url, $base)) {
+			return true;
+		}
+	}
+	return false;
+}
+
+/**
+ * Bloque «📣 Avisar al cliente» de un cierre publicado: estado de los envíos, correo (prueba o al cliente, con mensaje
+ * opcional), WhatsApp de Luis y descarga de los videos propios. Nada sale sin un clic. '' si el cierre no se puede enviar.
+ */
+function at_av_render_envio(object $fila, int $crm_id, array $av, string $cid): string {
+	$p = at_av_preparar_envio_de($fila, $av, $cid);
+	if (is_string($p)) {
+		return '';
+	}
+	[, , $c, $r, $d, $url_estado] = $p;
+	$id = (int) $fila->id;
+	$env = at_av_envio_de_cierre($c);
+	$co = $env['correo'];
+	$cuando = fn(?string $v, string $verbo): string => $v === null ? 'aún no' : $verbo . ' el ' . at_av_fecha_envio($v);
+	$enviado = $co['enviado_at'] !== null;
+	$para = (string) ($d['client_email'] ?? '');
+
+	$h = '<div class="at-av-envio"><strong>📣 Avisar al cliente</strong> <span class="description">No sale nada hasta que hagas clic.</span><ul>'
+		. '<li>Correo al cliente: ' . esc_html($cuando($co['enviado_at'], 'enviado')) . ($enviado && $co['a'] !== '' ? ' a ' . esc_html($co['a']) : '') . '</li>'
+		. '<li>Prueba: ' . esc_html($cuando($co['prueba_at'], 'enviada')) . '</li>'
+		. '<li>WhatsApp: ' . esc_html($cuando($env['whatsapp']['abierto_at'], 'abierto')) . '</li></ul>';
+
+	// Correo: la prueba va a nuestro correo; al cliente pide confirmación con su dirección (o la fecha del envío anterior).
+	$confirmar = $enviado
+		? 'Este cierre ya se envió el ' . at_av_fecha_envio((string) $co['enviado_at']) . ($co['a'] !== '' ? ' a ' . $co['a'] : '') . '. ¿Enviarlo otra vez al cliente?'
+		: 'Se enviará el correo de cierre a ' . $para . '. ¿Enviar?';
+	$h .= '<form method="post" action="' . esc_url(admin_url('admin-post.php')) . '" class="at-av-correo">'
+		. at_av_ocultos('at_av_correo', $id, $crm_id, ['cierre_id' => $cid])
+		. '<textarea name="mensaje" rows="3" maxlength="1500" placeholder="Mensaje opcional para el cliente (va arriba del resumen)">' . esc_textarea($co['mensaje']) . '</textarea>'
+		. ($enviado ? '<input type="hidden" name="reenviar" value="1">' : '')
+		. '<p><button type="submit" name="destino" value="prueba" class="button">📧 Enviarme una prueba</button> ';
+	if ($para === '') {
+		$h .= '<button type="submit" name="destino" value="cliente" class="button button-primary" disabled>' . ($enviado ? '📨 Reenviar al cliente' : '📨 Enviar al cliente') . '</button> '
+			. '<span class="description">El cliente no tiene correo en su ficha ni en el contrato.</span>';
+	} else {
+		$h .= '<button type="submit" name="destino" value="cliente" class="button button-primary" onclick="return confirm(' . esc_attr(wp_json_encode($confirmar, JSON_UNESCAPED_UNICODE)) . ');">'
+			. ($enviado ? '📨 Reenviar al cliente' : '📨 Enviar al cliente') . '</button>';
+	}
+	$h .= '</p></form>';
+
+	// WhatsApp: abre el WhatsApp de Luis (otra pestaña) con el texto ya escrito; el mismo texto queda abajo para copiarlo.
+	if (at_av_url_whatsapp_cierre($fila, $cid) !== '') {
+		$h .= '<form method="post" action="' . esc_url(admin_url('admin-post.php')) . '" target="_blank" class="at-av-whatsapp">'
+			. at_av_ocultos('at_av_whatsapp', $id, $crm_id, ['cierre_id' => $cid])
+			. '<p><button type="submit" class="button">💬 Enviar por mi WhatsApp</button>'
+			. (at_av_render_listo_para($av, $c) ? '' : ' <span class="description">Ojo: la presentación del cliente todavía no incluye este cierre; espera el «Lista» antes de mandarlo.</span>')
+			. '</p>'
+			. '<textarea readonly rows="3">' . esc_textarea(at_av_texto_whatsapp_cierre((string) ($d['client_name'] ?? ''), $r, $url_estado)) . '</textarea></form>';
+	} else {
+		$h .= '<p class="description">La ficha no tiene teléfono para WhatsApp.</p>';
+	}
+
+	// Videos: solo los de nuestro sitio se ofrecen para bajar (para mandarlos por WhatsApp).
+	foreach ((array) ($r['videos'] ?? []) as $v) {
+		if (at_av_url_propia((string) $v['url'])) {
+			$h .= '<a class="button at-av-form-boton" href="' . esc_url((string) $v['url']) . '" download>⬇️ Descargar el video «' . esc_html((string) $v['titulo']) . '»</a> ';
+		}
+	}
+	return $h . '</div>';
+}
+
 /** «ℹ️ ¿Para qué sirve?» bajo el título de una parte de la sección: se abre y se cierra sin JS. $html es texto fijo del código. */
 function at_av_ayuda(string $html): string {
 	return '<details class="at-av-ayuda"><summary>ℹ️ ¿Para qué sirve?</summary><p>' . $html . '</p></details>';
@@ -379,51 +580,20 @@ function at_av_render_seccion(object $fila, int $crm_id): void {
 	$publicados = at_av_publicados($av);
 	$publica = at_pt_url_ver_estado(home_url(), $codigo);
 
-	// Presentación para el cliente y vista previa.
-	$etiquetas = ['' => 'Todavía no se genera', 'pendiente' => 'Generándose', 'listo' => 'Lista', 'error' => 'Con error'];
-	$reg = $av['render'];
-	echo '<div class="at-av-render"><p><strong>Presentación para el cliente:</strong> ' . esc_html($etiquetas[$reg['estado']] ?? $reg['estado'])
-		. ($reg['at'] !== '' ? ' · ' . esc_html($reg['at']) : '') . '</p>';
-	if ($reg['nota'] !== '') {
-		echo '<p class="description">' . esc_html($reg['nota']) . '</p>';
-	}
-	echo '<p>El cliente la ve en <a href="' . esc_url($publica) . '" target="_blank" rel="noopener">' . esc_html($publica) . '</a>'
-		. ($publicados ? '' : ' (mientras no publiques un cierre, ve «Pronto verás aquí el avance de tu proyecto»)') . '.</p><p>';
-	if ($reg['view_url'] !== '') {
-		echo '<a class="button" href="' . esc_url($reg['view_url']) . '" target="_blank" rel="noopener">👁️ Ver la presentación publicada</a> ';
-		if ($reg['pdf_url'] !== '') {
-			echo '<a class="button" href="' . esc_url($reg['pdf_url']) . '" target="_blank" rel="noopener">📄 PDF</a> ';
-		}
-	}
-	if ($publicados) {
-		echo at_av_boton('at_av_reintentar', $id, $crm_id, '🔄 Rehacer la presentación');
-	}
-	if ($av['cierres']) {
-		echo at_av_boton('at_av_previa', $id, $crm_id, '👁️ Pedir vista previa con borradores');
-	}
-	echo '</p>';
-	$pr = $av['render_previa'];
-	if ($pr['estado'] === 'listo' && $pr['view_url'] !== '') {
-		echo '<p><a href="' . esc_url($pr['view_url']) . '" target="_blank" rel="noopener">Abrir la vista previa con borradores</a> <span class="description">(solo para ti; el cliente no la ve)</span></p>';
-	} elseif (in_array($pr['estado'], ['pendiente', 'error'], true)) {
-		echo '<p class="description">Vista previa: ' . esc_html($pr['estado'] === 'pendiente' ? 'generándose…' : 'con error. ' . $pr['nota']) . '</p>';
-	}
-	echo '</div>';
-
 	// Cierres.
-	echo '<h4>Cierres de hito</h4>' . at_av_ayuda('Cada cierre cuenta un hito terminado: cómo estaba, qué hicimos y cómo quedó, con sus pruebas. Nace en <strong>borrador</strong> (solo lo ves tú). Con «✅ Publicar» entra a la presentación «Estado del proyecto» del cliente; no se le envía nada. «↩️ Volver a borrador» lo saca de la presentación al tiro. Solo un borrador se edita o se quita.');
+	echo '<details class="at-pt-seccion" id="at-av-cierres-' . $id . '" open><summary><h4>Cierres de hito</h4></summary><div class="at-pt-seccion-contenido">' . at_av_ayuda('Cada cierre cuenta un hito terminado: cómo estaba, qué hicimos y cómo quedó, con sus pruebas. Nace en <strong>borrador</strong> (solo lo ves tú). Con «✅ Publicar» entra a la presentación «Estado del proyecto» del cliente; no se le envía nada: el aviso (correo o WhatsApp) lo mandas tú, aparte, desde el cierre publicado. «↩️ Volver a borrador» lo saca de la presentación al tiro. Solo un borrador se edita o se quita.');
 	if (!$av['cierres']) {
 		echo '<p class="description">Todavía no hay cierres. Créalo abajo con «Nuevo cierre» (o impórtalo, si te entregaron el archivo .json).</p>';
 	} else {
-		echo '<table class="widefat striped at-av-cierres"><thead><tr><th>Cierre</th><th>Bloques</th><th>Listo el</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>';
+		echo '<div class="at-pt-tabla-scroll" role="region" aria-label="Cierres de hito" tabindex="0"><table class="widefat striped at-av-cierres"><thead><tr><th>Cierre</th><th>Bloques</th><th>Listo el</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>';
 		foreach ($av['cierres'] as $c) {
 			$cid = (string) $c['id'];
 			$pub = ($c['estado'] ?? '') === 'publicado';
 			$faltan = at_av_faltan_archivos($av, $cid);
-			echo '<tr><td><strong>' . esc_html((string) $c['titulo']) . '</strong></td><td>' . esc_html(implode(', ', (array) $c['bloques'])) . '</td><td>'
-				. esc_html(at_pt_panel_fecha((string) $c['fecha_real'], true)) . '</td><td>'
+			echo '<tr id="at-av-' . esc_attr($cid) . '"><td data-label="Cierre"><strong>' . esc_html((string) $c['titulo']) . '</strong></td><td data-label="Bloques">' . esc_html(implode(', ', (array) $c['bloques'])) . '</td><td data-label="Listo el">'
+				. esc_html(at_pt_panel_fecha((string) $c['fecha_real'], true)) . '</td><td data-label="Estado">'
 				. ($pub ? '<span class="at-av-chip is-pub">Publicado</span>' : '<span class="at-av-chip">Borrador</span>')
-				. ($faltan ? '<br><small>Faltan archivos: ' . esc_html(implode(', ', $faltan)) . '</small>' : '') . '</td><td>';
+				. ($faltan ? '<br><small>Faltan archivos: ' . esc_html(implode(', ', $faltan)) . '</small>' : '') . '</td><td data-label="Acciones">';
 			if ($pub) {
 				echo at_av_boton('at_av_borrador', $id, $crm_id, '↩️ Volver a borrador', ['cierre_id' => $cid], 'El cliente dejará de ver este cierre. ¿Volver a borrador?');
 			} else {
@@ -432,7 +602,7 @@ function at_av_render_seccion(object $fila, int $crm_id): void {
 				echo at_av_boton('at_av_publicar', $id, $crm_id, '✅ Publicar', ['cierre_id' => $cid], 'El cliente verá este cierre en «Estado del proyecto». No se le envía nada. ¿Publicar?', (bool) $faltan);
 				echo at_av_boton('at_av_quitar', $id, $crm_id, '🗑️ Quitar', ['cierre_id' => $cid], '¿Quitar este cierre y sus archivos?');
 			}
-			echo '</td></tr><tr class="at-av-detalle"><td colspan="5"><details><summary>Archivos y edición avanzada (JSON)</summary>';
+			echo '</td></tr><tr class="at-av-detalle"><td colspan="5">' . ($pub ? at_av_render_envio($fila, $crm_id, $av, $cid) : '') . '<details><summary>Archivos y edición avanzada (JSON)</summary>';
 			foreach (array_merge((array) ($c['antes']['evidencias'] ?? []), (array) ($c['despues']['evidencias'] ?? [])) as $eid) {
 				$e = $av['evidencias'][$eid] ?? null;
 				// Publicado: sin formularios de subida (el cliente lo está viendo; primero se vuelve a borrador).
@@ -462,9 +632,13 @@ function at_av_render_seccion(object $fila, int $crm_id): void {
 			}
 			echo '</details></td></tr>';
 		}
-		echo '</tbody></table>';
+		echo '</tbody></table></div>';
 	}
+	echo '</div></details>';
 
+	$formulario_guardado = get_transient(at_av_clave_form());
+	$abrir_formulario = !empty($_GET['av_editar']) || (is_array($formulario_guardado) && (int) ($formulario_guardado['plan_id'] ?? 0) === $id);
+	echo '<details class="at-pt-seccion" id="at-av-formulario-' . $id . '"' . ($abrir_formulario ? ' open' : '') . '><summary><h4>Nuevo/editar cierre e importar</h4></summary><div class="at-pt-seccion-contenido">';
 	echo at_av_render_formulario($fila, $crm_id, $av, $plan);
 
 	// Importar cierre (archivo .json que entrega una sesión de Claude o Codex).
@@ -475,11 +649,12 @@ function at_av_render_seccion(object $fila, int $crm_id): void {
 		. '<p><label>Archivos de las evidencias (capturas, videos y pósters, con el nombre que dice el archivo) <input type="file" name="archivos[]" multiple accept="image/jpeg,image/png,image/webp,video/mp4,video/webm"></label></p>'
 		. '<p class="description">Se guarda como borrador: el cliente no ve nada hasta que lo publiques. Formato y ejemplo: Docs/METODO_AT/ESTADO-DEL-PROYECTO.md.</p>'
 		. '<p><button type="submit" class="button">📥 Importar como borrador</button></p></form></details>';
+	echo '</div></details>';
 
 	// Bloques.
 	$opciones = ['por_venir' => 'Por venir', 'en_curso' => 'En curso', 'listo' => 'Listo'];
-	echo '<h4>Bloques del plan</h4>' . at_av_ayuda('Aquí marcas en qué va cada etapa del plan firmado. Es lo que el cliente ve en la barra de avance de «Estado del proyecto». <strong>Por venir</strong> = aún no empieza; <strong>En curso</strong> = estamos trabajando en ella; <strong>Listo</strong> = terminada. <strong>Inicio y fin real</strong> son las fechas en que de verdad empezó y terminó (pueden ser distintas de lo planificado, que no cambia). Un bloque con un cierre publicado se muestra «listo» solo, aunque aquí diga otra cosa. Si ya hay un cierre publicado, guardar rehace la presentación del cliente en unos minutos; si no, lo verá en la primera.') . '<form method="post" action="' . $accion . '" class="at-av-bloques">' . at_av_ocultos('at_av_bloques', $id, $crm_id)
-		. '<table class="widefat striped"><thead><tr><th>Bloque</th><th>Planificado</th><th>Estado</th><th>Inicio real</th><th>Fin real</th></tr></thead><tbody>';
+	echo '<details class="at-pt-seccion" id="at-av-bloques-' . $id . '"><summary><h4>Bloques del plan</h4></summary><div class="at-pt-seccion-contenido">' . at_av_ayuda('Aquí marcas en qué va cada etapa del plan firmado. Es lo que el cliente ve en la barra de avance de «Estado del proyecto». <strong>Por venir</strong> = aún no empieza; <strong>En curso</strong> = estamos trabajando en ella; <strong>Listo</strong> = terminada. <strong>Inicio y fin real</strong> son las fechas en que de verdad empezó y terminó (pueden ser distintas de lo planificado, que no cambia). Un bloque con un cierre publicado se muestra «listo» solo, aunque aquí diga otra cosa. Si ya hay un cierre publicado, guardar rehace la presentación del cliente en unos minutos; si no, lo verá en la primera.') . '<form method="post" action="' . $accion . '" class="at-av-bloques">' . at_av_ocultos('at_av_bloques', $id, $crm_id)
+		. '<div class="at-pt-tabla-scroll" role="region" aria-label="Bloques del plan" tabindex="0"><table class="widefat striped at-av-tabla-bloques"><thead><tr><th>Bloque</th><th>Planificado</th><th>Estado</th><th>Inicio real</th><th>Fin real</th></tr></thead><tbody>';
 	foreach (at_av_estado_bloques($plan, $av) as $i => $b) {
 		$g = is_array($av['bloques'][$b['nombre']] ?? null) ? $av['bloques'][$b['nombre']] : ['estado' => 'por_venir', 'inicio_real' => '', 'fin_real' => ''];
 		$sel = '';
@@ -487,24 +662,55 @@ function at_av_render_seccion(object $fila, int $crm_id): void {
 			$sel .= '<option value="' . $k . '"' . selected((string) ($g['estado'] ?? 'por_venir'), $k, false) . '>' . $t . '</option>';
 		}
 		$cubierto = $b['estado'] === 'listo' && ($g['estado'] ?? '') !== 'listo' ? '<br><small>Listo por un cierre publicado</small>' : '';
-		echo '<tr><td>' . esc_html($b['nombre']) . '<input type="hidden" name="bloques[' . $i . '][nombre]" value="' . esc_attr($b['nombre']) . '"></td>'
-			. '<td>' . esc_html(at_pt_panel_fecha($b['plan_desde']) . ' – ' . at_pt_panel_fecha($b['plan_hasta'])) . '</td>'
-			. '<td><select name="bloques[' . $i . '][estado]">' . $sel . '</select>' . $cubierto . '</td>'
-			. '<td><input type="date" name="bloques[' . $i . '][inicio_real]" value="' . esc_attr((string) ($g['inicio_real'] ?? '')) . '"></td>'
-			. '<td><input type="date" name="bloques[' . $i . '][fin_real]" value="' . esc_attr((string) ($g['fin_real'] ?? '')) . '"></td></tr>';
+		echo '<tr><td data-label="Bloque">' . esc_html($b['nombre']) . '<input type="hidden" name="bloques[' . $i . '][nombre]" value="' . esc_attr($b['nombre']) . '"></td>'
+			. '<td data-label="Planificado">' . esc_html(at_pt_panel_fecha($b['plan_desde']) . ' – ' . at_pt_panel_fecha($b['plan_hasta'])) . '</td>'
+			. '<td data-label="Estado"><select aria-label="Estado de ' . esc_attr($b['nombre']) . '" name="bloques[' . $i . '][estado]">' . $sel . '</select>' . $cubierto . '</td>'
+			. '<td data-label="Inicio real"><input aria-label="Inicio real de ' . esc_attr($b['nombre']) . '" type="date" name="bloques[' . $i . '][inicio_real]" value="' . esc_attr((string) ($g['inicio_real'] ?? '')) . '"></td>'
+			. '<td data-label="Fin real"><input aria-label="Fin real de ' . esc_attr($b['nombre']) . '" type="date" name="bloques[' . $i . '][fin_real]" value="' . esc_attr((string) ($g['fin_real'] ?? '')) . '"></td></tr>';
 	}
-	echo '</tbody></table><p><button type="submit" class="button">💾 Guardar bloques</button></p></form>';
+	echo '</tbody></table></div><p><button type="submit" class="button">💾 Guardar bloques</button></p></form></div></details>';
 
 	// Cambios de plan, necesitamos y alcance.
 	$bp = at_av_bloques_plan($plan);
 	$fase1_def = implode("\n", array_values(array_unique(array_filter(array_column($bp, 'entregable'), 'strlen'))));
 	$mensual_def = implode("\n", array_map('strval', (array) ($plan['soporte']['mensuales'] ?? [])));
-	echo '<h4>Cambios de plan, «necesitamos de ti» y alcance</h4>' . at_av_ayuda('<strong>Cambios de plan acordados:</strong> lo que cambió respecto del plan firmado, con su fecha (p. ej., «Google Ads pasa al servicio mensual»). El plan firmado no se toca: el cliente ve estos cambios aparte, en «Estado del proyecto». <strong>Lo que necesitamos del cliente:</strong> los pendientes que dependen de él (logo, accesos, una fecha); un «✓ » al inicio lo marca resuelto. <strong>Qué incluye la Fase 1 y el servicio mensual:</strong> el alcance que ve el cliente; vacío = lo que dice el plan. Si ya hay un cierre publicado, guardar rehace la presentación del cliente.') . '<form method="post" action="' . $accion . '" class="at-av-listas">' . at_av_ocultos('at_av_listas', $id, $crm_id)
+	echo '<details class="at-pt-seccion" id="at-av-listas-' . $id . '"><summary><h4>Cambios de plan, «necesitamos de ti» y alcance</h4></summary><div class="at-pt-seccion-contenido">' . at_av_ayuda('<strong>Cambios de plan acordados:</strong> lo que cambió respecto del plan firmado, con su fecha (p. ej., «Google Ads pasa al servicio mensual»). El plan firmado no se toca: el cliente ve estos cambios aparte, en «Estado del proyecto». <strong>Lo que necesitamos del cliente:</strong> los pendientes que dependen de él (logo, accesos, una fecha); un «✓ » al inicio lo marca resuelto. <strong>Qué incluye la Fase 1 y el servicio mensual:</strong> el alcance que ve el cliente; vacío = lo que dice el plan. Si ya hay un cierre publicado, guardar rehace la presentación del cliente.') . '<form method="post" action="' . $accion . '" class="at-av-listas">' . at_av_ocultos('at_av_listas', $id, $crm_id)
 		. '<label class="at-pt-campo">Cambios de plan acordados (uno por línea: «2026-10-13 | título | detalle»)<textarea name="cambios_plan" rows="3" class="large-text">' . esc_textarea(at_av_texto_de_cambios($av['cambios_plan'])) . '</textarea></label>'
 		. '<label class="at-pt-campo">Lo que necesitamos del cliente (uno por línea; «✓ » al inicio = resuelto)<textarea name="necesitamos" rows="3" class="large-text">' . esc_textarea(at_av_texto_de_necesitamos($av['necesitamos'])) . '</textarea></label>'
 		. '<label class="at-pt-campo">Qué incluye la Fase 1 (uno por línea; vacío = los entregables del plan)<textarea name="alcance_fase1" rows="3" class="large-text" placeholder="' . esc_attr($fase1_def) . '">' . esc_textarea(implode("\n", $av['alcance']['fase1'])) . '</textarea></label>'
 		. '<label class="at-pt-campo">Qué incluye el servicio mensual (uno por línea; vacío = los mensuales del plan)<textarea name="alcance_mensual" rows="2" class="large-text" placeholder="' . esc_attr($mensual_def) . '">' . esc_textarea(implode("\n", $av['alcance']['mensual'])) . '</textarea></label>'
-		. '<p><button type="submit" class="button">💾 Guardar</button></p></form>';
+		. '<p><button type="submit" class="button">💾 Guardar</button></p></form></div></details>';
+
+	// Presentación para el cliente y vista previa, al final de la operación del plan.
+	$etiquetas = ['' => 'Todavía no se genera', 'pendiente' => 'Generándose', 'listo' => 'Lista', 'error' => 'Con error'];
+	$reg = $av['render'];
+	echo '<details class="at-pt-seccion" id="at-av-presentacion-' . $id . '"' . (in_array($reg['estado'], ['pendiente', 'error'], true) ? ' open' : '') . '><summary><h4>Presentación «Estado del proyecto» · ' . esc_html($etiquetas[$reg['estado']] ?? $reg['estado']) . '</h4></summary><div class="at-pt-seccion-contenido"><div class="at-av-render"><p><strong>Presentación para el cliente:</strong> ' . esc_html($etiquetas[$reg['estado']] ?? $reg['estado'])
+		. ($reg['at'] !== '' ? ' · ' . esc_html($reg['at']) : '') . '</p>';
+	if ($reg['nota'] !== '') {
+		echo '<p class="description">' . esc_html($reg['nota']) . '</p>';
+	}
+	echo '<p>El cliente la ve en <a href="' . esc_url($publica) . '" target="_blank" rel="noopener">' . esc_html($publica) . '</a>'
+		. ($publicados ? '' : ' (mientras no publiques un cierre, ve «Pronto verás aquí el avance de tu proyecto»)') . '.</p><div class="at-pt-botones">';
+	if ($reg['view_url'] !== '') {
+		echo '<a class="button" href="' . esc_url($reg['view_url']) . '" target="_blank" rel="noopener">👁️ Ver la presentación publicada</a> ';
+		if ($reg['pdf_url'] !== '') {
+			echo '<a class="button" href="' . esc_url($reg['pdf_url']) . '" target="_blank" rel="noopener">📄 PDF</a> ';
+		}
+	}
+	if ($publicados) {
+		echo at_av_boton('at_av_reintentar', $id, $crm_id, '🔄 Rehacer la presentación');
+	}
+	if ($av['cierres']) {
+		echo at_av_boton('at_av_previa', $id, $crm_id, '👁️ Pedir vista previa con borradores');
+	}
+	echo '</div>';
+	$pr = $av['render_previa'];
+	if ($pr['estado'] === 'listo' && $pr['view_url'] !== '') {
+		echo '<p><a href="' . esc_url($pr['view_url']) . '" target="_blank" rel="noopener">Abrir la vista previa con borradores</a> <span class="description">(solo para ti; el cliente no la ve)</span></p>';
+	} elseif (in_array($pr['estado'], ['pendiente', 'error'], true)) {
+		echo '<p class="description">Vista previa: ' . esc_html($pr['estado'] === 'pendiente' ? 'generándose…' : 'con error. ' . $pr['nota']) . '</p>';
+	}
+	echo '</div></div></details>';
 	echo '</section>';
 }
 

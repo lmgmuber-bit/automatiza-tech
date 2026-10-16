@@ -137,4 +137,93 @@ $motivo = at_av_pedir_render($id);
 $l = at_av_leer(at_pt_plan($id));
 ok($motivo !== '' && $l['render']['estado'] === 'error' && str_starts_with($l['render']['nota'], 'No se pudo pedir la presentación') && $l['render']['view_url'] === $vista, '9) n8n caído: queda en error con el motivo y conserva la última presentación (Review Focus 5)');
 ok(at_av_refrescar($id) !== '', '9) con publicados, refrescar sí pide el render');
+
+// 10) Render público serializado (Etapa 3, revisión final): nunca dos pedidos en vuelo; «listo» solo lo deja la devolución del último.
+$llamadas = [];
+$n8n_ok = true;
+add_filter('pre_http_request', function ($pre, $args, $url) use (&$llamadas, &$n8n_ok) {
+	if ($url !== AT_N8N_PLAN_RENDER) {
+		return $pre;
+	}
+	$llamadas[] = json_decode((string) $args['body'], true);
+	return $n8n_ok ? ['headers' => [], 'body' => '', 'response' => ['code' => 200, 'message' => 'OK'], 'cookies' => [], 'filename' => null] : new WP_Error('sin_red_en_pruebas', 'n8n caído');
+}, PHP_INT_MAX, 3);
+$reg = fn(string $clave = 'render'): array => at_av_leer(at_pt_plan($id))[$clave];
+$hace = fn(int $seg): string => date('Y-m-d H:i:s', strtotime(current_time('mysql')) - $seg);
+$ok_cb = ['modo' => 'estado', 'ok' => true, 'view_url' => $vista, 'pdf_url' => $pdf, 'nota' => 'listo'];
+
+ok(at_av_pedir_render($id) === '' && count($llamadas) === 1 && $reg()['estado'] === 'pendiente' && $reg()['pedido_at'] !== '' && $reg()['repetir'] === false, '10) con nada en vuelo el pedido sale a n8n, queda «pendiente» con su hora y sin cola');
+ok(($llamadas[0]['modo'] ?? '') === 'estado' && ($llamadas[0]['codigo'] ?? '') === $cod && !isset($llamadas[0]['previa']), '10) el aviso a n8n es de modo estado y público');
+ok(at_av_pedir_render($id) === '' && count($llamadas) === 1 && $reg()['estado'] === 'pendiente' && $reg()['repetir'] === true, '10) otro pedido con uno reciente en vuelo: no llama a n8n, queda en cola (repetir) y devuelve éxito');
+ok(at_av_pedir_render($id) === '' && count($llamadas) === 1 && $reg()['repetir'] === true, '10) un tercero con la cola ya anotada tampoco llama a n8n');
+$pedido_en_vuelo = $reg()['pedido_at'];
+pedir('POST', "/plan/{$id}/vista", $ok_cb);
+$r1 = $reg();
+ok($r1['estado'] === 'pendiente' && $r1['repetir'] === false && $r1['view_url'] === $vista && $r1['pdf_url'] === $pdf && count($llamadas) === 2 && $r1['pedido_at'] >= $pedido_en_vuelo, '10) llega la devolución del pedido en curso: guarda los enlaces pero sigue «pendiente», saca la cola y manda el siguiente pedido (una vez)');
+ok(!at_av_render_listo_para(at_av_leer(at_pt_plan($id)), ['publicado_at' => '2000-01-01 00:00:00']), '10) mientras sigue «pendiente» nunca cuenta como lista para enviar al cliente');
+pedir('POST', "/plan/{$id}/vista", $ok_cb);
+$r2 = $reg();
+ok($r2['estado'] === 'listo' && $r2['repetir'] === false && count($llamadas) === 2 && at_av_vista_publica(at_pt_plan($id)) === $vista, '10) la devolución del último pedido sí la deja «lista» y no se pide nada más');
+ok(at_av_pedir_render($id) === '' && count($llamadas) === 3 && $reg()['estado'] === 'pendiente' && $reg()['repetir'] === false, '10) con la presentación ya lista, un pedido nuevo sale a n8n');
+
+// Un pedido en vuelo de hace más de 10 minutos se da por perdido: el nuevo sale normal.
+at_av_guardar_render($id, 'render', ['estado' => 'pendiente', 'pedido_at' => $hace(AT_AV_RENDER_VIGENCIA + 5), 'repetir' => false]);
+ok(at_av_pedir_render($id) === '' && count($llamadas) === 4 && $reg()['pedido_at'] > $hace(60) && $reg()['repetir'] === false, '10) un pedido «pendiente» de hace más de 10 minutos no bloquea: el nuevo llama a n8n');
+// Uno de hace poco, justo por debajo del tope, sí bloquea; y un «pendiente» sin hora (de antes de esta versión) no.
+at_av_guardar_render($id, 'render', ['estado' => 'pendiente', 'pedido_at' => $hace(AT_AV_RENDER_VIGENCIA - 30), 'repetir' => false]);
+ok(at_av_pedir_render($id) === '' && count($llamadas) === 4 && $reg()['repetir'] === true, '10) uno de hace 9,5 minutos todavía bloquea');
+at_av_guardar_render($id, 'render', ['estado' => 'pendiente', 'pedido_at' => '', 'repetir' => false]);
+ok(at_av_pedir_render($id) === '' && count($llamadas) === 5, '10) un «pendiente» sin hora (anterior a esta versión) no bloquea');
+
+// La vista previa no se serializa.
+$antes_p = count($llamadas);
+at_av_pedir_render($id, true);
+at_av_pedir_render($id, true);
+ok(count($llamadas) === $antes_p + 2 && ($llamadas[$antes_p]['previa'] ?? null) === true && $reg('render_previa')['repetir'] === false, '10) la vista previa pide cada vez a n8n y no usa la cola');
+
+// Si el siguiente pedido no se puede mandar, queda en error con la nota de siempre y sin cola.
+at_av_guardar_render($id, 'render', ['estado' => 'pendiente', 'pedido_at' => current_time('mysql'), 'repetir' => true]);
+$n8n_ok = false;
+$antes_c = count($llamadas);
+pedir('POST', "/plan/{$id}/vista", $ok_cb);
+$n8n_ok = true;
+$r3 = $reg();
+ok(count($llamadas) === $antes_c + 1 && $r3['estado'] === 'error' && str_starts_with($r3['nota'], 'No se pudo pedir la presentación') && $r3['repetir'] === false && $r3['view_url'] === $vista, '10) si el pedido siguiente no llega a n8n: «error» con la nota, sin cola y con la última presentación guardada');
+// Una devolución con error mientras hay cola: tampoco deja «error» ni «listo»; se manda el pedido en cola y no se pierde el enlace anterior.
+at_av_guardar_render($id, 'render', ['estado' => 'pendiente', 'pedido_at' => current_time('mysql'), 'repetir' => true]);
+$antes_c = count($llamadas);
+pedir('POST', "/plan/{$id}/vista", ['modo' => 'estado', 'ok' => false, 'nota' => 'falló el anterior']);
+$r4 = $reg();
+ok(count($llamadas) === $antes_c + 1 && $r4['estado'] === 'pendiente' && $r4['repetir'] === false && $r4['view_url'] === $vista, '10) un error del pedido anterior con cola: sigue «pendiente», manda el siguiente y conserva el enlace');
+// Una devolución sin cola con la vista previa se guarda tal cual.
+$antes_c = count($llamadas);
+pedir('POST', "/plan/{$id}/vista", ['modo' => 'estado', 'previa' => true, 'ok' => true, 'view_url' => $prev]);
+ok(count($llamadas) === $antes_c && $reg('render_previa')['estado'] === 'listo', '10) la devolución de la vista previa no manda pedidos');
+// 11) Las capturas llevan su ancho y alto, leídos del archivo, para que la presentación dibuje entera la de celular.
+$dir_ev = at_av_dir($id)['dir'];
+$n_cel = str_repeat('q', 20) . '.png';
+$n_pc = str_repeat('w', 20) . '.png';
+imagepng(imagecreatetruecolor(390, 844), $dir_ev . $n_cel);
+imagepng(imagecreatetruecolor(1440, 900), $dir_ev . $n_pc);
+$a = at_av_leer(at_pt_plan($id));
+$ip = array_search('publicado', array_column($a['cierres'], 'estado'), true);
+foreach ([['qq', $n_cel, 'Celular vertical'], ['ww', $n_pc, 'Computador'], ['zz', str_repeat('z', 20) . '.png', 'Sin archivo']] as [$k, $arch, $t]) {
+	$a['evidencias'][$k] = ['tipo' => 'captura', 'titulo' => $t, 'url' => "https://example.com/wp-content/uploads/at-estado/{$id}/{$arch}",
+		'archivo' => 'nombre-original-' . $k . '.png', // como en PROD: el nombre que puso Luis, no el guardado
+		'poster' => '', 'valor' => '', 'unidad' => '', 'fuente' => '', 'fecha' => ''];
+	$a['cierres'][$ip]['despues']['evidencias'][] = $k;
+}
+ok($ip !== false && at_av_guardar($id, $a), '11) cierre publicado con tres capturas');
+$evs = [];
+foreach (pedir('GET', "/plan/{$id}/render", null, ['modo' => 'estado'])->get_data()['render']['cierres'] as $ci) {
+	foreach ($ci['despues']['evidencias'] as $e) {
+		$evs[$e['titulo']] = $e;
+	}
+}
+ok(($evs['Celular vertical']['ancho'] ?? 0) === 390 && ($evs['Celular vertical']['alto'] ?? 0) === 844, '11) la captura de celular trae 390×844');
+ok(($evs['Computador']['ancho'] ?? 0) === 1440 && ($evs['Computador']['alto'] ?? 0) === 900, '11) la de computador trae 1440×900');
+ok(isset($evs['Sin archivo']) && $evs['Sin archivo']['ancho'] === 0 && $evs['Sin archivo']['alto'] === 0, '11) sin archivo en disco: 0 y 0, sin error');
+ok(!array_key_exists('ancho', at_av_leer(at_pt_plan($id))['evidencias']['qq']), '11) las medidas no se guardan en el avance');
+@unlink($dir_ev . $n_cel);
+@unlink($dir_ev . $n_pc);
 fin();

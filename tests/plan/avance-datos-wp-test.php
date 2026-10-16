@@ -3,7 +3,7 @@
 // Estado del proyecto, Etapa 2 — Task 2: columna avance (migración idempotente), leer y guardar sin tocar el plan firmado.
 require __DIR__ . '/wp-bootstrap.php';
 require __DIR__ . '/fixtures-panel.php';
-exigir('at_av_migrar_esquema', 'at_av_columna_lista', 'at_av_leer', 'at_av_guardar', 'at_av_guardar_render');
+exigir('at_av_migrar_esquema', 'at_av_columna_lista', 'at_av_leer', 'at_av_guardar', 'at_av_guardar_render', 'at_av_guardar_si_igual');
 global $wpdb;
 $t = at_pt_tabla();
 $hay_columna = fn() => $wpdb->get_var($wpdb->prepare("SHOW COLUMNS FROM {$t} LIKE %s", 'avance')) === 'avance';
@@ -40,4 +40,42 @@ ok(!at_av_guardar($id, $enorme) && at_av_leer(at_pt_plan($id))['cambios_plan'] =
 update_option('at_plan_schema', '1');
 ok(!at_av_columna_lista() && !at_av_guardar($id, $a), 'sin la migración marcada no se guarda');
 update_option('at_plan_schema', '2');
+// Etapa 3: guardado condicional (reclamar un envío sin que dos pedidos casi juntos manden dos correos).
+$f_si = at_pt_plan($id);
+$antes_si = (string) $f_si->avance;
+$a_si = at_av_leer($f_si);
+$a_si['necesitamos'] = [['texto' => 'Uno', 'estado' => 'abierto', 'fecha' => '2026-10-15']];
+ok(at_av_guardar_si_igual($id, $antes_si, $a_si) === true, 'guarda si nadie cambió el avance');
+ok(at_av_guardar_si_igual($id, $antes_si, at_av_vacio()) === false && count(at_av_leer(at_pt_plan($id))['necesitamos']) === 1, 'no pisa si el avance cambió entretanto');
+// Fix round 1: la respuesta del renderer no pisa lo que otro proceso escribió entre la lectura y la escritura
+// (un envío reclamado o anotado en cierres[*].correo). Se simula cambiando la fila justo antes del UPDATE.
+$concurrente = true;
+add_filter('query', function ($q) use (&$concurrente, $wpdb, $t, $id) {
+	if ($concurrente && strpos($q, 'UPDATE') === 0 && strpos($q, 'SET avance') !== false) {
+		$concurrente = false; // la llamada anidada de abajo ya no vuelve a entrar
+		$x = at_av_leer(at_pt_plan($id));
+		$x['cierres'] = [['id' => 'cx0001', 'titulo' => 'Prueba', 'estado' => 'publicado', 'correo' => ['enviado_at' => null, 'prueba_at' => null, 'mensaje' => '', 'enviando' => '2026-10-15 09:00:00', 'a' => '']]];
+		$wpdb->query($wpdb->prepare("UPDATE {$t} SET avance = %s WHERE id = %d", wp_json_encode(at_av_normalizar($x), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), $id));
+	}
+	return $q;
+});
+ok(at_av_guardar_render($id, 'render', ['estado' => 'pendiente']) && !$concurrente, 'guardar un render con un cambio concurrente: se reintenta y guarda');
+$l = at_av_leer(at_pt_plan($id));
+ok($l['render']['estado'] === 'pendiente' && count($l['cierres']) === 1 && $l['cierres'][0]['correo']['enviando'] === '2026-10-15 09:00:00', 'guardar un render no borra el reclamo que otro proceso escribió entretanto');
+ok(at_av_guardar_render($id, 'render', ['estado' => 'pendiente']), 'guardar el mismo render otra vez es un éxito, no un fallo');
+remove_all_filters('query');
+// La condición compara bytes exactos: un avance que solo difiere en mayúsculas o tildes de lo leído NO es el mismo.
+$guardado_bin = at_av_vacio();
+$guardado_bin['necesitamos'] = [['texto' => 'Logo en alta', 'estado' => 'abierto', 'fecha' => '2026-10-15']];
+$js = fn(array $x): string => (string) wp_json_encode(at_av_normalizar($x), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+$wpdb->query($wpdb->prepare("UPDATE {$t} SET avance = %s WHERE id = %d", $js($guardado_bin), $id));
+$leido_otro = $guardado_bin;
+$leido_otro['necesitamos'][0]['texto'] = 'LOGO en alta';
+$leido_acento = $guardado_bin;
+$leido_acento['necesitamos'][0]['texto'] = 'Logó en alta';
+$nuevo_bin = $guardado_bin;
+$nuevo_bin['necesitamos'][0]['texto'] = 'Cambiado';
+ok(at_av_guardar_si_igual($id, $js($leido_otro), $nuevo_bin) === false && at_av_leer(at_pt_plan($id))['necesitamos'][0]['texto'] === 'Logo en alta', 'guardar_si_igual: lo leído que solo difiere en mayúsculas no cuenta como igual y no se escribe');
+ok(at_av_guardar_si_igual($id, $js($leido_acento), $nuevo_bin) === false && at_av_leer(at_pt_plan($id))['necesitamos'][0]['texto'] === 'Logo en alta', 'guardar_si_igual: ni la que solo difiere en una tilde');
+ok(at_av_guardar_si_igual($id, $js($guardado_bin), $nuevo_bin) === true && at_av_leer(at_pt_plan($id))['necesitamos'][0]['texto'] === 'Cambiado', 'guardar_si_igual: con los bytes exactos sí escribe');
 fin();

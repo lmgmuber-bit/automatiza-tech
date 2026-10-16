@@ -10,26 +10,32 @@ pestañas mantienen las dos columnas en escritorio.
 Plan empieza con «Qué hacer ahora» (estado, fechas, documento y accesos a las
 acciones) y un índice. Sus secciones plegables son Plan, Cierres de hito,
 Nuevo/editar e importar, Bloques, Cambios y alcance, y Presentación. Los
-formularios largos empiezan cerrados; la edición y los enlaces a una sección
-abren los desplegables necesarios. Las anclas de las redirecciones se conservan.
+formularios largos empiezan cerrados; el editor y los cambios del plan se abren
+cuando el plan es editable. La presentación muestra su estado en el título y
+se abre si está generándose o con error. Los enlaces a una sección abren sus
+desplegables. Las anclas de las redirecciones se conservan.
 
 Cada entregable muestra título, estado, versión y acciones. Vista previa del
 correo, edición, nueva versión e historial tienen desplegables independientes.
 Los formularios, avisos, permisos, nonces y acciones del servidor se conservan.
+El historial se abre al volver de una acción o si hay notas sin responder.
 
 ## Validación y entorno
 
 - PHP 8.4.15. `AT_WP_LOAD` apunta al WordPress local indicado en el encargo.
 - El bootstrap de las suites fija `HTTP_HOST=localhost:8093`. Una comprobación
   directa debe fijarlo antes de `wp-load.php` y cargar WordPress completo.
-- Ejecutar los 35 `tests/plan/*-test.php` y 11 `tests/entregables/*-test.php`;
+- Ejecutar los 36 `tests/plan/*-test.php` y 11 `tests/entregables/*-test.php`;
   registrar código de salida y marcador de fin por suite. `correr.sh` no
   propaga todos los códigos individuales.
 - Baseline observado: 42/46 PASS. Fallas previas: `agenda-web` (límite de IP),
   `datos-contexto` (portal), `panel-render` (aviso) y `firma-contrato` (exit 255).
-- Resultado posterior: 43/46 PASS, sin nuevas fallas. Persisten las tres
+- Resultado integral de Ronda 2: 43/46 PASS, sin nuevas fallas. Persisten las tres
   históricas de contexto, panel y firma; `agenda-web` pasó esta vez, sin
   atribuir esa variación al cambio de presentación.
+- Ronda 3: tres ajustes solicitados por Eje, cinco suites de marcado afectadas
+  revalidadas (cuatro PASS y la falla histórica de `panel-render`), sin fallas
+  nuevas. `crm-apertura-wp-test.php` agrega 22 comprobaciones PASS de estados.
 - Navegador: ancho de ambas pestañas 100 % del contenedor. `scrollWidth` de
   página igual a 1440, 1024, 768 y 390 px respectivamente. Diez comprobaciones
   de interacción PASS, incluidos formularios abiertos a 390 px y teclado.

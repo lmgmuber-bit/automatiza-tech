@@ -422,7 +422,7 @@ function at_pt_render_plan(object $fila, int $crm_id): void {
 		<?php endif; ?>
 
 		<?php if ($tiene_plan): ?>
-		<details class="at-pt-editor" id="at-pt-editor-<?php echo $id; ?>"><summary>Revisar o editar el plan completo</summary>
+		<details class="at-pt-editor" id="at-pt-editor-<?php echo $id; ?>"<?php echo $editable ? ' open' : ''; ?>><summary>Revisar o editar el plan completo</summary>
 		<form method="post" action="<?php echo esc_url($accion); ?>" class="at-pt-form-plan">
 			<?php echo $ocultos('at_pt_guardar'); ?>
 			<input type="hidden" name="plan_json" class="at-pt-plan-json" value="">
@@ -477,7 +477,7 @@ function at_pt_render_plan(object $fila, int $crm_id): void {
 					: 'No hay fotos nuevas que generar. Se generará la versión final del plan. ¿Aprobar?';
 				$ultimo = trim((string) ($fila->comentarios ?? ''));
 			?>
-			<details class="at-pt-pedir-cambios"><summary>Pedir cambios a la IA</summary>
+			<details class="at-pt-pedir-cambios"<?php echo $editable ? ' open' : ''; ?>><summary>Pedir cambios a la IA</summary>
 			<form method="post" action="<?php echo esc_url($accion); ?>" class="at-pt-form-cambios at-pt-requiere-guardado">
 				<?php echo $ocultos('at_pt_cambios'); ?>
 				<label class="at-pt-campo">Qué quieres que cambie la IA

@@ -80,6 +80,7 @@ $n = at_en_agregar_nota($id, 'cliente', 'Cliente', 'Cambia el color', [], '');
 ok(strpos($pestana(), '🔴 1 nota sin responder') !== false && at_en_marca_lista($fx['crm']) !== '', 'pendiente visible en la pestaña y en la lista');
 $xp = $marcado($pestana());
 ok($xp->query('//details[@id="at-en-historial-' . $id . '"]//form[input[@name="action" and @value="at_en_responder"]]')->length === 1, 'el historial conserva la respuesta de la nota pendiente con su formulario');
+ok($xp->query('//details[@id="at-en-historial-' . $id . '" and @open]')->length === 1 && $xp->query('//details[@open and not(@id="at-en-historial-' . $id . '")]')->length === 0, 'una nota pendiente abre el historial sin ?en y mantiene plegadas las demás secciones');
 $r = en_correr('at_en_responder', $admin, 'at_en_' . $id, ['entregable_id' => $id, 'nota_id' => $n, 'texto' => 'Listo, cambiado', 'avisar' => '1']);
 ok(en_query($r['redirect'])['en_msg'] === 'respuesta_ok' && at_en_sin_responder($id) === 0, 'respuesta guardada y nota respondida');
 ok(count(array_filter($r['mails'], function ($m) use ($marca) { return strpos($m, $marca . '@example.com') === 0; })) === 1, 'aviso al cliente con «Avisar»');
@@ -195,6 +196,15 @@ $_GET['en'] = $id;
 ok(strpos($pestana(), 'Motivo: SMTP simulado: no se pudo autenticar x') !== false, 'la pestaña muestra el motivo guardado');
 // Correo de la versión que falla: correo_fallo + motivo
 $vn = at_en_crear_version($id, 'https://example.com/vf', '');
+$nota_pendiente_marcado = at_en_agregar_nota($id, 'cliente', 'Cliente', 'Nota pendiente para revisar', [], '');
+unset($_GET['en']);
+$xp = $marcado($pestana());
+ok(at_en_sin_responder($id) > 0 && $xp->query('//details[@id="at-en-historial-' . $id . '" and @open]')->length === 1, 'con versión sin enviar, las notas pendientes mantienen abierto el historial sin ?en');
+foreach (['correo', 'editar', 'nueva'] as $seccion) {
+	ok($xp->query('//details[@id="at-en-' . $seccion . '-' . $id . '" and not(@open)]')->length === 1, $seccion . ': sigue plegado aunque haya notas pendientes');
+}
+at_en_marcar_respondida($nota_pendiente_marcado);
+$_GET['en'] = $id;
 delete_transient('at_en_fallo_' . $admin . '_' . $id);
 $r = en_correr('at_en_version_enviar', $admin, 'at_en_' . $id, ['entregable_id' => $id, 'numero' => $vn], [], ['EN_MAIL_FALLA' => '1']);
 ok(en_query($r['redirect'])['en_msg'] === 'correo_fallo' && at_en_version($id, $vn)->enviado_correo_at === null && at_en_motivo_fallo($id) !== '', 'enviar la versión con el SMTP caído: correo_fallo, no se marca y queda el motivo');

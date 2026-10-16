@@ -684,7 +684,7 @@ function at_av_render_seccion(object $fila, int $crm_id): void {
 	// Presentación para el cliente y vista previa, al final de la operación del plan.
 	$etiquetas = ['' => 'Todavía no se genera', 'pendiente' => 'Generándose', 'listo' => 'Lista', 'error' => 'Con error'];
 	$reg = $av['render'];
-	echo '<details class="at-pt-seccion" id="at-av-presentacion-' . $id . '"><summary><h4>Presentación «Estado del proyecto»</h4></summary><div class="at-pt-seccion-contenido"><div class="at-av-render"><p><strong>Presentación para el cliente:</strong> ' . esc_html($etiquetas[$reg['estado']] ?? $reg['estado'])
+	echo '<details class="at-pt-seccion" id="at-av-presentacion-' . $id . '"' . (in_array($reg['estado'], ['pendiente', 'error'], true) ? ' open' : '') . '><summary><h4>Presentación «Estado del proyecto» · ' . esc_html($etiquetas[$reg['estado']] ?? $reg['estado']) . '</h4></summary><div class="at-pt-seccion-contenido"><div class="at-av-render"><p><strong>Presentación para el cliente:</strong> ' . esc_html($etiquetas[$reg['estado']] ?? $reg['estado'])
 		. ($reg['at'] !== '' ? ' · ' . esc_html($reg['at']) : '') . '</p>';
 	if ($reg['nota'] !== '') {
 		echo '<p class="description">' . esc_html($reg['nota']) . '</p>';

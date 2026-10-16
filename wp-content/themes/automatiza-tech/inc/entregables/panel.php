@@ -220,7 +220,7 @@ function at_en_render_detalle(object $e, int $crm): void {
 		. '<p><label>Tu mensaje (párrafos con línea en blanco; listas con «- »)<br><textarea name="mensaje" rows="6" maxlength="6000" style="width:100%"></textarea></label><br>' . at_en_boton_ia('mensaje', $id, 'mensaje', (int) $e->version_vigente + 1) . '</p>'
 		. '<button class="button button-primary">Crear versión y ver vista previa</button></form></div></details>';
 	// El historial conserva versiones, notas y respuestas; ya no envuelve las acciones principales.
-	echo '<details class="at-en-fold at-en-history" id="at-en-historial-' . $id . '"' . (absint($_GET['en'] ?? 0) === $id ? ' open' : '') . '><summary>Línea de tiempo · versiones y notas</summary><div class="at-en-fold-body">';
+	echo '<details class="at-en-fold at-en-history" id="at-en-historial-' . $id . '"' . (absint($_GET['en'] ?? 0) === $id || at_en_sin_responder($id) > 0 ? ' open' : '') . '><summary>Línea de tiempo · versiones y notas</summary><div class="at-en-fold-body">';
 	foreach ($eventos as $ev) {
 		echo $ev[2];
 	}

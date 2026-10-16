@@ -111,23 +111,22 @@ function at_en_render_pestana(array $cliente): void {
 	}
 	foreach ($lista as $d) {
 		$en_id = (int) ($d->en_id ?? 0);
-		echo '<div style="border:1px solid #e2e8f0;border-radius:8px;padding:12px;margin:10px 0;background:#fff">';
-		echo '<strong>' . esc_html((string) $d->title) . '</strong>';
+		echo '<article class="at-en-card" aria-labelledby="at-en-titulo-' . (int) $d->id . '">';
+		echo '<header class="at-en-header"><h4 id="at-en-titulo-' . (int) $d->id . '">' . esc_html((string) $d->title) . '</h4>';
 		if ($en_id <= 0) {
-			echo ' <form method="post" action="' . esc_url(admin_url('admin-post.php')) . '" style="display:inline">'
+			echo '<p class="at-en-meta">Notas sin activar · Sin versiones</p></header><div class="at-en-actions"><form method="post" action="' . esc_url(admin_url('admin-post.php')) . '" style="display:inline">'
 				. '<input type="hidden" name="action" value="at_en_activar"><input type="hidden" name="detalle_id" value="' . (int) $d->id . '"><input type="hidden" name="crm_id" value="' . $crm . '">'
-				. wp_nonce_field('at_en_activar_' . (int) $d->id, '_wpnonce', true, false) . '<button class="button">Activar notas del cliente</button></form></div>';
+				. wp_nonce_field('at_en_activar_' . (int) $d->id, '_wpnonce', true, false) . '<button class="button">Activar notas del cliente</button></form></div></article>';
 			continue;
 		}
 		$e = at_en_por_id($en_id);
 		$pend = at_en_sin_responder($en_id);
-		echo ' · ' . esc_html($e->estado === 'abierto' ? 'Abierto' : 'Cerrado') . ' · versión ' . (int) $e->version_vigente
-			. ($pend > 0 ? ' · <span style="color:#b91c1c;font-weight:bold">🔴 ' . $pend . ($pend === 1 ? ' nota sin responder' : ' notas sin responder') . '</span>' : '');
+		echo '<p class="at-en-meta">' . esc_html($e->estado === 'abierto' ? 'Abierto' : 'Cerrado') . ' · Versión vigente: ' . (int) $e->version_vigente
+			. ($pend > 0 ? ' · <span style="color:#b91c1c;font-weight:bold">🔴 ' . $pend . ($pend === 1 ? ' nota sin responder' : ' notas sin responder') . '</span>' : '') . '</p></header>';
 		$url = at_en_url_pagina(home_url(), (string) $e->codigo);
-		echo '<p>Enlace del cliente: <input type="text" readonly value="' . esc_attr($url) . '" style="width:60%" onclick="this.select()"></p>';
-		echo '<details' . ($abierto === $en_id ? ' open' : '') . '><summary>Línea de tiempo y acciones</summary>';
+		echo '<p class="at-en-client-link"><label>Enlace del cliente<br><input type="text" readonly value="' . esc_attr($url) . '" style="width:100%" onclick="this.select()"></label></p>';
 		at_en_render_detalle($e, $crm);
-		echo '</details></div>';
+		echo '</article>';
 		$hay_activos = true;
 	}
 	if (!empty($hay_activos)) {
@@ -135,7 +134,7 @@ function at_en_render_pestana(array $cliente): void {
 	}
 }
 
-/** Línea de tiempo y acciones de un entregable. */
+/** Acciones visibles y secciones plegables de un entregable. */
 function at_en_render_detalle(object $e, int $crm): void {
 	$id = (int) $e->id;
 	$eventos = [];
@@ -170,9 +169,6 @@ function at_en_render_detalle(object $e, int $crm): void {
 		$eventos[] = [(string) $n->creado_at, 1, $html . '</div>'];
 	}
 	usort($eventos, function ($a, $b) { return strcmp($a[0], $b[0]) ?: $a[1] <=> $b[1]; });
-	foreach ($eventos as $ev) {
-		echo $ev[2];
-	}
 	// Última respuesta de AT: texto de WhatsApp para avisar.
 	$ult_at = null;
 	foreach (at_en_notas($id) as $n) {
@@ -180,43 +176,55 @@ function at_en_render_detalle(object $e, int $crm): void {
 			$ult_at = $n;
 		}
 	}
+	// Los envíos y el estado quedan visibles, fuera de todos los desplegables.
+	$vig = (int) $e->version_vigente > 0 ? at_en_version($id, (int) $e->version_vigente) : null;
+	echo '<div class="at-en-actions" role="group" aria-label="Acciones del entregable">';
+	if ($vig) {
+		$num = '<input type="hidden" name="numero" value="' . (int) $vig->numero . '">';
+		echo '<a class="button" href="' . esc_url((string) $vig->url) . '" target="_blank" rel="noopener">Abrir versión ' . (int) $vig->numero . '</a>'
+			. at_en_form('at_en_version_prueba', $id, $num, 'Enviarme una prueba')
+			. ($vig->enviado_correo_at === null ? at_en_form('at_en_version_enviar', $id, $num, 'Enviar al cliente por correo', ' onsubmit="return confirm(\'¿Enviar la versión al cliente?\')"') : '<em>Correo enviado.</em> ')
+			. at_en_form('at_en_version_whatsapp', $id, $num, 'Enviar por mi WhatsApp', ' target="_blank"');
+	}
+	echo ($e->estado === 'abierto'
+		? at_en_form('at_en_estado', $id, '<input type="hidden" name="estado" value="cerrado">', 'Cerrar el entregable')
+		: at_en_form('at_en_estado', $id, '<input type="hidden" name="estado" value="abierto">', 'Reabrir el entregable')) . '</div>';
+	if ($vig) {
+		echo '<p><label>Texto del WhatsApp para copiar<br><textarea readonly rows="3" style="width:100%" onclick="this.select()">' . esc_textarea(at_en_texto_wa_version($e, (int) $vig->numero)) . '</textarea></label></p>';
+	}
 	if ($ult_at) {
 		$t = at_en_texto_wa_respuesta($e, (int) $ult_at->version_numero);
 		$wa = at_en_url_wa_respuesta($e, (int) $ult_at->version_numero);
-		echo '<p><strong>Avisar tu última respuesta por WhatsApp:</strong><br><textarea readonly rows="2" style="width:100%" onclick="this.select()">' . esc_textarea($t) . '</textarea>'
+		echo '<p><label><strong>Avisar tu última respuesta por WhatsApp:</strong><br><textarea readonly rows="2" style="width:100%" onclick="this.select()">' . esc_textarea($t) . '</textarea></label>'
 			. ($wa !== '' ? '<a class="button" href="' . esc_url($wa) . '" target="_blank" rel="noopener">Abrir mi WhatsApp</a>' : '') . '</p>';
 	}
-	// Versión vigente sin enviar por correo: vista previa y envío.
-	$vig = (int) $e->version_vigente > 0 ? at_en_version($id, (int) $e->version_vigente) : null;
 	if ($vig) {
 		$cli = at_en_cliente($e);
 		$c = at_en_correo_version(['nombre' => $cli['nombre'], 'titulo' => $cli['titulo'], 'numero' => (int) $vig->numero, 'url_version' => (string) $vig->url, 'url_pagina' => at_en_url_pagina(home_url(), (string) $e->codigo), 'mensaje' => (string) $vig->mensaje, 'logo' => at_en_logo(), 'prueba' => false]);
-		echo '<h4>Versión ' . (int) $vig->numero . ': vista previa del correo</h4><p>Asunto: <strong>' . esc_html($c['asunto']) . '</strong></p>'
-			. '<iframe srcdoc="' . esc_attr($c['html']) . '" style="width:100%;height:520px;border:1px solid #e2e8f0;border-radius:6px;background:#fff" sandbox></iframe>';
-		$num = '<input type="hidden" name="numero" value="' . (int) $vig->numero . '">';
-		echo '<p>' . at_en_form('at_en_version_prueba', $id, $num, 'Enviarme una prueba')
-			. ($vig->enviado_correo_at === null ? at_en_form('at_en_version_enviar', $id, $num, 'Enviar al cliente por correo', ' onsubmit="return confirm(\'¿Enviar la versión al cliente?\')"') : '<em>Correo enviado.</em> ')
-			. at_en_form('at_en_version_whatsapp', $id, $num, 'Enviar por mi WhatsApp', ' target="_blank"') . '</p>';
-		echo '<p>Texto del WhatsApp para copiar:<br><textarea readonly rows="3" style="width:100%" onclick="this.select()">' . esc_textarea(at_en_texto_wa_version($e, (int) $vig->numero)) . '</textarea></p>';
+		echo '<details class="at-en-fold" id="at-en-correo-' . $id . '"><summary>Vista previa del correo · versión ' . (int) $vig->numero . '</summary><div class="at-en-fold-body"><p>Asunto: <strong>' . esc_html($c['asunto']) . '</strong></p>'
+			. '<iframe title="Vista previa del correo de la versión ' . (int) $vig->numero . '" srcdoc="' . esc_attr($c['html']) . '" style="width:100%;height:520px;border:1px solid #e2e8f0;border-radius:6px;background:#fff" sandbox></iframe></div></details>';
 		// Mientras no se envíe (ni por correo ni por WhatsApp) se puede corregir; enviada ya no: se crea una versión nueva.
 		if ($vig->enviado_correo_at === null && $vig->enviado_whatsapp_at === null) {
-			echo '<h4>Editar esta versión</h4><p><em>El cliente todavía no la ve: la verá cuando la envíes.</em></p>'
+			echo '<details class="at-en-fold" id="at-en-editar-' . $id . '"><summary>Editar esta versión</summary><div class="at-en-fold-body"><p><em>El cliente todavía no la ve: la verá cuando la envíes.</em></p>'
 				. '<form method="post" action="' . esc_url(admin_url('admin-post.php')) . '">'
 				. '<input type="hidden" name="action" value="at_en_version_editar"><input type="hidden" name="entregable_id" value="' . $id . '">' . $num . wp_nonce_field('at_en_' . $id, '_wpnonce', true, false)
 				. '<p><label>Enlace de la versión<br><input type="url" name="url" required style="width:100%" value="' . esc_attr((string) $vig->url) . '"></label></p>'
 				. '<p><label>Tu mensaje<br><textarea name="mensaje" rows="6" maxlength="6000" style="width:100%">' . esc_textarea((string) $vig->mensaje) . '</textarea></label><br>' . at_en_boton_ia('mensaje', $id, 'mensaje', (int) $vig->numero) . '</p>'
-				. '<button class="button">Guardar cambios de la versión ' . (int) $vig->numero . '</button></form>';
+				. '<button class="button">Guardar cambios de la versión ' . (int) $vig->numero . '</button></form></div></details>';
 		}
 	}
 	// Nueva versión.
-	echo '<h4>Nueva versión (' . ((int) $e->version_vigente + 1) . ')</h4><form method="post" action="' . esc_url(admin_url('admin-post.php')) . '">'
+	echo '<details class="at-en-fold" id="at-en-nueva-' . $id . '"><summary>Nueva versión (' . ((int) $e->version_vigente + 1) . ')</summary><div class="at-en-fold-body"><form method="post" action="' . esc_url(admin_url('admin-post.php')) . '">'
 		. '<input type="hidden" name="action" value="at_en_version_crear"><input type="hidden" name="entregable_id" value="' . $id . '">' . wp_nonce_field('at_en_' . $id, '_wpnonce', true, false)
 		. '<p><label>Enlace de la versión<br><input type="url" name="url" required style="width:100%" placeholder="https://"></label></p>'
 		. '<p><label>Tu mensaje (párrafos con línea en blanco; listas con «- »)<br><textarea name="mensaje" rows="6" maxlength="6000" style="width:100%"></textarea></label><br>' . at_en_boton_ia('mensaje', $id, 'mensaje', (int) $e->version_vigente + 1) . '</p>'
-		. '<button class="button button-primary">Crear versión y ver vista previa</button></form>';
-	echo '<p>' . ($e->estado === 'abierto'
-		? at_en_form('at_en_estado', $id, '<input type="hidden" name="estado" value="cerrado">', 'Cerrar el entregable')
-		: at_en_form('at_en_estado', $id, '<input type="hidden" name="estado" value="abierto">', 'Reabrir el entregable')) . '</p>';
+		. '<button class="button button-primary">Crear versión y ver vista previa</button></form></div></details>';
+	// El historial conserva versiones, notas y respuestas; ya no envuelve las acciones principales.
+	echo '<details class="at-en-fold at-en-history" id="at-en-historial-' . $id . '"' . (absint($_GET['en'] ?? 0) === $id ? ' open' : '') . '><summary>Línea de tiempo · versiones y notas</summary><div class="at-en-fold-body">';
+	foreach ($eventos as $ev) {
+		echo $ev[2];
+	}
+	echo '</div></details>';
 }
 
 /** Resumen para la línea de tiempo del portal del cliente (sin texto de notas ni imágenes). */

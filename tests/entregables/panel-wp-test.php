@@ -13,6 +13,14 @@ $sin_permiso = wp_insert_user(['user_login' => 'sub' . $marca, 'user_pass' => wp
 register_shutdown_function(function () use ($sin_permiso) { require_once ABSPATH . 'wp-admin/includes/user.php'; wp_delete_user($sin_permiso); });
 
 $pestana = function () use ($fx, $admin) { wp_set_current_user($admin); ob_start(); at_en_render_pestana(['id' => $fx['crm']]); return ob_get_clean(); };
+$marcado = function (string $html): DOMXPath {
+	$dom = new DOMDocument();
+	$errores = libxml_use_internal_errors(true);
+	$dom->loadHTML('<!doctype html><html><head><meta charset="utf-8"></head><body>' . $html . '</body></html>');
+	libxml_clear_errors();
+	libxml_use_internal_errors($errores);
+	return new DOMXPath($dom);
+};
 ok(strpos($pestana(), 'Activar notas del cliente') !== false && strpos($pestana(), 'Propuestas ' . $marca) !== false, 'lista con botón Activar');
 
 // Activar: sin permiso / nonce malo / bien
@@ -25,6 +33,9 @@ $e = at_en_por_detalle($fx['detalle']);
 $q = en_query($r['redirect']);
 ok($e && ($q['en_msg'] ?? '') === 'activado' && $q['#'] === 'tab-entregables' && (int) $q['en'] === (int) $e->id, 'activar y volver a la pestaña');
 $id = (int) $e->id;
+$xp = $marcado($pestana());
+ok($xp->query('//article[contains(@class,"at-en-card")]/header/h4')->length === 1 && $xp->query('//article//form[input[@name="action" and @value="at_en_estado"] and not(ancestor::details)]')->length === 1, 'tarjeta sin versiones: título y acción de estado visibles');
+ok($xp->query('//details[@id="at-en-nueva-' . $id . '" and not(@open)]//form[input[@name="action" and @value="at_en_version_crear"]]')->length === 1, 'crear la primera versión está plegado y conserva el formulario');
 
 // Nueva versión
 $r = en_correr('at_en_version_crear', $admin, 'at_en_' . $id, ['entregable_id' => $id, 'url' => 'https://example.com/v1', 'mensaje' => "Hola\n- portada"]);
@@ -40,6 +51,19 @@ unset($_GET['en_msg']);
 $html = $pestana();
 ok(strpos($html, 'srcdoc=') !== false && strpos($html, 'Enviarme una prueba') !== false && strpos($html, 'Enviar al cliente por correo') !== false && strpos($html, 'Enviar por mi WhatsApp') !== false, 'vista previa y botones de envío');
 ok(strpos($html, esc_html(at_en_texto_wa_version(at_en_por_id($id), 1))) !== false, 'texto de WhatsApp para copiar');
+$xp = $marcado($html);
+ok($xp->query('//article[contains(@class,"at-en-card")]/header/p[contains(.,"Abierto") and contains(.,"Versión vigente: 1")]')->length === 1, 'tarjeta con estado y versión vigente visibles');
+foreach (['at_en_version_prueba', 'at_en_version_enviar', 'at_en_version_whatsapp', 'at_en_estado'] as $accion_visible) {
+	ok($xp->query('//article//form[input[@name="action" and @value="' . $accion_visible . '"] and not(ancestor::details)]')->length === 1, $accion_visible . ': acción principal fuera de los desplegables');
+}
+foreach (['correo', 'editar', 'nueva', 'historial'] as $seccion) {
+	ok($xp->query('//article/details[@id="at-en-' . $seccion . '-' . $id . '" and not(@open)]/summary')->length === 1, $seccion . ': sección propia plegada por defecto');
+}
+ok($xp->query('//details[@id="at-en-correo-' . $id . '"]//iframe[@title and @sandbox]')->length === 1 && strpos($html, 'Línea de tiempo y acciones') === false, 'vista previa identificada y aislada del historial');
+$_GET['en'] = $id;
+$xp = $marcado($pestana());
+ok($xp->query('//details[@open]')->length === 1 && $xp->query('//details[@id="at-en-historial-' . $id . '" and @open]')->length === 1, 'al volver de una acción se abre el historial y los formularios largos siguen plegados');
+unset($_GET['en']);
 
 // Prueba / envío / WhatsApp
 $r = en_correr('at_en_version_prueba', $admin, 'at_en_' . $id, ['entregable_id' => $id, 'numero' => 1]);
@@ -54,6 +78,8 @@ ok(strpos($r['redirect'], 'https://wa.me/56911111111?text=') === 0 && at_en_vers
 // Responder
 $n = at_en_agregar_nota($id, 'cliente', 'Cliente', 'Cambia el color', [], '');
 ok(strpos($pestana(), '🔴 1 nota sin responder') !== false && at_en_marca_lista($fx['crm']) !== '', 'pendiente visible en la pestaña y en la lista');
+$xp = $marcado($pestana());
+ok($xp->query('//details[@id="at-en-historial-' . $id . '"]//form[input[@name="action" and @value="at_en_responder"]]')->length === 1, 'el historial conserva la respuesta de la nota pendiente con su formulario');
 $r = en_correr('at_en_responder', $admin, 'at_en_' . $id, ['entregable_id' => $id, 'nota_id' => $n, 'texto' => 'Listo, cambiado', 'avisar' => '1']);
 ok(en_query($r['redirect'])['en_msg'] === 'respuesta_ok' && at_en_sin_responder($id) === 0, 'respuesta guardada y nota respondida');
 ok(count(array_filter($r['mails'], function ($m) use ($marca) { return strpos($m, $marca . '@example.com') === 0; })) === 1, 'aviso al cliente con «Avisar»');

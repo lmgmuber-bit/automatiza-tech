@@ -6,7 +6,7 @@ import { readFileSync } from 'node:fs'
 import { JUEGOS, EQUIPOS_SUGERIDOS } from '../../src/animador/mazos.js'
 import {
   EQUIPOS_VOZ, TEXTO_COMENZAR, claveCarta, claveComenzar, claveEquipo, claveIntro, claveRespuesta, guionCompleto,
-  otraVoz, presentacion, vozDelJuego,
+  otraVoz, presentacion, textoLeible, vozDelJuego,
 } from '../../src/animador/vocesGuion.js'
 
 const datos = { nombre: 'Rosa', edad: 70 }
@@ -99,4 +99,12 @@ test('el kiosco: presentación con Omitir, voz por tarjeta, Repetir y reloj que 
   assert.match(src, /voz\.callar\(\)/)
   const app = readFileSync(new URL('../../src/App.jsx', import.meta.url), 'utf8')
   assert.match(app, /voces=\{CONFIG\.vocesAnimador\}/)
+})
+
+test('cómo se lee una tarjeta: «A + B» es «A y B» y el paréntesis pasa a coma (la voz se lo saltaba)', () => {
+  assert.equal(textoLeible('Tacón + coartada'), 'Tacón y coartada')
+  assert.equal(textoLeible('Todos a cantar «Me fui» (Reymar Perdomo).'), 'Todos a cantar "Me fui", Reymar Perdomo.')
+  assert.equal(textoLeible('Salto Ángel (Kerepakupai Merú), 979 m'), 'Salto Ángel, Kerepakupai Merú, 979 m')
+  assert.equal(textoLeible('El Ávila (Waraira Repano)'), 'El Ávila, Waraira Repano')
+  for (const x of guion) assert.doesNotMatch(x.texto, /[()]|,,|\s\+\s/, x.clave)
 })

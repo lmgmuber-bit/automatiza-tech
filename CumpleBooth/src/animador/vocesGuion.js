@@ -46,8 +46,18 @@ export const EQUIPOS_VOZ = Object.freeze([
 export const TEXTO_COMENZAR = '¡Presionemos comenzar!'
 export const TEXTO_TIEMPO = '¡Se acabó el tiempo!'
 
-/** El texto de una tarjeta tal como se lee: sin comillas angulares, que algunas voces leen como pausa rara. */
-export const textoLeible = (texto) => String(texto || '').replace(/[«»]/g, '"')
+/**
+ * El texto de una tarjeta tal como se lee. Sin comillas angulares (algunas voces las leen como pausa rara); «A + B»
+ * se dice «A y B» (se leía «A más B»); y el paréntesis pasa a coma, porque la voz se lo saltaba («Me fui (Reymar
+ * Perdomo)» sonaba «Me fui»). Lo que se ve en pantalla no cambia: sale de mazos.js.
+ */
+export const textoLeible = (texto) => String(texto || '')
+  .replace(/[«»]/g, '"')
+  .replace(/\s\+\s/g, ' y ')
+  .replace(/\s*\(([^)]+)\)/g, ', $1,')
+  .replace(/,\s*,/g, ',')
+  .replace(/,\s*([.?!:;])/g, '$1')
+  .replace(/,\s*$/, '')
 
 export const claveIntro = (juego) => `intro:${juego.id}`
 export const claveEquipo = (n, variante) => `equipo:${n}:${variante}`

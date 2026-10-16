@@ -177,6 +177,16 @@ $apiDesp = json_decode($luis->pedir('GET', '/api.php?p=' . rawurlencode($slug))[
 a_check(str_contains((string) ($apiDesp['theme']['videos']['despedida'] ?? ''), 'themes/adulto-coqueteria-pop/despedida-fiesta-' . $slug . '.mp4?v='), 'con video propio, el kiosco recibe la despedida de la fiesta');
 @unlink($despPropia);
 
+// Voces del animador de la fiesta: índice solo en el servidor (dicen el nombre y la edad). Sin carpeta, mudo.
+$dirVoces = cb_themes_dir() . '/adulto-coqueteria-pop/voces-fiesta-' . $slug;
+a_check(!array_key_exists('vocesAnimador', $api['party']), 'sin carpeta de voces, el kiosco no recibe índice');
+@mkdir($dirVoces, 0755, true);
+file_put_contents($dirVoces . '/indice.json', '{"version":1,"clips":{}}');
+register_shutdown_function(static function () use ($dirVoces): void { @unlink($dirVoces . '/indice.json'); @rmdir($dirVoces); });
+$apiVoces = json_decode($luis->pedir('GET', '/api.php?p=' . rawurlencode($slug))['html'], true);
+a_check(str_starts_with((string) ($apiVoces['party']['vocesAnimador'] ?? ''), 'themes/adulto-coqueteria-pop/voces-fiesta-' . $slug . '/indice.json?v='), 'con carpeta de voces, el kiosco recibe el índice de la fiesta');
+@unlink($dirVoces . '/indice.json'); @rmdir($dirVoces);
+
 // La invitación de un cumpleaños de adulto: tarjeta + video del evento (subidos y aprobados),
 // sin la voz de Alice (le habla a un niño) y con un formulario de asistencia para adultos.
 $tokenInv = cb_opaque_token(16);

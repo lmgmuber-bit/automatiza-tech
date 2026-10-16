@@ -7,6 +7,8 @@ import {
   deshacer, ganadores, juegosActivos, juegosDelNivel, marcador, necesitaPreparacion, nivelesDelJuego, nuevaRonda,
   nuevaSesion, pasar, reiniciarMazo, restaurarSesion, revelar, serializarSesion, siguiente, yaAnoto,
 } from './motor.js'
+import { claveCarta, claveRespuesta, claveTiempo, presentacion, seLee, tieneRespuesta, vozDelJuego } from './vocesGuion.js'
+import { useVoz } from './voz.js'
 
 /**
  * Lee la partida guardada en esta pestaña. Si no calza con la forma esperada (versión, nivel,
@@ -31,8 +33,12 @@ function leerGuardada(clave) {
  *
  * `apagados`: ids de juegos que el admin apagó para esta fiesta (`party.animadorApagados`). No
  * aparecen en la lista ni como alternativa, y si la partida apunta a uno se vuelve a la lista.
+ *
+ * `voces`: URL del índice de audios de la fiesta (vocesGuion.js). Con voces, cada juego abre con una
+ * presentación hablada (intro, equipos y «presionemos comenzar», con «Omitir») y cada tarjeta se lee.
+ * Sin índice, la presentación igual se muestra en texto y todo lo demás queda como antes.
  */
-export default function Animador({ nombre = '', edad = null, clave = 'animador', apagados = [], baseImagenes = '', onSalir, onFotoGrupal }) {
+export default function Animador({ nombre = '', edad = null, clave = 'animador', apagados = [], baseImagenes = '', voces = null, onSalir, onFotoGrupal }) {
   const datos = { nombre, edad }
   const t = (texto) => rellenar(texto, datos)
   const activos = useMemo(() => juegosActivos(JUEGOS, apagados), [apagados])
@@ -41,6 +47,8 @@ export default function Animador({ nombre = '', edad = null, clave = 'animador',
   const [pantalla, setPantalla] = useState(guardada ? 'juegos' : 'preparar')
   const [porPreparar, setPorPreparar] = useState(null) // id del juego que espera su preparación
   const { abrirFicha, ficha } = useFichaJuego(t)
+  const voz = useVoz(voces, clave + '_voz')
+  const salir = () => { voz.callar(); onSalir?.() }
 
   useEffect(() => {
     if (!sesion) return
@@ -55,7 +63,7 @@ export default function Animador({ nombre = '', edad = null, clave = 'animador',
         <h2 className="anim-titulo">Juegos de la fiesta</h2>
         <p className="anim-instr" role="status">Para esta fiesta no quedan juegos activos: se apagaron todos desde el panel de administración.</p>
         <div className="anim-pie">
-          <button type="button" className="cta ghost" onClick={onSalir}>📸 Volver a la cabina</button>
+          <button type="button" className="cta ghost" onClick={salir}>📸 Volver a la cabina</button>
         </div>
       </section>
     )
@@ -64,7 +72,7 @@ export default function Animador({ nombre = '', edad = null, clave = 'animador',
     return (
       <Preparar
         onListo={(nivel, equipos) => { setSesion(nuevaSesion({ nivel, equipos })); setPantalla('juegos') }}
-        onSalir={onSalir}
+        onSalir={salir}
         t={t}
       />
     )
@@ -72,14 +80,20 @@ export default function Animador({ nombre = '', edad = null, clave = 'animador',
   // Un juego apagado no se abre aunque la partida apunte a él: cae a la lista.
   const juego = activos.find((j) => j.id === sesion.juego) || null
   if (pantalla === 'cierre') {
-    return <Cierre sesion={sesion} onFotoGrupal={onFotoGrupal} onSeguir={() => setPantalla('juegos')} onSalir={onSalir}
+    return <Cierre sesion={sesion} onFotoGrupal={onFotoGrupal} onSeguir={() => setPantalla('juegos')} onSalir={salir}
       onNueva={() => { try { sessionStorage.removeItem(clave) } catch {}; setSesion(null); setPantalla('preparar') }} />
+  }
+  if (pantalla === 'presentacion' && juego) {
+    return (
+      <Presentacion key={juego.id} juego={juego} pasos={presentacion(JUEGOS, juego, sesion.equipos, EQUIPOS_SUGERIDOS, datos)}
+        voz={voz} onListo={() => { voz.callar(); setPantalla('juego') }} />
+    )
   }
   if (pantalla === 'juego' && juego) {
     return (
       <>
-        <Ronda sesion={sesion} setSesion={setSesion} juego={juego} t={t} onVolver={() => setPantalla('juegos')}
-          onInfo={abrirFicha(juego)} baseImagenes={baseImagenes} />
+        <Ronda sesion={sesion} setSesion={setSesion} juego={juego} t={t} onVolver={() => { voz.callar(); setPantalla('juegos') }}
+          onInfo={abrirFicha(juego)} baseImagenes={baseImagenes} voz={voz} />
         {ficha}
       </>
     )
@@ -87,7 +101,7 @@ export default function Animador({ nombre = '', edad = null, clave = 'animador',
   const abrir = (j) => {
     if (necesitaPreparacion(sesion, j)) { setPorPreparar(j.id); setPantalla('preparar-juego'); return }
     setSesion((s) => abrirJuego(s, j))
-    setPantalla('juego')
+    setPantalla('presentacion')
   }
   const pendiente = activos.find((j) => j.id === porPreparar) || null
   if (pantalla === 'preparar-juego' && pendiente) {
@@ -98,7 +112,7 @@ export default function Animador({ nombre = '', edad = null, clave = 'animador',
         onConfirmar={() => {
           setSesion((s) => abrirJuego(confirmarPreparacion(s, pendiente), pendiente))
           setPorPreparar(null)
-          setPantalla('juego')
+          setPantalla('presentacion')
         }}
         onAlternativa={(alt) => { setPorPreparar(null); abrir(alt) }}
         onVolver={() => { setPorPreparar(null); setPantalla('juegos') }} />
@@ -109,7 +123,7 @@ export default function Animador({ nombre = '', edad = null, clave = 'animador',
   const disponibles = juegosDelNivel(activos, sesion.nivel)
   return (
     <section className="screen anim">
-      <Cabecera sesion={sesion} setSesion={setSesion} />
+      <Cabecera sesion={sesion} setSesion={setSesion} voz={voz} />
       <h2 className="anim-titulo">Entre cómplices: ¿a qué jugamos?</h2>
       {disponibles.length === 0 ? (
         <p className="anim-instr" role="status">
@@ -130,7 +144,7 @@ export default function Animador({ nombre = '', edad = null, clave = 'animador',
       )}
       <div className="anim-pie">
         <button type="button" className="cta" onClick={() => setPantalla('cierre')}>🏆 Premios y cierre</button>
-        <button type="button" className="cta ghost" onClick={onSalir}>📸 Volver a la cabina</button>
+        <button type="button" className="cta ghost" onClick={salir}>📸 Volver a la cabina</button>
       </div>
       {ficha}
     </section>
@@ -263,10 +277,16 @@ function Preparar({ onListo, onSalir, t }) {
   )
 }
 
-function Cabecera({ sesion, setSesion, juego = null }) {
+function Cabecera({ sesion, setSesion, juego = null, voz = null }) {
   const totales = marcador(sesion)
   return (
     <header className="anim-cabecera">
+      {voz?.disponible && (
+        <button type="button" className="anim-chip anim-voz" aria-pressed={!voz.silencio}
+          aria-label={voz.silencio ? 'Activar la voz' : 'Silenciar la voz'} onClick={() => voz.setSilencio(!voz.silencio)}>
+          {voz.silencio ? '🔇' : '🔊'}
+        </button>
+      )}
       <div className="anim-marcador" aria-label="Marcador">
         {sesion.equipos.map((e, i) => (
           <span key={i} className="anim-marca"><small>{e}</small><b>{totales[i]}</b></span>
@@ -314,6 +334,46 @@ function PrepararJuego({ sesion, setSesion, juego, t, juegos, onInfo, onConfirma
           {t(altJuego.nombre)} se juega desde el nivel {NIVEL_TEXTO[altNivel].nombre}: súbelo arriba si quieren, o elige otro juego.
         </p>
       )}
+    </section>
+  )
+}
+
+/**
+ * Presentación hablada de un juego: el texto que suena va al centro, paso a paso (intro, cada equipo y
+ * «presionemos comenzar»). «Omitir» salta todo en cualquier momento; «Comenzar» aparece al final. Sin
+ * voz, cada paso queda en pantalla un momento para alcanzar a leerlo.
+ */
+function Presentacion({ juego, pasos, voz, onListo }) {
+  const [i, setI] = useState(0)
+  const [fin, setFin] = useState(false)
+  useEffect(() => {
+    let vivo = true
+    const esperar = (ms) => new Promise((r) => setTimeout(r, ms))
+    ;(async () => {
+      for (let k = 0; k < pasos.length && vivo; k++) {
+        setI(k)
+        const p = pasos[k]
+        const sono = voz.tiene(p.clave) && !voz.silencio ? await voz.decir(p.clave) : false
+        if (!sono && vivo) await esperar(Math.min(4500, 1200 + p.texto.length * 35))
+      }
+      if (vivo) setFin(true)
+    })()
+    return () => { vivo = false; voz.callar() }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+  const paso = pasos[Math.min(i, pasos.length - 1)]
+  return (
+    <section className="screen anim anim-presenta" aria-live="polite">
+      <span className="anim-presenta__emoji" aria-hidden="true">{juego.emoji}</span>
+      <p key={i} className="anim-presenta__texto">{paso.texto}</p>
+      <div className="anim-presenta__puntos" aria-hidden="true">
+        {pasos.map((_, k) => <i key={k} className={k <= i ? 'is-on' : ''} />)}
+      </div>
+      <div className="anim-pie">
+        {fin
+          ? <button type="button" className="cta" onClick={onListo} autoFocus>▶ Comenzar</button>
+          : <button type="button" className="cta ghost" onClick={onListo}>⏭ Omitir</button>}
+      </div>
     </section>
   )
 }
@@ -370,10 +430,15 @@ function CartaPrivada({ llave, texto }) {
   )
 }
 
-function Cronometro({ segundos, reinicio }) {
+function Cronometro({ segundos, reinicio, onFin }) {
   const [quedan, setQuedan] = useState(segundos)
   const [corre, setCorre] = useState(false)
-  useEffect(() => { setQuedan(segundos); setCorre(false) }, [segundos, reinicio])
+  const avisado = useRef(false)
+  useEffect(() => { setQuedan(segundos); setCorre(false); avisado.current = false }, [segundos, reinicio])
+  // Al llegar a cero, una sola vez por vuelta: «¡Se acabó el tiempo!» y la respuesta, si la hay.
+  useEffect(() => {
+    if (quedan === 0 && segundos && !avisado.current) { avisado.current = true; onFin?.() }
+  }, [quedan, segundos, onFin])
   useEffect(() => {
     if (!corre) return undefined
     const id = setInterval(() => setQuedan((q) => {
@@ -389,7 +454,7 @@ function Cronometro({ segundos, reinicio }) {
       <button type="button" className="anim-chip" onClick={() => setCorre((c) => !c)} disabled={quedan === 0}>
         {corre ? '⏸ Pausar' : '▶ Iniciar'}
       </button>
-      <button type="button" className="anim-chip" onClick={() => { setCorre(false); setQuedan(segundos) }}>↺</button>
+      <button type="button" className="anim-chip" onClick={() => { setCorre(false); setQuedan(segundos); avisado.current = false }}>↺</button>
     </div>
   )
 }
@@ -430,8 +495,30 @@ function ImagenDeTarjeta({ src }) {
   )
 }
 
-function Ronda({ sesion, setSesion, juego, t, onVolver, onInfo, baseImagenes = '' }) {
+function Ronda({ sesion, setSesion, juego, t, onVolver, onInfo, baseImagenes = '', voz }) {
   const carta = juego.cartas.find((c) => c.id === sesion.carta) || null
+  const vozJuego = vozDelJuego(JUEGOS, juego)
+  const sinTarjetaVoz = Boolean(sesion.agotado || sesion.categoriaAgotada)
+  // Cada tarjeta nueva se lee al aparecer (las privadas nunca). Al revelarse, la otra voz da la respuesta.
+  useEffect(() => {
+    if (!carta || sinTarjetaVoz || !seLee(juego, carta)) return
+    voz.decir(claveCarta(carta))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [carta?.id, sinTarjetaVoz])
+  const revelada = Boolean(sesion.revelada)
+  const yaLeida = useRef(null)
+  useEffect(() => {
+    if (!revelada || !carta || !tieneRespuesta(carta) || yaLeida.current === carta.id) return
+    yaLeida.current = carta.id
+    voz.decir(claveRespuesta(carta))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [revelada, carta?.id])
+  const alTerminarReloj = useCallback(() => {
+    const revela = Boolean(carta && tieneRespuesta(carta) && !sesion.revelada && !juego.privado)
+    const destapar = () => { if (revela) setSesion((s) => (s.carta === carta.id ? revelar(s) : s)) }
+    if (voz.tiene(claveTiempo(vozJuego)) && !voz.silencio) voz.decir(claveTiempo(vozJuego)).then(destapar)
+    else destapar()
+  }, [carta, sesion.revelada, juego.privado, vozJuego, voz, setSesion])
   const bloqueo = useRef(0)
   // Un toque cada 500 ms: un dedo nervioso no suma dos veces ni salta dos tarjetas.
   const una = (fn) => () => {
@@ -447,7 +534,7 @@ function Ronda({ sesion, setSesion, juego, t, onVolver, onInfo, baseImagenes = '
   const ultimo = sesion.puntos[sesion.puntos.length - 1]
   return (
     <section className="screen anim anim--ronda">
-      <Cabecera sesion={sesion} setSesion={setSesion} juego={juego} />
+      <Cabecera sesion={sesion} setSesion={setSesion} juego={juego} voz={voz} />
       <div className="anim-titulo-fila">
         <h2 className="anim-titulo"><span aria-hidden="true">{juego.emoji}</span> {t(juego.nombre)}</h2>
         <BotonInfo juego={juego} t={t} onClick={onInfo} />
@@ -487,6 +574,9 @@ function Ronda({ sesion, setSesion, juego, t, onVolver, onInfo, baseImagenes = '
         <div className="anim-carta">
           {carta.categoria && <p className="anim-carta__cat">{carta.categoria}</p>}
           <p className="anim-carta__texto">{t(carta.texto)}</p>
+          {voz.tiene(claveCarta(carta)) && !voz.silencio && (
+            <button type="button" className="anim-chip anim-repetir" onClick={() => voz.decir(claveCarta(carta))} aria-label="Leer de nuevo la tarjeta">🔊 Repetir</button>
+          )}
           {carta.tipo === 'reto' && <p className="anim-nota anim-nota--reto">Sin respuesta: el punto lo decide el aplauso.</p>}
           {carta.tipo === 'musica' && (
             <p className="anim-carta__pista"><span aria-hidden="true">🎵</span> Pon en el parlante {carta.pista} o pídeselo al DJ. La app no trae audio.</p>
@@ -498,7 +588,7 @@ function Ronda({ sesion, setSesion, juego, t, onVolver, onInfo, baseImagenes = '
         </div>
       ) : null}
 
-      <Cronometro segundos={juego.segundos} reinicio={sesion.ronda} />
+      <Cronometro segundos={juego.segundos} reinicio={`${sesion.ronda}|${sesion.carta}`} onFin={alTerminarReloj} />
 
       {valores.length > 0 && (
         <div className="anim-puntos">

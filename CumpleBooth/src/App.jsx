@@ -241,6 +241,10 @@ function buildRuntime(party, theme, slug) {
     animadorApagados: Array.isArray(party.animadorApagados)
       ? party.animadorApagados.filter((id) => typeof id === 'string')
       : [],
+    // Voces del animador de esta fiesta (índice de audios, solo en el servidor). Sin la clave, mudo.
+    vocesAnimador: typeof party.vocesAnimador === 'string' && /^themes\/[\w-]+\/voces-fiesta-[\w-]+\/indice\.json(\?v=\w+)?$/.test(party.vocesAnimador)
+      ? BASE + party.vocesAnimador
+      : null,
   }
   MUSIC_ENABLED = CONFIG.musicaHabilitada && Boolean(CONFIG.audio.musica)
   CABINA_ADULTO = CONFIG.eventType === 'adult_birthday'
@@ -929,6 +933,7 @@ function BoothApp() {
           clave={STORAGE_KEY + '_animador'}
           apagados={CONFIG.animadorApagados}
           baseImagenes={BASE + 'themes/' + THEME_SLUG + '/animador/'}
+          voces={CONFIG.vocesAnimador}
           onSalir={inicio}
           onFotoGrupal={CONFIG.grupal ? () => {
             setInvitado('')

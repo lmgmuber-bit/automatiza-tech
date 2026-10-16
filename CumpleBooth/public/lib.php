@@ -1532,6 +1532,14 @@ function cb_resolve_party(string $slugRaw): array
         $themePayload['videos'] = $videos;
     }
 
+    // Voces del animador de una fiesta adulta (src/animador/vocesGuion.js): índice + un mp3 por frase en
+    // `themes/<tema>/voces-fiesta-<slug>/`, solo en el servidor porque dicen el nombre y la edad (.gitignore).
+    // Sin la carpeta, el kiosco juega igual pero mudo.
+    $indiceVoces = cb_themes_dir() . '/' . $themeSlug . '/voces-fiesta-' . $slug . '/indice.json';
+    if ($eventType === 'adult_birthday' && cb_valid_public_slug($slug) && is_file($indiceVoces)) {
+        $partyPayload['vocesAnimador'] = 'themes/' . $themeSlug . '/voces-fiesta-' . $slug . '/indice.json?v=' . cb_sello_archivo($indiceVoces);
+    }
+
     return ['ok' => true, 'party' => $partyPayload, 'theme' => $themePayload];
 }
 

@@ -303,11 +303,11 @@ export const JUEGOS = [
     id: 'mas-venezolano',
     nombre: '¿Quién es más venezolano?',
     emoji: '🫓', // una arepa: la bandera sale como «VE» en Windows
-    segundos: 0,
+    segundos: 20,
     puntos: 'acierto',
     conCategorias: true,
     cierre: 'Canta conmigo',
-    instrucciones: 'Concurso de cultura venezolana entre dos equipos. Lee la pregunta: el primer equipo que grita la respuesta correcta se lleva el punto. Si nadie sabe, toca «Revelar respuesta». En «Chile o Venezuela», el equipo dice cómo se dice en el otro país.',
+    instrucciones: 'Concurso de cultura venezolana entre dos equipos. Lee la pregunta: el primer equipo que grita la respuesta correcta se lleva el punto. Si nadie sabe en 20 segundos, el reloj revela la respuesta (o toca «Revelar respuesta»). En «Chile o Venezuela», el equipo dice cómo se dice en el otro país.',
     premio: 'El equipo más venezolano',
     nota: 'Las respuestas las ve solo quien conduce: aparecen al tocar «Revelar respuesta». En «Canta conmigo» la tablet solo nombra la canción.',
     cartas: [
@@ -403,9 +403,9 @@ export const JUEGOS = [
     id: 'venezolano-politica',
     nombre: '¿Quién es más venezolano? Edición política',
     emoji: '🗳️',
-    segundos: 0,
+    segundos: 20,
     puntos: 'acierto',
-    instrucciones: 'Preguntas de la vida política venezolana, con humor. Mismo juego: el primer equipo que grita la respuesta correcta se lleva el punto; si nadie sabe, toca «Revelar respuesta». Si alguien se incomoda, se pasa a otro juego.',
+    instrucciones: 'Preguntas de la vida política venezolana, con humor. Mismo juego: el primer equipo que grita la respuesta correcta se lleva el punto; si nadie sabe en 20 segundos, el reloj la revela (o toca «Revelar respuesta»). Si alguien se incomoda, se pasa a otro juego.',
     premio: 'El equipo más venezolano',
     nota: 'Úsalo solo si el ambiente lo permite. Se apaga desde el admin.',
     cartas: [

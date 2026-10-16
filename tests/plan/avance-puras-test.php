@@ -75,6 +75,9 @@ ok(at_av_normalizar(null) === $vacio && at_av_normalizar('') === $vacio && at_av
 $n = at_av_normalizar('{"cierres":[{"id":"c1"},"basura"],"alcance":{"fase1":["A",3]},"render":{"estado":"listo","otra":1}}');
 ok(count($n['cierres']) === 1 && $n['alcance']['fase1'] === ['A'] && $n['render']['estado'] === 'listo' && !isset($n['render']['otra']) && $n['render_previa'] === at_av_registro_vacio(), 'normalizar descarta lo que no tiene la forma esperada');
 
+$n = at_av_normalizar('{"render":{"estado":"pendiente","repetir":true,"pedido_at":"2026-10-15 10:00:00"},"render_previa":{"repetir":"x","pedido_at":5}}');
+ok($n['render']['repetir'] === true && $n['render']['pedido_at'] === '2026-10-15 10:00:00' && $n['render_previa']['repetir'] === false && $n['render_previa']['pedido_at'] === '' && at_av_registro_vacio()['repetir'] === false && at_av_registro_vacio()['pedido_at'] === '', 'normalizar conserva repetir y pedido_at del render y los deja en falso y vacío si no son del tipo esperado');
+
 // --- ayudas
 ok(at_av_url_publica('https://example.com/a?b=1') === 'https://example.com/a?b=1', 'enlace https: sirve');
 ok(at_av_url_publica('http://example.com/') === '' && at_av_url_publica('https://n8n-propuesta-renderer.kchiba.easypanel.host/p/x') === '' && at_av_url_publica('https://ex ample.com') === '' && at_av_url_publica('javascript:alert(1)') === '', 'http, easypanel, espacios o javascript: no sirven (D8)');
@@ -280,4 +283,11 @@ $pf2['bloques'] = ['Diseño', 'Desarrollo'];
 ok(!array_key_exists('actividades', at_av_cierre_de_formulario($pf2, COD, [], $exp)['datos']['cierre']['durante']), 'editar con otros bloques: las actividades se vuelven a tomar del plan');
 $nueva = at_av_cierre_de_formulario($pf, COD, [1 => ['archivo' => 'otra.png']], $exp);
 ok($nueva['datos']['evidencias'][1]['archivo'] === 'evidencia-2.png' && $nueva['nombres'] === [1 => ['archivo' => 'evidencia-2.png']], 'editar con una imagen nueva: reemplaza la anterior');
+// Etapa 3: reimportar un borrador que ya se envió no olvida sus envíos; un cierre nuevo parte sin envíos.
+$base_env = at_av_aplicar_import(at_av_vacio(), at_av_validar_import(archivo(), COD, $plan, at_av_vacio()), 'cenv001', '2026-10-14 10:00:00')['avance'];
+ok(array_key_exists('enviado_at', $base_env['cierres'][0]['correo']) && $base_env['cierres'][0]['correo']['enviado_at'] === null && array_key_exists('abierto_at', $base_env['cierres'][0]['whatsapp']) && $base_env['cierres'][0]['whatsapp']['abierto_at'] === null, 'un cierre nuevo no trae envíos');
+$base_env['cierres'][0]['correo'] = ['enviado_at' => '2026-10-14 11:00:00', 'prueba_at' => null, 'mensaje' => 'Hola', 'enviando' => null, 'a' => 'cliente@example.com'];
+$base_env['cierres'][0]['whatsapp'] = ['abierto_at' => '2026-10-14 12:00:00'];
+$re = at_av_aplicar_import($base_env, at_av_validar_import(archivo(), COD, $plan, $base_env), 'cotro01', '2026-10-15 10:00:00')['avance'];
+ok(($re['cierres'][0]['correo']['enviado_at'] ?? '') === '2026-10-14 11:00:00' && ($re['cierres'][0]['correo']['a'] ?? '') === 'cliente@example.com' && ($re['cierres'][0]['whatsapp']['abierto_at'] ?? '') === '2026-10-14 12:00:00', 'reimportar el mismo cierre conserva cuándo se envió el correo, a quién y el WhatsApp');
 fin();

@@ -18,9 +18,13 @@ const AT_AV_MAX_ACTIVIDADES = 30;
 const AT_AV_ESTADOS_BLOQUE = ['listo', 'en_curso', 'por_venir'];
 const AT_AV_TIPOS = ['captura', 'enlace', 'cifra', 'video'];
 
-/** Registro de un render de «Estado del proyecto» (público o vista previa). */
+/**
+ * Registro de un render de «Estado del proyecto» (público o vista previa). `pedido_at` es cuándo se avisó a n8n por
+ * última vez y `repetir` que, mientras ese pedido seguía en curso, llegó otro: el render público se serializa con
+ * ellos (at_av_pedir_render y at_av_rest_vista_estado).
+ */
 function at_av_registro_vacio(): array {
-	return ['estado' => '', 'view_url' => '', 'pdf_url' => '', 'nota' => '', 'at' => ''];
+	return ['estado' => '', 'view_url' => '', 'pdf_url' => '', 'nota' => '', 'at' => '', 'repetir' => false, 'pedido_at' => ''];
 }
 
 function at_av_vacio(): array {
@@ -57,6 +61,8 @@ function at_av_normalizar(mixed $guardado): array {
 	foreach (['render', 'render_previa'] as $k) {
 		if (is_array($guardado[$k] ?? null)) {
 			$a[$k] = array_merge(at_av_registro_vacio(), array_intersect_key($guardado[$k], at_av_registro_vacio()));
+			$a[$k]['repetir'] = $a[$k]['repetir'] === true || $a[$k]['repetir'] === 1 || $a[$k]['repetir'] === '1';
+			$a[$k]['pedido_at'] = is_string($a[$k]['pedido_at']) ? $a[$k]['pedido_at'] : '';
 		}
 	}
 	return $a;
@@ -570,9 +576,18 @@ function at_av_archivos_de(array $evidencias): array {
 function at_av_aplicar_import(array $avance, array $v, string $nuevo_id, string $ahora): array {
 	$id = $nuevo_id;
 	$viejas = [];
+	$correo = ['enviado_at' => null, 'prueba_at' => null, 'mensaje' => ''];
+	$whatsapp = ['abierto_at' => null];
 	foreach ($avance['cierres'] as $i => $x) {
 		if (at_av_clave((string) ($x['titulo'] ?? '')) === at_av_clave($v['cierre']['titulo'])) {
 			$id = (string) $x['id'];
+			// Lo ya enviado al cliente sobrevive a reimportar el borrador: el estado de envío no viene en el archivo.
+			if (is_array($x['correo'] ?? null)) {
+				$correo = $x['correo'];
+			}
+			if (is_array($x['whatsapp'] ?? null)) {
+				$whatsapp = $x['whatsapp'];
+			}
 			foreach (array_merge((array) ($x['antes']['evidencias'] ?? []), (array) ($x['despues']['evidencias'] ?? [])) as $eid) {
 				if (isset($avance['evidencias'][$eid])) {
 					$viejas[$eid] = $avance['evidencias'][$eid];
@@ -612,8 +627,8 @@ function at_av_aplicar_import(array $avance, array $v, string $nuevo_id, string 
 	$avance['cierres'][] = [
 		'id' => $id, 'titulo' => $c['titulo'], 'bloques' => $c['bloques'], 'fecha_real' => $c['fecha_real'], 'estado' => 'borrador',
 		'publicado_at' => '', 'entregable_id' => $c['entregable_id'], 'antes' => $parte($c['antes']), 'durante' => $c['durante'],
-		'despues' => $parte($c['despues']), 'correo' => ['enviado_at' => null, 'prueba_at' => null, 'mensaje' => ''],
-		'whatsapp' => ['abierto_at' => null], 'importado_at' => $ahora,
+		'despues' => $parte($c['despues']), 'correo' => $correo,
+		'whatsapp' => $whatsapp, 'importado_at' => $ahora,
 	];
 	$avance['cierres'] = array_values($avance['cierres']);
 	foreach ($v['bloques'] as $n => $b) {
@@ -1038,7 +1053,7 @@ function at_av_bloques_de_post(mixed $post, array $plan, array &$errores): array
 /* ---------- Cuerpo para el renderer (Task 5) ---------- */
 
 /** Evidencias de un cierre para el renderer. No salen las de captura o video sin archivo, ni un enlace que no pase
- *  at_av_url_publica (D8). */
+ *  at_av_url_publica (D8). 'ancho'/'alto': medidas de la captura (at_av_con_medidas); 0 si no se conocen. */
 function at_av_evidencias_render(array $avance, array $ids): array {
 	$out = [];
 	foreach ($ids as $id) {
@@ -1051,7 +1066,8 @@ function at_av_evidencias_render(array $avance, array $ids): array {
 			continue;
 		}
 		$out[] = ['tipo' => (string) $e['tipo'], 'titulo' => (string) ($e['titulo'] ?? ''), 'url' => $url, 'poster' => at_av_url_publica($e['poster'] ?? ''),
-			'valor' => (string) ($e['valor'] ?? ''), 'unidad' => (string) ($e['unidad'] ?? ''), 'fuente' => (string) ($e['fuente'] ?? ''), 'fecha' => (string) ($e['fecha'] ?? '')];
+			'valor' => (string) ($e['valor'] ?? ''), 'unidad' => (string) ($e['unidad'] ?? ''), 'fuente' => (string) ($e['fuente'] ?? ''), 'fecha' => (string) ($e['fecha'] ?? ''),
+			'ancho' => max(0, (int) ($e['ancho'] ?? 0)), 'alto' => max(0, (int) ($e['alto'] ?? 0))];
 	}
 	return $out;
 }

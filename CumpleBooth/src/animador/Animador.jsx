@@ -588,7 +588,9 @@ function Ronda({ sesion, setSesion, juego, t, onVolver, onInfo, baseImagenes = '
         </div>
       ) : null}
 
-      <Cronometro segundos={juego.segundos} reinicio={`${sesion.ronda}|${sesion.carta}`} onFin={alTerminarReloj} />
+      {/* key: cada tarjeta o ronda monta un reloj nuevo; si no, el cero de la anterior disparaba el fin de la
+          nueva antes de iniciarla y revelaba su respuesta (revisión B de Codex, CX-30). */}
+      <Cronometro key={`${sesion.ronda}|${sesion.carta}`} segundos={juego.segundos} reinicio={`${sesion.ronda}|${sesion.carta}`} onFin={alTerminarReloj} />
 
       {valores.length > 0 && (
         <div className="anim-puntos">

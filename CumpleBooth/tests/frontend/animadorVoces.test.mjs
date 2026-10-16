@@ -108,3 +108,60 @@ test('cómo se lee una tarjeta: «A + B» es «A y B» y el paréntesis pasa a c
   assert.equal(textoLeible('El Ávila (Waraira Repano)'), 'El Ávila, Waraira Repano')
   for (const x of guion) assert.doesNotMatch(x.texto, /[()]|,,|\s\+\s/, x.clave)
 })
+
+// --- Revisión B de Codex (CX-30, CX-31, CX-32) ---
+import { crearReproductor } from '../../src/animador/voz.js'
+
+/** Audio falso: `play` responde según `modo` (ok = suena y termina al llamar `terminar`, falla = rechaza). */
+function audioFalso(modo = () => 'ok') {
+  const a = { src: '', pausado: false, onended: null, onerror: null, reproducidos: [] }
+  a.play = () => {
+    a.reproducidos.push(a.src); a.pausado = false
+    return modo(a.src) === 'falla' ? Promise.reject(new Error('autoplay')) : Promise.resolve()
+  }
+  a.pause = () => { a.pausado = true }
+  a.terminar = () => a.onended && a.onended()
+  return a
+}
+const tic = () => new Promise((r) => setTimeout(r, 0))
+
+test('CX-31: callar resuelve la reproducción pendiente con false (no queda colgada)', async () => {
+  const a = audioFalso(); const rep = crearReproductor(() => a)
+  const p = rep.decir(['a.mp3', 'b.mp3']); await tic()
+  rep.callar()
+  assert.equal(await p, false)
+  assert.equal(a.pausado, true)
+  assert.deepEqual(a.reproducidos, ['a.mp3'])
+})
+
+test('CX-31: una voz nueva corta la anterior; la vieja resuelve false y la nueva true', async () => {
+  const a = audioFalso(); const rep = crearReproductor(() => a)
+  const vieja = rep.decir(['a.mp3']); await tic()
+  const nueva = rep.decir(['b.mp3']); await tic()
+  a.terminar()
+  assert.equal(await vieja, false)
+  assert.equal(await nueva, true)
+})
+
+test('CX-32: si la reproducción falla o se bloquea, resuelve false (la presentación da tiempo de lectura)', async () => {
+  const rep = crearReproductor(() => audioFalso(() => 'falla'))
+  assert.equal(await rep.decir(['a.mp3', 'b.mp3']), false)
+  const conError = audioFalso(); const rep2 = crearReproductor(() => conError)
+  const p = rep2.decir(['x.mp3']); await tic(); conError.onerror()
+  assert.equal(await p, false)
+})
+
+test('una secuencia que suena entera resuelve true y en orden', async () => {
+  const a = audioFalso(); const rep = crearReproductor(() => a)
+  const p = rep.decir(['a.mp3', 'b.mp3'])
+  await tic(); a.terminar(); await tic(); a.terminar()
+  assert.equal(await p, true)
+  assert.deepEqual(a.reproducidos, ['a.mp3', 'b.mp3'])
+})
+
+test('CX-30: el reloj se monta de nuevo por tarjeta (key), así el cero de la anterior no cierra la nueva', () => {
+  const src = readFileSync(new URL('../../src/animador/Animador.jsx', import.meta.url), 'utf8')
+  assert.match(src, /<Cronometro key=\{`\$\{sesion\.ronda\}\|\$\{sesion\.carta\}`\}/)
+  // La presentación espera el tiempo de lectura cuando la voz no sonó (false), no solo cuando no hay clip.
+  assert.match(src, /if \(!sono && vivo\) await esperar/)
+})

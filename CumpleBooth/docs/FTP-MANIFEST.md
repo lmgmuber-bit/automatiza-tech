@@ -21,6 +21,32 @@ grep -o 'assets/[a-zA-Z0-9._-]*' dist/index.html   # lo que index.html pide
 Sube **todos** los de `dist/assets/` junto con `dist/index.html` en la misma
 tanda. Los que sobren del build anterior se pueden borrar después.
 
+## DESPLEGADO 2026-10-16 (~00:30): voces del animador adulto y «mujeres y hombres» (rama `claude/animador-voces`)
+
+Go de Luis. Lo hizo Claude por SSH (`desplegar-voces.py`, en la carpeta de Aseo de la sesión): cotejo previo (`lib.php` y
+`admin/index.php` de PROD = `main` `1c3e333`), respaldos `~/respaldos/app-*.antes-voces-20261016-*`, carpeta de voces
+subida a un temporal con sha256 por archivo y renombrada de una vez, después `lib.php`, `admin/index.php`, dos assets
+(`main-BcdOx6xG.js`, `main-BJa6JKvi.css`) y `index.html` al final.
+- **Voces** (`4a862fc`): cada juego abre con una presentación hablada (bienvenida, en qué consiste, un saludo por equipo
+  —voz masculina para «Caballeros sospechosos», femenina para «Cómplices peligrosas»— y «presionemos comenzar») con
+  **Omitir**; cada tarjeta se lee al aparecer (la Mímica nunca), con 🔊 Repetir y silencio en la cabecera; al acabarse el
+  reloj suena «¡Se acabó el tiempo!», se revela la respuesta y la otra voz la lee. Los dos «¿Quién es más venezolano?»
+  pasan a tener reloj de 20 s. Guion único en `src/animador/vocesGuion.js`.
+- **Audios:** 325 frases, dos voces diseñadas en ElevenLabs y guardadas en la cuenta («CumpleClick Animadora/Animador
+  venezolano», `eleven_v3`, 15.628 caracteres, nivel −16 LUFS). Dicen el nombre y la edad: viven **solo en el servidor**
+  en `themes/<tema>/voces-fiesta-<slug>/` (`.gitignore`); `lib.php` publica `party.vocesAnimador` si existe el índice.
+  Otra fiesta adulta necesita su propia carpeta (el guion se arma con `guionCompleto(JUEGOS, {nombre, edad})`).
+- **Textos adultos** (`dcb99be`): lista y gestión de invitados en «Mujeres/Hombres», «Elegir otro invitado» y el selector
+  del admin «Mujer/Hombre». Quedan textos infantiles fuera de la fiesta: página de aceptación, manual PDF y opciones de
+  la invitación en el admin.
+- **Verificado desde afuera:** los tres archivos de PROD iguales al local por sha256, `indice.json` (325 claves) y ocho
+  audios iguales, la API de la fiesta publica el índice, el kiosco en PROD reprodujo intro, equipos, «comenzar» y la
+  tarjeta, y Omitir cortó la presentación; luciano-spidey, feria y portada en 200.
+- **Calidad de voz:** 259 de 325 transcritas con `scribe_v1` (similitud media 0,979); las 66 restantes quedaron sin
+  verificar porque **ElevenLabs se quedó sin créditos**. Posibles a regrabar: «¿Me guardas un baile?» (algo atropellada) y
+  «Me fui», que omitió el paréntesis del intérprete; los «X + Y» de Piropos se leen «X más Y».
+- **NOT_RUN:** escuchar en la tablet y en el parlante del salón; la Revisión B cruzada (Codex) del cambio.
+
 ## DESPLEGADO 2026-10-13 (mañana): despedida propia de la fiesta del piloto
 
 Pedido de Luis: en la despedida del kiosco, la imagen de la cumpleañera con la copa, con movimiento y la voz chilena de

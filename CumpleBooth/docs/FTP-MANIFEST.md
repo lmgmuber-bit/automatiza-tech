@@ -21,6 +21,22 @@ grep -o 'assets/[a-zA-Z0-9._-]*' dist/index.html   # lo que index.html pide
 Sube **todos** los de `dist/assets/` junto con `dist/index.html` en la misma
 tanda. Los que sobren del build anterior se pueden borrar después.
 
+## DESPLEGADO 2026-10-16 (tarde): transiciones habladas y ruleta del baile (rama `claude/animador-voces`)
+
+Go de Luis en cada paso. **Transiciones** (`7ca9898`): «Paso esta» y «Siguiente» dicen una frase («¡Uy, esa no nos
+gustó! Vamos a la siguiente pregunta», tres variantes de cada una) antes de leer la tarjeta nueva. **Ruleta del baile**
+(`368fdcc`, `68c4367`): juego 19 «¿Quién baila? La ruleta»; gira entre los invitados de la fiesta (o frases sin lista),
+dice si baila sin pareja o en pareja y con quién, y nombra una de 37 canciones que pone el DJ (la app no trae audio):
+venezolanas, éxitos bailables del mundo y jocosas con destinatario (`para`: solo hombres o solo mujeres, por el género
+de la lista). «Otra persona» gira de nuevo. 55 frases nuevas (474 + 2.178 créditos), verificadas con `scribe_v1`.
+- **Subido:** carpeta de voces completa (380 claves, respaldo `~/respaldos/voces-fiesta-piloto.antes-*`), `lib.php`
+  (cotejado contra `4a862fc`; suma `ruleta-baile` a `cb_animador_juegos`, respaldo `~/respaldos/app-lib.php.antes-*`),
+  `assets/main-sbHBbQfN.js`, `assets/main-BYDY8wH5.css` e `index.html` (respaldo `~/respaldos/app-index.html.antes-*`).
+- **Verificado en PROD** con los 22 invitados reales: la ruleta eligió a un invitado, con pareja y canción, y sonaron en
+  orden la presentación, «está girando», «en pareja» y la canción; «Paso esta» dijo su frase y leyó la tarjeta nueva.
+- **Pendiente:** el título de la canción de Diveana y otras jocosas que conoce Luis; escuchar «El venao», «San Juan to'
+  lo tiene» y «Chino y Nacho» (el transcriptor oyó «El venado», «te lo tiene» y «Chimi Nacho»).
+
 ## DESPLEGADO 2026-10-16 (mañana): revisión B de Codex en las voces y textos adultos de Codex (rama `claude/animador-voces`)
 
 Go de Luis. Codex hizo la revisión B del PR #91 en su app (informe `Revision-B-Codex-Voces-PR91.md`, fuera del repo):

@@ -45,7 +45,13 @@ subida a un temporal con sha256 por archivo y renombrada de una vez, después `l
 - **Calidad de voz:** 259 de 325 transcritas con `scribe_v1` (similitud media 0,979); las 66 restantes quedaron sin
   verificar porque **ElevenLabs se quedó sin créditos**. Posibles a regrabar: «¿Me guardas un baile?» (algo atropellada) y
   «Me fui», que omitió el paréntesis del intérprete; los «X + Y» de Piropos se leen «X más Y».
-- **NOT_RUN:** escuchar en la tablet y en el parlante del salón; la Revisión B cruzada (Codex) del cambio.
+- **Regrabación (16-oct, mañana, go de Luis):** con saldo recargado se regrabaron 20 frases (762 créditos; `f3b138d`):
+  los «A + B» de Piropos se leen «A y B», los paréntesis pasan a coma («Me fui, Reymar Perdomo») y «¿Me guardas un baile?».
+  Las 325 quedaron verificadas con `scribe_v1` (similitud media 0,983); Luis escuchó las cuatro dudosas y aprobó. El
+  índice ahora lleva la huella de cada audio (`archivo.mp3?v=<sha8>`), así el CDN no sirve una frase vieja. Carpeta
+  reemplazada entera (respaldo `~/respaldos/voces-fiesta-piloto.antes-*`); las 20 nuevas verificadas desde afuera.
+- **NOT_RUN:** escuchar en la tablet y en el parlante del salón; la Revisión B cruzada (Codex): lanzada desde Claude, su
+  sandbox de Windows no arrancó (`CryptUnprotectData`), así que se pasó el encargo a Luis para correrlo en la app de Codex.
 
 ## DESPLEGADO 2026-10-13 (mañana): despedida propia de la fiesta del piloto
 

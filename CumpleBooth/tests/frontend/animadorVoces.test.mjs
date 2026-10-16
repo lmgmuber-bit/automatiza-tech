@@ -195,7 +195,7 @@ test('los botones dicen la transición antes de leer la tarjeta nueva', () => {
 // --- La ruleta del baile (Luis, 16-oct) ---
 import { RULETA, RULETA_SIN_LISTA, claveRuleta } from '../../src/animador/vocesGuion.js'
 
-test('la ruleta: su voz al girar, sin pareja, en pareja y otra vez, y sus 12 canciones leídas', () => {
+test('la ruleta: su voz al girar, sin pareja, en pareja y otra vez, y sus canciones leídas', () => {
   const ruleta = JUEGOS.find((j) => j.id === 'ruleta-baile')
   assert.ok(ruleta?.ruleta)
   const voz = vozDelJuego(JUEGOS, ruleta)
@@ -209,4 +209,19 @@ test('la ruleta: su voz al girar, sin pareja, en pareja y otra vez, y sus 12 can
   assert.match(src, /!juego\.ruleta && <button[^\n]*🙅 Paso esta/)
   const app = readFileSync(new URL('../../src/App.jsx', import.meta.url), 'utf8')
   assert.match(app, /invitados=\{invitadosList\.map/)
+})
+
+import { candidatosRuleta } from '../../src/animador/vocesGuion.js'
+
+test('la ruleta: una canción jocosa para hombres gira solo entre hombres (y para mujeres, entre mujeres)', () => {
+  const lista = [{ name: 'Rosa', g: 'f' }, { name: 'Carlos', g: 'm' }, { name: 'Jorge', g: 'm' }, { name: '  ', g: 'm' }]
+  assert.deepEqual(candidatosRuleta(lista).map((i) => i.name), ['Rosa', 'Carlos', 'Jorge'])
+  assert.deepEqual(candidatosRuleta(lista, 'm').map((i) => i.name), ['Carlos', 'Jorge'])
+  assert.deepEqual(candidatosRuleta(lista, 'f').map((i) => i.name), ['Rosa'])
+  // Sin nadie de ese género en la lista, no se traba: gira entre todos.
+  assert.deepEqual(candidatosRuleta([{ name: 'Rosa', g: 'f' }], 'm').map((i) => i.name), ['Rosa'])
+  const ruleta = JUEGOS.find((j) => j.id === 'ruleta-baile')
+  assert.equal(ruleta.cartas.find((c) => /Pluma pluma gay/.test(c.texto)).para, 'm')
+  assert.equal(ruleta.cartas.find((c) => /Es mentiroso/.test(c.texto)).para, 'f')
+  assert.ok(ruleta.cartas.filter((c) => !c.para).length >= 30, 'la mayoría le sale a cualquiera')
 })

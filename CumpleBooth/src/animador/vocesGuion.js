@@ -104,6 +104,17 @@ export const RULETA_SIN_LISTA = Object.freeze([
 ])
 export const RULETA_EMOJIS = Object.freeze(['💃', '🕺', '🎉', '🔥', '✨', '🎶', '🥳', '🎤', '🌶️', '🪇'])
 
+/**
+ * Entre quiénes gira la ruleta: todos los invitados con nombre, o solo los hombres o solo las mujeres cuando la
+ * canción es jocosa para uno de ellos (`para`). Si la lista no tiene a nadie de ese género, gira entre todos.
+ */
+export function candidatosRuleta(invitados, para = '') {
+  const todos = (invitados || []).filter((i) => i && typeof i.name === 'string' && i.name.trim())
+  if (!para) return todos
+  const mismos = todos.filter((i) => i.g === para)
+  return mismos.length ? mismos : todos
+}
+
 /** ¿La tarjeta se lee en voz alta? Las privadas (Mímica) nunca: solo las ve quien actúa. */
 export const seLee = (juego, carta) => Boolean(carta) && !juego.privado
 

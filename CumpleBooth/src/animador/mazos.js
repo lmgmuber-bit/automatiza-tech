@@ -463,8 +463,11 @@ JUEGOS.push({
 // La ruleta del baile (pedido de Luis, 16-oct): gira entre los nombres de la lista de invitados, elige a alguien
 // (solo o en pareja) y una canción venezolana bailable que pone el DJ: la app solo la nombra, no trae audio.
 // Cada tarjeta es una canción; la ruleta (`ruleta: true`) la revela recién cuando se detiene.
-const cancion = (id, titulo, autor, ritmo) =>
-  musica(id, 'coqueto', `¡DJ, que suene «${titulo}»${autor ? `, de ${autor}` : ''}!`, '', '', `«${titulo}»${autor ? ` (${autor}, ${ritmo})` : ` (${ritmo})`}`)
+// `para`: 'm' o 'f' en las canciones jocosas que van a un hombre o a una mujer; la ruleta elige entre ellos.
+const cancion = (id, titulo, autor, ritmo, para = '') => ({
+  ...musica(id, 'coqueto', `¡DJ, que suene «${titulo}»${autor ? `, de ${autor}` : ''}!`, '', '', `«${titulo}»${autor ? ` (${autor}, ${ritmo})` : ` (${ritmo})`}`),
+  ...(para ? { para } : {}),
+})
 JUEGOS.push({
   id: 'ruleta-baile',
   nombre: '¿Quién baila? La ruleta',
@@ -487,6 +490,33 @@ JUEGOS.push({
     cancion('rb10', 'Woman del Callao', '', 'calipso de El Callao'),
     cancion('rb11', "San Juan to' lo tiene", '', 'tambor'),
     cancion('rb12', 'Pídeme', 'Guaco', 'gaita'),
+    // Éxitos bailables de todo el mundo (pedido de Luis, 16-oct)
+    cancion('rb13', 'El baile del perrito', 'Wilfrido Vargas', 'merengue'),
+    cancion('rb14', 'Pretty Woman', 'Roy Orbison', 'rock and roll'),
+    cancion('rb15', 'Lambada', 'Kaoma', 'lambada'),
+    cancion('rb16', 'La vida es un carnaval', 'Celia Cruz', 'salsa'),
+    cancion('rb17', 'Macarena', 'Los del Río', 'pop'),
+    cancion('rb18', 'La bamba', 'Ritchie Valens', 'rock and roll'),
+    cancion('rb19', 'Suavemente', 'Elvis Crespo', 'merengue'),
+    cancion('rb20', 'La Bilirrubina', 'Juan Luis Guerra', 'merengue'),
+    cancion('rb21', 'Vivir mi vida', 'Marc Anthony', 'salsa'),
+    cancion('rb22', "Livin' la vida loca", 'Ricky Martin', 'pop'),
+    cancion('rb23', 'Waka Waka', 'Shakira', 'pop'),
+    cancion('rb24', 'Y.M.C.A.', 'Village People', 'disco'),
+    cancion('rb25', "Stayin' Alive", 'Bee Gees', 'disco'),
+    cancion('rb26', 'Dancing Queen', 'ABBA', 'disco'),
+    cancion('rb27', 'Mambo No. 5', 'Lou Bega', 'mambo'),
+    cancion('rb28', 'Sopa de caracol', 'Banda Blanca', 'punta'),
+    cancion('rb29', 'El tiburón', 'Proyecto Uno', 'merengue house'),
+    cancion('rb30', 'Aserejé', 'Las Ketchup', 'pop'),
+    cancion('rb31', 'Danza Kuduro', 'Don Omar y Lucenzo', 'urbano'),
+    cancion('rb32', 'Despacito', 'Luis Fonsi y Daddy Yankee', 'reguetón'),
+    // Jocosas con destinatario: le salen solo a un hombre o solo a una mujer de la lista.
+    cancion('rb33', 'Pluma pluma gay', '', 'para un caballero', 'm'),
+    cancion('rb34', 'Macho Man', 'Village People', 'disco', 'm'),
+    cancion('rb35', "I'm Too Sexy", 'Right Said Fred', 'pop', 'm'),
+    cancion('rb36', 'El venao', 'Los Cantores del Trópico', 'gaita', 'm'),
+    cancion('rb37', 'Es mentiroso', 'Olga Tañón', 'merengue', 'f'),
   ],
 })
 

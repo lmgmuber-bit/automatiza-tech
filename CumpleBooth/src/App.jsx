@@ -934,7 +934,7 @@ function BoothApp() {
           apagados={CONFIG.animadorApagados}
           baseImagenes={BASE + 'themes/' + THEME_SLUG + '/animador/'}
           voces={CONFIG.vocesAnimador}
-          invitados={invitadosList.map((i) => i?.name).filter((n) => typeof n === 'string' && n.trim())}
+          invitados={invitadosList.map((i) => ({ name: i?.name, g: i?.g })).filter((i) => typeof i.name === 'string' && i.name.trim())}
           onSalir={inicio}
           onFotoGrupal={CONFIG.grupal ? () => {
             setInvitado('')

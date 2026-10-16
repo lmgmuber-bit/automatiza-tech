@@ -283,7 +283,7 @@ test('tarjetas de música e imagen: pocas, sin audio en la app, respuesta oculta
   // Las canciones de la ruleta del baile son aparte: las nombra la tablet y las pone el DJ (se prueban abajo).
   const musica = todas.filter((c) => c.tipo === 'musica' && c.juego !== 'ruleta-baile')
   const canciones = todas.filter((c) => c.juego === 'ruleta-baile')
-  assert.equal(canciones.length, 12)
+  assert.equal(canciones.length, 37)
   for (const c of canciones) {
     assert.equal(c.tipo, 'musica')
     assert.match(c.texto, /^¡DJ, que suene «.+»/)

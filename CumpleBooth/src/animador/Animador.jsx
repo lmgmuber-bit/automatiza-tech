@@ -8,7 +8,7 @@ import {
   nuevaSesion, pasar, reiniciarMazo, restaurarSesion, revelar, serializarSesion, siguiente, yaAnoto,
 } from './motor.js'
 import {
-  RULETA, RULETA_EMOJIS, RULETA_SIN_LISTA, claveCarta, claveRespuesta, claveRuleta, claveTiempo, claveTransicion, presentacion, seLee,
+  RULETA, RULETA_EMOJIS, RULETA_SIN_LISTA, candidatosRuleta, claveCarta, claveRespuesta, claveRuleta, claveTiempo, claveTransicion, presentacion, seLee,
   tieneRespuesta, vozDelJuego,
 } from './vocesGuion.js'
 import { useVoz } from './voz.js'
@@ -504,7 +504,10 @@ function ImagenDeTarjeta({ src }) {
  * «Otra persona» gira de nuevo con la misma canción. Evita repetir a quien bailó hace poco.
  */
 function RuletaBaile({ carta, t, voz, invitados, recientes }) {
-  const nombres = invitados.length ? invitados : RULETA_SIN_LISTA
+  // Las canciones jocosas con destinatario (`para`) giran solo entre los hombres o solo entre las mujeres.
+  const lista = candidatosRuleta(invitados, carta.para)
+  const nombres = lista.length ? lista.map((i) => i.name) : RULETA_SIN_LISTA
+  const todosLosNombres = candidatosRuleta(invitados).map((i) => i.name)
   const [fase, setFase] = useState('listo') // listo | girando | resultado
   const [visor, setVisor] = useState(null)
   const [res, setRes] = useState(null)
@@ -513,7 +516,7 @@ function RuletaBaile({ carta, t, voz, invitados, recientes }) {
   const limpiar = () => { relojes.current.forEach(clearTimeout); relojes.current = [] }
   useEffect(() => limpiar, [])
   const azar = (lista) => lista[Math.floor(Math.random() * lista.length)]
-  const emoji = () => (invitados.length ? azar(RULETA_EMOJIS) : '')
+  const emoji = () => (lista.length ? azar(RULETA_EMOJIS) : '')
   const girar = (otra) => {
     limpiar()
     const n = vueltas.current++
@@ -522,8 +525,8 @@ function RuletaBaile({ carta, t, voz, invitados, recientes }) {
     voz.decir(otra ? [claveRuleta('otra'), claveRuleta('gira', n)] : claveRuleta('gira', n))
     const libres = nombres.filter((x) => !recientes.current.includes(x))
     const persona = azar(libres.length ? libres : nombres)
-    const otros = nombres.filter((x) => x !== persona)
-    const pareja = invitados.length > 1 && Math.random() < 0.5 ? azar(otros) : null
+    const otros = todosLosNombres.filter((x) => x !== persona)
+    const pareja = otros.length > 0 && Math.random() < 0.5 ? azar(otros) : null
     recientes.current = [persona, ...recientes.current].slice(0, Math.max(0, Math.min(nombres.length - 1, Math.floor(nombres.length / 2))))
     const pasos = REDUCE_MOVIMIENTO() ? 3 : 22
     let tiempo = 0

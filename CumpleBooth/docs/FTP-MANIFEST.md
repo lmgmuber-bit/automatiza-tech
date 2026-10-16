@@ -21,6 +21,23 @@ grep -o 'assets/[a-zA-Z0-9._-]*' dist/index.html   # lo que index.html pide
 Sube **todos** los de `dist/assets/` junto con `dist/index.html` en la misma
 tanda. Los que sobren del build anterior se pueden borrar después.
 
+## DESPLEGADO 2026-10-16 (mañana): revisión B de Codex en las voces y textos adultos de Codex (rama `claude/animador-voces`)
+
+Go de Luis. Codex hizo la revisión B del PR #91 en su app (informe `Revision-B-Codex-Voces-PR91.md`, fuera del repo):
+dictamen RECHAZADO por **CX-30** (al pasar con Siguiente tras «¡Tiempo!», la tarjeta nueva revelaba su respuesta),
+**CX-31** (silenciar durante «se acabó el tiempo» dejaba la respuesta sin revelar) y **CX-32** (un audio fallido saltaba
+la presentación). Claude los confirmó y corrigió (`429523f`; el reloj se monta por tarjeta con `key`, el reproductor
+`crearReproductor` resuelve siempre una vez), con pruebas y verificación en navegador local y en PROD. Codex terminó
+además los textos adultos (`92e8a19`, auditado por Claude): aceptación «persona homenajeada», manual sin «niños»,
+invitaciones Hombre/Mujer, avisos de juegos 3D y privacidad; 45 + 29 pruebas nuevas, en rojo contra el código anterior.
+- **Subido** (`desplegar-revision-b.py`, cotejo previo de cada archivo, respaldo `~/respaldos/revision-b-20261016-*`):
+  `lib.acceptance.php`, `lib.manual.php`, `aceptar-plan.php`, `admin/invitations.php`, `admin/event-profile.php`,
+  `admin/index.php`, `assets/main-BG7Zmx-h.js` e `index.html`. Todos iguales al local por sha256; portada, APIs, feria y
+  login en 200; en PROD la tarjeta siguiente a un «¡Tiempo!» queda en 20 s y sin revelar.
+- 🔴 **Para Luis y el abogado:** la aceptación sigue exigiendo el consentimiento de imagen **de menores** (madre, padre o
+  tutor) también en fiestas adultas. Hace falta un instrumento para adultos; Codex no reescribió texto legal, a propósito.
+- Pendiente menor: `lib.admin-usuarios.php` describe el permiso de invitados como «sumar un niño» (catálogo global).
+
 ## DESPLEGADO 2026-10-16 (~00:30): voces del animador adulto y «mujeres y hombres» (rama `claude/animador-voces`)
 
 Go de Luis. Lo hizo Claude por SSH (`desplegar-voces.py`, en la carpeta de Aseo de la sesión): cotejo previo (`lib.php` y

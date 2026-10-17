@@ -1,5 +1,5 @@
-version: 1
-updated_at: "2026-07-10"
+version: 2
+updated_at: "2026-10-17"
 owner: "Luis Miguel"
 
 policy:
@@ -54,11 +54,26 @@ profiles:
     human_gate: true
 
 model_map_claude_runtime:
-  note: "Autorizado por Luis 2026-07-10: el orquestador Claude puede delegar a subagentes con modelo por perfil."
-  fast_economical: "claude-haiku-4-5 (subagente)"
-  standard_executor: "claude-sonnet-5 (subagente)"
-  strong_reasoner: "claude-fable-5 / claude-opus-4-8"
-  critical_pipeline: "claude-fable-5 + revision independiente + gate humano"
+  note: "v2 aprobada por Luis 2026-10-17 (Shared-Tools/Router-Modelos-2026-10-17.md). Alias nativos de Claude Code; hoy opus=Opus 5.5, sonnet=Sonnet 5.5, haiku=Haiku 5.5."
+  fast_economical: "haiku, effort low"
+  standard_executor: "sonnet, effort medium"
+  strong_reasoner: "opus, effort high"
+  critical_pipeline: "orquestador (opus o fable), effort xhigh + revision independiente + gate humano"
+
+model_map_codex_runtime:
+  note: "Plan ChatGPT Plus. Esfuerzo por defecto medium en ~/.codex/config.toml; perfil ~/.codex/profundo.config.toml (codex --profile profundo) para C3. gpt-6-astra solo a pedido de Luis."
+  fast_economical: "gpt-6-luna, effort low"
+  standard_executor: "gpt-6.1-sol, effort medium"
+  strong_reasoner: "gpt-6.1-sol, effort xhigh"
+  critical_pipeline: "codex --profile profundo (gpt-6.1-sol ultra) + revision independiente + gate humano"
+
+enforcement:
+  native_only: "Ruteo nativo de Claude Code y Codex. Proxies de terceros (OmniRoute, claude-code-router, OpenRouter) descartados 2026-10-17."
+  role_defaults: "Cada cargo at-* fija model/effort en su frontmatter (Claude) o TOML (Codex); fuente compartida en Shared-Tools/at-agent-company/native/. Nexo hereda."
+  escalation: "Subir de modelo es explicito: parametro model del Agent tool en Claude; valor explicito o --profile profundo en Codex. Registrar el motivo."
+  delegation_floor: "Tareas de pocas llamadas las hace quien ya trabaja: delegar recarga el contexto completo."
+  skill: "at-router-modelos (~/.agents/skills, enlazada en Claude, Codex y OpenCode)"
+  measurement: "Shared-Tools/router-modelos/MEDICION.md; no afirmar ahorro sin medicion."
 
 runtime_record_required:
   fields:

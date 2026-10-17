@@ -54,11 +54,11 @@ profiles:
     human_gate: true
 
 model_map_claude_runtime:
-  note: "v2 aprobada por Luis 2026-10-17 (Shared-Tools/Router-Modelos-2026-10-17.md). Alias nativos de Claude Code; hoy opus=Opus 5.5, sonnet=Sonnet 5.5, haiku=Haiku 5.5."
-  fast_economical: "haiku, effort low"
-  standard_executor: "sonnet, effort medium"
-  strong_reasoner: "opus, effort high"
-  critical_pipeline: "orquestador (opus o fable), effort xhigh + revision independiente + gate humano"
+  note: "v2 aprobada por Luis 2026-10-17 (Shared-Tools/Router-Modelos-2026-10-17.md). IDs completos: el alias haiku resolvio a Haiku 4.5 con el CLI 2.1.284 (verificado 2026-10-17)."
+  fast_economical: "claude-haiku-5-5, effort low"
+  standard_executor: "claude-sonnet-5-5, effort medium"
+  strong_reasoner: "claude-opus-5-5, effort high"
+  critical_pipeline: "orquestador (claude-opus-5-5 o fable), effort xhigh + revision independiente + gate humano"
 
 model_map_codex_runtime:
   note: "Plan ChatGPT Plus. Esfuerzo por defecto medium en ~/.codex/config.toml; perfil ~/.codex/profundo.config.toml (codex --profile profundo) para C3. gpt-6-astra solo a pedido de Luis."

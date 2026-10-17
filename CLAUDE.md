@@ -37,7 +37,7 @@ Las credenciales viven **fuera del repo**, en `C:\Users\luis_\OneDrive\Documento
 - Fuente canonica: `Docs/ORCHESTRATION/README.md`.
 - Claude es el orquestador principal por defecto y Codex el suplente; solo uno puede estar activo mediante un lease valido.
 - Antes de ejecutar, cada agente registra clase, riesgo, incertidumbre, reversibilidad y perfil/modelo segun `Docs/ORCHESTRATION/model-routing.yaml`.
-- Router de modelos (Luis, 2026-10-17): antes de ejecutar o delegar, aplicar la skill `at-router-modelos`. Los cargos at-* traen modelo y esfuerzo fijados (Claude: haiku/sonnet/opus; Codex: gpt-6-luna/gpt-6.1-sol, `--profile profundo` para C3); subir de modelo es explícito. Mapa en `model-routing.yaml` v2; informe en `C:/Users/luis_/Documents/Codex/Shared-Tools/Router-Modelos-2026-10-17.md`. Sin proxies de terceros.
+- Router de modelos (Luis, 2026-10-17): antes de ejecutar o delegar, aplicar la skill `at-router-modelos`. Los cargos at-* traen modelo y esfuerzo fijados (Claude: claude-haiku-5-5/claude-sonnet-5-5/claude-opus-5-5; Codex: gpt-6-luna/gpt-6.1-sol, `--profile profundo` para C3); subir de modelo es explícito. Mapa en `model-routing.yaml` v2; informe en `C:/Users/luis_/Documents/Codex/Shared-Tools/Router-Modelos-2026-10-17.md`. Sin proxies de terceros.
 - Codex debe seguir `Docs/ORCHESTRATION/CODEX_ORCHESTRATOR.md` cuando tome el relevo.
 - Claude debe seguir `Docs/ORCHESTRATION/CLAUDE_ORCHESTRATOR.md` como orquestador principal.
 - Para iniciar o recuperar la orquestación con contexto completo, leer `Docs/ORCHESTRATION/CLAUDE_ORCHESTRATOR_PROMPT_FINAL.md`.

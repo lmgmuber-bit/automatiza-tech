@@ -1,11 +1,12 @@
 const crypto = require('node:crypto');
 const path = require('node:path');
 const express = require('express');
-const { validatePayload, validatePlanPayload, validateEstadoPayload } = require('./schema');
+const { validatePayload, validatePlanPayload, validateEstadoPayload, validateRetomarPayload } = require('./schema');
 const { generateProposalImages } = require('./higgsfield');
 const { renderProposalHtml } = require('./template');
 const { renderPlanHtml } = require('./template-plan');
 const { renderEstadoHtml } = require('./template-estado');
+const { renderRetomarHtml } = require('./template-retomar');
 const { renderToFiles } = require('./render');
 const { persistImages } = require('./images-store');
 const { promptHash, readManifest, writeManifest, reusablePhotos } = require('./photo-manifest');
@@ -45,7 +46,8 @@ function createApp({ publicDir, baseUrl, higgsfieldCredentials, renderKey = '' }
     const tipo = req.body && typeof req.body === 'object' ? req.body.document_type : '';
     const esPlan = tipo === 'plan';
     const esEstado = tipo === 'estado';
-    const { valid, errors } = esEstado ? validateEstadoPayload(req.body) : esPlan ? validatePlanPayload(req.body) : validatePayload(req.body);
+    const esRetomar = tipo === 'retomar';
+    const { valid, errors } = esRetomar ? validateRetomarPayload(req.body) : esEstado ? validateEstadoPayload(req.body) : esPlan ? validatePlanPayload(req.body) : validatePayload(req.body);
     if (!valid) {
       return res.status(400).json({ error: 'invalid payload', details: errors });
     }
@@ -61,6 +63,22 @@ function createApp({ publicDir, baseUrl, higgsfieldCredentials, renderKey = '' }
     }
 
     const outputDir = path.join(publicDir, data.unique_id);
+
+    // Retomar usa únicamente fotos y demos existentes del payload. No consultar manifiestos,
+    // persistir imágenes ni invocar Higgsfield, incluso si el pedido trae image_briefs.
+    if (esRetomar) {
+      try {
+        await renderToFiles(renderRetomarHtml(data), outputDir);
+        return res.json({
+          view_url: `${baseUrl}/p/${data.unique_id}/index.html`,
+          pdf_url: `${baseUrl}/p/${data.unique_id}/presentation.pdf`,
+          images: { requested: 0, stored_local: 0, kept_remote: [], missing: [], reused: 0 },
+        });
+      } catch (err) {
+        console.error('POST /render failed:', err.stack || err.message);
+        return res.status(502).json({ error: 'render failed', details: err.message });
+      }
+    }
 
     // Image generation (Higgsfield), HTML templating, and the Playwright
     // render must all be covered by the same guard: any of the three can

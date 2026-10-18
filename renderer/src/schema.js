@@ -122,4 +122,23 @@ function validateEstadoPayload(body) {
   return { valid: errors.length === 0, errors };
 }
 
-module.exports = { validatePayload, validatePlanPayload, validateEstadoPayload, REQUIRED_STRING_FIELDS, REQUIRED_ARRAY_FIELDS, PLAN_REQUIRED_STRING_FIELDS, ESTADO_REQUIRED_STRING_FIELDS };
+function validateRetomarPayload(body) {
+  const errors = [];
+  if (!body || typeof body !== 'object' || Array.isArray(body)) {
+    return { ok: false, valid: false, errors: ['el cuerpo debe ser un objeto JSON'] };
+  }
+  const limites = { company_name: 120, client_name: 120, proyecto: 180, quedamos: 600, proponemos: 600, partir: 600 };
+  for (const [field, max] of Object.entries(limites)) {
+    if (field !== 'partir' && (typeof body[field] !== 'string' || !body[field].trim())) errors.push(`falta o está vacío el campo obligatorio: ${field}`);
+    if (body[field] !== undefined && typeof body[field] !== 'string') errors.push(`${field} debe ser texto`);
+    if (typeof body[field] === 'string' && (body[field].length > max || body[field].split('\n').length > 6)) errors.push(`${field} admite hasta ${max} caracteres y 6 líneas`);
+  }
+  if (body.document_type !== 'retomar') errors.push('document_type debe ser retomar');
+  if (typeof body.unique_id !== 'string' || !/^[A-Za-z0-9_-]{6,64}$/.test(body.unique_id)) errors.push('unique_id debe tener de 6 a 64 caracteres, solo letras, números, guion o guion bajo');
+  if (!Array.isArray(body.demo_urls) || body.demo_urls.length > 6 || body.demo_urls.some((u) => typeof u !== 'string')) errors.push('demo_urls debe ser un arreglo de hasta 6 enlaces');
+  for (const field of ['demo_imagen', 'propuesta_url']) if (body[field] !== undefined && typeof body[field] !== 'string') errors.push(`${field} debe ser texto`);
+  for (const field of ['agenda', 'fotos']) if (body[field] !== undefined && (!body[field] || typeof body[field] !== 'object' || Array.isArray(body[field]))) errors.push(`${field} debe ser un objeto`);
+  return { ok: errors.length === 0, valid: errors.length === 0, errors };
+}
+
+module.exports = { validatePayload, validatePlanPayload, validateEstadoPayload, validateRetomarPayload, REQUIRED_STRING_FIELDS, REQUIRED_ARRAY_FIELDS, PLAN_REQUIRED_STRING_FIELDS, ESTADO_REQUIRED_STRING_FIELDS };

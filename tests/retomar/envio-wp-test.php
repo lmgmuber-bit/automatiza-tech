@@ -113,4 +113,26 @@ $carrera=static function ($sql) use ($wpdb, $con, &$inyectado) {
 add_filter('query',$carrera,20); $res=at_rt_whatsapp_resultado(['id'=>$con['id'],'n'=>1,'wamid'=>'fixture-concurrente']); remove_filter('query',$carrera,20);
 $eventos=at_rt_obtener($con['id'])['envios'];
 ok($inyectado && $res['ok'] && count($eventos)===2 && $eventos[0]['whatsapp']['estado']==='enviado' && $eventos[1]['nota']==='fixture_concurrente', 'CAS conserva evento agregado entre lectura y callback');
+foreach (['baja','agendo','pausado'] as $i => $parada) {
+    $race=rt_env_fixture(['telefono'=>'+5690000000'.(3+$i)]);
+    $durante=static function ($v,$mail) use ($race,$parada) {
+        if ($mail['to'] === $race['email']) {
+            if ($parada==='baja') { at_rt_dar_baja($race['id'],'prueba'); }
+            else { at_rt_guardar($race['id'],['estado'=>$parada,'proximo_at'=>null]); }
+        }
+        return $v;
+    };
+    add_filter('pre_wp_mail',$durante,150,2); $resultado=at_rt_entregar($race['id'],false,'2026-10-19 10:30:00'); remove_filter('pre_wp_mail',$durante,150);
+    $final=at_rt_obtener($race['id']);
+    ok($resultado['ok'] && $final['estado']===$parada && $final['proximo_at']===null && count($final['envios'])===1 && $final['envios'][0]['correo']['estado']==='enviado' && $final['envios'][0]['whatsapp']===null && $resultado['whatsapp']===null, 'parada '.$parada.' durante correo conserva entrega y detiene WA sin reactivar');
+}
+$dedup=rt_env_fixture(['crm_cliente_id'=>$crm,'telefono'=>'']); $inyectado=false;
+$antes=(int)$wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$wpdb->prefix}crm_historial WHERE cliente_id=%d AND tipo_evento='retomar_baja'",$crm));
+$carrera=static function($sql) use($dedup,&$inyectado) {
+    if (!$inyectado && $sql==='START TRANSACTION') { $inyectado=true; at_rt_dar_baja($dedup['id'],'prueba'); }
+    return $sql;
+};
+add_filter('query',$carrera,20); $resultado=at_rt_dar_baja($dedup['id'],'prueba'); remove_filter('query',$carrera,20);
+$despues=(int)$wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$wpdb->prefix}crm_historial WHERE cliente_id=%d AND tipo_evento='retomar_baja'",$crm));
+ok($inyectado && $resultado && $despues===$antes+1, 'baja concurrente entre snapshot y BEGIN genera una sola historia');
 fin();

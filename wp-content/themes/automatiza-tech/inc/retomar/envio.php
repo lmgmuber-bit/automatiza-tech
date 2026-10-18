@@ -28,6 +28,35 @@ function at_rt_detener(array $s, string $motivo, string $ahora): void {
 function at_rt_enviar(int $id, bool $prueba): array {
     return at_rt_entregar($id, $prueba, (new DateTimeImmutable('now', new DateTimeZone('America/Santiago')))->format('Y-m-d H:i:s'));
 }
+
+/** Persistir la entrega aceptada bajo bloqueo, respetando paradas ocurridas durante SMTP. */
+function at_rt_finalizar_entrega(int $id, int $n, bool $ok, string $ahora): ?array {
+    global $wpdb;
+    if ($wpdb->query('START TRANSACTION') === false) { return null; }
+    $confirmado = false;
+    try {
+        $raw = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$wpdb->prefix}at_retomar WHERE id=%d FOR UPDATE", $id), ARRAY_A);
+        if (!$raw) { return null; }
+        $s = at_rt_fila($raw);
+        $motivo = at_rt_motivo_parada(at_rt_contexto_parada($s));
+        $propio = $s['estado'] === 'activo' && $s['enviando'] === $ahora;
+        $wa = $propio && $motivo === '' && $ok && in_array('whatsapp', at_rt_canales($n, $s['max_envios'], $s['canales'], (bool) $s['wa_autorizado'], at_pt_telefono_wa($s['telefono'])), true);
+        $s['envios'][] = ['tipo' => 'envio', 'n' => $n, 'fecha' => substr($ahora, 0, 10), 'at' => $ahora, 'correo' => ['estado' => $ok ? 'enviado' : 'error'], 'whatsapp' => $wa ? ['estado' => 'pendiente'] : null];
+        $campos = ['envios' => $s['envios']];
+        // La transición sólo pertenece al claim vigente y a una fila aún activa.
+        if ($propio) {
+            $estado = $motivo !== '' ? at_rt_estado_por_motivo($motivo) : (!$ok ? 'pausado' : ($n >= $s['max_envios'] ? 'agotado' : 'activo'));
+            $campos += ['estado' => $estado, 'proximo_at' => $estado === 'activo' ? at_rt_proximo(substr($ahora, 0, 10), $s['intervalo_dias']) : null];
+        }
+        $d = at_rt_campos($campos);
+        $d['actualizado_at'] = current_time('mysql');
+        if ($wpdb->update($wpdb->prefix . 'at_retomar', $d, ['id' => $id, 'estado' => $s['estado'], 'enviando' => $s['enviando']]) === false) { return null; }
+        $confirmado = $wpdb->query('COMMIT') !== false;
+        return $confirmado ? ['seguimiento' => $s, 'whatsapp' => $wa] : null;
+    } finally {
+        if (!$confirmado) { $wpdb->query('ROLLBACK'); }
+    }
+}
 function at_rt_entregar(int $id, bool $prueba, string $ahora): array {
     global $wpdb;
     $r = ['ok' => false, 'motivo' => 'no_disponible', 'whatsapp' => null];
@@ -77,15 +106,14 @@ function at_rt_entregar(int $id, bool $prueba, string $ahora): array {
         finally { remove_action('phpmailer_init', $alternativa); }
         $r['ok'] = (bool) $ok; $r['motivo'] = $ok ? 'enviado' : 'correo_error';
         if ($prueba) { return $r; }
-        $wa = $ok && in_array('whatsapp', at_rt_canales($n, $s['max_envios'], $s['canales'], (bool) $s['wa_autorizado'], at_pt_telefono_wa($s['telefono'])), true);
-        $evento = ['tipo' => 'envio', 'n' => $n, 'fecha' => $hoy, 'at' => $ahora, 'correo' => ['estado' => $ok ? 'enviado' : 'error'], 'whatsapp' => $wa ? ['estado' => 'pendiente'] : null];
-        if (!at_rt_agregar_envio($id, $evento)) {
-            at_rt_guardar($id, ['estado' => 'pausado', 'proximo_at' => null]);
+        $entrega = at_rt_finalizar_entrega($id, $n, (bool) $ok, $ahora);
+        if (!$entrega) {
+            $wpdb->query($wpdb->prepare("UPDATE {$wpdb->prefix}at_retomar SET estado='pausado',proximo_at=NULL WHERE id=%d AND estado='activo' AND enviando=%s", $id, $ahora));
             return ['ok' => false, 'motivo' => 'registro_error', 'whatsapp' => null];
         }
-        at_rt_guardar($id, ['estado' => !$ok ? 'pausado' : ($n >= $s['max_envios'] ? 'agotado' : 'activo'), 'proximo_at' => !$ok || $n >= $s['max_envios'] ? null : at_rt_proximo($hoy, $s['intervalo_dias'])]);
+        $s = $entrega['seguimiento'];
         if ($ok) { at_rt_historia($s, 'retomar_correo', '🔁 Recordatorio enviado'); }
-        if ($wa) { $r['whatsapp'] = ['id' => $id, 'n' => $n, 'telefono' => at_pt_telefono_wa($s['telefono']), 'nombre' => $s['nombre'], 'negocio' => $s['negocio'], 'token' => $s['token']]; }
+        if ($entrega['whatsapp']) { $r['whatsapp'] = ['id' => $id, 'n' => $n, 'telefono' => at_pt_telefono_wa($s['telefono']), 'nombre' => $s['nombre'], 'negocio' => $s['negocio'], 'token' => $s['token']]; }
         return $r;
     } finally {
         if ($claim) { $wpdb->query($wpdb->prepare("UPDATE {$wpdb->prefix}at_retomar SET enviando=NULL WHERE id=%d AND enviando=%s", $id, $ahora)); }

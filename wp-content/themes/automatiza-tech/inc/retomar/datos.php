@@ -145,6 +145,9 @@ function at_rt_dar_baja(int $id, string $origen): bool {
 	$email = strtolower(trim($s['email']));
 	$telefono = at_pt_telefono_wa($s['telefono']);
 	if ($wpdb->query('START TRANSACTION') === false) { return false; }
+	// La transición y su hook se deciden dentro del candado, nunca con el snapshot previo.
+	$actual = $wpdb->get_row($wpdb->prepare("SELECT estado FROM {$wpdb->prefix}at_retomar WHERE id=%d FOR UPDATE", $id), ARRAY_A);
+	if (!$actual) { $wpdb->query('ROLLBACK'); return false; }
 	// Conservar ambos identificadores también cuando uno ya aparecía en otra supresión.
 	$misma_baja = $wpdb->get_var($wpdb->prepare("SELECT id FROM {$wpdb->prefix}at_retomar_bajas WHERE email = %s AND telefono = %s AND revertido_at IS NULL LIMIT 1", $email, $telefono));
 	if (($email !== '' || $telefono !== '') && !$misma_baja) {
@@ -160,7 +163,7 @@ function at_rt_dar_baja(int $id, string $origen): bool {
 		}
 	}
 	$confirmada = $wpdb->query('COMMIT') !== false;
-	if ($confirmada && $s['estado'] !== 'baja') { do_action('at_rt_baja_confirmada', $id); }
+	if ($confirmada && $actual['estado'] !== 'baja') { do_action('at_rt_baja_confirmada', $id); }
 	return $confirmada;
 }
 

@@ -9,15 +9,20 @@ add_action('admin_enqueue_scripts', static function () {
     wp_enqueue_style('at-retomar', get_template_directory_uri() . '/assets/css/retomar.css', [], '1.0');
     wp_add_inline_script('media-editor', 'jQuery(function($){$("#rt-media").on("click",function(){var f=wp.media({title:"Elegir imagen de la demo",multiple:false,library:{type:"image"}});f.on("select",function(){$("#rt-imagen_url").val(f.state().get("selection").first().toJSON().url);});f.open();});});');
 });
-foreach (['guardar','previa','prueba','activar','pausar','respondio','baja','revertir_baja'] as $accion) {
-    add_action('admin_post_at_rt_' . $accion, static function () use ($accion) {
-        $r = at_rt_panel_ejecutar($accion, wp_unslash($_POST));
-        if (is_wp_error($r) && in_array($r->get_error_code(), ['permiso','nonce'], true)) { wp_die(esc_html($r->get_error_message()), '', ['response'=>403]); }
-        $id = is_wp_error($r) ? absint($_POST['id'] ?? 0) : $r['id'];
-        $msg = is_wp_error($r) ? $r->get_error_message() : $r['mensaje'];
-        wp_safe_redirect(add_query_arg(['page'=>'at-retomar','id'=>$id,'rt_msg'=>$msg,'rt_error'=>is_wp_error($r)?1:0], admin_url('admin.php'))); exit;
-    });
+/** Registra las acciones del panel dentro de una función: este archivo se carga en el ámbito global y un foreach
+ *  suelto dejaba la global $accion pisada (rompía las acciones del plan de trabajo y de entregables). */
+function at_rt_registrar_acciones(): void {
+    foreach (['guardar','previa','prueba','activar','pausar','respondio','baja','revertir_baja'] as $accion) {
+        add_action('admin_post_at_rt_' . $accion, static function () use ($accion) {
+            $r = at_rt_panel_ejecutar($accion, wp_unslash($_POST));
+            if (is_wp_error($r) && in_array($r->get_error_code(), ['permiso','nonce'], true)) { wp_die(esc_html($r->get_error_message()), '', ['response'=>403]); }
+            $id = is_wp_error($r) ? absint($_POST['id'] ?? 0) : $r['id'];
+            $msg = is_wp_error($r) ? $r->get_error_message() : $r['mensaje'];
+            wp_safe_redirect(add_query_arg(['page'=>'at-retomar','id'=>$id,'rt_msg'=>$msg,'rt_error'=>is_wp_error($r)?1:0], admin_url('admin.php'))); exit;
+        });
+    }
 }
+at_rt_registrar_acciones();
 /** Única entrada de las acciones del panel: también verificable sin redirects en pruebas. */
 function at_rt_panel_ejecutar(string $accion, array $p) {
     if (!current_user_can('manage_options')) { return new WP_Error('permiso','No tienes permiso para administrar Retomar.'); }

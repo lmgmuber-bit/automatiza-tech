@@ -49,23 +49,25 @@ Luis configura `AT_N8N_RETOMAR_RENDER` con la URL del webhook de render en el de
 
 ## Entrega FTP: exactamente 13 archivos
 
+> **18-oct, Eje:** los archivos salen de la rama `claude/retomar-prospectos-final` (worktree `.worktrees/retomar-eje`), que corrige `inc/retomar/panel.php` (la global `$accion`) y deja `inc/admin-proposals.php` con un solo cambio. El ZIP del renderer de Codex sigue valiendo: la corrección no toca `renderer/`.
+
 Preparación local; **no desplegada**. Tras revisión B y autorización de Luis, respaldar los archivos de destino que se van a reemplazar y la BD de forma protegida. Subir los grupos en orden; dentro de un mismo grupo el orden no cambia la carga. Los módulos van antes del archivo que los habilita. La migración se ejecuta por separado después del grupo 4 y antes del grupo 5.
 
 | Orden | Ruta local absoluta | Destino relativo en PROD | Clasificación |
 | --- | --- | --- | --- |
-| 1 | `C:/wamp64/www/automatiza-tech/.worktrees/codex-retomar/wp-content/themes/automatiza-tech/inc/retomar/esquema.php` | `wp-content/themes/automatiza-tech/inc/retomar/esquema.php` | OBLIGATORIO |
-| 1 | `C:/wamp64/www/automatiza-tech/.worktrees/codex-retomar/wp-content/themes/automatiza-tech/inc/retomar/puras.php` | `wp-content/themes/automatiza-tech/inc/retomar/puras.php` | OBLIGATORIO |
-| 1 | `C:/wamp64/www/automatiza-tech/.worktrees/codex-retomar/wp-content/themes/automatiza-tech/inc/retomar/datos.php` | `wp-content/themes/automatiza-tech/inc/retomar/datos.php` | OBLIGATORIO |
-| 1 | `C:/wamp64/www/automatiza-tech/.worktrees/codex-retomar/wp-content/themes/automatiza-tech/inc/retomar/render.php` | `wp-content/themes/automatiza-tech/inc/retomar/render.php` | OBLIGATORIO |
-| 1 | `C:/wamp64/www/automatiza-tech/.worktrees/codex-retomar/wp-content/themes/automatiza-tech/inc/retomar/publica.php` | `wp-content/themes/automatiza-tech/inc/retomar/publica.php` | OBLIGATORIO |
-| 1 | `C:/wamp64/www/automatiza-tech/.worktrees/codex-retomar/wp-content/themes/automatiza-tech/inc/retomar/envio.php` | `wp-content/themes/automatiza-tech/inc/retomar/envio.php` | OBLIGATORIO |
-| 1 | `C:/wamp64/www/automatiza-tech/.worktrees/codex-retomar/wp-content/themes/automatiza-tech/inc/retomar/panel.php` | `wp-content/themes/automatiza-tech/inc/retomar/panel.php` | OBLIGATORIO |
-| 2 | `C:/wamp64/www/automatiza-tech/.worktrees/codex-retomar/wp-content/themes/automatiza-tech/assets/css/retomar.css` | `wp-content/themes/automatiza-tech/assets/css/retomar.css` | OBLIGATORIO |
-| 2 | `C:/wamp64/www/automatiza-tech/.worktrees/codex-retomar/wp-content/mu-plugins/at-timeline-origen.php` | `wp-content/mu-plugins/at-timeline-origen.php` | OBLIGATORIO |
-| 2 | `C:/wamp64/www/automatiza-tech/.worktrees/codex-retomar/wp-content/themes/automatiza-tech/inc/admin-followup-meetings.php` | `wp-content/themes/automatiza-tech/inc/admin-followup-meetings.php` | OBLIGATORIO |
-| 3 | `C:/wamp64/www/automatiza-tech/.worktrees/codex-retomar/wp-content/themes/automatiza-tech/inc/retomar/cargar.php` | `wp-content/themes/automatiza-tech/inc/retomar/cargar.php` | OBLIGATORIO |
-| 4 | `C:/wamp64/www/automatiza-tech/.worktrees/codex-retomar/wp-content/themes/automatiza-tech/inc/admin-proposals.php` | `wp-content/themes/automatiza-tech/inc/admin-proposals.php` | OBLIGATORIO |
-| 5, último | `C:/wamp64/www/automatiza-tech/.worktrees/codex-retomar/retomar.php` | `retomar.php` | OBLIGATORIO |
+| 1 | `C:/wamp64/www/automatiza-tech/.worktrees/retomar-eje/wp-content/themes/automatiza-tech/inc/retomar/esquema.php` | `wp-content/themes/automatiza-tech/inc/retomar/esquema.php` | OBLIGATORIO |
+| 1 | `C:/wamp64/www/automatiza-tech/.worktrees/retomar-eje/wp-content/themes/automatiza-tech/inc/retomar/puras.php` | `wp-content/themes/automatiza-tech/inc/retomar/puras.php` | OBLIGATORIO |
+| 1 | `C:/wamp64/www/automatiza-tech/.worktrees/retomar-eje/wp-content/themes/automatiza-tech/inc/retomar/datos.php` | `wp-content/themes/automatiza-tech/inc/retomar/datos.php` | OBLIGATORIO |
+| 1 | `C:/wamp64/www/automatiza-tech/.worktrees/retomar-eje/wp-content/themes/automatiza-tech/inc/retomar/render.php` | `wp-content/themes/automatiza-tech/inc/retomar/render.php` | OBLIGATORIO |
+| 1 | `C:/wamp64/www/automatiza-tech/.worktrees/retomar-eje/wp-content/themes/automatiza-tech/inc/retomar/publica.php` | `wp-content/themes/automatiza-tech/inc/retomar/publica.php` | OBLIGATORIO |
+| 1 | `C:/wamp64/www/automatiza-tech/.worktrees/retomar-eje/wp-content/themes/automatiza-tech/inc/retomar/envio.php` | `wp-content/themes/automatiza-tech/inc/retomar/envio.php` | OBLIGATORIO |
+| 1 | `C:/wamp64/www/automatiza-tech/.worktrees/retomar-eje/wp-content/themes/automatiza-tech/inc/retomar/panel.php` | `wp-content/themes/automatiza-tech/inc/retomar/panel.php` | OBLIGATORIO |
+| 2 | `C:/wamp64/www/automatiza-tech/.worktrees/retomar-eje/wp-content/themes/automatiza-tech/assets/css/retomar.css` | `wp-content/themes/automatiza-tech/assets/css/retomar.css` | OBLIGATORIO |
+| 2 | `C:/wamp64/www/automatiza-tech/.worktrees/retomar-eje/wp-content/mu-plugins/at-timeline-origen.php` | `wp-content/mu-plugins/at-timeline-origen.php` | OBLIGATORIO |
+| 2 | `C:/wamp64/www/automatiza-tech/.worktrees/retomar-eje/wp-content/themes/automatiza-tech/inc/admin-followup-meetings.php` | `wp-content/themes/automatiza-tech/inc/admin-followup-meetings.php` | OBLIGATORIO |
+| 3 | `C:/wamp64/www/automatiza-tech/.worktrees/retomar-eje/wp-content/themes/automatiza-tech/inc/retomar/cargar.php` | `wp-content/themes/automatiza-tech/inc/retomar/cargar.php` | OBLIGATORIO |
+| 4 | `C:/wamp64/www/automatiza-tech/.worktrees/retomar-eje/wp-content/themes/automatiza-tech/inc/admin-proposals.php` | `wp-content/themes/automatiza-tech/inc/admin-proposals.php` | OBLIGATORIO |
+| 5, último | `C:/wamp64/www/automatiza-tech/.worktrees/retomar-eje/retomar.php` | `retomar.php` | OBLIGATORIO |
 
 Migración idempotente prevista desde el root WordPress de PROD, con WP-CLI y respaldo confirmado (comando documentado, **no ejecutado en PROD**):
 

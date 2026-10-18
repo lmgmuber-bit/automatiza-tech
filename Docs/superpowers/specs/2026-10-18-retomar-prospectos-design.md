@@ -38,7 +38,7 @@ que salga algo roto o con datos equivocados.
 - **Canales:** correo en los 4; WhatsApp solo en el 1.º y el 4.º, para cuidar el límite de marketing de Meta y el
   costo. Parametrizable por prospecto.
 - **Horario:** días hábiles, entre 10:00 y 13:00, hora de Chile. Nunca fines de semana.
-- **Se detiene solo** con: baja («No me interesa»), reunión agendada, paso a cliente en el CRM, propuesta aceptada,
+- **Se detiene solo** con: baja («No me interesa»), reunión agendada, paso a cliente en el CRM, propuesta aceptada o rechazada,
   tope alcanzado, o pausa manual. Si el prospecto responde por correo o WhatsApp, Luis marca «Respondió» en el panel
   (detectar respuestas automáticamente queda fuera de esta versión).
 - **Sin precios nuevos** en la presentación: se dice que se puede ajustar al presupuesto y se conversa en la reunión.
@@ -148,15 +148,15 @@ presentación se guarda como las demás (URL de vista y PDF del renderer).
    entrega los JSON y los scripts. **Crearlos y activarlos en n8n es parte del despliegue, con OK de Luis.**
 8. **«Lo que proponemos»** es texto libre que escribe Luis, sin importar tablas de precios.
 
-**Pendientes de Luis (cambian lo que se construye):** ver §8.
+**Respuestas de Luis:** ver §8.
 
-## 8. Preguntas abiertas para Luis
+## 8. Respuestas de Luis (18-oct)
 
-- **A. Propuestas rechazadas.** Si el prospecto marcó «No acepto» en su propuesta, ¿se le escribe o no? Las
-  archivadas sí entran (uno de los prospectos del piloto tiene su propuesta archivada en el sistema).
-- **B. Permiso para WhatsApp de marketing.** Meta exige que la persona haya aceptado recibir mensajes. Propuesta de
-  Eje: una casilla «WhatsApp autorizado» por prospecto, que marca Luis cuando el prospecto le escribió o conversó con
-  él por WhatsApp. Sin esa casilla, solo sale el correo.
+- **A. Propuestas rechazadas:** no se le escribe a quien marcó «No acepto» en su propuesta (estado `rechazada`): se
+  bloquea al activar y detiene un seguimiento activo. Las `archivada`, `sent` y `evaluando` sí entran.
+- **B. Permiso para WhatsApp:** casilla «WhatsApp autorizado» por prospecto, que marca Luis cuando el prospecto le
+  escribió o conversó con él por WhatsApp. Sin la casilla, solo sale el correo.
+- Luis aprobó el diseño completo («tienes mi ok»).
 
 ## 9. Queda para quien lo construya
 

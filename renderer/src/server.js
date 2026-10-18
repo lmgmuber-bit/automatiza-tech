@@ -29,6 +29,15 @@ function createApp({ publicDir, baseUrl, higgsfieldCredentials, renderKey = '' }
 
   // Iframe embedding must keep working for ver-presentacion.php — never set
   // X-Frame-Options or a frame-ancestors CSP here.
+  // La URL tokenizada de Retomar no debe indexarse (incluido su PDF) ni viajar
+  // como referencia al abrir la demo o la agenda. Las otras presentaciones conservan sus headers.
+  app.use('/p', (req, res, next) => {
+    if (/^\/[A-Za-z0-9_-]+-retomar\/(?:index\.html|presentation\.pdf)?$/.test(req.path)) {
+      res.set('X-Robots-Tag', 'noindex, nofollow');
+      res.set('Referrer-Policy', 'no-referrer');
+    }
+    next();
+  });
   app.use('/p', express.static(publicDir));
 
   app.get('/health', (req, res) => {

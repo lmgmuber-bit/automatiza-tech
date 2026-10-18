@@ -38,6 +38,23 @@ test('validación rechaza cuerpo inválido y unique_id inseguro antes de tocar d
   assert.equal(largo.ok, false); assert.match(largo.errors.join(' '), /quedamos admite hasta 600/);
 });
 
+test('archivos HTML/PDF de UID retomar llevan noindex y no filtran referencia sin afectar otros documentos', async () => {
+  const { createApp } = require('../src/server');
+  const server = createApp({ publicDir: __dirname, baseUrl: 'https://example.com', higgsfieldCredentials: {} }).listen(0, '127.0.0.1');
+  await new Promise((resolve) => server.once('listening', resolve));
+  try {
+    for (const file of ['ejemplo123-retomar/index.html', 'ejemplo123-retomar/presentation.pdf', 'x-retomar/', 'x-retomar/presentation.pdf']) {
+      const r = await fetch(`http://127.0.0.1:${server.address().port}/p/${file}`);
+      assert.equal(r.status, 404, 'el middleware se verifica sin crear archivos');
+      assert.equal(r.headers.get('x-robots-tag'), 'noindex, nofollow');
+      assert.equal(r.headers.get('referrer-policy'), 'no-referrer');
+    }
+    const other = await fetch(`http://127.0.0.1:${server.address().port}/p/ejemplo123-estado/presentation.pdf`);
+    assert.equal(other.headers.get('x-robots-tag'), null);
+    assert.equal(other.headers.get('referrer-policy'), null);
+  } finally { await new Promise((resolve) => server.close(resolve)); }
+});
+
 test('POST /render despacha retomar sin llamar imágenes aunque llegue image_briefs', async () => {
   const modules = ['higgsfield', 'images-store', 'photo-manifest', 'render'];
   const originals = modules.map((m) => { const p = require.resolve(`../src/${m}`); require(p); return [p, require.cache[p].exports]; });

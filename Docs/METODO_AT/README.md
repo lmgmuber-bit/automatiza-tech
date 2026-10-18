@@ -14,6 +14,7 @@ Esta carpeta documenta cómo AutomatizaTech diagnostica, propone, ejecuta, entre
 - [Plan de trabajo con carta Gantt](./PLAN-DE-TRABAJO.md): al firmar un contrato de servicios, borrador con IA, edición en la ficha del CRM, tabla de tiempos y versión final y, desde la Etapa 2 (EN PROD 01-oct), envío al cliente por correo o WhatsApp, `ver-plan.php` y agenda web de la llamada de seguimiento.
 - [Entregables con notas, versiones y sugerencias con IA](./ENTREGABLES-NOTAS.md): EN PROD desde el 06-oct. Versiones de un entregable enviadas por correo o WhatsApp, notas del cliente con fotos, respuestas de Luis desde la ficha y borradores con IA.
 - [Orden de la ficha CRM](./CRM-FICHA-ORDEN.md): AT-CRM-001, presentación local de Plan y Entregables, validación y archivos de entrega; revisión pendiente.
+- [Retomar prospectos](./RETOMAR-PROSPECTOS.md): AT-RETOMAR-001, guía local de operación, límites, bajas y entrega FTP/renderer/n8n; revisión B y autorización de PROD/piloto pendientes.
 - [Prototipos de Claude Design y demos](./PROTOTIPOS-Y-DEMOS.md): publicar un export en `automatizatech.cl/demos/<rubro>/`, arreglo móvil obligatorio, advertencia de alcohol y video de recorrido para WhatsApp.
 - [Flujo cliente end-to-end](../FLUJO_CLIENTE_END_TO_END.md): inventario histórico de capacidades existentes, faltantes y automatizaciones propuestas.
 - [Prompt final de Claude Orquestador](../ORCHESTRATION/CLAUDE_ORCHESTRATOR_PROMPT_FINAL.md): contexto autónomo para iniciar o recuperar al orquestador principal.

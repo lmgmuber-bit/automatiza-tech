@@ -69,3 +69,9 @@ source files when (a) modifying/debugging specific code, (b) the graph lacks the
 (c) the graph is missing or stale.
 
 Type `/graphify` in Copilot Chat to build or update the graph.
+
+<!-- AT-RETOMAR-001-LOCAL:START -->
+## AT-RETOMAR-001 — referencia local
+
+Rama `codex/retomar-prospectos`, worktree `C:/wamp64/www/automatiza-tech/.worktrees/codex-retomar`. Guía: [Retomar prospectos](../Docs/METODO_AT/RETOMAR-PROSPECTOS.md). Preparación local; revisión B de Eje y autorización de Luis para PROD/piloto pendientes. No activar ni desplegar por este puntero.
+<!-- AT-RETOMAR-001-LOCAL:END -->

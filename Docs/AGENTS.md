@@ -27,3 +27,9 @@ Antes de trabajar, crea una rama nueva. Usa y manten actualizados `CLAUDE.md`, `
 - **Relevo completo:** bóveda privada `10-Projects/GT-Baseball/README.md`. Diseño e historial en
   `Docs/superpowers/specs/2026-09-27-gt-baseball-prototipo-design.md`.
 
+
+<!-- AT-RETOMAR-001-LOCAL:START -->
+## AT-RETOMAR-001 — referencia local
+
+Rama `codex/retomar-prospectos`, worktree `C:/wamp64/www/automatiza-tech/.worktrees/codex-retomar`. Guía: [Retomar prospectos](METODO_AT/RETOMAR-PROSPECTOS.md). Preparación local; revisión B de Eje y autorización de Luis para PROD/piloto pendientes. No activar ni desplegar por este puntero.
+<!-- AT-RETOMAR-001-LOCAL:END -->

@@ -2,6 +2,8 @@
 
 Se entregan dos workflows según Tasks 4 y 7: `retomar-render.json` y `retomar-reloj.json`. La especificación menciona tres; el reloj y WhatsApp se combinan en un workflow, sin cambiar reglas de negocio. Ambos exports se entregan con `active: false`. No se importaron ni ejecutaron en n8n ni se enviaron mensajes reales.
 
+El webhook de render recibe `{id,generacion,render}` y devuelve la generación en todos los callbacks, incluidos fallos. El UID versionado tiene 57 caracteres (`token-generacion-retomar`); WordPress rechaza con 409 callbacks de una generación anterior o de contenido cambiado. Importar este flujo junto con el PHP de esta entrega: un flujo anterior sin `generacion` no es compatible. Los enlaces externos conservan el wrapper con token estable.
+
 Regenerar desde este directorio con Python 3 sin bytecode:
 
 ```powershell

@@ -159,7 +159,9 @@ function at_rt_dar_baja(int $id, string $origen): bool {
 			$wpdb->query('ROLLBACK'); return false;
 		}
 	}
-	return $wpdb->query('COMMIT') !== false;
+	$confirmada = $wpdb->query('COMMIT') !== false;
+	if ($confirmada && $s['estado'] !== 'baja') { do_action('at_rt_baja_confirmada', $id); }
+	return $confirmada;
 }
 
 function at_rt_revertir_baja(int $baja_id, string $motivo): bool {

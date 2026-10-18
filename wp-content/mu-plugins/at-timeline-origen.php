@@ -14,6 +14,10 @@ if (!defined('ABSPATH') && !defined('AT_TL_PRUEBAS')) {
 /** tipo_evento de crm_historial → detail_type de la línea de tiempo (gana sobre el mapa viejo de crm-ai-completo.php). */
 function at_tl_mapa_historial(): array {
 	return [
+		'retomar_correo' => 'retomar_correo',
+		'retomar_whatsapp' => 'retomar_whatsapp',
+		'retomar_baja' => 'retomar_baja',
+		'retomar_agendo' => 'retomar_agendo',
 		'entregable_nota'      => 'entregable_nota',
 		'entregable_version'   => 'entregable_version',
 		'entregable_respuesta' => 'entregable_respuesta',
@@ -30,6 +34,10 @@ function at_tl_mapa_historial(): array {
 /** Etiquetas, íconos y colores de los tipos nuevos y de «legacy» (ganan sobre las de cada vista). */
 function at_tl_tipos_extra(): array {
 	return [
+		'retomar_correo' => ['label' => '🔁 Recordatorio enviado', 'icon' => '🔁', 'color' => '#0f766e', 'bg' => '#ccfbf1'],
+		'retomar_whatsapp' => ['label' => '🔁 Recordatorio por WhatsApp', 'icon' => '🔁', 'color' => '#0f766e', 'bg' => '#ccfbf1'],
+		'retomar_baja' => ['label' => '🔁 No le interesa', 'icon' => '🔁', 'color' => '#64748b', 'bg' => '#f8fafc'],
+		'retomar_agendo' => ['label' => '🔁 Agendó reunión', 'icon' => '🔁', 'color' => '#0f766e', 'bg' => '#ccfbf1'],
 		'entregable_nota'      => ['label' => 'Comentario del cliente · entregable', 'icon' => '💬', 'color' => '#0ea5e9', 'bg' => '#f0f9ff'],
 		'entregable_version'   => ['label' => 'Versión enviada · entregable', 'icon' => '📦', 'color' => '#84cc16', 'bg' => '#ecfccb'],
 		'entregable_respuesta' => ['label' => 'Respuesta del equipo · entregable', 'icon' => '↩️', 'color' => '#6366f1', 'bg' => '#eef2ff'],
@@ -67,6 +75,7 @@ function at_tl_origen(array $h): string {
 	}
 	if ($fuente === 'system') {
 		$tipo = (string) ($h['tipo_evento'] ?? '');
+		if (in_array($tipo, ['retomar_baja', 'retomar_agendo'], true)) { return 'cliente'; }
 		$titulo = trim((string) ($h['title'] ?? ''));
 		$desc = ltrim((string) ($h['description'] ?? ''));
 		if ($tipo === 'entregable_nota' || in_array($titulo, at_tl_titulos_cliente(), true) || strpos($desc, 'El cliente ') === 0) {

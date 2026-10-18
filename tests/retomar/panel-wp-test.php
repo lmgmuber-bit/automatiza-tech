@@ -26,6 +26,9 @@ ok(!is_wp_error($r)&&$s['estado']==='activo'&&$s['proximo_at']===$prox&&substr($
 $before=$s['envios'];$r=panel_action('prueba',$id);ok(!is_wp_error($r)&&at_rt_obtener($id)['envios']===$before,'prueba no suma envíos');
 $r=panel_action('respondio',$id);ok(!is_wp_error($r)&&at_rt_obtener($id)['estado']==='respondio'&&at_rt_obtener($id)['proximo_at']===null,'Respondió detiene seguimiento');
 $r=panel_action('guardar',$id,$p+['estado'=>'activo','envios'=>[]]);ok(!is_wp_error($r)&&at_rt_obtener($id)['estado']==='respondio'&&at_rt_obtener($id)['render']['estado']!=='listo','guardar ignora estado e invalida render anterior sin flujo');
+at_rt_guardar($id,['render'=>['estado'=>'listo','generacion'=>str_repeat('a',16),'huella'=>str_repeat('b',64),'uid'=>$s['token'].'-'.str_repeat('a',16).'-retomar','view_url'=>$view,'pdf_url'=>$view.'presentacion.pdf']]);
+$r=panel_action('guardar',$id,$p);$render=at_rt_obtener($id)['render'];
+ok(!is_wp_error($r)&&$render['estado']==='pendiente'&&!array_intersect(['generacion','huella','uid','view_url','pdf_url'],array_keys($render)),'guardar contenido idéntico elimina generación, huella y URLs previas sin flujo');
 foreach(['guardar','previa','prueba','activar','pausar','respondio','baja','revertir_baja'] as $a){$before=at_rt_obtener($id);$r=at_rt_panel_ejecutar($a,['id'=>$id,'_wpnonce'=>'invalido']);ok(is_wp_error($r)&&at_rt_obtener($id)===$before,$a.' nonce inválido no muta');}
 wp_set_current_user(0);
 foreach(['guardar','previa','prueba','activar','pausar','respondio','baja','revertir_baja'] as $a){$before=at_rt_obtener($id);$r=panel_action($a,$id,$p);ok(is_wp_error($r)&&$r->get_error_code()==='permiso'&&at_rt_obtener($id)===$before,$a.' exige manage_options en backend');}

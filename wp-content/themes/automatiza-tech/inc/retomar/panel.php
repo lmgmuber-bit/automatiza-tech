@@ -100,7 +100,7 @@ function at_rt_panel_guardar(int $id, array $p) {
     }
     $d += ['crm_cliente_id'=>$crm_id,'propuesta_id'=>$propuesta_id];
     // Cada guardado invalida la versión previa ANTES de pedir la nueva. Sin flujo nunca queda listo.
-    $d['render'] = array_merge($s['render'] ?? [],['estado'=>'pendiente','nota'=>'Contenido guardado; falta generar la presentación.']);
+    $d['render'] = ['estado'=>'pendiente','nota'=>'Contenido guardado; falta generar la presentación.'];
     if ($id ? !at_rt_guardar($id,$d) : !($id=at_rt_crear($d))) { return new WP_Error('guardar','No se pudo guardar el seguimiento.'); }
     $error = at_rt_pedir_render($id);
     return ['id'=>$id,'mensaje'=>$error==='sin_flujo'?'Guardado. El flujo de presentación no está configurado; no se puede activar aún.':($error!==''?'Guardado. No se pudo pedir la presentación: '.$error:'Guardado. Presentación solicitada.')];

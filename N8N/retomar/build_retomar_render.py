@@ -1,7 +1,7 @@
 """Genera Retomar · Render INACTIVO. No accede a n8n ni genera fotos.
 
 Credenciales existentes referidas únicamente por nombre; sus valores nunca se exportan.
-El POST autenticado recibe {id, render}; cualquier respuesta/error del renderer llega
+El POST autenticado recibe {id, generacion, render}; cualquier respuesta/error del renderer llega
 al callback con ok booleano. La URL interna se guarda solo para iframe/PDF en WP.
 """
 import json
@@ -22,7 +22,7 @@ const ok = estado >= 200 && estado < 300 && typeof body.view_url === 'string' &&
 const detalles = Array.isArray(body.details) ? body.details.filter(x => typeof x === 'string').join('; ') : '';
 const nota = ok ? '' : ('No se pudo generar la presentación (HTTP ' + estado + '). ' + detalles)
   .replace(/https?:\/\/\S+/gi, '[enlace omitido]').slice(0, 1000);
-return [{json: {id: Number(hook.id), callback: {ok,
+return [{json: {id: Number(hook.id), callback: {ok, generacion: hook.generacion,
   view_url: ok ? body.view_url : '', pdf_url: ok && typeof body.pdf_url === 'string' ? body.pdf_url : '', nota}}}];"""
 
 

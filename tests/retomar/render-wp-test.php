@@ -23,13 +23,16 @@ if (!defined('AT_N8N_RETOMAR_RENDER')) {
 }
 do_action('rest_api_init');
 function rt_callback(int $id, array $body, bool $auth = true) {
+	$body += ['generacion' => at_rt_obtener($id)['render']['generacion'] ?? ''];
 	$r = new WP_REST_Request('POST', '/automatiza-tech/v1/retomar/' . $id . '/vista');
 	$r->set_header('Content-Type', 'application/json');
 	if ($auth) { $r->set_header('X-AT-Secret', AT_REST_SECRET); }
 	$r->set_body(wp_json_encode($body));
 	return rest_do_request($r);
 }
-$base = 'https://' . at_pt_host_renderer() . '/p/' . $s['token'] . '-retomar/';
+$generacion = str_repeat('a', 16);
+at_rt_guardar($ids[0], ['render' => ['generacion' => $generacion, 'huella' => hash('sha256', wp_json_encode($p)), 'uid' => $s['token'] . '-' . $generacion . '-retomar', 'estado' => 'pendiente']]);
+$base = 'https://' . at_pt_host_renderer() . '/p/' . $s['token'] . '-' . $generacion . '-retomar/';
 ok(rt_callback($ids[0], ['ok' => true], false)->get_status() === 401, 'callback sin secreto 401');
 ok(rt_callback($ids[0], ['ok' => true, 'view_url' => $base, 'pdf_url' => $base . 'presentation.pdf'])->get_status() === 200 && at_rt_obtener($ids[0])['render']['estado'] === 'listo' && at_rt_obtener($ids[0])['render']['view_url'] === $base, 'callback listo conserva vista propia');
 foreach (['https://example.com/p/' . $s['token'] . '-retomar/', 'https://' . at_pt_host_renderer() . '/p/' . at_rt_obtener($ids[1])['token'] . '-retomar/', $base . '?iframe=1', str_replace('https:', 'http:', $base)] as $url) {
@@ -67,8 +70,20 @@ add_filter('pre_http_request', static function ($pre, $args, $url) use (&$captur
 	return ['response' => ['code' => 200], 'body' => '{}', 'headers' => []];
 }, PHP_INT_MAX, 3);
 ok(at_rt_pedir_render($ids[0]) === '' && at_rt_obtener($ids[0])['render']['estado'] === 'pendiente', 'solicitud simulada marca pendiente');
-ok($capturado['id'] === $ids[0] && $capturado['render']['unique_id'] === $s['token'] . '-retomar', 'n8n recibe id y payload propios');
+ok($capturado['id'] === $ids[0] && $capturado['render']['unique_id'] === $s['token'] . '-' . ($capturado['generacion'] ?? '') . '-retomar' && preg_match('/^[a-f0-9]{16}$/D', $capturado['generacion'] ?? ''), 'n8n recibe id, generación y payload propios');
 ok(strpos(wp_json_encode($capturado['render']), 'easypanel') === false, 'n8n recibe solo láminas públicas');
+$pedido_a = $capturado;
+at_rt_guardar($ids[0], ['textos' => ['quedamos' => '[PRUEBA] Versión B']]);
+$base_a = 'https://' . at_pt_host_renderer() . '/p/' . $pedido_a['render']['unique_id'] . '/';
+ok(rt_callback($ids[0], ['ok' => true, 'generacion' => $pedido_a['generacion'] ?? '', 'view_url' => $base_a])->get_status() === 409, 'callback A tras guardar B se rechaza');
+ok(at_rt_pedir_render($ids[0]) === '', 'solicitud B simulada');
+$pedido_b = $capturado;
+ok($pedido_a['render']['unique_id'] !== $pedido_b['render']['unique_id'], 'A y B escriben carpetas independientes');
+$base_b = 'https://' . at_pt_host_renderer() . '/p/' . $pedido_b['render']['unique_id'] . '/';
+ok(rt_callback($ids[0], ['ok' => true, 'generacion' => $pedido_b['generacion'] ?? '', 'view_url' => $base_b])->get_status() === 200, 'callback B actual aceptado');
+$render_b = at_rt_obtener($ids[0])['render'];
+ok(rt_callback($ids[0], ['ok' => true, 'generacion' => $pedido_a['generacion'] ?? '', 'view_url' => $base_a])->get_status() === 409 && at_rt_obtener($ids[0])['render'] === $render_b, 'callback A tardío no reemplaza B listo');
+ok(rt_callback($ids[0], ['ok' => false, 'generacion' => $pedido_a['generacion'] ?? '', 'nota' => 'fallo A'])->get_status() === 409 && at_rt_obtener($ids[0])['render'] === $render_b, 'fallo A tardío no altera B listo');
 at_rt_guardar($ids[0], ['textos' => ['quedamos' => str_repeat('a', 601)]]);
 $capturado = null;
 ok(at_rt_pedir_render($ids[0]) !== '' && $capturado === null && at_rt_obtener($ids[0])['render']['estado'] === 'error', 'error claro por límite antes de llamar n8n');

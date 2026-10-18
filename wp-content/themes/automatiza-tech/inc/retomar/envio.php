@@ -2,6 +2,11 @@
 /** Reloj local y entrega de Retomar. El tick nunca llama a Meta. */
 if (!defined('ABSPATH')) { exit; }
 
+/** Interruptor del WhatsApp automático (opción at_rt_wa_automatico = '1'). Apagado por defecto: mientras Meta no
+ *  apruebe la plantilla retomar_propuesta, el reloj solo manda correos y Luis comparte a mano desde el panel. */
+function at_rt_wa_automatico(): bool {
+    return get_option('at_rt_wa_automatico') === '1';
+}
 function at_rt_historia(array $s, string $tipo, string $titulo): void {
     if (!empty($s['crm_cliente_id']) && function_exists('at_cc_historial_crm')) {
         at_cc_historial_crm((int) $s['crm_cliente_id'], $tipo, $titulo, 'Retomar #' . $s['id']);
@@ -40,7 +45,7 @@ function at_rt_finalizar_entrega(int $id, int $n, bool $ok, string $ahora): ?arr
         $s = at_rt_fila($raw);
         $motivo = at_rt_motivo_parada(at_rt_contexto_parada($s));
         $propio = $s['estado'] === 'activo' && $s['enviando'] === $ahora;
-        $wa = $propio && $motivo === '' && $ok && in_array('whatsapp', at_rt_canales($n, $s['max_envios'], $s['canales'], (bool) $s['wa_autorizado'], at_pt_telefono_wa($s['telefono'])), true);
+        $wa = $propio && $motivo === '' && $ok && at_rt_wa_automatico() && in_array('whatsapp', at_rt_canales($n, $s['max_envios'], $s['canales'], (bool) $s['wa_autorizado'], at_pt_telefono_wa($s['telefono'])), true);
         $s['envios'][] = ['tipo' => 'envio', 'n' => $n, 'fecha' => substr($ahora, 0, 10), 'at' => $ahora, 'correo' => ['estado' => $ok ? 'enviado' : 'error'], 'whatsapp' => $wa ? ['estado' => 'pendiente'] : null];
         $campos = ['envios' => $s['envios']];
         // La transición sólo pertenece al claim vigente y a una fila aún activa.

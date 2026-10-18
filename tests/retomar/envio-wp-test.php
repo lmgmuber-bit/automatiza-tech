@@ -27,6 +27,7 @@ function rt_env_fixture(array $c = []): array {
     return at_rt_obtener($id);
 }
 function rt_env_tick(string $cuando): array { return at_rt_tick($cuando); }
+update_option('at_rt_wa_automatico', '1');
 $s = rt_env_fixture();
 ok(rt_env_tick('2026-10-19 09:30:00')['enviados'] === 0 && count($mails) === 0, '09:30 no entrega');
 ok(rt_env_tick('2026-10-24 10:30:00')['enviados'] === 0 && count($mails) === 0, 'sábado no entrega');
@@ -135,4 +136,15 @@ $carrera=static function($sql) use($dedup,&$inyectado) {
 add_filter('query',$carrera,20); $resultado=at_rt_dar_baja($dedup['id'],'prueba'); remove_filter('query',$carrera,20);
 $despues=(int)$wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$wpdb->prefix}crm_historial WHERE cliente_id=%d AND tipo_evento='retomar_baja'",$crm));
 ok($inyectado && $resultado && $despues===$antes+1, 'baja concurrente entre snapshot y BEGIN genera una sola historia');
+// Interruptor del WhatsApp automático (pedido de Luis, 18-oct): apagado = solo correo, sin pedido de WhatsApp.
+update_option('at_rt_wa_automatico', '0');
+$sa = rt_env_fixture(['proximo_at' => '2026-10-20']);
+$ra = rt_env_tick('2026-10-20 10:30:00');
+$ea = at_rt_obtener($sa['id'])['envios'];
+ok($ra['enviados'] >= 1 && $ra['whatsapp'] === [] && ($ea[0]['whatsapp'] ?? null) === null, 'WhatsApp automático apagado: sale el correo y no se pide WhatsApp');
+ok(!at_rt_wa_automatico(), 'el interruptor apagado se lee como apagado');
+update_option('at_rt_wa_automatico', '1');
+ok(at_rt_wa_automatico(), 'el interruptor encendido se lee como encendido');
+delete_option('at_rt_wa_automatico');
+ok(!at_rt_wa_automatico(), 'sin opción guardada, el WhatsApp automático queda apagado');
 fin();

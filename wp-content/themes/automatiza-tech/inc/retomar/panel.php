@@ -136,6 +136,9 @@ function at_rt_panel(): void {
     global $wpdb;
     $id=absint($_GET['id']??0); $s=$id?at_rt_obtener($id):null;
     echo '<div class="wrap at-retomar"><h1>🔁 Retomar prospectos</h1><p>Recordatorios del equipo de AutomatizaTech. Correo en días hábiles, entre 10:00 y 13:00 de Santiago.</p>';
+    echo at_rt_wa_automatico()
+        ? '<div class="notice notice-success inline rt-wa-estado"><p><strong>🟢 WhatsApp automático: encendido.</strong> El reloj manda el WhatsApp en el primer y el último recordatorio a quien tenga la casilla «WhatsApp autorizado».</p></div>'
+        : '<div class="notice notice-warning inline rt-wa-estado"><p><strong>⏸️ WhatsApp automático: en pausa (apagado).</strong> Mientras Meta revisa la plantilla, el reloj solo manda correos. Para avisar por WhatsApp, usa «💬 Compartir a mano» en cada prospecto.</p></div>';
     if (!empty($_GET['rt_msg'])) { echo '<div role="status" class="notice '.(!empty($_GET['rt_error'])?'notice-error':'notice-success').'"><p>'.esc_html(sanitize_text_field(wp_unslash($_GET['rt_msg']))).'</p></div>'; }
     echo '<div class="rt-tabla"><table class="widefat striped"><caption class="screen-reader-text">Seguimientos de prospectos</caption><thead><tr><th>Prospecto</th><th>Estado</th><th>Envíos / máximo</th><th>Próximo</th><th>Último resultado</th></tr></thead><tbody>';
     foreach (at_rt_lista() as $f) {
@@ -168,7 +171,7 @@ function at_rt_panel(): void {
         // Compartir a mano mientras Meta aprueba la plantilla: copiar el mensaje o abrir el WhatsApp de Luis.
         if (!in_array($s['estado'], ['baja','rechazado','cliente'], true)) {
             $tel = at_pt_telefono_wa((string) $s['telefono']);
-            echo '<div class="rt-manual"><h2>💬 Compartir a mano</h2><p>Mientras Meta aprueba la plantilla de WhatsApp, copia este mensaje o ábrelo en tu WhatsApp. Queda anotado en el historial y no cuenta como recordatorio automático.</p>'
+            echo '<div class="rt-manual"><h2>💬 Compartir a mano</h2><p>' . (at_rt_wa_automatico() ? 'El WhatsApp automático está encendido; esta opción sirve para escribirle además a mano.' : '<strong>El WhatsApp automático está en pausa</strong> mientras Meta aprueba la plantilla.') . ' Copia este mensaje o ábrelo en tu WhatsApp. Queda anotado en el historial y no cuenta como recordatorio automático.</p>'
                 . '<p><label for="rt-texto-manual">Mensaje para el prospecto</label><textarea id="rt-texto-manual" rows="7" readonly>' . esc_textarea(at_rt_panel_texto_manual($s)) . '</textarea></p>'
                 . '<p class="rt-acciones"><button type="button" class="button" onclick="(function(b){var t=document.getElementById(\'rt-texto-manual\');var listo=function(){b.textContent=\'✅ Copiado\';};if(navigator.clipboard){navigator.clipboard.writeText(t.value).then(listo,function(){t.select();document.execCommand(\'copy\');listo();});}else{t.select();document.execCommand(\'copy\');listo();}})(this)">📋 Copiar</button> ';
             if ($tel !== '') {

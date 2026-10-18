@@ -1,0 +1,151 @@
+{
+  "name": "Retomar · Render",
+  "active": false,
+  "nodes": [
+    {
+      "id": "rt1",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "retomar-render",
+        "authentication": "headerAuth",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "webhookId": "retomar-render",
+      "credentials": {
+        "httpHeaderAuth": {
+          "name": "AT REST Secret (header)"
+        }
+      }
+    },
+    {
+      "id": "rt2",
+      "name": "Render",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        260,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://n8n-propuesta-renderer.kchiba.easypanel.host/render",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.body.render }}",
+        "options": {
+          "timeout": 180000,
+          "redirect": {
+            "redirect": {
+              "followRedirects": false
+            }
+          },
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "name": "X-AT-Render-Key"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "rt3",
+      "name": "Resultado",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        520,
+        0
+      ],
+      "parameters": {
+        "jsCode": "const respuesta = $input.first().json || {};\nconst hook = $('Webhook').first().json.body || {};\nlet body = respuesta.body || {};\nif (typeof body === 'string') { try { body = JSON.parse(body); } catch (_) { body = {}; } }\nconst estado = Number(respuesta.statusCode) || 0;\nconst ok = estado >= 200 && estado < 300 && typeof body.view_url === 'string' && !!body.view_url;\n// Sin copiar mensajes de red: pueden contener URLs internas o datos de infraestructura.\nconst detalles = Array.isArray(body.details) ? body.details.filter(x => typeof x === 'string').join('; ') : '';\nconst nota = ok ? '' : ('No se pudo generar la presentación (HTTP ' + estado + '). ' + detalles)\n  .replace(/https?:\\/\\/\\S+/gi, '[enlace omitido]').slice(0, 1000);\nreturn [{json: {id: Number(hook.id), callback: {ok,\n  view_url: ok ? body.view_url : '', pdf_url: ok && typeof body.pdf_url === 'string' ? body.pdf_url : '', nota}}}];"
+      }
+    },
+    {
+      "id": "rt4",
+      "name": "Guardar vista",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        780,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ \"https://automatizatech.cl/?rest_route=/automatiza-tech/v1/retomar/\" + $json.id + \"/vista\" }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.callback }}",
+        "options": {
+          "timeout": 30000,
+          "redirect": {
+            "redirect": {
+              "followRedirects": false
+            }
+          }
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "name": "AT REST Secret (header)"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Render",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Render": {
+      "main": [
+        [
+          {
+            "node": "Resultado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Resultado": {
+      "main": [
+        [
+          {
+            "node": "Guardar vista",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

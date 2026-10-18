@@ -118,3 +118,18 @@ function at_rt_cabeceras_baja(string $url_baja): array {
 	$url = at_rt_url_correo($url_baja);
 	return $url !== '' ? ['List-Unsubscribe: <' . $url . '>', 'List-Unsubscribe-Post: List-Unsubscribe=One-Click'] : [];
 }
+/** Mensaje para compartir a mano (copiar o abrir el WhatsApp de Luis) mientras Meta aprueba la plantilla
+ *  retomar_propuesta. Mismo texto que la plantilla, con los dos enlaces escritos. */
+function at_rt_texto_manual(string $nombre, string $negocio, string $url_ver, string $url_baja): string {
+	$nombre = trim($nombre);
+	$negocio = trim($negocio);
+	return 'Hola ' . ($nombre !== '' ? $nombre . ' ' : '') . '👋 Te saluda el equipo de AutomatizaTech. Hace unas semanas conversamos sobre '
+		. ($negocio !== '' ? $negocio : 'tu proyecto') . ' y quedó pendiente. Te dejamos un resumen de lo que vimos y tu demo. '
+		. 'Si algo no calza con lo que necesitas o con tu presupuesto, lo ajustamos y podemos partir por lo más importante. '
+		. '¿Agendamos 20 minutos para conversarlo?' . "\n\n" . 'Ver y agendar: ' . $url_ver . "\n\n"
+		. 'Si prefieres que no te escribamos más: ' . $url_baja;
+}
+/** wa.me al teléfono del prospecto con el mensaje; '' sin teléfono. $telefono_wa ya normalizado (solo dígitos). */
+function at_rt_url_wa_manual(string $telefono_wa, string $texto): string {
+	return $telefono_wa === '' ? '' : 'https://wa.me/' . $telefono_wa . '?text=' . rawurlencode($texto);
+}

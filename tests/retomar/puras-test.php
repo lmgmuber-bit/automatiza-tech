@@ -46,5 +46,17 @@ ok(at_rt_cabeceras_baja($d['url_baja']) === ['List-Unsubscribe: <https://example
 $internas = at_rt_internas(['texto' => 'Servidor EASYpanel interno', 'anidado' => ['https://demo.easypanel.host/', ['texto' => 'Servidor EASYpanel interno']], 'seguro' => 'https://example.com', 'numero' => 1]);
 ok($internas === ['Servidor EASYpanel interno', 'https://demo.easypanel.host/'], 'D8 recursivo y único');
 ok(!str_contains(strtolower(at_rt_correo_html(array_replace($d, ['quedamos' => 'No mostrar easypanel interno']))), 'easypanel') && !str_contains(strtolower(at_rt_correo_texto(array_replace($d, ['nombre' => 'easypanel']))), 'easypanel'), 'D8 también en textos visibles');
+// Compartir a mano mientras Meta aprueba la plantilla (pedido de Luis, 18-oct).
+$ver = 'https://automatizatech.cl/retomar.php?t=abc&agendar=1';
+$baja = 'https://automatizatech.cl/retomar.php?t=abc&baja=1';
+$m = at_rt_texto_manual('Ana', 'Panadería Prueba', $ver, $baja);
+ok(str_starts_with($m, 'Hola Ana 👋 Te saluda el equipo de AutomatizaTech.'), 'manual: saludo con el nombre');
+ok(str_contains($m, 'conversamos sobre Panadería Prueba y quedó pendiente'), 'manual: negocio en el texto');
+ok(str_contains($m, "Ver y agendar: $ver") && str_contains($m, "Si prefieres que no te escribamos más: $baja"), 'manual: los dos enlaces');
+$m2 = at_rt_texto_manual('', '', $ver, $baja);
+ok(str_starts_with($m2, 'Hola 👋 Te saluda') && str_contains($m2, 'conversamos sobre tu proyecto'), 'manual: sin nombre ni negocio usa frases neutras');
+$wa = at_rt_url_wa_manual('56900000000', "Hola & chao\nfin");
+ok($wa === 'https://wa.me/56900000000?text=' . rawurlencode("Hola & chao\nfin"), 'manual: wa.me con el texto codificado');
+ok(at_rt_url_wa_manual('', 'x') === '', 'manual: sin teléfono no hay enlace');
 echo "$total pruebas, $fallas fallas\n";
 exit($fallas ? 1 : 0);

@@ -53,4 +53,13 @@ $wpdb->update($wpdb->prefix.'automatiza_propuestas',['client_email'=>'otro@examp
 $before=at_rt_obtener($id);$r=panel_action('guardar',$id,array_replace($p,['propuesta_id'=>$pid]));ok(is_wp_error($r)&&at_rt_obtener($id)===$before,'propuesta de otro correo no se vincula');
 $before=at_rt_obtener($id);$r=panel_action('guardar',$id,array_replace($p,['imagen_url'=>'https://example.com/'.str_repeat('a',500)]));ok(is_wp_error($r)&&at_rt_obtener($id)===$before,'URL excede columna 500 sin truncado silencioso');
 at_rt_guardar($id,['envios'=>[['tipo'=>'envio','correo'=>['estado'=>'enviado']]],'render'=>['estado'=>'listo','view_url'=>$view]]);$r=panel_action('activar',$id);ok(!is_wp_error($r)&&at_rt_envios_realizados(at_rt_obtener($id)['envios'])===1,'activar conserva envíos previos');
+// Compartir a mano por WhatsApp: deja rastro, no cuenta como envío ni mueve el próximo.
+$rm=panel_action('guardar',0,array_replace($p,['email'=>'manual-retomar@example.com','telefono'=>'+56 9 0000 0000']));$mid=$rm['id'];$ids[]=$mid;
+at_rt_guardar($mid,['proximo_at'=>'2026-11-02']);$antes=at_rt_obtener($mid);
+$r=panel_action('whatsapp_manual',$mid);$desp=at_rt_obtener($mid);$ult=end($desp['envios']);
+ok(!is_wp_error($r)&&str_starts_with($r['url']??'','https://wa.me/56900000000?text='),'compartir a mano devuelve wa.me del prospecto');
+ok(is_array($ult)&&$ult['tipo']==='manual'&&$ult['canal']==='whatsapp','compartir a mano queda anotado');
+ok(at_rt_envios_realizados($desp['envios'])===at_rt_envios_realizados($antes['envios'])&&$desp['proximo_at']==='2026-11-02','compartir a mano no suma envío ni mueve el próximo');
+at_rt_guardar($mid,['telefono'=>'']);ok(is_wp_error(panel_action('whatsapp_manual',$mid)),'sin teléfono avisa en vez de abrir WhatsApp');
+ok(is_wp_error(at_rt_panel_ejecutar('whatsapp_manual',['id'=>$mid,'_wpnonce'=>'invalido'])),'compartir a mano exige nonce');
 fin();

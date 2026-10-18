@@ -12,10 +12,11 @@ add_action('admin_enqueue_scripts', static function () {
 /** Registra las acciones del panel dentro de una función: este archivo se carga en el ámbito global y un foreach
  *  suelto dejaba la global $accion pisada (rompía las acciones del plan de trabajo y de entregables). */
 function at_rt_registrar_acciones(): void {
-    foreach (['guardar','previa','prueba','activar','pausar','respondio','baja','revertir_baja'] as $accion) {
+    foreach (['guardar','previa','prueba','activar','pausar','respondio','baja','revertir_baja','whatsapp_manual'] as $accion) {
         add_action('admin_post_at_rt_' . $accion, static function () use ($accion) {
             $r = at_rt_panel_ejecutar($accion, wp_unslash($_POST));
             if (is_wp_error($r) && in_array($r->get_error_code(), ['permiso','nonce'], true)) { wp_die(esc_html($r->get_error_message()), '', ['response'=>403]); }
+            if (!is_wp_error($r) && !empty($r['url'])) { wp_redirect($r['url']); exit; } // wa.me: sale del sitio a propósito
             $id = is_wp_error($r) ? absint($_POST['id'] ?? 0) : $r['id'];
             $msg = is_wp_error($r) ? $r->get_error_message() : $r['mensaje'];
             wp_safe_redirect(add_query_arg(['page'=>'at-retomar','id'=>$id,'rt_msg'=>$msg,'rt_error'=>is_wp_error($r)?1:0], admin_url('admin.php'))); exit;
@@ -59,6 +60,16 @@ function at_rt_panel_ejecutar(string $accion, array $p) {
     } elseif ($accion === 'prueba') {
         $r = at_rt_enviar($id,true); $ok = $r['ok']; $mensaje = 'Prueba enviada solo al equipo, sin sumar envíos ni enviar WhatsApp.';
         if (!$ok) { return new WP_Error('prueba','No se pudo enviar la prueba: ' . sanitize_text_field($r['motivo'])); }
+    } elseif ($accion === 'whatsapp_manual') {
+        if (in_array($s['estado'], ['baja','rechazado','cliente'], true) || at_rt_en_bajas($s['email'], $s['telefono'])) { return new WP_Error('detenido','Este prospecto no recibe recordatorios (baja, rechazo o ya es cliente).'); }
+        $tel = at_pt_telefono_wa((string) $s['telefono']);
+        if ($tel === '') { return new WP_Error('telefono','Agrega un teléfono con código de país para abrir WhatsApp. Puedes copiar el mensaje igual.'); }
+        $texto = at_rt_panel_texto_manual($s);
+        if (at_rt_internas(['texto' => $texto])) { return new WP_Error('interno','El mensaje tiene un enlace interno y no se comparte.'); }
+        $ahora = new DateTimeImmutable('now', new DateTimeZone('America/Santiago'));
+        $ok = at_rt_agregar_envio($id, ['tipo'=>'manual','canal'=>'whatsapp','fecha'=>$ahora->format('Y-m-d'),'at'=>$ahora->format('Y-m-d H:i:s')]);
+        at_rt_historia($s, 'retomar_whatsapp', 'Recordatorio compartido a mano por WhatsApp');
+        return $ok ? ['id'=>$id,'mensaje'=>'WhatsApp abierto con el mensaje.','url'=>at_rt_url_wa_manual($tel, $texto)] : new WP_Error('guardar','No se pudo anotar el envío manual.');
     } else { return new WP_Error('accion','Acción desconocida.'); }
     return $ok ? ['id'=>$id,'mensaje'=>$mensaje] : new WP_Error('guardar','No se pudo completar la acción.');
 }
@@ -110,6 +121,11 @@ function at_rt_panel_guardar(int $id, array $p) {
     $error = at_rt_pedir_render($id);
     return ['id'=>$id,'mensaje'=>$error==='sin_flujo'?'Guardado. El flujo de presentación no está configurado; no se puede activar aún.':($error!==''?'Guardado. No se pudo pedir la presentación: '.$error:'Guardado. Presentación solicitada.')];
 }
+/** Texto para compartir a mano: el de la plantilla de Meta con los enlaces de agenda y baja del prospecto. */
+function at_rt_panel_texto_manual(array $s): string {
+    $base = home_url('/retomar.php?t=' . rawurlencode((string) $s['token']));
+    return at_rt_texto_manual((string) $s['nombre'], (string) $s['negocio'], $base . '&agendar=1', $base . '&baja=1');
+}
 function at_rt_panel_form_inicio(string $accion,int $id): void {
     echo '<form method="post" action="'.esc_url(admin_url('admin-post.php')).'">';
     echo '<input type="hidden" name="action" value="at_rt_'.esc_attr($accion).'"><input type="hidden" name="id" value="'.$id.'">';
@@ -148,7 +164,22 @@ function at_rt_panel(): void {
     if ($s) {
         echo '<h2>Acciones del seguimiento</h2><div class="rt-acciones">';
         foreach (['previa'=>'Vista previa','prueba'=>'Enviar prueba al equipo','activar'=>'Activar','pausar'=>'Pausar','respondio'=>'Respondió','baja'=>'Dar de baja'] as $a=>$label) { at_rt_panel_form_inicio($a,$id); echo '<button class="button">'.$label.'</button></form>'; }
-        echo '</div>'; at_rt_panel_form_inicio('revertir_baja',$id); echo '<p><label for="rt-motivo">Motivo para revertir la baja</label><input id="rt-motivo" name="motivo" maxlength="255" required></p><button class="button">Revertir baja</button></form>';
+        echo '</div>';
+        // Compartir a mano mientras Meta aprueba la plantilla: copiar el mensaje o abrir el WhatsApp de Luis.
+        if (!in_array($s['estado'], ['baja','rechazado','cliente'], true)) {
+            $tel = at_pt_telefono_wa((string) $s['telefono']);
+            echo '<div class="rt-manual"><h2>💬 Compartir a mano</h2><p>Mientras Meta aprueba la plantilla de WhatsApp, copia este mensaje o ábrelo en tu WhatsApp. Queda anotado en el historial y no cuenta como recordatorio automático.</p>'
+                . '<p><label for="rt-texto-manual">Mensaje para el prospecto</label><textarea id="rt-texto-manual" rows="7" readonly>' . esc_textarea(at_rt_panel_texto_manual($s)) . '</textarea></p>'
+                . '<p class="rt-acciones"><button type="button" class="button" onclick="(function(b){var t=document.getElementById(\'rt-texto-manual\');var listo=function(){b.textContent=\'✅ Copiado\';};if(navigator.clipboard){navigator.clipboard.writeText(t.value).then(listo,function(){t.select();document.execCommand(\'copy\');listo();});}else{t.select();document.execCommand(\'copy\');listo();}})(this)">📋 Copiar</button> ';
+            if ($tel !== '') {
+                echo '</p><form method="post" action="' . esc_url(admin_url('admin-post.php')) . '" target="_blank" rel="noopener"><input type="hidden" name="action" value="at_rt_whatsapp_manual"><input type="hidden" name="id" value="' . $id . '">'
+                    . wp_nonce_field('at_rt_whatsapp_manual_' . $id, '_wpnonce', true, false) . '<button class="button button-primary">💬 Abrir mi WhatsApp</button></form>';
+            } else {
+                echo '<span class="description">Agrega un teléfono con código de país para abrir WhatsApp.</span></p>';
+            }
+            echo '</div>';
+        }
+        at_rt_panel_form_inicio('revertir_baja',$id); echo '<p><label for="rt-motivo">Motivo para revertir la baja</label><input id="rt-motivo" name="motivo" maxlength="255" required></p><button class="button">Revertir baja</button></form>';
         echo '<h2>Presentación</h2><p role="status">'.esc_html(($s['render']['estado']??'Sin generar').' · '.($s['render']['nota']??'')).'</p>';
         $view=(string)($s['render']['view_url']??'');
         if (($s['render']['estado']??'')==='listo' && at_rt_url_render_valida($view,$s['token'])) { echo '<a href="'.esc_url($view).'" target="_blank" rel="noopener">Abrir presentación</a><iframe title="Vista previa de Retomar" src="'.esc_url($view).'" loading="lazy"></iframe>'; }

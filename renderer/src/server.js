@@ -32,7 +32,15 @@ function createApp({ publicDir, baseUrl, higgsfieldCredentials, renderKey = '' }
   // La URL tokenizada de Retomar no debe indexarse (incluido su PDF) ni viajar
   // como referencia al abrir la demo o la agenda. Las otras presentaciones conservan sus headers.
   app.use('/p', (req, res, next) => {
-    if (/^\/[A-Za-z0-9_-]+-retomar\/(?:index\.html|presentation\.pdf)?$/.test(req.path)) {
+    // express.static decodifica y normaliza la ruta antes de resolver el archivo.
+    // Comparar la forma codificada permitiría eludir los headers con %70resentation.pdf.
+    let pathname;
+    try {
+      pathname = path.posix.normalize(decodeURIComponent(req.path).replace(/\\/g, '/'));
+    } catch {
+      return next(); // static conserva su manejo de escapes malformados.
+    }
+    if (/^\/[A-Za-z0-9_-]+-retomar\/(?:index\.html|presentation\.pdf)?$/i.test(pathname)) {
       res.set('X-Robots-Tag', 'noindex, nofollow');
       res.set('Referrer-Policy', 'no-referrer');
     }

@@ -10,7 +10,7 @@ test('retomar valida y dibuja exactamente seis láminas en orden', () => {
   const html = renderRetomarHtml(d);
   assert.equal((html.match(/<section class="slide/g) || []).length, 6);
   let pos = 0;
-  for (const titulo of ['Negocio de ejemplo', 'En qué quedamos', 'Tu demo', 'Lo que proponemos', 'Podemos partir por lo prioritario y ajustarnos a tu presupuesto', 'Agendemos 20 min']) {
+  for (const titulo of ['[PRUEBA] Negocio de ejemplo', 'En qué quedamos', 'Tu demo', 'Lo que proponemos', 'Podemos partir por lo prioritario y ajustarnos a tu presupuesto', 'Agendemos 20 min']) {
     const next = html.indexOf(titulo, pos); assert.ok(next >= pos, titulo); pos = next + titulo.length;
   }
   assert.ok(html.includes('Si algo no calza con lo que necesitas o con tu presupuesto, lo ajustamos y partimos por lo más importante.'));
@@ -43,7 +43,10 @@ test('archivos HTML/PDF de UID retomar llevan noindex y no filtran referencia si
   const server = createApp({ publicDir: __dirname, baseUrl: 'https://example.com', higgsfieldCredentials: {} }).listen(0, '127.0.0.1');
   await new Promise((resolve) => server.once('listening', resolve));
   try {
-    for (const file of ['ejemplo123-retomar/index.html', 'ejemplo123-retomar/presentation.pdf', 'x-retomar/', 'x-retomar/presentation.pdf']) {
+    for (const file of ['ejemplo123-retomar/index.html', 'ejemplo123-retomar/presentation.pdf', 'x-retomar/', 'x-retomar/presentation.pdf',
+      'ejemplo123-retomar/%70resentation.pdf', 'ejemplo123%2Dretomar/presentation.pdf', 'ejemplo123%2Dretomar/%69ndex.html',
+      'ejemplo123-retomar/otra/%2e%2e%2fpresentation.pdf', 'ejemplo123-retomar%5Cpresentation.pdf',
+      'ejemplo123-RETOMAR/PRESENTATION.PDF']) {
       const r = await fetch(`http://127.0.0.1:${server.address().port}/p/${file}`);
       assert.equal(r.status, 404, 'el middleware se verifica sin crear archivos');
       assert.equal(r.headers.get('x-robots-tag'), 'noindex, nofollow');
@@ -52,6 +55,8 @@ test('archivos HTML/PDF de UID retomar llevan noindex y no filtran referencia si
     const other = await fetch(`http://127.0.0.1:${server.address().port}/p/ejemplo123-estado/presentation.pdf`);
     assert.equal(other.headers.get('x-robots-tag'), null);
     assert.equal(other.headers.get('referrer-policy'), null);
+    const malformed = await fetch(`http://127.0.0.1:${server.address().port}/p/ejemplo123-retomar/%zz`);
+    assert.equal(malformed.status, 404);
   } finally { await new Promise((resolve) => server.close(resolve)); }
 });
 

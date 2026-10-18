@@ -1,0 +1,213 @@
+{
+  "name": "Retomar · Reloj y WhatsApp",
+  "active": false,
+  "nodes": [
+    {
+      "id": "rr1",
+      "name": "Reloj",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 15 10 * * 1-5"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "rr2",
+      "name": "Tick",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        240,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://automatizatech.cl/?rest_route=/automatiza-tech/v1/retomar/tick",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "timeout": 30000,
+          "redirect": {
+            "redirect": {
+              "followRedirects": false
+            }
+          }
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "name": "AT REST Secret (header)"
+        }
+      }
+    },
+    {
+      "id": "rr3",
+      "name": "Preparar WhatsApp",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        480,
+        0
+      ],
+      "parameters": {
+        "jsCode": "const salida = [];\nfor (const [i, item] of $input.all().entries()) {\n  const res = item.json || {};\n  for (const w of (Array.isArray(res.whatsapp) ? res.whatsapp : [])) {\n    const token = encodeURIComponent(String(w.token));\n    salida.push({json: {id: w.id, n: w.n, payload: {\n      messaging_product: 'whatsapp', to: String(w.telefono), type: 'template',\n      template: {name: 'retomar_propuesta', language: {code: 'es'}, components: [\n        {type: 'body', parameters: [\n          {type: 'text', text: String(w.nombre)}, {type: 'text', text: String(w.negocio)}]},\n        {type: 'button', sub_type: 'url', index: '0',\n          parameters: [{type: 'text', text: 't=' + token + '&agendar=1'}]},\n        {type: 'button', sub_type: 'url', index: '1',\n          parameters: [{type: 'text', text: 't=' + token + '&baja=1'}]}\n      ]}\n    }}, pairedItem: {item: i}});\n  }\n}\nreturn salida;"
+      }
+    },
+    {
+      "id": "rr4",
+      "name": "Enviar WhatsApp",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        720,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://graph.facebook.com/v22.0/946501128543201/messages",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "whatsAppApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.payload }}",
+        "options": {
+          "timeout": 30000,
+          "redirect": {
+            "redirect": {
+              "followRedirects": false
+            }
+          },
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        }
+      },
+      "credentials": {
+        "whatsAppApi": {
+          "name": "WhatsApp Tech"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "rr5",
+      "name": "Normalizar resultado",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        960,
+        0
+      ],
+      "parameters": {
+        "jsCode": "return $input.all().map((item, i) => {\n  // El HTTP reemplaza json: recuperar el original por su enlace, no por posición global.\n  const original = $('Preparar WhatsApp').itemMatching(i).json;\n  const res = item.json || {};\n  let body = res.body || {};\n  if (typeof body === 'string') { try { body = JSON.parse(body); } catch (_) { body = {}; } }\n  const estado = Number(res.statusCode) || 0;\n  const wamid = body.messages?.[0]?.id;\n  const metaError = body.error || res.error || {};\n  const codigo = Number(metaError.code || metaError.context?.code) || 0;\n  const resultado = {id: original.id, n: original.n};\n  if (estado >= 200 && estado < 300 && !body.error && typeof wamid === 'string' && wamid) {\n    resultado.wamid = wamid;\n  } else {\n    resultado.codigo = codigo;\n    // No copiar mensajes de error arbitrarios (pueden contener tokens o datos personales).\n    resultado.titulo = codigo === 131049 ? 'Meta limita marketing: sin reintento' :\n      (estado ? 'Error WhatsApp HTTP ' + estado : 'Error de red WhatsApp: sin reintento');\n  }\n  return {json: resultado, pairedItem: {item: i}};\n});"
+      }
+    },
+    {
+      "id": "rr6",
+      "name": "Registrar resultado",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        1200,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://automatizatech.cl/?rest_route=/automatiza-tech/v1/retomar/whatsapp-resultado",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json }}",
+        "options": {
+          "timeout": 30000,
+          "redirect": {
+            "redirect": {
+              "followRedirects": false
+            }
+          }
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "name": "AT REST Secret (header)"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Reloj": {
+      "main": [
+        [
+          {
+            "node": "Tick",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tick": {
+      "main": [
+        [
+          {
+            "node": "Preparar WhatsApp",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar WhatsApp": {
+      "main": [
+        [
+          {
+            "node": "Enviar WhatsApp",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar WhatsApp": {
+      "main": [
+        [
+          {
+            "node": "Normalizar resultado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalizar resultado": {
+      "main": [
+        [
+          {
+            "node": "Registrar resultado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Santiago"
+  }
+}

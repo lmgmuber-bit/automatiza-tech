@@ -4,3 +4,4 @@ if (!defined('ABSPATH')) {
 	exit;
 }
 require_once __DIR__ . '/esquema.php';
+require_once __DIR__ . '/puras.php';

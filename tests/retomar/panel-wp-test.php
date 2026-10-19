@@ -190,8 +190,32 @@ $desp = at_rt_obtener($mid); $ult = end($desp['envios']);
 ok(!is_wp_error($r) && str_starts_with($r['url'] ?? '', 'https://wa.me/56900000000?text='), 'compartir a mano devuelve wa.me del prospecto');
 ok(is_array($ult) && $ult['tipo'] === 'manual' && $ult['canal'] === 'whatsapp', 'compartir a mano queda anotado');
 ok(at_rt_envios_realizados($desp['envios']) === at_rt_envios_realizados($antes['envios']) && $desp['proximo_at'] === '2026-11-02', 'compartir a mano no suma envío ni mueve el próximo');
+$base_manual = home_url('/retomar.php?t=' . rawurlencode(at_rt_obtener($mid)['token']));
+$texto_manual = at_rt_panel_texto_manual(at_rt_obtener($mid));
+ok(str_contains($texto_manual, 'Ver y agendar: ' . $base_manual . "\n") && !str_contains($texto_manual, '&agendar=1') && str_contains($texto_manual, $base_manual . '&baja=1'), '«Ver y agendar» del WhatsApp a mano abre la página del prospecto con la presentación, no el formulario de agenda');
 at_rt_guardar($mid, ['telefono' => '']);
 ok(is_wp_error(panel_action('whatsapp_manual', $mid)), 'sin teléfono avisa en vez de abrir WhatsApp');
+
+// ---- Ruling 18 (I2) y 17 (C1): Guardar sobre un aprobado lo deja muerto y conserva la versión publicada ----
+/** Deja $sid aprobado (vigente) con una versión ya publicada; devuelve [aprobacion, publicada]. */
+function rt_pn_aprobado(int $sid): array {
+	$s = at_rt_obtener($sid);
+	$pub = ['view_url' => 'https://' . at_pt_host_renderer() . '/p/' . $s['token'] . '-' . str_repeat('9', 16) . '-retomar/index.html', 'pdf_url' => '', 'huella' => 'publicada', 'generacion' => str_repeat('9', 16)];
+	$ap = ['estado' => 'aprobado', 'n' => 1, 'nonce' => str_repeat('e', 16), 'huella' => (string) $s['render']['huella'], 'usada' => true, 'programado' => '2026-10-20', 'destino' => at_rt_aprobacion_destino($s)];
+	at_rt_guardar($sid, ['aprobacion' => $ap, 'render' => array_merge($s['render'], ['publicada' => $pub])]);
+	return [$ap, $pub];
+}
+$ga = rt_pn_lista();
+[$ap_ga, $pub_ga] = rt_pn_aprobado($ga);
+$sg = at_rt_obtener($ga);
+$r = panel_action('guardar', $ga, array_replace($p, ['nombre' => $sg['nombre'], 'email' => $sg['email'], 'telefono' => '']));
+$f = at_rt_obtener($ga);
+ok(!is_wp_error($r) && ($f['aprobacion']['estado'] ?? '') === 'por_aprobar' && ($f['aprobacion']['usada'] ?? null) === true && !isset($f['aprobacion']['programado']) && ($f['aprobacion']['nonce'] ?? '') === $ap_ga['nonce'], 'Guardar sobre un aprobado: la aprobación queda muerta (por_aprobar, usada, sin día)');
+ok(($f['render']['publicada'] ?? null) === $pub_ga && $f['render']['estado'] === 'pendiente', 'Guardar invalida la presentación vigente pero conserva la versión publicada');
+$gp = rt_pn_lista([], ['aprobacion' => ['estado' => 'por_aprobar', 'n' => 1, 'nonce' => str_repeat('f', 16), 'huella' => 'x', 'usada' => false]]);
+$sgp = at_rt_obtener($gp);
+panel_action('guardar', $gp, array_replace($p, ['nombre' => $sgp['nombre'], 'email' => $sgp['email'], 'telefono' => '']));
+ok(at_rt_obtener($gp)['aprobacion'] === $sgp['aprobacion'], 'Guardar sobre algo por aprobar no toca su aprobación (sus enlaces mueren solos al cambiar la huella)');
 
 // ---- Reanudar: activo, hoy, aprobación muerta; nunca envía ----
 $rid1 = rt_pn_lista([], ['estado' => 'pausado', 'proximo_at' => null, 'aprobacion' => ['estado' => 'aprobado', 'n' => 1, 'nonce' => str_repeat('a', 16), 'huella' => str_repeat('b', 64), 'usada' => true, 'programado' => '2026-10-20']]);
@@ -220,6 +244,10 @@ foreach ([['dia' => '3', 'hora' => '25:00', 'destino' => $destino], ['dia' => '3
 	ok(is_wp_error($r) && get_option('at_rt_resumen_dia') === '3' && get_option('at_rt_resumen_hora') === '08:30' && get_option('at_rt_resumen_destino') === $destino, 'config con ' . json_encode($mala) . ': error y no cambia nada');
 }
 ok(str_contains(panel_action('config', 0, ['dia' => '3', 'hora' => '25:00', 'destino' => ''])->get_error_message(), 'HH:MM'), 'la hora inválida dice el formato');
+$r = panel_action('config', 0, ['dia' => '7', 'hora' => '23:30', 'destino' => $destino]);
+ok(is_wp_error($r) && str_contains($r->get_error_message(), '23:05') && get_option('at_rt_resumen_dia') === '3' && get_option('at_rt_resumen_hora') === '08:30', 'domingo después de las 23:05: error claro y no cambia nada (el resumen nunca saldría)');
+$r = panel_action('config', 0, ['dia' => '7', 'hora' => '23:05', 'destino' => $destino]);
+ok(!is_wp_error($r) && at_rt_config()['dia'] === 7 && at_rt_config()['hora'] === '23:05', 'domingo a las 23:05 se acepta');
 $r = panel_action('config', 0, ['dia' => '1', 'hora' => '09:00', 'destino' => '']);
 ok(!is_wp_error($r) && get_option('at_rt_resumen_destino') === '' && at_rt_config()['destino'] === at_cc_correo_avisos(), 'destino vacío vuelve al correo de avisos');
 panel_action('config', 0, ['dia' => '1', 'hora' => '09:00', 'destino' => $destino]);
@@ -287,6 +315,18 @@ $falla_n8n = true;
 $r = panel_action('redactar', $iaid);
 ok(is_wp_error($r) && str_contains($r->get_error_message(), 'No se pudo pedir la redacción') && at_rt_obtener($iaid)['redaccion']['estado'] === 'error', 'n8n falla: mensaje claro y la redacción queda en error');
 $falla_n8n = false;
+// Ruling 18: «Volver a redactar» y «Guardar» (con los flujos) sobre un aprobado lo dejan muerto; la versión publicada sigue.
+$ra = rt_pn_lista();
+[$ap_ra, $pub_ra] = rt_pn_aprobado($ra);
+$r = panel_action('redactar', $ra);
+$f = at_rt_obtener($ra);
+ok(!is_wp_error($r) && ($f['aprobacion']['estado'] ?? '') === 'por_aprobar' && ($f['aprobacion']['usada'] ?? null) === true && !isset($f['aprobacion']['programado']) && $f['redaccion']['estado'] === 'pendiente' && ($f['render']['publicada'] ?? null) === $pub_ra, '«Volver a redactar» sobre un aprobado: la aprobación queda muerta y la versión publicada sigue');
+$rg = rt_pn_lista();
+[$ap_rg, $pub_rg] = rt_pn_aprobado($rg);
+$srg = at_rt_obtener($rg); $pedidos_render = [];
+$r = panel_action('guardar', $rg, array_replace($p, ['nombre' => $srg['nombre'], 'email' => $srg['email'], 'telefono' => '']));
+$f = at_rt_obtener($rg);
+ok(!is_wp_error($r) && ($f['aprobacion']['estado'] ?? '') === 'por_aprobar' && ($f['aprobacion']['usada'] ?? null) === true && count($pedidos_render) === 1 && $f['render']['estado'] === 'pendiente' && ($f['render']['publicada'] ?? null) === $pub_rg && preg_match('/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/D', (string) ($f['render']['pedido_at'] ?? '')) === 1, 'Guardar con los flujos sobre un aprobado: aprobación muerta, presentación pedida (con pedido_at) y la publicada intacta');
 
 // ---- Vincular la propuesta nueva a quien espera una ----
 $correo_v = $tag . '-vincula@example.com';
@@ -378,8 +418,12 @@ ok($rev($un) === 'Lista para aprobar', 'revisión: lista y con presentación = L
 $huella = at_rt_obtener($un)['render']['huella'];
 at_rt_guardar($un, ['aprobacion' => ['estado' => 'aprobado', 'n' => 1, 'huella' => $huella, 'usada' => true, 'programado' => '2026-10-20']]);
 ok($rev($un) === 'Aprobado, sale el 2026-10-20', 'revisión: aprobado y vigente = Aprobado, sale el AAAA-MM-DD');
-at_rt_guardar($un, ['render' => ['estado' => 'pendiente', 'nota' => 'x']]);
+at_rt_guardar($un, ['render' => ['estado' => 'pendiente', 'nota' => 'x', 'pedido_at' => at_rt_ahora_chile()]]);
 ok($rev($un) === 'Aprobado, esperando la presentación', 'revisión: aprobado sin presentación = Aprobado, esperando la presentación');
+at_rt_guardar($un, ['render' => ['estado' => 'pendiente', 'nota' => 'x', 'pedido_at' => (new DateTimeImmutable(at_rt_ahora_chile()))->modify('-2 days')->format('Y-m-d H:i:s')]]);
+ok($rev($un) === 'Necesita revisión', 'revisión (I4): aprobado con la presentación pendiente hace más de 24 h = Necesita revisión');
+at_rt_guardar($un, ['render' => ['estado' => 'error', 'nota' => 'x']]);
+ok($rev($un) === 'Necesita revisión', 'revisión (I2): aprobado con la presentación en error = Necesita revisión');
 $un = rt_pn_lista([], ['estado' => 'pausado', 'proximo_at' => null]);
 ok($rev($un) === '—', 'revisión: pausado = guion');
 $un = rt_pn_lista([], ['aprobacion' => ['estado' => 'omitido', 'n' => 1, 'usada' => true, 'resuelto_at' => at_rt_ahora_chile()]]);

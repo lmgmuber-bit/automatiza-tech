@@ -129,7 +129,7 @@ $ana = rt_res_seg(['nombre' => '[PRUEBA] Ana Lista', 'propuesta_id' => $p_ana, '
 $p_beto = rt_res_prop(['created_at' => '2026-10-04 10:00:00']);
 $ids[] = $beto_id = at_rt_crear(['nombre' => '[PRUEBA] Beto Espera', 'negocio' => '[PRUEBA] Negocio', 'email' => $marca . '-beto@example.com', 'estado' => 'espera_propuesta', 'propuesta_id' => $p_beto, 'proximo_at' => '2026-10-19', 'activado_at' => '2026-10-05 09:00:00', 'render' => ['estado' => 'pendiente', 'nota' => 'Esperando redacción']]);
 $caro = rt_res_seg(['nombre' => '[PRUEBA] Caro Sinrender']);
-at_rt_guardar($caro['id'], ['render' => ['estado' => 'pendiente', 'nota' => '']]);
+at_rt_guardar($caro['id'], ['render' => ['estado' => 'pendiente', 'nota' => '', 'pedido_at' => '2026-10-19 08:00:00']]); // pedida hace una hora
 $wpdb->update($wpdb->prefix . 'at_retomar', ['creado_at' => '2026-10-09 10:00:00'], ['id' => $caro['id']]);
 $dani = rt_res_seg(['nombre' => '[PRUEBA] Dani Revision'], ['redaccion' => ['estado' => 'revision', 'nota' => '[PRUEBA] nota-de-revision-ia']]);
 $eli = rt_res_seg(['nombre' => '[PRUEBA] Eli Vigente']);
@@ -137,7 +137,7 @@ $ap_eli = ['estado' => 'aprobado', 'n' => 1, 'nonce' => str_repeat('e', 16), 'hu
 at_rt_guardar($eli['id'], ['aprobacion' => $ap_eli]);
 $fede = rt_res_seg(['nombre' => '[PRUEBA] Fede Aprobsinrender']);
 $ap_fede = array_merge($ap_eli, ['nonce' => str_repeat('f', 16), 'huella' => $fede['render']['huella']]);
-at_rt_guardar($fede['id'], ['aprobacion' => $ap_fede, 'render' => array_merge($fede['render'], ['estado' => 'pendiente'])]);
+at_rt_guardar($fede['id'], ['aprobacion' => $ap_fede, 'render' => array_merge($fede['render'], ['estado' => 'pendiente', 'pedido_at' => '2026-10-19 08:00:00'])]);
 $gabi = rt_res_seg(['nombre' => '[PRUEBA] Gabi Huellavieja']);
 at_rt_guardar($gabi['id'], ['aprobacion' => array_merge($ap_eli, ['nonce' => str_repeat('a', 16), 'huella' => hash('sha256', 'presentación anterior')])]);
 $hugo = rt_res_seg(['nombre' => '[PRUEBA] Hugo Futuro', 'proximo_at' => '2026-10-26']);
@@ -181,7 +181,8 @@ ok(($ap_ana['estado'] ?? '') === 'por_aprobar' && ($ap_ana['n'] ?? 0) === 1 && (
 $t_ana = rt_res_tarjeta($html, '[PRUEBA] Ana Lista');
 $presentacion = set_url_scheme(home_url('/retomar.php?t=' . $ana['token']), 'https');
 ok($t_ana !== '' && str_contains($t_ana, '✅ Aprobar y enviar') && str_contains($t_ana, rt_res_esc(at_rt_aprobacion_url($ana['id'], 'aprobar', $ap_ana['nonce'], $ap_ana['vence']))), 'la tarjeta de Ana lleva su botón firmado de aprobar');
-ok(str_contains($t_ana, 'Ver la presentación completa') && str_contains($t_ana, rt_res_esc($presentacion)) && str_contains($t_ana, rt_res_esc(at_rt_aprobacion_url($ana['id'], 'ver', $ap_ana['nonce'], $ap_ana['vence']))), '«Ver la presentación completa» es la página pública retomar.php y «Ver el correo» es el enlace ver');
+$ver_ana = at_rt_aprobacion_url($ana['id'], 'ver', $ap_ana['nonce'], $ap_ana['vence']);
+ok(str_contains($t_ana, 'Ver la presentación completa') && str_contains($t_ana, 'href="' . rt_res_esc($ver_ana . '#presentacion') . '"') && str_contains($t_ana, 'href="' . rt_res_esc($ver_ana) . '"') && !str_contains($t_ana, rt_res_esc($presentacion)), 'Ruling 17: «Ver la presentación completa» es la página firmada «ver» (#presentacion), no la pública del prospecto; «Ver el correo» es el mismo enlace');
 ok(str_contains($t_ana, 'hace 20 días') && str_contains($t_ana, 'WhatsApp ✓') && str_contains($t_ana, '[PRUEBA] Quedamos en retomar la agenda.') && str_contains($t_ana, '[PRUEBA] Recomendamos partir por la agenda.'), 'días desde el envío de la propuesta, WhatsApp autorizado y los textos');
 ok(at_rt_aprobacion_motivo(at_rt_obtener($ana['id']), 'aprobar', rt_res_q($ana['id'], 'aprobar'), rt_res_ts('2026-10-19 09:30:00')) === '', 'el enlace de aprobar del correo es válido');
 ok(substr_count($html, 'WhatsApp ✓') === 1, 'sin WhatsApp autorizado, la tarjeta dice solo correo');
@@ -252,6 +253,7 @@ ok(count($mails) === $antes + 1 && ($aviso['to'] ?? '') === $destino && ($aviso[
 $ap_rita = at_rt_obtener($rita['id'])['aprobacion'];
 ok(($ap_rita['estado'] ?? '') === 'por_aprobar' && ($ap_rita['usada'] ?? null) === false && str_contains($aviso['message'] ?? '', rt_res_esc(at_rt_aprobacion_url($rita['id'], 'aprobar', (string) ($ap_rita['nonce'] ?? ''), (int) ($ap_rita['vence'] ?? 0)))), 'emite una aprobación nueva (sale de «cambios») con sus enlaces');
 ok(substr_count($aviso['message'] ?? '', '✅ Aprobar y enviar') === 1 && substr_count($aviso['message'] ?? '', 'border:1px solid #d6dde6') === 1 && rt_res_sin_internos($aviso['message'] ?? '') && rt_res_enlaces_del_sitio($aviso['message'] ?? ''), 'una sola tarjeta, sin enlaces internos y todo HTTPS del sitio');
+ok(str_contains($aviso['message'] ?? '', 'href="' . rt_res_esc(at_rt_aprobacion_url($rita['id'], 'ver', (string) ($ap_rita['nonce'] ?? ''), (int) ($ap_rita['vence'] ?? 0)) . '#presentacion') . '"'), 'Ruling 17: en el aviso, «Ver la presentación completa» también es la página firmada «ver»');
 $falla_mail = true;
 $cambios = ['estado' => 'cambios', 'n' => 1, 'usada' => true];
 at_rt_guardar($rita['id'], ['aprobacion' => $cambios]);
@@ -335,7 +337,7 @@ add_filter('pre_http_request', static function ($pre, $args, $url) use (&$evento
 }, 1, 3);
 $solo_http = static fn(array $ev): array => array_values(array_filter($ev, static fn($e) => str_starts_with($e, 'http:')));
 $vale = rt_res_seg(['nombre' => '[PRUEBA] Vale Whatsapp', 'proximo_at' => '2026-11-23', 'telefono' => '+56900000009', 'wa_autorizado' => 1], [], $tp);
-at_rt_guardar($vale['id'], ['aprobacion' => ['estado' => 'aprobado', 'n' => 1, 'nonce' => str_repeat('b', 16), 'huella' => $vale['render']['huella'], 'emitido_at' => '2026-11-16 09:00:00', 'vence' => rt_res_ts('2026-11-23 09:00:00'), 'usada' => true, 'resuelto_at' => '2026-11-16 09:05:00', 'programado' => '2026-11-23']]);
+at_rt_guardar($vale['id'], ['aprobacion' => ['estado' => 'aprobado', 'n' => 1, 'nonce' => str_repeat('b', 16), 'huella' => $vale['render']['huella'], 'emitido_at' => '2026-11-16 09:00:00', 'vence' => rt_res_ts('2026-11-23 09:00:00'), 'usada' => true, 'resuelto_at' => '2026-11-16 09:05:00', 'programado' => '2026-11-23', 'destino' => at_rt_aprobacion_destino($vale)]]);
 $atasco = [];
 foreach (['Uno', 'Dos'] as $cual) {
 	$s = rt_res_seg(['nombre' => '[PRUEBA] Atasco ' . $cual, 'proximo_at' => '2026-11-23'], [], $tp);
@@ -363,6 +365,106 @@ ok($solo_http($eventos) === ['http:' . $atasco[0] . ':5', 'http:' . $atasco[1] .
 $eventos = [];
 $r = at_rt_tick('2026-11-23 12:30:00');
 ok($solo_http($eventos) === [] && $r['redacciones'] === 0 && $r['enviados'] === 0, 'con todo pedido, la tercera pasada no llama a n8n');
+// ---- I4 e I2: lo que no se arregla solo se ve «Necesita revisión», nunca «En preparación» para siempre ----
+$tp_tipo = $marca . '-tipo';
+$ahora_t = '2026-10-19 12:00:00';
+$tipo_de = static fn(array $c, array $despues = []): string => at_rt_resumen_tipo(rt_res_seg($c, $despues, $tp_tipo), $ahora_t);
+$espera_red = ['estado' => 'pendiente', 'nota' => 'Esperando redacción'];
+$casos_tipo = [
+	'presentación pendiente hace 25 h' => [[], ['render' => ['estado' => 'pendiente', 'pedido_at' => '2026-10-18 11:00:00']], 'revision'],
+	'presentación pendiente hace 23 h' => [[], ['render' => ['estado' => 'pendiente', 'pedido_at' => '2026-10-18 13:00:00']], 'preparacion'],
+	'presentación pendiente sin pedido_at (nunca se pidió)' => [[], ['render' => ['estado' => 'pendiente']], 'revision'],
+	'presentación en error' => [[], ['render' => ['estado' => 'error', 'nota' => 'x']], 'revision'],
+	'redacción en error, sin reintento del reloj' => [[], ['redaccion' => ['estado' => 'error', 'pedida_at' => '2026-10-19 08:00:00'], 'render' => $espera_red], 'preparacion'],
+	'redacción en error después de un reintento del reloj' => [[], ['redaccion' => ['estado' => 'error', 'pedida_at' => '2026-10-19 08:00:00', 'reintento_at' => '2026-10-19 08:00:00'], 'render' => $espera_red], 'revision'],
+	'redacción pendiente durante un reintento' => [[], ['redaccion' => ['estado' => 'pendiente', 'pedida_at' => '2026-10-19 11:00:00', 'reintento_at' => '2026-10-19 11:00:00'], 'render' => $espera_red], 'preparacion'],
+	'correo inválido, sin aprobar' => [['email' => ''], [], 'revision'],
+	'lista y con correo válido' => [[], [], 'normal'],
+];
+foreach ($casos_tipo as $caso => [$c, $despues, $esperado]) { ok($tipo_de($c, $despues) === $esperado, "tipo ({$caso}): {$esperado}"); }
+$aprobado_con = static fn(array $s): array => ['estado' => 'aprobado', 'n' => 1, 'nonce' => str_repeat('a', 16), 'huella' => (string) $s['render']['huella'], 'usada' => true, 'programado' => '2026-10-19', 'destino' => at_rt_aprobacion_destino($s)];
+$xa = rt_res_seg([], [], $tp_tipo);
+at_rt_guardar($xa['id'], ['aprobacion' => $aprobado_con($xa)]);
+ok(at_rt_resumen_tipo(at_rt_obtener($xa['id']), $ahora_t) === '', 'tipo: aprobado vigente con correo válido no va (espera su envío)');
+$casos_aprobado = [
+	[['estado' => 'error', 'nota' => 'x'], 'revision', 'aprobado con la presentación en error'],
+	[['estado' => 'pendiente', 'pedido_at' => '2026-10-19 11:00:00'], 'preparacion', 'aprobado con la presentación pedida hace una hora'],
+	[['estado' => 'pendiente', 'pedido_at' => '2026-10-18 11:00:00'], 'revision', 'aprobado con la presentación pendiente hace 25 h'],
+];
+foreach ($casos_aprobado as [$render, $esperado, $caso]) {
+	at_rt_guardar($xa['id'], ['render' => array_merge($xa['render'], $render)]);
+	ok(at_rt_resumen_tipo(at_rt_obtener($xa['id']), $ahora_t) === $esperado, "tipo ({$caso}): {$esperado}");
+}
+ok(at_rt_panel_revision(at_rt_obtener($xa['id']), $ahora_t) === 'Necesita revisión', 'el panel dice «Necesita revisión» con la misma regla');
+$xc = rt_res_seg(['email' => ''], [], $tp_tipo);
+at_rt_guardar($xc['id'], ['aprobacion' => $aprobado_con($xc)]);
+ok(at_rt_resumen_tipo(at_rt_obtener($xc['id']), $ahora_t) === 'revision', 'tipo (I2): aprobado vigente con el correo inválido: revision, nunca espera un envío que no puede salir');
+// Días: una propuesta vinculada que sigue `lista` nunca se envió; se cuentan desde el alta del seguimiento.
+$p_lista = rt_res_prop(['status' => 'lista', 'flujo' => 'v3', 'created_at' => '2026-09-01 10:00:00']);
+$wpdb->insert($wpdb->prefix . 'automatiza_propuestas_details', ['propuesta_id' => $p_lista, 'detail_type' => 'propuesta_enviada', 'title' => '[PRUEBA] enviada', 'status' => 'completed', 'completed_date' => '2026-09-02', 'created_at' => '2026-09-02 10:00:00']);
+$sl = rt_res_seg(['propuesta_id' => $p_lista], [], $tp_tipo);
+$wpdb->update($wpdb->prefix . 'at_retomar', ['creado_at' => '2026-10-14 10:00:00'], ['id' => $sl['id']]);
+ok(at_rt_resumen_dias(at_rt_obtener($sl['id']), '2026-10-19') === 5, 'días: con la propuesta vinculada en lista, desde el alta del seguimiento');
+$wpdb->update($wpdb->prefix . 'automatiza_propuestas', ['status' => 'sent'], ['id' => $p_lista]);
+ok(at_rt_resumen_dias(at_rt_obtener($sl['id']), '2026-10-19') === 47, 'días: ya enviada, desde el envío anotado');
+// Si Luis aprueba mientras se arma el resumen (la emisión nunca pisa un aprobado vigente), no va tarjeta.
+$rc = rt_res_seg([], [], $tp_tipo);
+$snap = at_rt_obtener($rc['id']);
+at_rt_guardar($rc['id'], ['aprobacion' => $aprobado_con($snap)]);
+$ap_rc = at_rt_obtener($rc['id'])['aprobacion'];
+ok(at_rt_resumen_tipo($snap, $ahora_t) === 'normal' && at_rt_resumen_tarjeta($snap, $ahora_t) === null && at_rt_obtener($rc['id'])['aprobacion'] === $ap_rc, 'aprobado entretanto: sin tarjeta y la aprobación de Luis intacta');
+
+// ---- I4: el reloj vuelve a pedir las presentaciones atascadas, dentro del mismo tope de 3 pedidos por pasada ----
+if (!defined('AT_N8N_RETOMAR_RENDER')) { define('AT_N8N_RETOMAR_RENDER', 'https://example.invalid/webhook/retomar-render'); }
+$pedidos_render = [];
+add_filter('pre_http_request', static function ($pre, $args, $url) use (&$pedidos_render) {
+	if ($url !== AT_N8N_RETOMAR_RENDER) { return $pre; }
+	$pedidos_render[] = ['id' => (int) (json_decode($args['body'], true)['id'] ?? 0), 'timeout' => $args['timeout'] ?? null];
+	return ['response' => ['code' => 200], 'body' => '{}', 'headers' => []];
+}, PHP_INT_MAX, 3);
+$rr = $marca . '-rr';
+$GLOBALS['rt_res_prefijo'] = $rr;
+update_option('at_rt_resumen_semana', '2026-W49'); // el resumen de la semana ya salió: solo se prueba el reintento
+$rr_atascadas = [];
+foreach (['Uno', 'Dos'] as $cual) {
+	$s = rt_res_seg(['nombre' => '[PRUEBA] Redacción atascada ' . $cual, 'proximo_at' => '2026-12-01'], [], $rr);
+	at_rt_guardar($s['id'], ['redaccion' => ['estado' => 'error', 'pedida_at' => '2026-11-28 10:00:00'], 'render' => $espera_red]);
+	$rr_atascadas[] = $s['id'];
+}
+$rr_casos = [
+	'pendiente hace 7 h' => [[], ['estado' => 'pendiente', 'pedido_at' => '2026-12-01 02:00:00'], true],
+	'pendiente hace 3 h' => [[], ['estado' => 'pendiente', 'pedido_at' => '2026-12-01 06:00:00'], false],
+	'pendiente hace 7 h, reintentada hace 2 h' => [[], ['estado' => 'pendiente', 'pedido_at' => '2026-12-01 02:00:00', 'reintento_at' => '2026-12-01 07:05:00'], false],
+	'pendiente sin pedido_at' => [[], ['estado' => 'pendiente'], true],
+	'en error' => [[], ['estado' => 'error', 'pedido_at' => '2026-11-30 09:00:00'], false],
+	'lista' => [[], null, false],
+	'pausado' => [['estado' => 'pausado'], ['estado' => 'pendiente', 'pedido_at' => '2026-11-30 09:00:00'], false],
+	'próximo envío futuro' => [['proximo_at' => '2026-12-08'], ['estado' => 'pendiente', 'pedido_at' => '2026-11-30 09:00:00'], false],
+	'dado de baja' => [[], ['estado' => 'pendiente', 'pedido_at' => '2026-11-30 09:00:00'], false],
+];
+$rr_ids = [];
+foreach ($rr_casos as $caso => [$alta, $render, $pide]) {
+	$s = rt_res_seg($alta + ['nombre' => '[PRUEBA] Presentación ' . $caso, 'proximo_at' => '2026-12-01'], [], $rr);
+	if ($render !== null) { at_rt_guardar($s['id'], ['render' => array_merge($s['render'], $render)]); }
+	if ($caso === 'dado de baja') { $wpdb->insert($wpdb->prefix . 'at_retomar_bajas', ['email' => $s['email'], 'telefono' => '', 'origen' => 'prueba', 'creado_at' => current_time('mysql')]); }
+	$rr_ids[$caso] = $s['id'];
+}
+$antes_rr = array_map(static fn(int $id): array => at_rt_obtener($id)['render'], $rr_ids);
+$filtros = ['lista' => 0, 'reloj' => 0, 'deteccion' => 0];
+$r = at_rt_tick('2026-12-01 09:05:00');
+$r7 = at_rt_obtener($rr_ids['pendiente hace 7 h'])['render'];
+ok($filtros['reloj'] > 0 && $r['redacciones'] === 2 && ($r['renders'] ?? null) === 1 && $pedidos_render === [['id' => $rr_ids['pendiente hace 7 h'], 'timeout' => 5]], 'martes 09:05: 2 redacciones atascadas + 1 presentación atascada = el tope de 3 pedidos; la presentación espera 5 s a n8n');
+ok($r7['estado'] === 'pendiente' && $r7['pedido_at'] === '2026-12-01 09:05:00' && $r7['reintento_at'] === '2026-12-01 09:05:00' && preg_match('/^[a-f0-9]{16}$/D', (string) ($r7['generacion'] ?? '')) === 1 && $r7['generacion'] !== ($antes_rr['pendiente hace 7 h']['generacion'] ?? null), 'la presentación atascada se pide de nuevo con la hora del reloj y queda anotado el reintento');
+$sin_cambio = true;
+foreach ($rr_casos as $caso => [$alta, $render, $pide]) { if ($caso !== 'pendiente hace 7 h') { $sin_cambio = $sin_cambio && at_rt_obtener($rr_ids[$caso])['render'] === $antes_rr[$caso]; } }
+ok($sin_cambio, 'las demás no se tocan (recientes, reintentadas hace poco, en error, listas, en pausa, futuras, de baja) y la sin pedido_at espera el tope');
+ok(at_rt_resumen_tipo(at_rt_obtener($rr_ids['pendiente hace 7 h']), '2026-12-01 09:05:00') === 'preparacion', 'recién pedida de nuevo: «En preparación»');
+$r = at_rt_tick('2026-12-01 09:35:00');
+ok($r['redacciones'] === 0 && ($r['renders'] ?? null) === 1 && array_column($pedidos_render, 'id') === [$rr_ids['pendiente hace 7 h'], $rr_ids['pendiente sin pedido_at']], 'la pasada siguiente pide la que esperó el tope');
+$r = at_rt_tick('2026-12-01 10:35:00');
+ok(($r['renders'] ?? null) === 0 && count($pedidos_render) === 2, 'una vez cada 24 h: la tercera pasada no vuelve a pedirlas');
+ok(at_rt_reintentar_renders('no es una fecha', 3) === [] && at_rt_reintentar_renders('2026-12-01 11:35:00', 0) === [], 'con una hora ilegible o sin cupo no se pide nada');
+
 // Sin el esquema listo el reloj no hace nada.
 update_option('at_rt_schema', '1', false);
 $antes = count($mails); $pedidos_redaccion = [];

@@ -76,11 +76,13 @@ function at_rt_aprobacion_para(array $s, string $hoy): bool {
 }
 
 /**
- * ¿Lo aprobado es exactamente lo que saldría como recordatorio $n? Misma huella en la aprobación, en el render `listo`
- * y en el contenido actual (un texto guardado sin rehacer la presentación también cambia la huella), redacción
- * `lista` y el mismo número de recordatorio. Si algo no calza, el contenido cambió después de aprobar.
+ * ¿El contenido de la aprobación es exactamente el que saldría como recordatorio $n? Misma huella en la aprobación, en el
+ * render `listo` y en el contenido actual (un texto guardado sin rehacer la presentación también cambia la huella),
+ * redacción `lista` y el mismo número de recordatorio. Si algo no calza, el contenido cambió después de emitir o aprobar.
+ * Es el núcleo que comparten el envío (at_rt_aprobacion_calza) y los botones del correo (at_rt_aprobacion_motivo), así la
+ * página nunca dice «Aprobado» de algo que el reloj cancelaría.
  */
-function at_rt_aprobacion_calza(array $s, int $n): bool {
+function at_rt_aprobacion_calza_contenido(array $s, int $n): bool {
     $ap = is_array($s['aprobacion'] ?? null) ? $s['aprobacion'] : [];
     $render = is_array($s['render'] ?? null) ? $s['render'] : [];
     $aprobada = is_string($ap['huella'] ?? null) ? $ap['huella'] : '';
@@ -89,6 +91,20 @@ function at_rt_aprobacion_calza(array $s, int $n): bool {
     try { $actual = at_rt_huella_render($s); }
     catch (InvalidArgumentException $e) { return false; }
     return hash_equals($aprobada, $actual);
+}
+
+/**
+ * ¿Lo aprobado es exactamente lo que saldría como recordatorio $n, y a quien Luis aprobó? El contenido
+ * (at_rt_aprobacion_calza_contenido) y además la foto del destinatario (aprobacion.destino, Ruling 18) con el mismo correo
+ * y el mismo teléfono que hoy. Un correo o un teléfono distinto vence la aprobación como un cambio de contenido, pero sin
+ * rehacer la presentación (su huella no cambia). Sin foto no calza: nunca sale algo sin saber a quién se aprobó.
+ */
+function at_rt_aprobacion_calza(array $s, int $n): bool {
+    if (!at_rt_aprobacion_calza_contenido($s, $n)) { return false; }
+    $foto = $s['aprobacion']['destino'] ?? null;
+    if (!is_array($foto) || !is_string($foto['email'] ?? null) || !is_string($foto['telefono_wa'] ?? null)) { return false; }
+    $actual = at_rt_aprobacion_destino($s);
+    return hash_equals($foto['email'], $actual['email']) && hash_equals($foto['telefono_wa'], $actual['telefono_wa']);
 }
 
 /**
@@ -159,9 +175,13 @@ function at_rt_enviar(int $id, bool $prueba): array {
 /**
  * Persistir la entrega aceptada bajo bloqueo, respetando paradas ocurridas durante SMTP. $aprobacion es la aprobación
  * revisada antes del correo: si salió y la fila aún tiene esa misma aprobación, se consume en esta misma transacción
- * ({estado:'enviado', n, at}); si cambió entretanto no se pisa y tampoco se pide el WhatsApp.
+ * ({estado:'enviado', n, at}); si cambió entretanto no se pisa y tampoco se pide el WhatsApp. El WhatsApp sale solo si
+ * estaba en la foto del destinatario de la aprobación Y hoy sigue autorizado Y el interruptor está encendido (Ruling 18).
+ * Ruling 17: al consumir con éxito la aprobación, render.publicada = {view_url, pdf_url, huella, generacion} del render que
+ * se revisó antes del correo ($render_aprobado, el que calzó), y no del que haya ahora: si la presentación se rehízo
+ * durante SMTP, el prospecto igual ve la que Luis aprobó. La página del prospecto (retomar.php) muestra esa versión.
  */
-function at_rt_finalizar_entrega(int $id, int $n, bool $ok, string $ahora, array $aprobacion): ?array {
+function at_rt_finalizar_entrega(int $id, int $n, bool $ok, string $ahora, array $aprobacion, array $render_aprobado): ?array {
     global $wpdb;
     if ($wpdb->query('START TRANSACTION') === false) { return null; }
     $confirmado = false;
@@ -172,12 +192,17 @@ function at_rt_finalizar_entrega(int $id, int $n, bool $ok, string $ahora, array
         $motivo = at_rt_motivo_parada(at_rt_contexto_parada($s));
         $propio = $s['estado'] === 'activo' && $s['enviando'] === $ahora;
         $aprobada = ($aprobacion['estado'] ?? '') === 'aprobado' && $s['aprobacion'] === $aprobacion;
-        $wa = $propio && $aprobada && $motivo === '' && $ok && at_rt_wa_automatico() && in_array('whatsapp', at_rt_canales($n, $s['max_envios'], $s['canales'], (bool) $s['wa_autorizado'], at_pt_telefono_wa($s['telefono'])), true);
+        $wa = $propio && $aprobada && $motivo === '' && $ok && at_rt_wa_automatico() && !empty($aprobacion['destino']['whatsapp']) && in_array('whatsapp', at_rt_canales($n, $s['max_envios'], $s['canales'], (bool) $s['wa_autorizado'], at_pt_telefono_wa($s['telefono'])), true);
         $s['envios'][] = ['tipo' => 'envio', 'n' => $n, 'fecha' => substr($ahora, 0, 10), 'at' => $ahora, 'correo' => ['estado' => $ok ? 'enviado' : 'error'], 'whatsapp' => $wa ? ['estado' => 'pendiente'] : null];
         $campos = ['envios' => $s['envios']];
         // El correo ya salió: la aprobación queda usada aunque una parada (baja, agendó) llegara durante SMTP.
         // Ruling 10: si el correo falló, lo aprobado no sobrevive: el seguimiento queda en pausa y la aprobación muerta.
         if ($aprobada) { $campos['aprobacion'] = $s['aprobacion'] = $ok ? ['estado' => 'enviado', 'n' => $n, 'at' => $ahora] : at_rt_aprobacion_muerta($s['aprobacion'], $ahora); }
+        if ($aprobada && $ok) {
+            $publicada = [];
+            foreach (['view_url', 'pdf_url', 'huella', 'generacion'] as $k) { $publicada[$k] = is_string($render_aprobado[$k] ?? null) ? $render_aprobado[$k] : ''; }
+            $campos['render'] = $s['render'] = array_merge(is_array($s['render']) ? $s['render'] : [], ['publicada' => $publicada]);
+        }
         // La transición sólo pertenece al claim vigente y a una fila aún activa.
         if ($propio) {
             $estado = $motivo !== '' ? at_rt_estado_por_motivo($motivo) : (!$ok ? 'pausado' : ($n >= $s['max_envios'] ? 'agotado' : 'activo'));
@@ -232,7 +257,8 @@ function at_rt_entregar(int $id, bool $prueba, string $ahora): array {
         // Revisar los campos que salen, nunca render.view_url (iframe autorizado).
         if (at_rt_internas($d) || stripos(wp_json_encode($d), 'easypanel') !== false || !at_rt_url_correo($d['url_ver'])) { $r['motivo'] = 'interno'; return $r; }
         $n = at_rt_envios_realizados($s['envios']) + 1;
-        // Lo aprobado debe ser exactamente lo que sale; si cambió después de aprobar, vuelve a pedir aprobación.
+        // Lo aprobado debe ser exactamente lo que sale y a quien se aprobó (correo y teléfono de la foto, Ruling 18); si
+        // cambió después de aprobar, vuelve a pedir aprobación.
         if (!$prueba && !at_rt_aprobacion_calza($s, $n)) {
             if (at_rt_vencer_aprobacion($id, $s['aprobacion'], $ahora) === 'render') {
                 // Ya confirmado y fuera del candado: la presentación nueva se pide sola, con la huella del contenido actual
@@ -254,7 +280,7 @@ function at_rt_entregar(int $id, bool $prueba, string $ahora): array {
         finally { remove_action('phpmailer_init', $alternativa); }
         $r['ok'] = (bool) $ok; $r['motivo'] = $ok ? 'enviado' : 'correo_error';
         if ($prueba) { return $r; }
-        $entrega = at_rt_finalizar_entrega($id, $n, (bool) $ok, $ahora, $s['aprobacion']);
+        $entrega = at_rt_finalizar_entrega($id, $n, (bool) $ok, $ahora, $s['aprobacion'], $s['render']);
         if (!$entrega) {
             $wpdb->query($wpdb->prepare("UPDATE {$wpdb->prefix}at_retomar SET estado='pausado',proximo_at=NULL WHERE id=%d AND estado='activo' AND enviando=%s", $id, $ahora));
             return ['ok' => false, 'motivo' => 'registro_error', 'whatsapp' => null];
@@ -279,21 +305,23 @@ function at_rt_entregar(int $id, bool $prueba, string $ahora): array {
  */
 function at_rt_timeout_reloj(): int { return 5; }
 
-/** Pedidos de redacción que inicia una pasada del reloj, detección y reintentos juntos; el resto espera la siguiente hora. */
+/** Pedidos a n8n que inicia una pasada del reloj (redacciones de la detección y de los reintentos, y presentaciones
+ *  atascadas, todo junto); el resto espera la siguiente hora. */
 function at_rt_tope_pedidos_reloj(): int { return 3; }
 
 /**
  * Reloj por hora (n8n lo llama cada hora). Ruling 12: primero, solo en día hábil y dentro de la ventana 10:00–13:00,
  * entrega lo que Luis aprobó; así la lista de WhatsApp queda armada antes de cualquier trabajo lento. Después, en toda
- * pasada: detecta propuestas estancadas, vuelve a pedir las redacciones atascadas (Ruling 7) y manda el correo semanal si
- * le toca (at_rt_resumen decide día y hora). Detección y reintentos juntos inician como máximo at_rt_tope_pedidos_reloj()
- * pedidos de redacción, cada uno con at_rt_timeout_reloj(): un detectado que no cupo queda con la redacción vacía y lo
- * toma el reintento de una pasada siguiente. Cada paso corre aunque el anterior falle. Sin el esquema listo no hace nada.
- * Devuelve {enviados, diferidos, detenidos, whatsapp, detectados, redacciones, resumen}.
+ * pasada: detecta propuestas estancadas, vuelve a pedir las redacciones atascadas (Ruling 7), vuelve a pedir las
+ * presentaciones que llevan más de 6 h esperando (I4, at_rt_reintentar_renders) y manda el correo semanal si le toca
+ * (at_rt_resumen decide día y hora). Detección y reintentos juntos inician como máximo at_rt_tope_pedidos_reloj() pedidos
+ * a n8n, cada uno con at_rt_timeout_reloj(): un detectado que no cupo queda con la redacción vacía y lo toma el reintento
+ * de una pasada siguiente. Cada paso corre aunque el anterior falle. Sin el esquema listo no hace nada.
+ * Devuelve {enviados, diferidos, detenidos, whatsapp, detectados, redacciones, renders, resumen}.
  */
 function at_rt_tick(string $ahora): array {
     global $wpdb;
-    $r = ['enviados' => 0, 'diferidos' => 0, 'detenidos' => 0, 'whatsapp' => [], 'detectados' => 0, 'redacciones' => 0, 'resumen' => ['enviado' => false, 'tarjetas' => 0, 'motivo' => '']];
+    $r = ['enviados' => 0, 'diferidos' => 0, 'detenidos' => 0, 'whatsapp' => [], 'detectados' => 0, 'redacciones' => 0, 'renders' => 0, 'resumen' => ['enviado' => false, 'tarjetas' => 0, 'motivo' => '']];
     if (!at_rt_esquema_listo()) { $r['resumen']['motivo'] = 'esquema'; return $r; }
     try { $d = new DateTimeImmutable($ahora, new DateTimeZone('America/Santiago')); } catch (Exception $e) { return $r; }
     $d = $d->setTimezone(new DateTimeZone('America/Santiago'));
@@ -316,8 +344,12 @@ function at_rt_tick(string $ahora): array {
         // La detección pide la redacción de los primeros activos que crea, hasta el cupo (at_rt_detectar).
         $cupo -= min($cupo, count($detectados['creados']));
     } catch (Throwable $e) { error_log('Retomar: la detección del reloj falló: ' . $e->getMessage()); }
-    try { $r['redacciones'] = count(at_rt_reintentar_redacciones($cuando, $cupo)); }
-    catch (Throwable $e) { error_log('Retomar: el reintento de redacciones del reloj falló: ' . $e->getMessage()); }
+    try {
+        $r['redacciones'] = count(at_rt_reintentar_redacciones($cuando, $cupo));
+        $cupo -= min($cupo, $r['redacciones']);
+    } catch (Throwable $e) { error_log('Retomar: el reintento de redacciones del reloj falló: ' . $e->getMessage()); }
+    try { $r['renders'] = $cupo > 0 ? count(at_rt_reintentar_renders($cuando, $cupo)) : 0; }
+    catch (Throwable $e) { error_log('Retomar: el reintento de presentaciones del reloj falló: ' . $e->getMessage()); }
     try { $r['resumen'] = at_rt_resumen($cuando); }
     catch (Throwable $e) { error_log('Retomar: el resumen semanal del reloj falló: ' . $e->getMessage()); }
     return $r;

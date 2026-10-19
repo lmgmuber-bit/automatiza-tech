@@ -12,6 +12,21 @@ if (!defined('ABSPATH')) { exit; }
 function at_rt_aprobacion_vida(): int { return 604800; }
 function at_rt_aprobacion_acciones(): array { return ['aprobar', 'cambios', 'omitir', 'ver']; }
 
+/**
+ * Foto del destinatario de un recordatorio (Ruling 18): el correo, el teléfono normalizado y si saldría por WhatsApp (canal
+ * elegido, «WhatsApp autorizado» y teléfono; no depende del interruptor at_rt_wa_automatico). Con esta misma función se
+ * arma lo que muestra la página de confirmación y lo que se guarda al aprobar (aprobacion.destino), así nunca difieren. Al
+ * enviar, un correo o un teléfono distinto del de la foto vence la aprobación, y el WhatsApp sale solo si estaba en la foto.
+ */
+function at_rt_aprobacion_destino(array $s): array {
+	$tel = at_pt_telefono_wa((string) ($s['telefono'] ?? ''));
+	return [
+		'email' => strtolower(trim((string) ($s['email'] ?? ''))),
+		'telefono_wa' => $tel,
+		'whatsapp' => in_array('whatsapp', at_rt_canales(1, (int) ($s['max_envios'] ?? 4), (string) ($s['canales'] ?? ''), !empty($s['wa_autorizado']), $tel), true),
+	];
+}
+
 /** Enlace firmado de una acción: https://<sitio>/retomar-aprobar.php?id=&a=&k=<nonce>&v=<vence>&f=<firma>. */
 function at_rt_aprobacion_url(int $id, string $accion, string $nonce, int $vence): string {
 	$args = ['id' => (string) $id, 'a' => $accion, 'k' => $nonce, 'v' => (string) $vence, 'f' => at_rt_firma($id, $accion, $nonce, $vence, wp_salt('auth'))];
@@ -22,6 +37,8 @@ function at_rt_aprobacion_url(int $id, string $accion, string $nonce, int $vence
  * Emite la aprobación del recordatorio que toca, solo si la redacción está `lista` y el render `listo` con huella (sin
  * huella, un render rehecho no podría invalidar el enlace). Guarda {estado:'por_aprobar', n, nonce, huella, emitido_at,
  * vence, usada:false} bajo FOR UPDATE y devuelve los cuatro enlaces; null si no corresponde. Emitir otra vez rota el nonce.
+ * Nunca pisa un `aprobado` vigente (misma huella que el render `listo`): si Luis aprobó mientras se armaba el resumen, su
+ * aprobación queda y esta emisión devuelve null. Un aprobado con huella vieja sí se reemplaza.
  */
 function at_rt_emitir_aprobacion(int $id, string $ahora): ?array {
 	$fecha = at_rt_ahora($ahora);
@@ -34,6 +51,8 @@ function at_rt_emitir_aprobacion(int $id, string $ahora): ?array {
 		$s = at_rt_fila($fila);
 		$huella = $s['render']['huella'] ?? '';
 		if (($s['redaccion']['estado'] ?? '') !== 'lista' || ($s['render']['estado'] ?? '') !== 'listo' || !is_string($huella) || $huella === '') { return null; }
+		$previa = is_array($s['aprobacion']) ? $s['aprobacion'] : [];
+		if (($previa['estado'] ?? '') === 'aprobado' && is_string($previa['huella'] ?? null) && hash_equals($huella, $previa['huella'])) { return null; }
 		$aprobacion = [
 			'estado' => 'por_aprobar',
 			'n' => at_rt_envios_realizados($s['envios']) + 1,
@@ -73,7 +92,10 @@ function at_rt_aprobacion_params(array $q): ?array {
  *  4. cambio        — nonce distinto del vigente (se emitió otra), vence distinto, o huella de la aprobación distinta de la
  *                     del render actual (o render sin huella: se guardó contenido nuevo);
  *  5. usado         — la aprobación ya se usó (aprobar, cambios u omitir: un solo uso entre los tres);
- *  6. no_disponible — la aprobación no está `por_aprobar` aunque no figure usada.
+ *  6. no_disponible — la aprobación no está `por_aprobar` aunque no figure usada;
+ *  7. cambio        — lo mismo que exige el envío no se cumple: redacción `lista`, render `listo`, huella del contenido
+ *                     actual igual a la aprobada y que sea el recordatorio enviados+1 (at_rt_aprobacion_calza_contenido).
+ *                     Así la página nunca dice «Aprobado. Sale el…» de algo que el reloj cancelaría.
  * «ver» se valida hasta el paso 4: es de solo lectura y no es de un solo uso.
  */
 function at_rt_aprobacion_motivo(array $s, string $accion, array $q, int $ts): string {
@@ -88,7 +110,8 @@ function at_rt_aprobacion_motivo(array $s, string $accion, array $q, int $ts): s
 	if (!hash_equals($nonce, $p['k']) || (int) ($ap['vence'] ?? 0) !== $p['v'] || $huella === '' || $vigente === '' || !hash_equals($vigente, $huella)) { return 'cambio'; }
 	if ($accion === 'ver') { return ''; }
 	if (!empty($ap['usada'])) { return 'usado'; }
-	return ($ap['estado'] ?? '') === 'por_aprobar' ? '' : 'no_disponible';
+	if (($ap['estado'] ?? '') !== 'por_aprobar') { return 'no_disponible'; }
+	return at_rt_aprobacion_calza_contenido($s, at_rt_envios_realizados(is_array($s['envios'] ?? null) ? $s['envios'] : []) + 1) ? '' : 'cambio';
 }
 
 /**
@@ -135,12 +158,14 @@ function at_rt_dia_largo(string $ymd): string {
 /**
  * Ejecuta la decisión de un enlace (solo la llama el POST de la página). Todo bajo START TRANSACTION + FOR UPDATE: un
  * doble clic o dos dispositivos se serializan y el segundo recibe «usado».
- *  - aprobar: aprobacion.estado = 'aprobado', usada, programado = proximo_at = at_rt_programar($ahora); antes revisa las
- *    paradas y que el seguimiento esté activo. No envía nada: el reloj envía lo aprobado en su ventana.
+ *  - aprobar: aprobacion.estado = 'aprobado', usada, programado = proximo_at = at_rt_programar($ahora) y destino = la foto
+ *    del destinatario (at_rt_aprobacion_destino, Ruling 18: lo mismo que mostró la página); antes revisa las paradas y que
+ *    el seguimiento esté activo. No envía nada: el reloj envía lo aprobado en su ventana.
  *  - cambios: pedido de 1 a 1000 caracteres; aprobacion.estado = 'cambios', usada, el pedido se agrega a las notas (que se
  *    recortan a sus últimos 4000 caracteres: MySQL sin modo estricto truncaría en silencio) y, después del COMMIT y fuera
  *    del candado, se pide la redacción a la IA con ese pedido.
- *  - omitir: aprobacion.estado = 'omitido', usada; historial «🔁 Esta semana no»; proximo_at no se toca.
+ *  - omitir: aprobacion.estado = 'omitido', usada, y el evento {tipo:'omitido', fecha, at, n} en envíos (queda rastro aunque
+ *    el seguimiento no tenga ficha CRM; no consume un recordatorio); historial «🔁 Esta semana no»; proximo_at no se toca.
  * Devuelve {ok, motivo ('' si ok), mensaje, programado? (solo aprobar)}.
  */
 function at_rt_resolver_aprobacion(int $id, string $accion, array $q, string $ahora, string $pedido = ''): array {
@@ -172,6 +197,7 @@ function at_rt_resolver_aprobacion(int $id, string $accion, array $q, string $ah
 			$programado = at_rt_programar($cuando);
 			$ap['estado'] = 'aprobado';
 			$ap['programado'] = $programado;
+			$ap['destino'] = at_rt_aprobacion_destino($s);
 			$campos['proximo_at'] = $programado;
 		} elseif ($accion === 'cambios') {
 			$ap['estado'] = 'cambios';
@@ -180,6 +206,7 @@ function at_rt_resolver_aprobacion(int $id, string $accion, array $q, string $ah
 			$campos['notas'] = mb_strlen($notas) > 4000 ? mb_substr($notas, -4000) : $notas;
 		} else {
 			$ap['estado'] = 'omitido';
+			$campos['envios'] = array_merge($s['envios'], [['tipo' => 'omitido', 'fecha' => $fecha->format('Y-m-d'), 'at' => $cuando, 'n' => max(1, (int) ($s['aprobacion']['n'] ?? 1))]]);
 		}
 		$campos['aprobacion'] = $ap;
 		if (!at_rt_guardar($id, $campos) || $wpdb->query('COMMIT') === false) { return $fallo('error'); }
@@ -265,12 +292,21 @@ function at_rt_pagina_aprobacion(array $get, string $metodo, array $post): array
 	if ($accion === 'ver') {
 		$datos = at_rt_datos_correo($s);
 		$correo = at_rt_correo_html($datos);
+		// Ruling 17: la presentación candidata (la vigente, que el prospecto todavía no ve) se muestra aquí, en esta página
+		// firmada. El correo nunca lleva la URL del renderer (D8) y la página del prospecto sigue con la que ya recibió.
+		$render = is_array($s['render']) ? $s['render'] : [];
+		$vista = is_string($render['view_url'] ?? null) ? $render['view_url'] : '';
+		$presentacion = ($render['estado'] ?? '') === 'listo' && at_rt_url_render_valida($vista, (string) $s['token'])
+			? '<iframe title="Presentación del recordatorio" referrerpolicy="no-referrer" src="' . esc_url($vista) . '"></iframe>'
+			: '<p class="aviso">La presentación de este recordatorio todavía se está preparando. Vuelve a abrir este enlace en un rato.</p>';
 		// srcdoc con doble escapado (htmlspecialchars, no esc_attr, que no re-escapa entidades) y sandbox sin permisos: dentro
 		// no corren scripts ni se envían formularios (tampoco el de la baja si se sigue un enlace del correo).
-		return $pagina(200, '<h1>Así le llega el correo a ' . $h($quien) . '</h1>'
+		return $pagina(200, '<h1>Así le llega a ' . $h($quien) . '</h1>'
 			. '<p class="nota">Para: ' . $h($s['email']) . '<br>Asunto: ' . $h(at_rt_asunto($n, $s['nombre'])) . '<br>Es el ' . $h($recordatorio) . '. Esta vista no envía nada.</p>'
+			. '<h2 id="correo">El correo</h2>'
 			. '<iframe title="Correo al prospecto" sandbox="" srcdoc="' . htmlspecialchars($correo, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '"></iframe>'
-			. '<p class="nota">«Ver resumen y demo» lleva a <a href="' . esc_url($datos['url_ver']) . '" target="_blank" rel="noopener">la página del prospecto</a>, con la presentación, la agenda y la baja.</p>');
+			. '<h2 id="presentacion">La presentación</h2>' . $presentacion
+			. '<p class="nota">«Ver resumen y demo» lleva a <a href="' . esc_url($datos['url_ver']) . '" target="_blank" rel="noopener">la página del prospecto</a>, con la agenda y la baja. Esta presentación aparece ahí cuando sale este recordatorio; hasta entonces el prospecto sigue viendo la que ya recibió.</p>');
 	}
 
 	$bloqueo = at_rt_aprobacion_bloqueo($s, $accion);
@@ -278,6 +314,13 @@ function at_rt_pagina_aprobacion(array $get, string $metodo, array $post): array
 
 	$ahora = (new DateTimeImmutable('now', new DateTimeZone('America/Santiago')))->format('Y-m-d H:i:s');
 	$tel = at_pt_telefono_wa((string) $s['telefono']);
+	// Por dónde sale, según la foto del destinatario (la misma que se guarda al aprobar) y el interruptor del WhatsApp.
+	$canal = static function (array $destino) use ($h): string {
+		if (empty($destino['whatsapp'])) { return 'por correo'; }
+		$telefono = '+' . (string) ($destino['telefono_wa'] ?? '');
+		return at_rt_wa_automatico() ? 'por correo y por WhatsApp al ' . $h($telefono)
+			: 'por correo (el WhatsApp al ' . $h($telefono) . ' no sale: el WhatsApp automático está en pausa; puedes compartirlo a mano)';
+	};
 	$http = 200;
 	$aviso = '';
 	$previo = '';
@@ -290,8 +333,8 @@ function at_rt_pagina_aprobacion(array $get, string $metodo, array $post): array
 		if ($res['ok']) {
 			if ($accion === 'aprobar') {
 				$s = at_rt_obtener($id) ?? $s;
-				$wa = at_rt_wa_automatico() && in_array('whatsapp', at_rt_canales($n, (int) $s['max_envios'], (string) $s['canales'], (bool) $s['wa_autorizado'], $tel), true);
-				$contenido = '<h1>✅ Recordatorio aprobado</h1><p role="status">Sale el <strong>' . $h(at_rt_dia_largo($res['programado'])) . ' entre 10:00 y 13:00</strong> ' . ($wa ? 'por correo y WhatsApp' : 'por correo') . ' a ' . $quien_html . '.</p>';
+				$destino = is_array($s['aprobacion']['destino'] ?? null) ? $s['aprobacion']['destino'] : at_rt_aprobacion_destino($s);
+				$contenido = '<h1>✅ Recordatorio aprobado</h1><p role="status">Sale el <strong>' . $h(at_rt_dia_largo($res['programado'])) . ' entre 10:00 y 13:00</strong> ' . $canal($destino) . ' a ' . $quien_html . '.</p>';
 				if (!at_rt_wa_automatico() && !empty($s['wa_autorizado']) && $tel !== '') {
 					$texto = at_rt_panel_texto_manual($s);
 					if (!at_rt_internas(['texto' => $texto])) {
@@ -313,9 +356,9 @@ function at_rt_pagina_aprobacion(array $get, string $metodo, array $post): array
 	$formulario = static fn(string $campos, string $boton): string => '<form method="post"><input type="hidden" name="_wpnonce" value="' . esc_attr(wp_create_nonce('at_rt_aprobar_' . $id)) . '">' . $campos . '<p><button type="submit">' . $boton . '</button></p></form>';
 	$ver = '<p class="nota"><a href="' . esc_url(at_rt_aprobacion_url($id, 'ver', $p['k'], $p['v'])) . '">Ver el correo tal como le llega</a></p>';
 	if ($accion === 'aprobar') {
-		$wa = at_rt_wa_automatico() && in_array('whatsapp', at_rt_canales($n, (int) $s['max_envios'], (string) $s['canales'], (bool) $s['wa_autorizado'], $tel), true);
-		return $pagina($http, '<h1>¿Enviar el recordatorio?</h1><p>¿Enviar el ' . $h($recordatorio) . ' a ' . $quien_html . ', al correo ' . $h($s['email']) . '?</p>'
-			. '<p class="nota">Si lo apruebas ahora, sale el ' . $h(at_rt_dia_largo(at_rt_programar($ahora))) . ' entre 10:00 y 13:00 ' . ($wa ? 'por correo y WhatsApp' : 'por correo') . '. Justo antes de enviarlo revisamos que no se haya dado de baja ni agendado.</p>'
+		$destino = at_rt_aprobacion_destino($s);
+		return $pagina($http, '<h1>¿Enviar el recordatorio?</h1><p>¿Enviar el ' . $h($recordatorio) . ' a ' . $quien_html . ', al correo ' . $h($destino['email']) . '?</p>'
+			. '<p class="nota">Si lo apruebas ahora, sale el ' . $h(at_rt_dia_largo(at_rt_programar($ahora))) . ' entre 10:00 y 13:00 ' . $canal($destino) . '. Justo antes de enviarlo revisamos que no se haya dado de baja ni agendado, y que el correo y el teléfono sigan siendo estos: si cambian, hay que aprobarlo de nuevo.</p>'
 			. $aviso . $ver . $formulario('', '✅ Aprobar y enviar'));
 	}
 	if ($accion === 'cambios') {

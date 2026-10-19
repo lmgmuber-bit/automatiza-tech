@@ -73,7 +73,9 @@ function at_rt_crear(array $campos): int {
 
 /**
  * Configuración del resumen semanal: día ISO-8601 (1 = lunes ... 7 = domingo), hora HH:MM de Chile y
- * correo de destino. Un valor fuera de rango vuelve al defecto: lunes, 09:00 y el correo de avisos.
+ * correo de destino. Un valor fuera de rango vuelve al defecto: lunes, 09:00 y el correo de avisos. El domingo con una
+ * hora posterior a su última pasada del reloj (at_rt_resumen_hora_valida) tampoco sirve: el resumen nunca saldría, así
+ * que esa combinación vuelve entera al defecto (lunes 09:00).
  */
 function at_rt_config(): array {
 	$dia = trim((string) get_option('at_rt_resumen_dia', '1'));
@@ -82,11 +84,10 @@ function at_rt_config(): array {
 	if (!is_email($destino)) {
 		$destino = function_exists('at_cc_correo_avisos') ? at_cc_correo_avisos() : (string) get_option('admin_email');
 	}
-	return [
-		'dia' => preg_match('/^[1-7]$/D', $dia) ? (int) $dia : 1,
-		'hora' => preg_match('/^([01]\d|2[0-3]):[0-5]\d$/D', $hora) ? $hora : '09:00',
-		'destino' => $destino,
-	];
+	$dia = preg_match('/^[1-7]$/D', $dia) ? (int) $dia : 1;
+	$hora = preg_match('/^([01]\d|2[0-3]):[0-5]\d$/D', $hora) ? $hora : '09:00';
+	if (!at_rt_resumen_hora_valida($dia, $hora)) { [$dia, $hora] = [1, '09:00']; }
+	return ['dia' => $dia, 'hora' => $hora, 'destino' => $destino];
 }
 
 function at_rt_obtener(int $id): ?array {
@@ -195,16 +196,23 @@ function at_rt_revertir_baja(int $baja_id, string $motivo): bool {
 	return $wpdb->update($wpdb->prefix . 'at_retomar_bajas', ['revertido_at' => current_time('mysql'), 'motivo' => mb_substr($motivo, 0, 255)], ['id' => $baja_id, 'revertido_at' => null]) === 1;
 }
 
+/**
+ * Datos para at_rt_motivo_parada(). «crm_tipo» es 'cliente' si la ficha vinculada es cliente o si CUALQUIER ficha del CRM
+ * con el mismo correo (sin mayúsculas ni espacios) es cliente, aunque no esté vinculada: un seguimiento detectado o
+ * creado sin ficha no le escribe a quien ya contrató (la misma búsqueda que usa la detección, at_rt_detectar_fichas).
+ */
 function at_rt_contexto_parada(array $seg): array {
 	global $wpdb;
 	$email = strtolower(trim((string) ($seg['email'] ?? '')));
 	$crm = (int) ($seg['crm_cliente_id'] ?? 0);
 	$propuesta = (int) ($seg['propuesta_id'] ?? 0);
 	$activado = (string) ($seg['activado_at'] ?? '');
+	$crm_tipo = $crm > 0 ? (string) $wpdb->get_var($wpdb->prepare("SELECT tipo FROM {$wpdb->prefix}crm_clientes WHERE id = %d", $crm)) : '';
+	if ($crm_tipo !== 'cliente' && $email !== '' && at_rt_detectar_fichas($email)['cliente']) { $crm_tipo = 'cliente'; }
 	return [
 		'baja' => at_rt_en_bajas($email, (string) ($seg['telefono'] ?? '')),
 		'reunion' => $email !== '' && $activado !== '' && (bool) $wpdb->get_var($wpdb->prepare("SELECT id FROM {$wpdb->prefix}automatiza_followup_meetings WHERE LOWER(client_email) = %s AND created_at > %s LIMIT 1", $email, $activado)),
-		'crm_tipo' => $crm > 0 ? (string) $wpdb->get_var($wpdb->prepare("SELECT tipo FROM {$wpdb->prefix}crm_clientes WHERE id = %d", $crm)) : '',
+		'crm_tipo' => $crm_tipo,
 		'propuesta_estado' => $propuesta > 0 ? (string) $wpdb->get_var($wpdb->prepare("SELECT status FROM {$wpdb->prefix}automatiza_propuestas WHERE id = %d", $propuesta)) : '',
 		'enviados' => at_rt_envios_realizados($seg['envios'] ?? []),
 		'max' => at_rt_max((int) ($seg['max_envios'] ?? 4)),

@@ -109,4 +109,58 @@ try {
     $otra->close();
 }
 ok((string) $wpdb->get_var("SELECT IS_FREE_LOCK('" . AT_PT_AGENDA_LOCK . "')") === '1', 'candado liberado tras prueba concurrente');
+
+// ---- Ruling 17 (C1): la página fija del prospecto muestra solo lo que ya se le envió ----
+// Recordatorio 1 con la presentación A → «Pedir cambios» (B pendiente, B fallida, B lista) → la página sigue con A hasta
+// que sale el recordatorio 2 con B.
+if (!defined('AT_REST_SECRET')) { define('AT_REST_SECRET', bin2hex(random_bytes(24))); }
+if (!defined('AT_N8N_RETOMAR_RENDER')) { define('AT_N8N_RETOMAR_RENDER', 'https://example.invalid/webhook/retomar-render'); }
+$pedido_render = null;
+// El bloqueo de HTTP del bootstrap sigue: solo el flujo de presentación responde (simulado).
+add_filter('pre_http_request', static function ($pre, $args, $url) use (&$pedido_render) {
+    if ($url !== AT_N8N_RETOMAR_RENDER) { return $pre; }
+    $pedido_render = json_decode($args['body'], true);
+    return ['response' => ['code' => 200], 'body' => '{}', 'headers' => []];
+}, PHP_INT_MAX, 3);
+$rt_pub_vista = static function (int $id, array $body): int {
+    $r = new WP_REST_Request('POST', '/automatiza-tech/v1/retomar/' . $id . '/vista');
+    $r->set_header('Content-Type', 'application/json'); $r->set_header('X-AT-Secret', AT_REST_SECRET);
+    $r->set_body(wp_json_encode($body));
+    return rest_do_request($r)->get_status();
+};
+$rt_pub_render = static function (int $id) use (&$pedido_render, $rt_pub_vista): string {
+    $pedido_render = null;
+    if (at_rt_pedir_render($id) !== '' || !is_array($pedido_render)) { return ''; }
+    $vista = 'https://' . at_pt_host_renderer() . '/p/' . $pedido_render['render']['unique_id'] . '/index.html';
+    return $rt_pub_vista($id, ['ok' => true, 'generacion' => $pedido_render['generacion'], 'view_url' => $vista]) === 200 ? $vista : '';
+};
+$rt_pub_aprobar = static function (int $id, string $emitir, string $aprobar): bool {
+    $enlaces = at_rt_emitir_aprobacion($id, $emitir);
+    parse_str((string) parse_url((string) ($enlaces['aprobar'] ?? ''), PHP_URL_QUERY), $q);
+    return is_array($enlaces) && at_rt_resolver_aprobacion($id, 'aprobar', $q, $aprobar)['ok'];
+};
+$rt_pub_html = static fn(array $s): string => at_rt_pagina(['t' => $s['token']], 'GET', [])['html'];
+$c1 = rt_publica_fixture();
+at_rt_guardar($c1['id'], ['telefono' => '', 'redaccion' => ['estado' => 'lista'], 'proximo_at' => '2026-10-19', 'activado_at' => '2026-10-01 00:00:00', 'textos' => ['quedamos' => '[PRUEBA] Versión A', 'proponemos' => '[PRUEBA] Proponemos', 'partir' => '[PRUEBA] Partimos']]);
+$url_a = $rt_pub_render($c1['id']);
+ok($url_a !== '' && str_contains($rt_pub_html($c1), esc_url($url_a)), 'C1: antes del primer envío la página muestra la presentación vigente (A)');
+ok($rt_pub_aprobar($c1['id'], '2026-10-19 09:00:00', '2026-10-19 09:30:00') && at_rt_entregar($c1['id'], false, '2026-10-19 10:30:00')['ok'], 'C1: Luis aprueba A y sale el recordatorio 1');
+ok((at_rt_obtener($c1['id'])['render']['publicada']['view_url'] ?? '') === $url_a, 'C1: A quedó publicada');
+// Pedir cambios: textos nuevos y presentación B.
+at_rt_guardar($c1['id'], ['textos' => ['quedamos' => '[PRUEBA] Versión B', 'proponemos' => '[PRUEBA] Proponemos', 'partir' => '[PRUEBA] Partimos']]);
+$pedido_render = null;
+ok(at_rt_pedir_render($c1['id']) === '' && is_array($pedido_render), 'C1: se pide la presentación B');
+$html = $rt_pub_html($c1);
+ok(str_contains($html, esc_url($url_a)) && !str_contains($html, 'Estamos preparando'), 'C1: mientras se rehace B, el enlace que ya tiene el prospecto sigue mostrando A');
+ok($rt_pub_vista($c1['id'], ['ok' => false, 'generacion' => $pedido_render['generacion'], 'nota' => '[PRUEBA] Falló']) === 200 && at_rt_obtener($c1['id'])['render']['estado'] === 'error' && str_contains($rt_pub_html($c1), esc_url($url_a)), 'C1: con un render fallido después del envío, la página sigue mostrando A');
+$url_b = $rt_pub_render($c1['id']);
+$html = $rt_pub_html($c1);
+ok($url_b !== '' && $url_b !== $url_a && str_contains($html, esc_url($url_a)) && !str_contains($html, esc_url($url_b)), 'C1: B lista pero sin aprobar ni enviar: la página sigue con A');
+ok($rt_pub_aprobar($c1['id'], '2026-10-26 09:00:00', '2026-10-26 09:30:00') && at_rt_entregar($c1['id'], false, '2026-10-26 10:30:00')['ok'], 'C1: Luis aprueba B y sale el recordatorio 2');
+$html = $rt_pub_html($c1);
+ok(str_contains($html, esc_url($url_b)) && !str_contains($html, esc_url($url_a)), 'C1: desde el recordatorio 2, la página muestra B');
+// Una versión publicada que no es de este seguimiento no se muestra (nunca la vigente sin aprobar en su lugar).
+at_rt_guardar($c1['id'], ['render' => array_merge(at_rt_obtener($c1['id'])['render'], ['publicada' => ['view_url' => 'https://example.com/ajena/index.html']])]);
+$html = $rt_pub_html($c1);
+ok(!str_contains($html, '<iframe') && str_contains($html, 'Estamos preparando'), 'C1: una versión publicada ajena no se muestra ni se cambia por la vigente');
 fin();

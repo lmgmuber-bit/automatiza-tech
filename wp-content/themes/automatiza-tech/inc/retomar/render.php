@@ -111,9 +111,33 @@ function at_rt_huella_render(array $seg): string {
 	return hash('sha256', wp_json_encode($p));
 }
 
-/** Pide la presentación al flujo de n8n. $timeout: segundos de espera (15 desde el panel; el reloj pasa at_rt_timeout_reloj()). */
-function at_rt_pedir_render(int $id, int $timeout = 15): string {
-	if (!defined('AT_N8N_RETOMAR_RENDER') || AT_N8N_RETOMAR_RENDER === '') { return 'sin_flujo'; }
+/** URL del flujo de n8n «Retomar · Render» (no es secreta); '' si no está configurada. */
+function at_rt_render_flujo(): string {
+	return defined('AT_N8N_RETOMAR_RENDER') && is_string(AT_N8N_RETOMAR_RENDER) ? AT_N8N_RETOMAR_RENDER : '';
+}
+
+/**
+ * Lo que un render nuevo hereda del anterior cuando una ruta lo reemplaza entero: la versión publicada (Ruling 17: solo la
+ * cambia un recordatorio que sale, at_rt_finalizar_entrega) y, con $reintento, la marca del último reintento del reloj
+ * (render.reintento_at, para no volver a pedirla más de una vez cada 24 h). Lo demás (vista, PDF, nota) es del render nuevo.
+ */
+function at_rt_render_heredar(array $anterior, array $nuevo, bool $reintento = true): array {
+	if (is_array($anterior['publicada'] ?? null)) { $nuevo['publicada'] = $anterior['publicada']; }
+	if ($reintento && is_string($anterior['reintento_at'] ?? null)) { $nuevo['reintento_at'] = $anterior['reintento_at']; }
+	return $nuevo;
+}
+
+/**
+ * Pide la presentación al flujo de n8n. $timeout: segundos de espera (15 desde el panel; el reloj pasa at_rt_timeout_reloj()).
+ * Deja render.pedido_at con $ahora (la hora de la pasada del reloj, «Y-m-d H:i[:s]» de Chile) o, sin ella, con la hora de
+ * Chile actual: el reloj y el resumen la usan para ver si la presentación quedó atascada (I4). El render nuevo conserva la
+ * versión publicada y la marca del último reintento (at_rt_render_heredar).
+ */
+function at_rt_pedir_render(int $id, int $timeout = 15, string $ahora = ''): string {
+	$flujo = at_rt_render_flujo();
+	if ($flujo === '') { return 'sin_flujo'; }
+	$cuando = at_rt_ahora($ahora);
+	$pedido_at = $cuando !== null ? $cuando->format('Y-m-d H:i:s') : at_rt_ahora_chile();
 	global $wpdb;
 	if ($wpdb->query('START TRANSACTION') === false) { return 'No se pudo reservar la presentación.'; }
 	try {
@@ -125,16 +149,16 @@ function at_rt_pedir_render(int $id, int $timeout = 15): string {
 			$huella = at_rt_huella_render($s);
 			$payload = at_rt_armar_render($s, $generacion);
 		} catch (InvalidArgumentException $e) {
-			at_rt_guardar($id, ['render' => ['estado' => 'error', 'nota' => $e->getMessage()]]);
+			at_rt_guardar($id, ['render' => at_rt_render_heredar($s['render'], ['estado' => 'error', 'nota' => $e->getMessage(), 'pedido_at' => $pedido_at])]);
 			$wpdb->query('COMMIT');
 			return $e->getMessage();
 		}
-		$render = ['generacion' => $generacion, 'huella' => $huella, 'uid' => $payload['unique_id'], 'estado' => 'pendiente', 'nota' => ''];
+		$render = at_rt_render_heredar($s['render'], ['generacion' => $generacion, 'huella' => $huella, 'uid' => $payload['unique_id'], 'estado' => 'pendiente', 'nota' => '', 'pedido_at' => $pedido_at]);
 		if (!at_rt_guardar($id, ['render' => $render]) || $wpdb->query('COMMIT') === false) { return 'No se pudo guardar el estado del render.'; }
 	} finally {
 		$wpdb->query('ROLLBACK'); // Sin efecto después de COMMIT; libera el candado ante cualquier retorno/error.
 	}
-	$error = at_pt_llamar_n8n(AT_N8N_RETOMAR_RENDER, ['id' => $id, 'generacion' => $generacion, 'render' => $payload], $timeout);
+	$error = at_pt_llamar_n8n($flujo, ['id' => $id, 'generacion' => $generacion, 'render' => $payload], $timeout);
 	if ($error !== '') {
 		$actual = at_rt_obtener($id);
 		if ($actual && ($actual['render']['generacion'] ?? '') === $generacion && ($actual['render']['estado'] ?? '') === 'pendiente') {
@@ -145,6 +169,67 @@ function at_rt_pedir_render(int $id, int $timeout = 15): string {
 		}
 	}
 	return $error;
+}
+
+/**
+ * ¿La presentación está esperando desde hace más de $horas horas? Pendiente (o sin pedir: estado vacío) y su pedido_at es de
+ * hace más de $horas; sin pedido_at legible, sí (nunca se pidió, por ejemplo porque no había flujo). $ahora es «Y-m-d
+ * H:i[:s]» (o «Y-m-d», la medianoche) de Chile; ilegible, no. El reloj la repite a las 6 h y el resumen la marca a las 24 h.
+ */
+function at_rt_render_esperando(array $render, string $ahora, int $horas): bool {
+	$fecha = at_rt_ahora($ahora);
+	return $fecha !== null && in_array((string) ($render['estado'] ?? ''), ['', 'pendiente'], true) && at_rt_marca_vieja($render['pedido_at'] ?? null, $fecha, $horas);
+}
+
+/**
+ * Reserva bajo FOR UPDATE el reintento del reloj de una presentación atascada (I4): si el seguimiento sigue activo, ya toca
+ * (proximo_at hoy o antes), su redacción está `lista`, la presentación lleva más de 6 h esperando y el reloj no la volvió a
+ * pedir en las últimas 24 h (render.reintento_at), y no tiene una condición de parada, anota render.reintento_at = $ahora y
+ * devuelve true. Otra pasada simultánea ve la marca y no la pide dos veces.
+ */
+function at_rt_render_reservar_reintento(int $id, string $ahora): bool {
+	$fecha = at_rt_ahora($ahora);
+	if ($fecha === null) { return false; }
+	global $wpdb;
+	if ($wpdb->query('START TRANSACTION') === false) { return false; }
+	try {
+		$fila = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$wpdb->prefix}at_retomar WHERE id=%d FOR UPDATE", $id), ARRAY_A);
+		if (!$fila) { return false; }
+		$s = at_rt_fila($fila);
+		$proximo = (string) ($s['proximo_at'] ?? '');
+		if ($s['estado'] !== 'activo' || $proximo === '' || $proximo > $fecha->format('Y-m-d') || ($s['redaccion']['estado'] ?? '') !== 'lista') { return false; }
+		if (!at_rt_render_esperando($s['render'], $ahora, 6) || !at_rt_marca_vieja($s['render']['reintento_at'] ?? null, $fecha, 24, true)) { return false; }
+		if (at_rt_motivo_parada(at_rt_contexto_parada($s)) !== '') { return false; }
+		if (!at_rt_guardar($id, ['render' => array_merge($s['render'], ['reintento_at' => $fecha->format('Y-m-d H:i:s')])])) { return false; }
+		return $wpdb->query('COMMIT') !== false;
+	} finally {
+		$wpdb->query('ROLLBACK'); // Sin efecto después de COMMIT; libera el candado ante cualquier retorno o error.
+	}
+}
+
+/**
+ * Pasada del reloj (I4): vuelve a pedir la presentación de los seguimientos activos que ya tocan y cuya presentación quedó
+ * más de 6 h esperando, una vez cada 24 h por seguimiento. Sin flujo de presentación o con una hora ilegible no hace nada.
+ * La reserva va bajo candado y el pedido a n8n (HTTP) fuera de él, con at_rt_timeout_reloj(). $max: cuántos pedidos como
+ * máximo en esta pasada (el mismo tope del reloj que comparte con las redacciones, Ruling 12; negativo = sin tope); los
+ * que no caben se piden en la pasada siguiente, en orden de id. Devuelve los ids pedidos.
+ */
+function at_rt_reintentar_renders(string $ahora, int $max = -1): array {
+	if (at_rt_render_flujo() === '' || $max === 0) { return []; }
+	$fecha = at_rt_ahora($ahora);
+	if ($fecha === null) { return []; }
+	$cuando = $fecha->format('Y-m-d H:i:s');
+	global $wpdb;
+	// La misma consulta que el envío del reloj: los seguimientos activos cuyo próximo envío ya llegó.
+	$ids = $wpdb->get_col($wpdb->prepare("SELECT id FROM {$wpdb->prefix}at_retomar WHERE estado='activo' AND proximo_at<=%s ORDER BY id", $fecha->format('Y-m-d')));
+	$pedidos = [];
+	foreach ($ids as $id) {
+		if ($max > 0 && count($pedidos) >= $max) { break; } // Sin reservar: el que no cupo sigue libre para la pasada siguiente.
+		if (!at_rt_render_reservar_reintento((int) $id, $cuando)) { continue; }
+		at_rt_pedir_render((int) $id, at_rt_timeout_reloj(), $cuando);
+		$pedidos[] = (int) $id;
+	}
+	return $pedidos;
 }
 
 add_action('rest_api_init', static function () {

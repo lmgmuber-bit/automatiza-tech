@@ -1,6 +1,6 @@
 <?php
 require __DIR__ . '/wp-bootstrap.php';
-exigir('at_rt_enviar', 'at_rt_tick', 'at_rt_whatsapp_resultado');
+exigir('at_rt_enviar', 'at_rt_tick', 'at_rt_whatsapp_resultado', 'at_rt_aprobacion_destino', 'at_rt_aprobacion_calza_contenido');
 at_rt_migrar_esquema();
 global $wpdb;
 $ids = []; $emails = []; $marca = 'rt-envio-' . strtolower(wp_generate_password(10, false, false));
@@ -47,7 +47,7 @@ function rt_env_aprobacion_muerta(array $f, array $ap_original): bool {
 /**
  * Seguimiento activo listo para salir. Por defecto trae la redacción `lista` y la aprobación de Luis tal como la deja
  * Task 7 al aprobar: {estado:'aprobado', n: el recordatorio que toca, huella: la del render, usada, programado: su
- * proximo_at}. Pasar 'aprobacion' o 'redaccion' en $c deja ese valor tal cual.
+ * proximo_at, destino: la foto del destinatario (Ruling 18)}. Pasar 'aprobacion' o 'redaccion' en $c deja ese valor tal cual.
  */
 function rt_env_fixture(array $c = []): array {
     global $ids, $emails, $marca;
@@ -61,7 +61,7 @@ function rt_env_fixture(array $c = []): array {
     try { $huella = at_rt_huella_render($s); } catch (InvalidArgumentException $e) { $huella = hash('sha256', 'rt-env-sin-huella-' . $id); }
     $campos = ['render' => array_merge($s['render'], ['huella' => $huella])];
     if (!array_key_exists('aprobacion', $c)) {
-        $campos['aprobacion'] = ['estado' => 'aprobado', 'n' => at_rt_envios_realizados($s['envios']) + 1, 'nonce' => bin2hex(random_bytes(8)), 'huella' => $huella, 'emitido_at' => '2026-10-12 09:00:00', 'vence' => strtotime('2026-10-19 09:00:00'), 'usada' => true, 'resuelto_at' => '2026-10-12 09:05:00', 'programado' => (string) ($s['proximo_at'] ?: '2026-10-19')];
+        $campos['aprobacion'] = ['estado' => 'aprobado', 'n' => at_rt_envios_realizados($s['envios']) + 1, 'nonce' => bin2hex(random_bytes(8)), 'huella' => $huella, 'emitido_at' => '2026-10-12 09:00:00', 'vence' => strtotime('2026-10-19 09:00:00'), 'usada' => true, 'resuelto_at' => '2026-10-12 09:05:00', 'programado' => (string) ($s['proximo_at'] ?: '2026-10-19'), 'destino' => at_rt_aprobacion_destino($s)];
     }
     at_rt_guardar($id, $campos);
     return at_rt_obtener($id);
@@ -286,6 +286,66 @@ $wa2 = rt_env_fixture(['telefono' => '+56900000013', 'envios' => [['tipo' => 'en
 $r = rt_env_tick_solo([$wa2['id']], '2026-10-19 10:30:00');
 ok($wa2['aprobacion']['n'] === 2 && $r['enviados'] === 1 && count($r['whatsapp']) === 1 && $r['whatsapp'][0]['n'] === 2 && $r['whatsapp'][0]['id'] === $wa2['id'], '2.º envío aprobado con WhatsApp autorizado: un pedido de WhatsApp');
 ok(at_rt_obtener($wa2['id'])['aprobacion'] === ['estado' => 'enviado', 'n' => 2, 'at' => '2026-10-19 10:30:00'], '2.º envío consume su aprobación con n = 2');
+// ---- Ruling 18 (I2): la aprobación es para un destinatario concreto ----
+// Aprobado para el correo A y después se cambia a B: no sale a ninguno, la aprobación muere y no se pide otra presentación.
+$da = rt_env_fixture(['telefono' => '']);
+$correo_b = $marca . '-destino-b@example.com'; $emails[] = $correo_b;
+ok(($da['aprobacion']['destino'] ?? null) === ['email' => $da['email'], 'telefono_wa' => '', 'whatsapp' => false], 'fixture: la aprobación guarda la foto del destinatario');
+at_rt_guardar($da['id'], ['email' => $correo_b]);
+$f = at_rt_obtener($da['id']);
+ok(hash_equals((string) $f['render']['huella'], at_rt_huella_render($f)) && at_rt_aprobacion_calza_contenido($f, 1), 'cambiar el correo no cambia la huella del contenido');
+$r = rt_env_tick_solo([$da['id']], '2026-10-19 10:30:00'); $f = at_rt_obtener($da['id']); $ultimo = end($f['envios']) ?: [];
+ok($r['enviados'] === 0 && rt_env_correos($da['email']) === 0 && rt_env_correos($correo_b) === 0, 'I2: aprobado para A y editado a B: no sale a ninguno');
+ok(rt_env_aprobacion_muerta($f, $da['aprobacion']) && ($ultimo['nota'] ?? '') === 'aprobacion_vencida' && $f['render'] === $da['render'], 'I2: la aprobación vence como un cambio de contenido, sin tocar ni pedir la presentación');
+$dt2 = rt_env_fixture(['telefono' => '+56900000021']);
+at_rt_guardar($dt2['id'], ['telefono' => '+56900000022']);
+$r = at_rt_entregar($dt2['id'], false, '2026-10-19 10:30:00');
+ok($r['motivo'] === 'aprobacion_vencida' && rt_env_correos($dt2['email']) === 0 && $r['whatsapp'] === null, 'I2: cambiar el teléfono después de aprobar: no sale');
+// Aprobado sin WhatsApp; después se autoriza con el interruptor encendido: sale solo el correo.
+update_option('at_rt_wa_automatico', '1');
+$sw = rt_env_fixture(['telefono' => '+56900000023', 'wa_autorizado' => 0]);
+ok(($sw['aprobacion']['destino']['whatsapp'] ?? null) === false, 'fixture: aprobado sin WhatsApp');
+at_rt_guardar($sw['id'], ['wa_autorizado' => 1]);
+$r = rt_env_tick_solo([$sw['id']], '2026-10-19 10:30:00'); $f = at_rt_obtener($sw['id']);
+ok($r['enviados'] === 1 && $r['whatsapp'] === [] && rt_env_correos($sw['email']) === 1 && array_key_exists('whatsapp', $f['envios'][0] ?? []) && $f['envios'][0]['whatsapp'] === null, 'I2: autorizado después de aprobar sin WhatsApp: sale solo el correo, nunca un WhatsApp que no estaba en la foto');
+// Con WhatsApp en la foto pero hoy ya no autorizado, o con el interruptor apagado: solo correo (intersección).
+$sn = rt_env_fixture(['telefono' => '+56900000024']);
+ok(($sn['aprobacion']['destino']['whatsapp'] ?? null) === true, 'fixture: aprobado con WhatsApp');
+at_rt_guardar($sn['id'], ['wa_autorizado' => 0]);
+$r = rt_env_tick_solo([$sn['id']], '2026-10-19 10:30:00');
+ok($r['enviados'] === 1 && $r['whatsapp'] === [] && rt_env_correos($sn['email']) === 1, 'I2: con WhatsApp en la foto pero ya no autorizado: solo correo');
+update_option('at_rt_wa_automatico', '0');
+$so = rt_env_fixture(['telefono' => '+56900000025']);
+$r = rt_env_tick_solo([$so['id']], '2026-10-19 10:30:00');
+ok($r['enviados'] === 1 && $r['whatsapp'] === [] && rt_env_correos($so['email']) === 1, 'I2: con el interruptor apagado: solo correo');
+update_option('at_rt_wa_automatico', '1');
+$sinf = rt_env_fixture(['telefono' => '']); $ap = $sinf['aprobacion']; unset($ap['destino']); at_rt_guardar($sinf['id'], ['aprobacion' => $ap]);
+ok(at_rt_entregar($sinf['id'], false, '2026-10-19 10:30:00')['motivo'] === 'aprobacion_vencida' && rt_env_correos($sinf['email']) === 0, 'I2: una aprobación sin foto del destinatario no sale');
+// ---- I3: una ficha cliente con el mismo correo, aunque no esté vinculada, detiene el envío ----
+$yc = rt_env_fixture(['telefono' => '']);
+$wpdb->insert($wpdb->prefix . 'crm_clientes', ['nombre' => '[PRUEBA]', 'email' => $yc['email'], 'tipo' => 'cliente', 'estado' => 'contratado']);
+$crm_yc = (int) $wpdb->insert_id;
+register_shutdown_function(static function () use ($wpdb, $crm_yc) { $wpdb->delete($wpdb->prefix . 'crm_clientes', ['id' => $crm_yc]); });
+$r = rt_env_tick_solo([$yc['id']], '2026-10-19 10:30:00'); $f = at_rt_obtener($yc['id']);
+ok($crm_yc > 0 && $r['enviados'] === 0 && $r['detenidos'] === 1 && rt_env_correos($yc['email']) === 0 && $f['estado'] === 'cliente' && $f['proximo_at'] === null, 'I3: ficha cliente no vinculada con el mismo correo: el aprobado no sale y el seguimiento queda cliente');
+ok(rt_env_aprobacion_muerta($f, $yc['aprobacion']), 'I3: y la aprobación no sobrevive');
+// ---- Ruling 17 (C1): lo que sale queda publicado (la página del prospecto mira eso) ----
+$pub = rt_env_fixture(['telefono' => '']);
+$gen_pub = str_repeat('a', 16); $carpeta_pub = 'https://' . at_pt_host_renderer() . '/p/' . $pub['token'] . '-' . $gen_pub . '-retomar/';
+at_rt_guardar($pub['id'], ['render' => array_merge($pub['render'], ['generacion' => $gen_pub, 'view_url' => $carpeta_pub . 'index.html', 'pdf_url' => $carpeta_pub . 'presentation.pdf'])]);
+$antes = at_rt_obtener($pub['id']);
+ok(!isset($antes['render']['publicada']), 'C1: antes del primer envío no hay versión publicada');
+$r = at_rt_entregar($pub['id'], false, '2026-10-19 10:30:00'); $f = at_rt_obtener($pub['id']);
+ok($r['ok'] && ($f['render']['publicada'] ?? null) === ['view_url' => $carpeta_pub . 'index.html', 'pdf_url' => $carpeta_pub . 'presentation.pdf', 'huella' => $antes['render']['huella'], 'generacion' => $gen_pub], 'C1: el recordatorio que sale deja publicada la presentación aprobada');
+ok(array_diff_key($f['render'], ['publicada' => 1]) === $antes['render'], 'C1: el render vigente no cambia al publicar');
+$pf = rt_env_fixture(['telefono' => '']); $falla_mail = true; at_rt_entregar($pf['id'], false, '2026-10-19 10:30:00'); $falla_mail = false;
+ok(!isset(at_rt_obtener($pf['id'])['render']['publicada']), 'C1: si el correo falla no se publica nada');
+$pp2 = rt_env_fixture(['telefono' => '']); at_rt_enviar($pp2['id'], true);
+ok(!isset(at_rt_obtener($pp2['id'])['render']['publicada']), 'C1: la prueba al equipo no publica nada');
+$pc = rt_env_fixture(['telefono' => '']);
+$durante = static function ($v, $mail) use ($pc) { if ($mail['to'] === $pc['email']) { at_rt_guardar($pc['id'], ['render' => ['estado' => 'pendiente', 'generacion' => str_repeat('c', 16), 'huella' => $pc['render']['huella'], 'nota' => '']]); } return $v; };
+add_filter('pre_wp_mail', $durante, 150, 2); $r = at_rt_entregar($pc['id'], false, '2026-10-19 10:30:00'); remove_filter('pre_wp_mail', $durante, 150); $f = at_rt_obtener($pc['id']);
+ok($r['ok'] && ($f['render']['publicada']['view_url'] ?? '') === $pc['render']['view_url'] && ($f['render']['publicada']['huella'] ?? '') === $pc['render']['huella'] && ($f['render']['estado'] ?? '') === 'pendiente', 'C1: si la presentación se rehace mientras sale el correo, queda publicada la que se aprobó');
 // «Enviar prueba al equipo» funciona sin aprobación y no crea ninguna.
 $pr = rt_env_fixture(['telefono' => '', 'aprobacion' => []]); $antes = count($mails);
 $r = at_rt_enviar($pr['id'], true); $f = at_rt_obtener($pr['id']);

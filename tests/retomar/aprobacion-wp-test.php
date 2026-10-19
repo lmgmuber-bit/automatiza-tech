@@ -20,16 +20,22 @@ register_shutdown_function(static function () use (&$ids, &$emails, $wpdb, $crm_
 });
 update_option('at_rt_wa_automatico', '0');
 
-/** Seguimiento listo para aprobar: activo, redacción lista y render listo con huella. */
+/** Seguimiento listo para aprobar: activo, redacción lista y render listo con la huella real de su contenido. */
 function rt_ap_seg(array $extra = []): int {
 	global $ids, $emails, $marca;
 	$email = $marca . '-' . count($ids) . '@example.com';
 	$emails[] = $email;
 	$id = at_rt_crear($extra + ['nombre' => '[PRUEBA] Ana', 'negocio' => '[PRUEBA] Panadería', 'email' => $email, 'telefono' => '+56900000000', 'wa_autorizado' => 1, 'estado' => 'activo', 'activado_at' => '2026-10-01 00:00:00', 'proximo_at' => '2026-10-19', 'textos' => ['quedamos' => '[PRUEBA] Quedamos en retomar el pedido.', 'proponemos' => '[PRUEBA] Proponemos partir simple.', 'partir' => '[PRUEBA] Partimos esta semana.']]);
 	$ids[] = $id;
-	$s = at_rt_obtener($id);
-	at_rt_guardar($id, ['redaccion' => ['estado' => 'lista', 'generacion' => str_repeat('a', 16), 'intentos' => 1], 'render' => ['estado' => 'listo', 'huella' => hash('sha256', 'prueba-' . $id), 'view_url' => 'https://' . at_pt_host_renderer() . '/p/' . $s['token'] . '-retomar/index.html']]);
+	rt_ap_al_dia($id);
 	return $id;
+}
+/** Deja la redacción lista y el render listo con la huella del contenido actual (como un render recién terminado). */
+function rt_ap_al_dia(int $id): void {
+	$s = at_rt_obtener($id);
+	at_rt_guardar($id, ['redaccion' => ['estado' => 'lista', 'generacion' => str_repeat('a', 16), 'intentos' => 1], 'render' => ['estado' => 'listo', 'view_url' => 'https://' . at_pt_host_renderer() . '/p/' . $s['token'] . '-retomar/index.html']]);
+	$s = at_rt_obtener($id);
+	at_rt_guardar($id, ['render' => array_merge($s['render'], ['huella' => at_rt_huella_render($s)])]);
 }
 /** Query del enlace firmado, como la recibe la página en $_GET. */
 function rt_ap_q(string $url): array {
@@ -122,6 +128,7 @@ ok($todo_igual, 'GET, HEAD y otros métodos de aprobar, cambios y omitir respond
 $r = at_rt_pagina_aprobacion($qa, 'GET', []);
 ok(str_contains($r['html'], '<form method="post"') && str_contains($r['html'], 'name="_wpnonce" value="' . $nonce_wp . '"') && str_contains($r['html'], 'recordatorio 1 de 4') && str_contains($r['html'], '[PRUEBA] Ana'), 'GET aprobar: confirmación con un formulario POST y el nonce at_rt_aprobar_<id>');
 ok(str_contains($r['html'], 'entre 10:00 y 13:00') && str_contains($r['html'], esc_url($enlaces['ver'])), 'GET aprobar dice cuándo saldría y enlaza a «ver»');
+ok(str_contains($r['html'], esc_html(at_rt_obtener($a)['email'])) && str_contains($r['html'], '+56900000000') && str_contains($r['html'], 'WhatsApp automático está en pausa'), 'GET aprobar muestra la foto del destinatario: correo y teléfono, y que el WhatsApp automático está en pausa');
 ok($r['cabeceras']['X-Robots-Tag'] === 'noindex, nofollow' && str_contains($r['cabeceras']['Cache-Control'], 'no-store') && $r['cabeceras']['Referrer-Policy'] === 'no-referrer' && str_contains($r['html'], 'noindex'), 'sin índice, caché ni referente');
 $r = at_rt_pagina_aprobacion(rt_ap_q($enlaces['cambios']), 'GET', []);
 ok(str_contains($r['html'], 'name="pedido"') && str_contains($r['html'], '¿Qué cambiamos?') && str_contains($r['html'], 'maxlength="1000"'), 'GET cambios: cuadro «¿Qué cambiamos?»');
@@ -131,7 +138,11 @@ ok(str_contains($r['html'], '<form method="post"') && str_contains($r['html'], '
 // ---- Ver: el correo tal como le llega, de solo lectura ----
 $r = at_rt_pagina_aprobacion($qv, 'GET', []);
 ok($r['http'] === 200 && str_contains($r['html'], '[PRUEBA] Ana') && str_contains($r['html'], 'Ver resumen y demo') && str_contains($r['html'], 'srcdoc=') && str_contains($r['html'], 'sandbox=""'), 'ver muestra el nombre del prospecto y el correo con «Ver resumen y demo»');
-ok(str_contains($r['html'], esc_html(at_rt_asunto(1, '[PRUEBA] Ana'))) && !str_contains($r['html'], at_pt_host_renderer()), 'ver muestra el asunto y nunca el host del renderer');
+// Ruling 17: Luis ve la presentación candidata (la vigente, aún no publicada) dentro de la página firmada, no en el correo.
+$src_vigente = 'src="' . esc_url(at_rt_obtener($a)['render']['view_url']) . '"';
+ok(str_contains($r['html'], 'id="correo"') && str_contains($r['html'], 'id="presentacion"') && str_contains($r['html'], $src_vigente) && str_contains($r['html'], 'referrerpolicy="no-referrer"'), 'ver: además del correo, la presentación vigente en un iframe con su ancla #presentacion');
+ok(str_contains($r['html'], esc_html(at_rt_asunto(1, '[PRUEBA] Ana'))) && !str_contains(str_replace($src_vigente, '', $r['html']), at_pt_host_renderer()), 'ver muestra el asunto y el host del renderer solo en el iframe de la presentación');
+ok(($r['cabeceras']['X-Frame-Options'] ?? '') === 'DENY', 'ver: la página misma sigue sin poder enmarcarse');
 ok(!str_contains($r['html'], '<form') && !str_contains($r['html'], 'a=aprobar') && !str_contains($r['html'], 'a=omitir') && !str_contains($r['html'], 'a=cambios'), 'ver no tiene formulario ni enlaces para decidir');
 ok(str_contains($r['html'], 'href="' . esc_url(at_rt_datos_correo(at_rt_obtener($a))['url_ver']) . '"'), 'ver enlaza a la página pública del prospecto (fuera del sandbox)');
 ok(at_rt_pagina_aprobacion($qv, 'POST', ['_wpnonce' => $nonce_wp])['http'] === 200 && rt_ap_foto($a) === $antes, 'POST de ver no cambia nada');
@@ -152,6 +163,7 @@ $r = rt_ap_post($qa);
 $s = at_rt_obtener($a);
 ok($r['http'] === 200 && $s['aprobacion']['estado'] === 'aprobado' && $s['aprobacion']['usada'] === true && $s['aprobacion']['programado'] === $esperado && $s['proximo_at'] === $esperado, 'POST aprobar: aprobado, usada y programado = proximo_at = at_rt_programar(ahora)');
 ok($s['aprobacion']['nonce'] === $ap['nonce'] && $s['aprobacion']['huella'] === $ap['huella'] && $s['aprobacion']['n'] === 1 && $s['estado'] === 'activo' && $s['envios'] === [], 'aprobar conserva nonce, huella y n, y no envía nada');
+ok(($s['aprobacion']['destino'] ?? null) === ['email' => $s['email'], 'telefono_wa' => '56900000000', 'whatsapp' => true] && ($s['aprobacion']['destino'] ?? null) === at_rt_aprobacion_destino($s), 'Ruling 18: aprobar guarda la foto del destinatario tal como la mostró la página (con WhatsApp aunque el interruptor esté apagado)');
 ok(str_contains($r['html'], 'Sale el') && str_contains($r['html'], at_pt_fecha_larga($esperado)) && str_contains($r['html'], 'entre 10:00 y 13:00'), 'tras aprobar muestra la fecha programada');
 ok(str_contains($r['html'], 'Compartir a mano') && str_contains($r['html'], esc_url(at_rt_url_wa_manual('56900000000', at_rt_panel_texto_manual($s)))), 'WhatsApp automático apagado, casilla y teléfono: enlace «💬 Compartir a mano» a wa.me');
 $tras = rt_ap_foto($a);
@@ -181,11 +193,50 @@ $antes_v = rt_ap_foto($v);
 $res = at_rt_resolver_aprobacion($v, 'aprobar', rt_ap_q($ev['aprobar']), '2026-10-23 14:00:05');
 ok($res['ok'] === false && $res['motivo'] === 'usado' && rt_ap_foto($v) === $antes_v, 'resolver: segundo POST → usado, sin cambios');
 ok(at_rt_resolver_aprobacion($v, 'ver', rt_ap_q($ev['ver']), '2026-10-23 14:00:05')['ok'] === false && rt_ap_foto($v) === $antes_v, 'resolver no ejecuta «ver»');
+// Ruling 15: la última pasada del reloj en la ventana es la de las 12:05; aprobado a las 12:30 ya no sale ese día.
+$v1230 = rt_ap_seg();
+$e1230 = at_rt_emitir_aprobacion($v1230, '2026-10-19 09:00:00');
+$res = at_rt_resolver_aprobacion($v1230, 'aprobar', rt_ap_q($e1230['aprobar']), '2026-10-23 12:30:00');
+ok($res['ok'] && $res['programado'] === '2026-10-26' && str_contains($res['mensaje'], 'lunes 26'), 'aprobar el viernes 12:30 → programado el lunes (no hay pasada entre 12:05 y 13:00)');
+$v1204 = rt_ap_seg();
+$e1204 = at_rt_emitir_aprobacion($v1204, '2026-10-19 09:00:00');
+ok(at_rt_resolver_aprobacion($v1204, 'aprobar', rt_ap_q($e1204['aprobar']), '2026-10-23 12:04:00')['programado'] === '2026-10-23', 'aprobar el viernes 12:04 → sale ese viernes en la pasada de las 12:05');
+
+// ---- T7: aprobar (y cambios u omitir) exige lo mismo que el envío; «ver» sigue mostrando ----
+$cambia = [
+	'textos guardados sin rehacer la presentación' => static function (int $id): void { at_rt_guardar($id, ['textos' => array_merge(at_rt_obtener($id)['textos'], ['quedamos' => '[PRUEBA] Texto que nadie aprobó'])]); },
+	'presentación sin terminar (misma huella)' => static function (int $id): void { at_rt_guardar($id, ['render' => array_merge(at_rt_obtener($id)['render'], ['estado' => 'pendiente'])]); },
+	'redacción pendiente' => static function (int $id): void { at_rt_guardar($id, ['redaccion' => ['estado' => 'pendiente', 'generacion' => str_repeat('b', 16)]]); },
+	'otro recordatorio (salió uno entretanto)' => static function (int $id): void { at_rt_guardar($id, ['envios' => [['tipo' => 'envio', 'n' => 1, 'correo' => ['estado' => 'enviado']]]]); },
+];
+foreach ($cambia as $caso => $cambiar) {
+	$t7 = rt_ap_seg();
+	$e7 = at_rt_emitir_aprobacion($t7, rt_ap_ahora());
+	$cambiar($t7);
+	$s7 = at_rt_obtener($t7);
+	$antes_t7 = rt_ap_foto($t7);
+	$motivos = array_map(static fn(string $a): string => at_rt_aprobacion_motivo($s7, $a, rt_ap_q($e7[$a]), time()), ['aprobar', 'cambios', 'omitir', 'ver']);
+	ok($motivos === ['cambio', 'cambio', 'cambio', ''], 'T7, ' . $caso . ': aprobar, cambios y omitir dicen «cambio»; «ver» sigue mostrando');
+	$res = at_rt_resolver_aprobacion($t7, 'aprobar', rt_ap_q($e7['aprobar']), rt_ap_ahora());
+	$pag = at_rt_pagina_aprobacion(rt_ap_q($e7['aprobar']), 'GET', []);
+	ok(!$res['ok'] && $res['motivo'] === 'cambio' && !str_contains($res['mensaje'], 'Sale el') && $pag['http'] === 409 && !str_contains($pag['html'], '<form') && rt_ap_foto($t7) === $antes_t7, 'T7, ' . $caso . ': nunca dice «Aprobado. Sale el…» y nada cambia');
+}
+
+// ---- Emitir no pisa un aprobado vigente ----
+$vig = rt_ap_seg();
+$evig = at_rt_emitir_aprobacion($vig, rt_ap_ahora());
+at_rt_resolver_aprobacion($vig, 'aprobar', rt_ap_q($evig['aprobar']), rt_ap_ahora());
+$ap_vig = at_rt_obtener($vig)['aprobacion'];
+ok($ap_vig['estado'] === 'aprobado' && at_rt_emitir_aprobacion($vig, rt_ap_ahora()) === null && at_rt_obtener($vig)['aprobacion'] === $ap_vig, 'emitir sobre un aprobado vigente (misma huella, render listo): no emite y la aprobación queda intacta');
+at_rt_guardar($vig, ['aprobacion' => array_merge($ap_vig, ['huella' => hash('sha256', 'presentación anterior')])]);
+ok(is_array(at_rt_emitir_aprobacion($vig, rt_ap_ahora())) && at_rt_obtener($vig)['aprobacion']['estado'] === 'por_aprobar', 'un aprobado con huella vieja sí se vuelve a emitir');
 
 // ---- Render rehecho y emisión nueva → cambio ----
 $h = rt_ap_seg();
 $eh = at_rt_emitir_aprobacion($h, rt_ap_ahora());
-at_rt_guardar($h, ['render' => array_merge(at_rt_obtener($h)['render'], ['huella' => hash('sha256', 'nueva')])]);
+// Contenido nuevo y presentación rehecha con su huella (como deja un render terminado).
+at_rt_guardar($h, ['textos' => array_merge(at_rt_obtener($h)['textos'], ['quedamos' => '[PRUEBA] Quedamos en retomar el pedido, versión nueva.'])]);
+rt_ap_al_dia($h);
 $antes_h = rt_ap_foto($h);
 $r = at_rt_pagina_aprobacion(rt_ap_q($eh['aprobar']), 'GET', []);
 ok($r['http'] === 409 && str_contains($r['html'], 'cambió') && !str_contains($r['html'], '<form'), 'render rehecho: GET dice que el recordatorio cambió, sin formulario');
@@ -249,8 +300,13 @@ $eo = at_rt_emitir_aprobacion($o, rt_ap_ahora());
 $antes_o = at_rt_obtener($o);
 $r = rt_ap_post(rt_ap_q($eo['omitir']));
 $so = at_rt_obtener($o);
-ok($r['http'] === 200 && $so['aprobacion']['estado'] === 'omitido' && $so['aprobacion']['usada'] === true && $so['proximo_at'] === $antes_o['proximo_at'] && $so['envios'] === [] && $so['redaccion'] === $antes_o['redaccion'], 'omitir: omitido y usada, sin tocar proximo_at, envíos ni redacción');
+$ev_o = $so['envios'][0] ?? [];
+ok($r['http'] === 200 && $so['aprobacion']['estado'] === 'omitido' && $so['aprobacion']['usada'] === true && $so['proximo_at'] === $antes_o['proximo_at'] && count($so['envios']) === 1 && $so['redaccion'] === $antes_o['redaccion'], 'omitir: omitido y usada, sin tocar proximo_at ni redacción, con un solo evento en envíos');
+ok(array_keys($ev_o) === ['tipo', 'fecha', 'at', 'n'] && $ev_o['tipo'] === 'omitido' && $ev_o['n'] === 1 && str_starts_with($ev_o['at'], $ev_o['fecha']) && at_rt_envios_realizados($so['envios']) === 0, 'omitir deja rastro en envíos {tipo:omitido, fecha, at, n} sin consumir un recordatorio');
 ok((int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$wpdb->prefix}crm_historial WHERE cliente_id=%d AND tipo_evento='retomar_omitido' AND titulo=%s", $crm_falso, '🔁 Esta semana no')) === 1, 'omitir deja «🔁 Esta semana no» en el historial del CRM');
+$o2 = rt_ap_seg(); // sin ficha CRM: el rastro queda igual en envíos
+$eo2 = at_rt_emitir_aprobacion($o2, '2026-10-19 09:00:00');
+ok(at_rt_resolver_aprobacion($o2, 'omitir', rt_ap_q($eo2['omitir']), '2026-10-19 09:30:00')['ok'] && at_rt_obtener($o2)['envios'] === [['tipo' => 'omitido', 'fecha' => '2026-10-19', 'at' => '2026-10-19 09:30:00', 'n' => 1]], 'omitir sin ficha CRM: el evento queda en envíos con la hora de la decisión');
 ok(rt_ap_post(rt_ap_q($eo['aprobar']))['http'] === 409 && at_rt_obtener($o)['aprobacion']['estado'] === 'omitido', 'después de omitir, aprobar con el mismo correo no aprueba');
 
 // ---- Paradas justo antes de aprobar ----
@@ -275,10 +331,18 @@ at_rt_guardar($pa, ['estado' => 'pausado', 'proximo_at' => null]);
 $res = at_rt_resolver_aprobacion($pa, 'aprobar', rt_ap_q($epa['aprobar']), rt_ap_ahora());
 ok($res['ok'] === false && $res['motivo'] === 'inactivo' && at_rt_obtener($pa)['proximo_at'] === null && at_rt_obtener($pa)['aprobacion']['estado'] === 'por_aprobar', 'seguimiento en pausa: inactivo, no se aprueba ni se programa');
 
+// ---- Ver con la presentación todavía rehaciéndose: no hay iframe, se dice que se está preparando ----
+$pv = rt_ap_seg();
+$epv = at_rt_emitir_aprobacion($pv, rt_ap_ahora());
+at_rt_guardar($pv, ['render' => ['estado' => 'pendiente', 'huella' => at_rt_obtener($pv)['render']['huella'], 'generacion' => str_repeat('d', 16)]]);
+$html_pv = at_rt_pagina_aprobacion(rt_ap_q($epv['ver']), 'GET', [])['html'];
+ok(str_contains($html_pv, 'id="presentacion"') && str_contains($html_pv, 'se está preparando') && substr_count($html_pv, '<iframe') === 1 && !str_contains($html_pv, at_pt_host_renderer()), 'ver con la presentación sin terminar: solo el correo y el aviso de que se está preparando');
+
 // ---- Escapado ----
 $x = rt_ap_seg();
-$ex = at_rt_emitir_aprobacion($x, rt_ap_ahora());
 $wpdb->update($wpdb->prefix . 'at_retomar', ['negocio' => '<script>alert(1)</script> & "Co"', 'nombre' => '[PRUEBA] <b onmouseover="x">Ana</b>'], ['id' => $x]);
+rt_ap_al_dia($x); // el nombre y el negocio son parte de la presentación: la huella sigue al contenido nuevo
+$ex = at_rt_emitir_aprobacion($x, rt_ap_ahora());
 $sin_script = true;
 foreach (['aprobar', 'cambios', 'omitir', 'ver'] as $accion) {
 	$html = at_rt_pagina_aprobacion(rt_ap_q($ex[$accion]), 'GET', [])['html'];

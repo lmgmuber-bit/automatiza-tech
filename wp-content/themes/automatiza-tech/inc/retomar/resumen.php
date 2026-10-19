@@ -4,8 +4,9 @@
  * at_rt_config(), hora de Chile) al destino de esa configuración: una tarjeta por seguimiento que toca revisar, con los
  * botones firmados de la aprobación, y la lista de quienes salieron de Retomar desde el resumen anterior. Nada sale al
  * prospecto: él solo recibe lo que Luis apruebe, y eso lo envía el reloj en su ventana.
- * D8: el correo nunca lleva easypanel ni el host del renderer. Las tarjetas no llevan <img>, «Ver la presentación
- * completa» es la página pública retomar.php del sitio y todo enlace es HTTPS.
+ * D8: el correo nunca lleva easypanel ni el host del renderer. Las tarjetas no llevan <img>, todo enlace es HTTPS del sitio
+ * y «Ver la presentación completa» es la página firmada «ver» (retomar-aprobar.php#presentacion, Ruling 17), que muestra
+ * la presentación candidata dentro de la página: la pública del prospecto (retomar.php) sigue con la que ya recibió.
  */
 if (!defined('ABSPATH')) { exit; }
 
@@ -58,16 +59,17 @@ function at_rt_correo_luis(string $destino, string $asunto, string $html): bool 
 }
 
 /**
- * Días desde que se envió la propuesta vinculada (at_rt_fecha_envio_propuesta) o, sin propuesta, desde el alta del
- * seguimiento (creado_at), hasta $hoy ('Y-m-d'). 0 si no se puede saber o la fecha es futura.
+ * Días desde que se envió la propuesta vinculada (at_rt_fecha_envio_propuesta) o, sin propuesta o con una que sigue `lista`
+ * (terminada y nunca enviada: la propuesta nueva que llega con el recordatorio), desde el alta del seguimiento (creado_at),
+ * hasta $hoy ('Y-m-d'). 0 si no se puede saber o la fecha es futura.
  */
 function at_rt_resumen_dias(array $s, string $hoy): int {
 	global $wpdb;
 	$desde = '';
 	$pid = (int) ($s['propuesta_id'] ?? 0);
 	if ($pid > 0) {
-		$p = $wpdb->get_row($wpdb->prepare("SELECT id, created_at FROM {$wpdb->prefix}automatiza_propuestas WHERE id = %d", $pid), ARRAY_A);
-		if ($p) { $desde = at_rt_fecha_envio_propuesta($p); }
+		$p = $wpdb->get_row($wpdb->prepare("SELECT id, status, created_at FROM {$wpdb->prefix}automatiza_propuestas WHERE id = %d", $pid), ARRAY_A);
+		if ($p && ($p['status'] ?? '') !== 'lista') { $desde = at_rt_fecha_envio_propuesta($p); }
 	}
 	if ($desde === '') { $desde = at_pt_ymd((string) ($s['creado_at'] ?? '')); }
 	// Días de calendario en UTC: un cambio de hora en Chile no resta ni suma un día.
@@ -99,17 +101,23 @@ function at_rt_resumen_textos(array $s): array {
 }
 
 /**
- * Qué tarjeta le toca a un seguimiento en el resumen del día $hoy, o '' si no va:
+ * Qué tarjeta le toca a un seguimiento en el resumen de las $ahora («Y-m-d H:i[:s]» de Chile; «Y-m-d» cuenta como la
+ * medianoche), o '' si no va:
  *  - 'propuesta'   — espera_propuesta: la propuesta no usa la plantilla AT y hay que hacerle una nueva.
  *  - ''            — no está activo o su próximo envío es futuro; tiene una condición de parada o llegó al tope (Ruling 3:
- *                    nunca se emite); o ya está aprobado con la presentación vigente (huella del render `listo`) y solo
- *                    espera su envío: emitir pisaría la aprobación.
- *  - 'preparacion' — aprobado pero la presentación no está lista («Aprobado, esperando la presentación»), o la redacción o
- *                    la presentación todavía se están haciendo (el reloj reintenta las redacciones atascadas).
- *  - 'revision'    — la redacción quedó en revisión, la presentación falló, o no hay flujo de redacción que la termine.
+ *                    nunca se emite); o ya está aprobado con la presentación vigente (huella del render `listo`) y un correo
+ *                    válido, y solo espera su envío: emitir pisaría la aprobación.
+ *  - 'revision'    — algo que no se arregla solo, con un texto fijo en la tarjeta (nunca la nota cruda): el correo del
+ *                    prospecto no es válido (I2: aprobado o no, el reloj no podría enviarlo); la presentación está en
+ *                    `error` o lleva más de 24 h esperando (I4; sin pedido_at cuenta como vieja: nunca se pidió); la
+ *                    redacción quedó en revisión, o en `error` después de al menos un reintento del reloj (reintento_at),
+ *                    o no hay flujo de redacción que la termine.
+ *  - 'preparacion' — aprobado con la presentación rehaciéndose («Aprobado, esperando la presentación»), o la redacción o la
+ *                    presentación todavía se están haciendo (el reloj reintenta lo atascado).
  *  - 'normal'      — redacción `lista` y render `listo`: se emite la aprobación. Un aprobado con huella vieja cae aquí.
  */
-function at_rt_resumen_tipo(array $s, string $hoy): string {
+function at_rt_resumen_tipo(array $s, string $ahora): string {
+	$hoy = substr($ahora, 0, 10);
 	$estado = (string) ($s['estado'] ?? '');
 	$proximo = (string) ($s['proximo_at'] ?? '');
 	if ($estado !== 'espera_propuesta' && ($estado !== 'activo' || $proximo === '' || $proximo > $hoy)) { return ''; }
@@ -118,33 +126,44 @@ function at_rt_resumen_tipo(array $s, string $hoy): string {
 	$huella = is_string($render['huella'] ?? null) ? $render['huella'] : '';
 	$listo = ($render['estado'] ?? '') === 'listo' && $huella !== '';
 	$aprobado = $estado === 'activo' && ($ap['estado'] ?? '') === 'aprobado';
-	if ($aprobado && $listo && is_string($ap['huella'] ?? null) && hash_equals($huella, $ap['huella'])) { return ''; }
+	$correo = is_email((string) ($s['email'] ?? ''));
+	if ($aprobado && $listo && $correo && is_string($ap['huella'] ?? null) && hash_equals($huella, $ap['huella'])) { return ''; }
 	if (at_rt_motivo_parada(at_rt_contexto_parada($s)) !== '') { return ''; }
 	if ($estado === 'espera_propuesta') { return 'propuesta'; }
-	if ($aprobado && !$listo) { return 'preparacion'; }
-	$redaccion = (string) ($s['redaccion']['estado'] ?? '');
-	if ($redaccion === 'revision') { return 'revision'; }
-	if ($redaccion !== 'lista') { return at_rt_red_flujo() === '' ? 'revision' : 'preparacion'; }
-	if (($render['estado'] ?? '') === 'error') { return 'revision'; }
-	return $listo ? 'normal' : 'preparacion';
+	if (!$correo || ($render['estado'] ?? '') === 'error') { return 'revision'; }
+	$redaccion = is_array($s['redaccion'] ?? null) ? $s['redaccion'] : [];
+	$red_estado = (string) ($redaccion['estado'] ?? '');
+	$esperando = !$listo && ($aprobado || $red_estado === 'lista') && at_rt_render_esperando($render, $ahora, 24);
+	if ($aprobado && !$listo) { return $esperando ? 'revision' : 'preparacion'; }
+	if ($red_estado === 'revision' || ($red_estado === 'error' && is_string($redaccion['reintento_at'] ?? null) && $redaccion['reintento_at'] !== '')) { return 'revision'; }
+	if ($red_estado !== 'lista') { return at_rt_red_flujo() === '' ? 'revision' : 'preparacion'; }
+	if ($listo) { return 'normal'; }
+	return $esperando ? 'revision' : 'preparacion';
 }
 
 /**
  * Tarjeta del resumen para el seguimiento $s a la hora $ahora, o null si no va. Si toca aprobar, emite la aprobación con
- * esa hora (rota el nonce: los botones de un correo anterior responden «cambio») y la tarjeta lleva los textos, la página
- * pública de la presentación y los cuatro enlaces. Unos textos con un enlace interno no se ofrecen para aprobar (D8).
+ * esa hora (rota el nonce: los botones de un correo anterior responden «cambio») y la tarjeta lleva los textos y los cuatro
+ * enlaces; «Ver la presentación completa» es el enlace «ver» con el ancla #presentacion (Ruling 17). Unos textos con un
+ * enlace interno no se ofrecen para aprobar (D8). Si la emisión no se pudo porque, entretanto, Luis ya lo aprobó (la
+ * emisión nunca pisa un aprobado vigente), no va tarjeta; cualquier otra emisión fallida va como «Necesita revisión».
  */
 function at_rt_resumen_tarjeta(array $s, string $ahora): ?array {
 	$hoy = substr($ahora, 0, 10);
-	$tipo = at_rt_resumen_tipo($s, $hoy);
+	$tipo = at_rt_resumen_tipo($s, $ahora);
 	if ($tipo === '') { return null; }
 	$textos = at_rt_resumen_textos($s);
 	if ($tipo === 'normal' && at_rt_red_interno(array_merge([(string) $s['nombre'], (string) $s['negocio']], array_values($textos)))) { $tipo = 'revision'; }
 	$t = at_rt_resumen_base($s, $hoy) + ['tipo' => $tipo];
 	if ($tipo !== 'normal') { return $t; }
 	$enlaces = at_rt_emitir_aprobacion((int) $s['id'], $ahora);
-	if ($enlaces === null) { $t['tipo'] = 'revision'; return $t; }
-	return $t + ['textos' => $textos, 'url_presentacion' => at_rt_datos_correo($s)['url_ver'], 'enlaces' => $enlaces];
+	if ($enlaces === null) {
+		$actual = at_rt_obtener((int) $s['id']);
+		if ($actual && at_rt_resumen_tipo($actual, $ahora) === '') { return null; }
+		$t['tipo'] = 'revision';
+		return $t;
+	}
+	return $t + ['textos' => $textos, 'url_presentacion' => $enlaces['ver'] . '#presentacion', 'enlaces' => $enlaces];
 }
 
 /** «Salieron de Retomar»: seguimientos de $lista en un estado de cierre cuyo cambio es posterior a $desde. */
@@ -257,7 +276,7 @@ function at_rt_aviso_listo(int $id): bool {
 	if (!is_email($destino)) { error_log('Retomar: el destino del aviso no es un correo válido.'); return false; }
 	$enlaces = at_rt_emitir_aprobacion($id, $ahora);
 	if ($enlaces === null) { return false; }
-	$t = at_rt_resumen_base($s, substr($ahora, 0, 10)) + ['tipo' => 'normal', 'textos' => $textos, 'url_presentacion' => at_rt_datos_correo($s)['url_ver'], 'enlaces' => $enlaces, 'url_panel' => at_rt_url_panel()];
+	$t = at_rt_resumen_base($s, substr($ahora, 0, 10)) + ['tipo' => 'normal', 'textos' => $textos, 'url_presentacion' => $enlaces['ver'] . '#presentacion', 'enlaces' => $enlaces, 'url_panel' => at_rt_url_panel()];
 	$html = at_rt_aviso_html($t);
 	if (at_rt_correo_interno($html)) { error_log('Retomar: el aviso del recordatorio corregido #' . $id . ' traía un enlace interno y no se envió.'); return false; }
 	$quien = $t['nombre'] !== '' ? $t['nombre'] : ($t['negocio'] !== '' ? $t['negocio'] : 'prospecto sin nombre');

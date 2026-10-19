@@ -16,6 +16,12 @@ function at_rt_es_habil(string $ymd): bool {
 function at_rt_en_ventana(string $hm): bool {
 	return preg_match('/^\d{2}:[0-5]\d$/D', $hm) === 1 && $hm >= '10:00' && $hm < '13:00';
 }
+/** Minuto de cada hora en que corre el reloj de n8n («Retomar · Reloj y WhatsApp», cron `0 5 * * * *`). Única fuente:
+ *  si cambia el cron, cambia aquí y con eso la programación de lo aprobado y la hora tope del resumen del domingo. */
+function at_rt_minuto_reloj(): int { return 5; }
+/** Última pasada del reloj dentro de la ventana de envío 10:00–13:00: la de las 12 con el minuto del reloj («12:05»).
+ *  Lo aprobado desde esa hora ya no alcanza a salir ese día. */
+function at_rt_ultima_pasada(): string { return sprintf('12:%02d', at_rt_minuto_reloj()); }
 function at_rt_proximo(string $ymd_envio, int $intervalo): string {
 	$fecha = at_rt_fecha($ymd_envio);
 	if ($fecha === null) { return ''; }
@@ -138,11 +144,16 @@ function at_rt_url_wa_manual(string $telefono_wa, string $texto): string {
 
 /* ---------- Fase 2: detección, aprobación semanal y resumen (sin WordPress) ---------- */
 
-/** true si el texto trae un monto: «$», CLP/USD/UF como palabra o cifras con separador de miles (1.500, 1,500).
- *  Si el texto no es UTF-8 válido se revisa por bytes, así un texto roto nunca se da por limpio. */
+/** true si el texto trae un monto: «$» (también «US$»), CLP/USD/UF como palabra o pegadas a una cifra («USD500»,
+ *  «500USD»), cifras con separador de miles (1.500, 1,500) o una cifra seguida de pesos, dólares, lucas, mil, millón o
+ *  millones, con o sin espacio («5 mil», «300pesos»). «mil gracias», «3 milímetros» o «UFO» no cuentan.
+ *  Si el texto no es UTF-8 válido se revisa por bytes, así un texto roto nunca se da por limpio (las alternativas con
+ *  tilde van como «o|ó», no como clase de caracteres, para que valgan también byte a byte; y «la palabra sigue» es una
+ *  letra latina en UTF-8 y, por bytes, el primer byte de esas letras, \xC3). */
 function at_rt_tiene_montos(string $t): bool {
-	$r = preg_match('/\$|\b(CLP|USD|UF)\b|\d{1,3}(?:[.,]\d{3})+/iu', $t);
-	if ($r === false) { $r = preg_match('/\$|\b(CLP|USD|UF)\b|\d{1,3}(?:[.,]\d{3})+/i', $t); }
+	$patron = static fn(string $letra): string => '/\$|(?:\b|(?<=\d))(?:CLP|USD|UF)(?![a-z])|\d{1,3}(?:[.,]\d{3})+|\d\s*(?:millones|mill(?:o|ó)n|mil|pesos|d(?:o|ó)lares|lucas)(?!' . $letra . ')/i';
+	$r = preg_match($patron('[a-z\x{c0}-\x{ff}]') . 'u', $t);
+	if ($r === false) { $r = preg_match($patron('[a-z]|\xc3'), $t); }
 	return $r === 1;
 }
 
@@ -175,6 +186,17 @@ function at_rt_ahora(string $ahora): ?DateTimeImmutable {
 	return null;
 }
 
+/**
+ * ¿La marca $marca («Y-m-d H:i[:s]» de Chile) es de hace más de $horas horas respecto de $fecha (o justo $horas, con
+ * $incluido)? Sin marca legible, sí: viene de antes de que se anotara. Una marca futura no es vieja. La usan los
+ * reintentos del reloj (redacción y presentación) y el resumen para saber qué quedó atascado.
+ */
+function at_rt_marca_vieja($marca, DateTimeImmutable $fecha, int $horas, bool $incluido = false): bool {
+	$cuando = is_string($marca) ? at_rt_ahora($marca) : null;
+	$limite = $fecha->modify('-' . $horas . ' hours');
+	return $cuando === null || $cuando < $limite || ($incluido && $cuando == $limite);
+}
+
 /** Semana ISO-8601 en hora de Chile, p. ej. «2026-W43» (el 2027-01-01 es «2026-W53»). '' si la fecha no se entiende. */
 function at_rt_semana(string $ahora): string {
 	$fecha = at_rt_ahora($ahora);
@@ -193,13 +215,24 @@ function at_rt_toca_resumen(string $ahora, int $dia, string $hora, string $ultim
 	return $n > $dia || ($n === $dia && $fecha->format('H:i') >= $hora);
 }
 
-/** Día de envío al prospecto para algo aprobado a las $ahora: hoy si es hábil y falta para las 13:00; si no, el
- *  siguiente día hábil. '' si la fecha no se entiende. (La hora exacta la sigue decidiendo la ventana 10:00–13:00.) */
+/**
+ * ¿Sirve esta combinación de día ($dia 1..7, ISO «N») y hora ('H:i') para el resumen semanal? El domingo (7) no admite una
+ * hora posterior a su última pasada del reloj (23 con el minuto del reloj, «23:05»): a esa hora ya no hay pasada ese día y
+ * la siguiente es de otra semana, así que el resumen nunca saldría. Los demás días la pasada siguiente lo recupera.
+ */
+function at_rt_resumen_hora_valida(int $dia, string $hora): bool {
+	if ($dia < 1 || $dia > 7 || preg_match('/^([01]\d|2[0-3]):[0-5]\d$/D', $hora) !== 1) { return false; }
+	return $dia !== 7 || $hora <= sprintf('23:%02d', at_rt_minuto_reloj());
+}
+
+/** Día de envío al prospecto para algo aprobado a las $ahora: hoy si es hábil y todavía no pasó la última pasada del
+ *  reloj dentro de la ventana (at_rt_ultima_pasada(), las 12:05); si no, el siguiente día hábil. '' si la fecha no se
+ *  entiende. (La hora exacta la decide la pasada del reloj dentro de la ventana 10:00–13:00.) */
 function at_rt_programar(string $ahora): string {
 	$fecha = at_rt_ahora($ahora);
 	if ($fecha === null) { return ''; }
 	$dia = $fecha->setTime(0, 0);
-	if ($fecha->format('H:i') >= '13:00' || (int) $dia->format('N') > 5) { $dia = $dia->modify('+1 day'); }
+	if ($fecha->format('H:i') >= at_rt_ultima_pasada() || (int) $dia->format('N') > 5) { $dia = $dia->modify('+1 day'); }
 	while ((int) $dia->format('N') > 5) { $dia = $dia->modify('+1 day'); }
 	return $dia->format('Y-m-d');
 }
@@ -253,7 +286,7 @@ function at_rt_tarjeta_html(array $t): string {
 		[$etiqueta, $aviso] = [
 			'propuesta' => ['Necesita propuesta nueva', 'La propuesta que le enviamos es antigua y no la enlazamos para no mostrarle montos viejos. Hay que hacerle una propuesta nueva y vincularla desde el panel; mientras tanto no sale ningún recordatorio.'],
 			'preparacion' => ['En preparación', 'Estamos redactando el recordatorio y armando su presentación. Te lo mostramos listo en el próximo aviso.'],
-			'revision' => ['Necesita revisión', 'El recordatorio no quedó listo para enviarse. Revisa y corrige sus textos en el panel.'],
+			'revision' => ['Necesita revisión', 'El recordatorio no quedó listo para enviarse: falló la redacción o la presentación, o el correo del prospecto no es válido. Revísalo en el panel; mientras tanto no sale nada.'],
 		][$tipo];
 		$html .= '<div style="margin:0 0 4px"><span style="display:inline-block;background:#fef3c7;color:#92400e;border-radius:6px;padding:4px 10px;font-size:12px;font-weight:bold">' . $etiqueta . '</span></div>';
 		$html .= '<div style="font-size:12.5px;color:#333">' . $h($aviso) . '</div>';

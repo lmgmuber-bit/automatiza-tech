@@ -10,8 +10,9 @@ add_action('admin_enqueue_scripts', static function () {
     wp_add_inline_script('media-editor', 'jQuery(function($){$("#rt-media").on("click",function(){var f=wp.media({title:"Elegir imagen de la demo",multiple:false,library:{type:"image"}});f.on("select",function(){$("#rt-imagen_url").val(f.state().get("selection").first().toJSON().url);});f.open();});});');
 });
 /**
- * Acciones del panel. No hay «activar»: guardar deja el seguimiento activo y nada sale al prospecto sin la aprobación
- * semanal de Luis. «config» y «resumen» no son de un seguimiento (su nonce es el de id 0).
+ * Acciones del panel. No hay «activar»: guardar deja activo un seguimiento nuevo, en borrador o que esperaba una propuesta
+ * nueva (si puede recibir recordatorios), nunca uno pausado o detenido; y nada sale al prospecto sin la aprobación semanal
+ * de Luis. «config» y «resumen» no son de un seguimiento (su nonce es el de id 0).
  */
 function at_rt_acciones_panel(): array {
     return ['guardar','previa','prueba','pausar','respondio','baja','revertir_baja','whatsapp_manual','config','resumen','redactar','reanudar'];
@@ -108,6 +109,7 @@ function at_rt_panel_config(array $p) {
     $dia = trim((string)($p['dia'] ?? '')); $hora = trim((string)($p['hora'] ?? '')); $destino = trim((string)($p['destino'] ?? ''));
     if (!preg_match('/^[1-7]$/D', $dia)) { return new WP_Error('dia','Elige un día de la semana.'); }
     if (!preg_match('/^([01]\d|2[0-3]):[0-5]\d$/D', $hora)) { return new WP_Error('hora','Escribe la hora como HH:MM, entre 00:00 y 23:59 (por ejemplo 09:00).'); }
+    if (!at_rt_resumen_hora_valida((int)$dia, $hora)) { return new WP_Error('hora','El domingo el resumen puede salir a más tardar a las ' . sprintf('23:%02d', at_rt_minuto_reloj()) . ', la última pasada del reloj de ese día: más tarde ya es otra semana y nunca saldría. Elige una hora más temprana u otro día.'); }
     if ($destino !== '' && (strlen($destino) > 190 || !is_email($destino))) { return new WP_Error('destino','El correo de destino no es válido (máximo 190 caracteres). Déjalo vacío para usar el de avisos del equipo.'); }
     at_rt_resumen_marcar(['at_rt_resumen_dia'=>$dia,'at_rt_resumen_hora'=>$hora,'at_rt_resumen_destino'=>sanitize_email($destino)]);
     return ['id'=>0,'mensaje'=>'Configuración guardada. El resumen sale los ' . at_rt_panel_dias()[(int)$dia] . ' a las ' . $hora . ' (hora de Chile).'];
@@ -201,7 +203,7 @@ function at_rt_panel_guardar(int $id, array $p) {
     if ($reemplaza) {
         $r = at_rt_panel_vincular($id, $d, $reemplaza, $propuesta_id);
         if (is_wp_error($r)) { return $r; }
-    } elseif ($id ? !at_rt_guardar($id,$d) : !($id=at_rt_crear($d))) { return new WP_Error('guardar','No se pudo guardar el seguimiento.'); }
+    } elseif ($id ? !at_rt_panel_escribir($id, $d, $ahora) : !($id=at_rt_crear($d))) { return new WP_Error('guardar','No se pudo guardar el seguimiento.'); }
     $extra = $reemplaza ? ' La propuesta anterior quedó archivada.' : '';
     if (($d['estado'] ?? $estado) !== 'activo') {
         return ['id'=>$id,'mensaje'=>$aviso !== '' ? 'Guardado como borrador: ' . $aviso : 'Guardado. El seguimiento no está activo, así que no se pidió ni la redacción ni la presentación.'];
@@ -228,8 +230,9 @@ function at_rt_panel_vincular(int $id, array $d, int $vieja_id, int $nueva_id) {
     if ($wpdb->query('START TRANSACTION') === false) { return new WP_Error('guardar','No se pudo reservar el seguimiento.'); }
     $confirmado = false;
     try {
-        $estado = $wpdb->get_var($wpdb->prepare("SELECT estado FROM {$wpdb->prefix}at_retomar WHERE id=%d FOR UPDATE", $id));
-        if ($estado !== 'espera_propuesta') { return new WP_Error('estado','El seguimiento cambió mientras lo guardabas. Recarga el panel.'); }
+        $fila = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$wpdb->prefix}at_retomar WHERE id=%d FOR UPDATE", $id), ARRAY_A);
+        if (!$fila || $fila['estado'] !== 'espera_propuesta') { return new WP_Error('estado','El seguimiento cambió mientras lo guardabas. Recarga el panel.'); }
+        $d = at_rt_panel_bloqueado(at_rt_fila($fila), $d, at_rt_ahora_chile());
         $vieja = function_exists('at_cc_propuesta_por_id') ? at_cc_propuesta_por_id($vieja_id) : null;
         if ($vieja && ($vieja->flujo ?? null) !== 'v3' && ($vieja->status ?? '') !== 'archivada') {
             if (!function_exists('at_cc_archivar_propuesta')) { return new WP_Error('propuesta','No se pudo archivar la propuesta anterior: falta el módulo de cierre de cliente.'); }
@@ -248,11 +251,36 @@ function at_rt_panel_vincular(int $id, array $d, int $vieja_id, int $nueva_id) {
     }
 }
 /**
- * Estado de la revisión de un seguimiento, en palabras (sin datos internos ni enlaces): qué falta para que Luis lo apruebe o
- * cuándo sale. Se apoya en la misma regla que arma las tarjetas del resumen semanal (at_rt_resumen_tipo).
+ * Lo que un guardado del panel no puede perder ni dejar vivo; se aplica con la fila ya bloqueada ($actual). La versión
+ * publicada de la presentación (Ruling 17) pasa al render nuevo, y un recordatorio `aprobado` queda con la aprobación
+ * muerta (Ruling 18: Luis aprobó otro contenido u otro destinatario; así, cuando la presentación nueva quede lista, le
+ * llega el aviso «Recordatorio corregido» del Ruling 11).
  */
-function at_rt_panel_revision(array $s, string $hoy): string {
-    $tipo = at_rt_resumen_tipo($s, $hoy);
+function at_rt_panel_bloqueado(array $actual, array $d, string $ahora): array {
+    if (is_array($d['render'] ?? null)) { $d['render'] = at_rt_render_heredar(is_array($actual['render'] ?? null) ? $actual['render'] : [], $d['render'], false); }
+    if (($actual['aprobacion']['estado'] ?? '') === 'aprobado') { $d['aprobacion'] = at_rt_aprobacion_muerta($actual['aprobacion'], $ahora); }
+    return $d;
+}
+/** Guarda un seguimiento existente desde el panel bajo START TRANSACTION + FOR UPDATE (at_rt_panel_bloqueado). */
+function at_rt_panel_escribir(int $id, array $d, string $ahora): bool {
+    global $wpdb;
+    if ($wpdb->query('START TRANSACTION') === false) { return false; }
+    try {
+        $fila = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$wpdb->prefix}at_retomar WHERE id=%d FOR UPDATE", $id), ARRAY_A);
+        if (!$fila || !at_rt_guardar($id, at_rt_panel_bloqueado(at_rt_fila($fila), $d, $ahora))) { return false; }
+        return $wpdb->query('COMMIT') !== false;
+    } finally {
+        $wpdb->query('ROLLBACK'); // Sin efecto después de COMMIT; libera el candado ante cualquier retorno o error.
+    }
+}
+/**
+ * Estado de la revisión de un seguimiento, en palabras (sin datos internos ni enlaces): qué falta para que Luis lo apruebe o
+ * cuándo sale. Se apoya en la misma regla que arma las tarjetas del resumen semanal (at_rt_resumen_tipo). $ahora: «Y-m-d
+ * H:i:s» de Chile (o solo «Y-m-d»), para saber si una presentación lleva más de 24 h esperando.
+ */
+function at_rt_panel_revision(array $s, string $ahora): string {
+    $hoy = substr($ahora, 0, 10);
+    $tipo = at_rt_resumen_tipo($s, $ahora);
     if ($tipo === 'propuesta') { return 'Necesita propuesta nueva'; }
     if ($tipo === 'revision') { return 'Necesita revisión'; }
     $ap = is_array($s['aprobacion'] ?? null) ? $s['aprobacion'] : [];
@@ -277,10 +305,11 @@ function at_rt_boton_ficha(array $cliente): void {
     if (($cliente['tipo'] ?? '') !== 'prospecto' || $id === 0) { return; }
     echo '<p class="at-rt-ficha-boton" style="margin:0 0 12px"><a class="button" href="' . esc_attr(admin_url('admin.php?page=at-retomar&crm=' . $id)) . '">🔁 Retomar</a></p>';
 }
-/** Texto para compartir a mano: el de la plantilla de Meta con los enlaces de agenda y baja del prospecto. */
+/** Texto para compartir a mano: el de la plantilla de Meta con los enlaces del prospecto. «Ver y agendar» abre su página
+ *  (la presentación, «Agendar» y «No me interesa»), como el botón de la plantilla; la baja va aparte. */
 function at_rt_panel_texto_manual(array $s): string {
     $base = home_url('/retomar.php?t=' . rawurlencode((string) $s['token']));
-    return at_rt_texto_manual((string) $s['nombre'], (string) $s['negocio'], $base . '&agendar=1', $base . '&baja=1');
+    return at_rt_texto_manual((string) $s['nombre'], (string) $s['negocio'], $base, $base . '&baja=1');
 }
 function at_rt_panel_form_inicio(string $accion,int $id): void {
     echo '<form method="post" action="'.esc_url(admin_url('admin-post.php')).'">';
@@ -298,7 +327,7 @@ function at_rt_panel(): void {
         $f=$wpdb->get_row($wpdb->prepare("SELECT id,nombre,empresa,email,telefono FROM {$wpdb->prefix}crm_clientes WHERE id=%d AND tipo='prospecto'",$crm_id),ARRAY_A);
         if ($f) { $pre=['crm_cliente_id'=>(int)$f['id'],'nombre'=>$f['nombre'],'negocio'=>$f['empresa'],'email'=>$f['email'],'telefono'=>$f['telefono']]; }
     }
-    $v=$s?:$pre; $id=$s?$id:0; $hoy=substr(at_rt_ahora_chile(),0,10); $cfg=at_rt_config();
+    $v=$s?:$pre; $id=$s?$id:0; $hoy=at_rt_ahora_chile(); $cfg=at_rt_config(); // $hoy con la hora: la revisión mide esperas de 24 h
     echo '<div class="wrap at-retomar"><h1>🔁 Retomar prospectos</h1><p>Recordatorios del equipo de AutomatizaTech. Cada semana te llega un correo para aprobarlos; nada sale al prospecto sin tu aprobación, en días hábiles entre 10:00 y 13:00 de Santiago.</p>';
     echo at_rt_wa_automatico()
         ? '<div class="notice notice-success inline rt-wa-estado"><p><strong>🟢 WhatsApp automático: encendido.</strong> El WhatsApp sale en cada recordatorio que apruebes a quien tenga la casilla «WhatsApp autorizado».</p></div>'

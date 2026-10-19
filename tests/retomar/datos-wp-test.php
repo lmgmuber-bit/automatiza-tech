@@ -92,6 +92,21 @@ ok(at_rt_campos(['estado' => 'espera_propuesta']) !== null && at_rt_campos(['est
 $id3 = rt_fixture(['estado' => 'espera_propuesta']);
 ok($id3 > 0 && at_rt_obtener($id3)['estado'] === 'espera_propuesta', 'crear con estado espera_propuesta');
 
+// I3: «ya es cliente» mira también cualquier ficha cliente con el mismo correo, aunque no esté vinculada al seguimiento.
+$correo_sf = 'sinficha-' . $correo;
+$sf = rt_fixture(['email' => $correo_sf, 'telefono' => '']);
+$wpdb->insert($wpdb->prefix . 'crm_clientes', ['nombre' => '[PRUEBA]', 'email' => $correo_sf, 'empresa' => '[PRUEBA]', 'tipo' => 'prospecto', 'estado' => 'nuevo', 'origen' => 'prueba_retomar']);
+$extras[] = [$wpdb->prefix . 'crm_clientes', $ficha_prospecto = (int) $wpdb->insert_id];
+at_rt_guardar($sf, ['crm_cliente_id' => $ficha_prospecto]);
+ok(at_rt_contexto_parada(at_rt_obtener($sf))['crm_tipo'] === 'prospecto', 'I3: ficha vinculada de prospecto y ninguna cliente: crm_tipo prospecto');
+$wpdb->insert($wpdb->prefix . 'crm_clientes', ['nombre' => '[PRUEBA]', 'email' => '  ' . strtoupper($correo_sf) . ' ', 'empresa' => '[PRUEBA]', 'tipo' => 'cliente', 'estado' => 'contratado', 'origen' => 'prueba_retomar']);
+$extras[] = [$wpdb->prefix . 'crm_clientes', (int) $wpdb->insert_id];
+$c_sf = at_rt_contexto_parada(at_rt_obtener($sf));
+ok($c_sf['crm_tipo'] === 'cliente' && at_rt_motivo_parada($c_sf) === 'cliente', 'I3: otra ficha cliente con el mismo correo (mayúsculas y espacios), no vinculada: el seguimiento ya es cliente');
+at_rt_guardar($sf, ['crm_cliente_id' => null]);
+ok(at_rt_contexto_parada(at_rt_obtener($sf))['crm_tipo'] === 'cliente', 'I3: sin ficha vinculada, la ficha cliente del mismo correo igual cuenta');
+ok(at_rt_contexto_parada(at_rt_obtener($ajeno))['crm_tipo'] === '' && at_rt_contexto_parada(['email' => '', 'crm_cliente_id' => 0])['crm_tipo'] === '', 'I3: un correo sin ficha cliente, o vacío, no es cliente');
+
 // Configuración del resumen semanal: valores fuera de rango vuelven al defecto.
 $previas = [];
 foreach (['at_rt_resumen_dia', 'at_rt_resumen_hora', 'at_rt_resumen_destino'] as $opcion) {
@@ -108,10 +123,21 @@ foreach (['9' => 1, '0' => 1, '8' => 1, 'x' => 1, '1abc' => 1, '' => 1, '2' => 2
 	update_option('at_rt_resumen_dia', (string) $dia, false);
 	ok(at_rt_config()['dia'] === $esperado, "día '{$dia}' da {$esperado}");
 }
+update_option('at_rt_resumen_dia', '1', false); // las horas se prueban un lunes: el domingo tiene su propio tope (abajo)
 foreach (['25:00' => '09:00', '24:00' => '09:00', '9:00' => '09:00', '10:60' => '09:00', 'abc' => '09:00', '' => '09:00', '00:00' => '00:00', '14:30' => '14:30', '23:59' => '23:59'] as $hora => $esperada) {
 	update_option('at_rt_resumen_hora', (string) $hora, false);
 	ok(at_rt_config()['hora'] === $esperada, "hora '{$hora}' da {$esperada}");
 }
+// Domingo con una hora posterior a su última pasada (23:05) nunca saldría: la combinación vuelve al defecto.
+update_option('at_rt_resumen_dia', '7', false);
+foreach (['23:30' => [1, '09:00'], '23:06' => [1, '09:00'], '23:05' => [7, '23:05'], '20:00' => [7, '20:00']] as $hora => [$dia_esperado, $hora_esperada]) {
+	update_option('at_rt_resumen_hora', $hora, false);
+	$cfg = at_rt_config();
+	ok($cfg['dia'] === $dia_esperado && $cfg['hora'] === $hora_esperada, "domingo {$hora} da día {$dia_esperado} a las {$hora_esperada}");
+}
+update_option('at_rt_resumen_dia', '6', false);
+update_option('at_rt_resumen_hora', '23:30', false);
+ok(at_rt_config()['dia'] === 6 && at_rt_config()['hora'] === '23:30', 'sábado 23:30 se conserva (el domingo lo recupera)');
 update_option('at_rt_resumen_destino', 'esto no es un correo', false);
 ok(at_rt_config()['destino'] === at_cc_correo_avisos(), 'destino inválido vuelve al correo de avisos');
 update_option('at_rt_resumen_destino', '  rt-destino@example.com ', false);

@@ -10,7 +10,7 @@ function ok($valor, string $mensaje): void {
 	if (!$valor) { $fallas++; }
 	echo ($valor ? 'ok ' : 'FALLA ') . $mensaje . "\n";
 }
-$funciones = ['intervalo', 'max', 'es_habil', 'en_ventana', 'proximo', 'canales', 'motivo_parada', 'estado_por_motivo', 'token', 'token_valido', 'asunto', 'correo_html', 'correo_texto', 'cabeceras_baja', 'internas', 'tiene_montos', 'es_candidata', 'necesita_propuesta', 'semana', 'toca_resumen', 'programar', 'firma', 'firma_valida', 'tarjeta_html', 'resumen_html'];
+$funciones = ['intervalo', 'max', 'es_habil', 'en_ventana', 'proximo', 'canales', 'motivo_parada', 'estado_por_motivo', 'token', 'token_valido', 'asunto', 'correo_html', 'correo_texto', 'cabeceras_baja', 'internas', 'tiene_montos', 'es_candidata', 'necesita_propuesta', 'semana', 'toca_resumen', 'programar', 'firma', 'firma_valida', 'tarjeta_html', 'resumen_html', 'minuto_reloj', 'ultima_pasada', 'resumen_hora_valida', 'marca_vieja'];
 foreach ($funciones as $f) { ok(function_exists('at_rt_' . $f), 'interfaz at_rt_' . $f); }
 if ($fallas) { echo "$total pruebas, $fallas fallas\n"; exit(1); }
 ok(at_rt_intervalo(3) === 7 && at_rt_intervalo(10) === 10, 'intervalo mínimo');
@@ -60,7 +60,10 @@ ok($wa === 'https://wa.me/56900000000?text=' . rawurlencode("Hola & chao\nfin"),
 ok(at_rt_url_wa_manual('', 'x') === '', 'manual: sin teléfono no hay enlace');
 // Fase 2 (aprobación semanal): reglas puras.
 foreach (['$680.000', '680.000', '1.500', 'USD 500', '2 UF', 'CLP', 'unos 1,500 pesos'] as $texto) { ok(at_rt_tiene_montos($texto) === true, 'montos detecta ' . $texto); }
-foreach (['en 2 semanas', 'fase 1 en 30 días', 'año 2026', '10:00 a 13:00', 'UFO', ''] as $texto) { ok(at_rt_tiene_montos($texto) === false, 'montos no confunde «' . $texto . '»'); }
+// Ruling 19: también cifras con la moneda o la cantidad en palabras, con o sin espacio, y siglas pegadas a la cifra.
+foreach (['300 pesos', '300pesos', '20 dólares', '20 dolares', '20dólares', '50 lucas', '5 mil', '5mil', 'unos 2 millones', '1 millón', 'USD500', '500USD', 'US$500', 'CLP2000', '2000CLP', 'UF3', '3UF', 'cuesta 5 MIL'] as $texto) { ok(at_rt_tiene_montos($texto) === true, 'montos detecta ' . $texto); }
+foreach (['en 2 semanas', 'fase 1 en 30 días', 'año 2026', '10:00 a 13:00', 'UFO', '', 'mil gracias', 'son 3 milímetros', 'a 2 millas', 'sufijo', 'el 2 de mayo'] as $texto) { ok(at_rt_tiene_montos($texto) === false, 'montos no confunde «' . $texto . '»'); }
+ok(at_rt_tiene_montos("5 mil\xff") === true && at_rt_tiene_montos("en 2 semanas\xff") === false, 'montos: un texto que no es UTF-8 válido se revisa igual');
 $hoy = '2026-10-18';
 $cliente_ok = ['crm_tipo' => 'prospecto', 'baja' => false, 'existe' => false];
 ok(at_rt_es_candidata(['status' => 'sent', 'enviada' => '2026-10-04'], $cliente_ok, $hoy) === '', 'candidata: sent hace exactamente 14 días');
@@ -92,10 +95,24 @@ ok(at_rt_toca_resumen('2026-10-18 23:30', 1, '09:00', '2026-W41') === true, 'toc
 ok(at_rt_toca_resumen('2026-10-19 00:30', 1, '09:00', '2026-W42') === false, 'toca: lunes 00:30 es antes de la hora');
 ok(at_rt_toca_resumen('2026-10-21 08:00', 3, '08:30', '') === false && at_rt_toca_resumen('2026-10-21 08:30', 3, '08:30', '') === true && at_rt_toca_resumen('2026-10-20 23:59', 3, '08:30', '') === false, 'toca: otro día configurado');
 ok(at_rt_toca_resumen('basura', 1, '09:00', '') === false, 'toca: fecha inválida no envía');
-ok(at_rt_programar('2026-10-23 12:59') === '2026-10-23', 'programar: viernes antes de las 13:00 es hoy');
+// Ruling 15: el reloj pasa al minuto 5 de cada hora; la última pasada dentro de la ventana 10:00–13:00 es la de las 12:05.
+ok(at_rt_minuto_reloj() === 5 && at_rt_ultima_pasada() === '12:05', 'reloj: minuto 5 y última pasada en la ventana a las 12:05');
+ok(at_rt_en_ventana(at_rt_ultima_pasada()) && !at_rt_en_ventana(sprintf('13:%02d', at_rt_minuto_reloj())), 'la última pasada cae en la ventana y la siguiente ya no');
+ok(at_rt_programar('2026-10-23 12:04') === '2026-10-23', 'programar: viernes 12:04 (antes de la última pasada) es hoy');
+ok(at_rt_programar('2026-10-23 12:05') === '2026-10-26' && at_rt_programar('2026-10-23 12:05:00') === '2026-10-26', 'programar: viernes 12:05 ya no alcanza la pasada: pasa al lunes');
+ok(at_rt_programar('2026-10-23 12:59') === '2026-10-26', 'programar: viernes 12:59 pasa al lunes (no hay pasada entre 12:05 y 13:00)');
 ok(at_rt_programar('2026-10-23 13:00') === '2026-10-26', 'programar: viernes 13:00 pasa al lunes');
 ok(at_rt_programar('2026-10-24 09:00') === '2026-10-26', 'programar: sábado pasa al lunes');
-ok(at_rt_programar('2026-10-19 07:00') === '2026-10-19' && at_rt_programar('2026-10-19 13:00:00') === '2026-10-20', 'programar: lunes temprano es hoy, lunes tarde es martes');
+ok(at_rt_programar('2026-10-19 07:00') === '2026-10-19' && at_rt_programar('2026-10-19 13:00:00') === '2026-10-20' && at_rt_programar('2026-10-19 12:30:00') === '2026-10-20', 'programar: lunes temprano es hoy, lunes 12:30 o más tarde es martes');
+// Día 7 (domingo) con una hora posterior a la última pasada del domingo (23:05) nunca saldría: la semana siguiente ya es otra.
+ok(at_rt_resumen_hora_valida(7, '23:05') && !at_rt_resumen_hora_valida(7, '23:06') && !at_rt_resumen_hora_valida(7, '23:30'), 'resumen: domingo admite hasta las 23:05');
+ok(at_rt_resumen_hora_valida(6, '23:30') && at_rt_resumen_hora_valida(1, '09:00') && at_rt_resumen_hora_valida(1, '23:59'), 'resumen: de lunes a sábado cualquier hora (la pasada siguiente lo recupera)');
+ok(!at_rt_resumen_hora_valida(1, '25:00') && !at_rt_resumen_hora_valida(1, '9:00') && !at_rt_resumen_hora_valida(0, '09:00') && !at_rt_resumen_hora_valida(8, '09:00'), 'resumen: hora o día fuera de rango no valen');
+ok(at_rt_toca_resumen('2026-10-25 23:05', 7, '23:05', '2026-W42') === true, 'toca: domingo 23:05 configurado sale en la pasada de las 23:05');
+// Marcas de tiempo («Y-m-d H:i[:s]» de Chile) para los reintentos del reloj: sin marca legible cuenta como vieja.
+$f12 = at_rt_ahora('2026-10-19 12:00:00');
+ok(at_rt_marca_vieja(null, $f12, 6) && at_rt_marca_vieja('basura', $f12, 6) && at_rt_marca_vieja(['x'], $f12, 6), 'marca vieja: sin marca legible, sí');
+ok(at_rt_marca_vieja('2026-10-19 05:59:59', $f12, 6) && !at_rt_marca_vieja('2026-10-19 06:00:00', $f12, 6) && at_rt_marca_vieja('2026-10-19 06:00:00', $f12, 6, true) && !at_rt_marca_vieja('2026-10-19 11:00', $f12, 6) && !at_rt_marca_vieja('2026-10-19 13:00:00', $f12, 6), 'marca vieja: más de N horas; justo N solo con «incluido»; una futura no');
 $sal = 'sal-de-prueba-sin-secreto';
 $f = at_rt_firma(7, 'aprobar', 'abcdef0123456789', 1792000000, $sal);
 ok($f === substr(hash_hmac('sha256', 'rta|7|aprobar|abcdef0123456789|1792000000', $sal), 0, 32) && preg_match('/^[0-9a-f]{32}$/D', $f) === 1, 'firma: 32 hex del HMAC exacto');
@@ -128,6 +145,7 @@ $tpre = at_rt_tarjeta_html(array_replace($tarjeta, ['tipo' => 'preparacion']));
 ok(str_contains($tpre, 'En preparación') && !str_contains($tpre, 'Aprobar') && !str_contains($tpre, 'retomar-aprobar.php'), 'tarjeta preparación: sin botones');
 $trev = at_rt_tarjeta_html(array_replace($tarjeta, ['tipo' => 'revision']));
 ok(str_contains($trev, 'Necesita revisión') && !str_contains($trev, 'Aprobar') && !str_contains($trev, 'retomar-aprobar.php'), 'tarjeta revisión: sin botones');
+ok(str_contains($trev, 'la redacción o la presentación') && str_contains($trev, 'correo del prospecto') && !str_contains($trev, 'Conversamos del pedido'), 'tarjeta revisión: texto fijo que cubre redacción, presentación y correo, sin los textos');
 $tdesc = at_rt_tarjeta_html(array_replace($tarjeta, ['tipo' => 'aprobado']));
 ok(str_contains($tdesc, 'Necesita revisión') && !str_contains($tdesc, 'Aprobar') && !str_contains($tdesc, 'retomar-aprobar.php'), 'tarjeta: un tipo desconocido nunca es aprobable');
 $th = at_rt_tarjeta_html(array_replace($tarjeta, ['nombre' => '<script>x</script>', 'negocio' => '<script>x</script>', 'textos' => ['quedamos' => '<script>x</script>', 'proponemos' => '<b onclick="x">', 'partir' => '"><img src=x>', 'recomendacion' => '<script>x</script>']]));

@@ -287,4 +287,20 @@ $capturado = null;
 ok(at_rt_pedir_render($cb) === '', 'pedido con el seguimiento en pausa');
 $pedido6 = $capturado;
 ok(rt_callback($cb, ['ok' => true, 'view_url' => 'https://' . at_pt_host_renderer() . '/p/' . $pedido6['render']['unique_id'] . '/'])->get_status() === 200 && at_rt_obtener($cb)['render']['estado'] === 'listo' && rt_avisos() === $avisos_antes && at_rt_obtener($cb)['aprobacion']['estado'] === 'cambios', 'seguimiento en pausa: el render queda listo, no se avisa ni se emite');
+
+// ---- Ruling 17 (C1) e I4: un pedido nuevo de presentación nunca borra la versión publicada y anota cuándo se pidió ----
+$pub = ['view_url' => 'https://' . at_pt_host_renderer() . '/p/' . $seg_cb['token'] . '-' . str_repeat('9', 16) . '-retomar/index.html', 'pdf_url' => '', 'huella' => 'publicada', 'generacion' => str_repeat('9', 16)];
+at_rt_guardar($cb, ['aprobacion' => [], 'render' => array_merge(at_rt_obtener($cb)['render'], ['publicada' => $pub, 'reintento_at' => '2026-10-19 09:05:00'])]);
+$capturado = null;
+ok(at_rt_pedir_render($cb, 5, '2026-10-19 11:05:00') === '' && is_array($capturado), 'pedido de la presentación con la hora del reloj');
+$rp = at_rt_obtener($cb)['render'];
+ok(($rp['publicada'] ?? null) === $pub && ($rp['reintento_at'] ?? '') === '2026-10-19 09:05:00' && ($rp['pedido_at'] ?? '') === '2026-10-19 11:05:00' && $rp['estado'] === 'pendiente' && !isset($rp['view_url']), 'pedirla conserva la versión publicada y la marca del reintento, anota pedido_at y deja de mostrar la vigente vieja');
+ok(rt_callback($cb, ['ok' => false, 'nota' => '[PRUEBA] Falló'])->get_status() === 200 && at_rt_obtener($cb)['render']['estado'] === 'error' && (at_rt_obtener($cb)['render']['publicada'] ?? null) === $pub && (at_rt_obtener($cb)['render']['pedido_at'] ?? '') === '2026-10-19 11:05:00', 'un callback de error conserva la versión publicada y cuándo se pidió');
+$capturado = null;
+ok(at_rt_pedir_render($cb) === '' && preg_match('/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/D', (string) (at_rt_obtener($cb)['render']['pedido_at'] ?? '')) === 1, 'sin hora inyectada, pedido_at es la hora de Chile');
+ok(rt_callback($cb, ['ok' => true, 'view_url' => 'https://' . at_pt_host_renderer() . '/p/' . $capturado['render']['unique_id'] . '/'])->get_status() === 200 && at_rt_obtener($cb)['render']['estado'] === 'listo' && (at_rt_obtener($cb)['render']['publicada'] ?? null) === $pub, 'un callback listo conserva la versión publicada');
+at_rt_guardar($cb, ['textos' => array_merge(at_rt_obtener($cb)['textos'], ['quedamos' => str_repeat('a', 601)])]);
+$capturado = null;
+ok(at_rt_pedir_render($cb, 15, '2026-10-19 12:05:00') !== '' && $capturado === null && at_rt_obtener($cb)['render']['estado'] === 'error' && (at_rt_obtener($cb)['render']['publicada'] ?? null) === $pub && (at_rt_obtener($cb)['render']['pedido_at'] ?? '') === '2026-10-19 12:05:00', 'contenido que no se puede presentar: error con la versión publicada intacta');
+ok(at_rt_render_flujo() === AT_N8N_RETOMAR_RENDER, 'at_rt_render_flujo devuelve la URL del flujo de presentación');
 fin();

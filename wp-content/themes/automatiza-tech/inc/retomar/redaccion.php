@@ -38,9 +38,10 @@ function at_rt_red_nota($nota): string {
 /** Pedido de quien lo hace (Luis o un cambio pedido desde el correo): texto plano de hasta 2000 caracteres. */
 function at_rt_red_pedido(string $pedido): string { return mb_substr(sanitize_textarea_field($pedido), 0, 2000); }
 
-/** Pedido del reintento: conserva el de Luis y agrega la indicación. Sin «$», siglas de moneda ni cifras con miles. */
+/** Pedido del reintento: conserva el de Luis y agrega la indicación. Sin «$», siglas de moneda ni cifras (el aviso
+ *  mismo no puede traer lo que at_rt_tiene_montos() rechaza). */
 function at_rt_red_pedido_sin_montos(string $original): string {
-	$aviso = 'Reintento: tu respuesta anterior traía montos o precios. Redáctala de nuevo sin montos ni precios: no escribas signos de moneda, siglas de moneda ni cifras con separador de miles.';
+	$aviso = 'Reintento: tu respuesta anterior traía montos o precios. Redáctala de nuevo sin montos ni precios: no escribas signos de moneda, siglas de moneda, cifras con separador de miles ni cifras seguidas de pesos, dólares, lucas, mil o millones.';
 	$base = trim(mb_substr(trim($original), 0, 1000));
 	return $base === '' ? $aviso : $base . "\n" . $aviso;
 }
@@ -94,8 +95,13 @@ function at_rt_pedir_redaccion(int $id, string $pedido = '', string $ahora = '',
 	try {
 		$fila = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$wpdb->prefix}at_retomar WHERE id=%d FOR UPDATE", $id), ARRAY_A);
 		if (!$fila) { return 'El seguimiento no existe.'; }
-		$redaccion = at_rt_red_nueva(at_rt_fila($fila), at_rt_red_pedido($pedido), false, $pedida_at);
-		if (!at_rt_guardar($id, ['redaccion' => $redaccion]) || $wpdb->query('COMMIT') === false) { return 'No se pudo guardar el estado de la redacción.'; }
+		$s = at_rt_fila($fila);
+		$redaccion = at_rt_red_nueva($s, at_rt_red_pedido($pedido), false, $pedida_at);
+		$campos = ['redaccion' => $redaccion];
+		// Ruling 18: una redacción nueva rehace el contenido, así que lo aprobado antes ya no vale; la aprobación muerta es
+		// también la que hace llegar el aviso «Recordatorio corregido» cuando la presentación nueva quede lista (Ruling 11).
+		if (($s['aprobacion']['estado'] ?? '') === 'aprobado') { $campos['aprobacion'] = at_rt_aprobacion_muerta($s['aprobacion'], $pedida_at); }
+		if (!at_rt_guardar($id, $campos) || $wpdb->query('COMMIT') === false) { return 'No se pudo guardar el estado de la redacción.'; }
 	} finally {
 		$wpdb->query('ROLLBACK'); // Sin efecto después de COMMIT; libera el candado ante cualquier retorno/error.
 	}
@@ -111,16 +117,10 @@ function at_rt_pedir_redaccion(int $id, string $pedido = '', string $ahora = '',
 function at_rt_red_atascada(array $red, string $ahora): bool {
 	$fecha = at_rt_ahora($ahora);
 	if ($fecha === null) { return false; }
-	// ¿La marca es de hace más de (o justo, con $incluido) $horas horas? Sin marca legible, sí.
-	$hace = static function ($marca, int $horas, bool $incluido) use ($fecha): bool {
-		$cuando = is_string($marca) ? at_rt_ahora($marca) : null;
-		$limite = $fecha->modify('-' . $horas . ' hours');
-		return $cuando === null || $cuando < $limite || ($incluido && $cuando == $limite);
-	};
 	$estado = is_string($red['estado'] ?? null) ? $red['estado'] : '';
 	if (!in_array($estado, ['', 'error', 'pendiente'], true)) { return false; }
-	if ($estado === 'pendiente' && !$hace($red['pedida_at'] ?? null, 6, false)) { return false; }
-	return $hace($red['reintento_at'] ?? null, 24, true);
+	if ($estado === 'pendiente' && !at_rt_marca_vieja($red['pedida_at'] ?? null, $fecha, 6)) { return false; }
+	return at_rt_marca_vieja($red['reintento_at'] ?? null, $fecha, 24, true);
 }
 
 /**

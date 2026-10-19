@@ -168,7 +168,10 @@ function at_rt_pagina(array $get, string $metodo, array $post): array {
             }
         } else {
             $contenido = '<h1>Retomemos tu proyecto</h1>';
-            $vista = (string) ($s['render']['view_url'] ?? '');
+            // Ruling 17: el prospecto ve la presentación del último recordatorio que le salió (render.publicada), nunca la
+            // que se está rehaciendo o espera la aprobación de Luis. Solo si todavía no se le envió nada, la vigente.
+            $publicada = $s['render']['publicada'] ?? null;
+            $vista = is_array($publicada) ? (string) ($publicada['view_url'] ?? '') : (string) ($s['render']['view_url'] ?? '');
             if (at_rt_url_render_valida($vista, $t)) {
                 $contenido .= '<iframe title="Presentación de tu proyecto" referrerpolicy="no-referrer" src="' . esc_url($vista) . '" style="width:100%;height:75vh;border:0"></iframe>';
             } else { $contenido .= '<p>Estamos preparando tu presentación.</p>'; }

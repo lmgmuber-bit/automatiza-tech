@@ -213,23 +213,14 @@ function at_rt_firma_valida(string $f, int $id, string $accion, string $nonce, i
 	return hash_equals(at_rt_firma($id, $accion, $nonce, $vence, $salt), $f);
 }
 
-/** Enlace http(s) apto para el cuerpo del resumen: sin controles, comillas ni credenciales y sin D8 (easypanel).
- *  Devuelve '' si no sirve; nunca javascript:, mailto: ni «//host». */
-function at_rt_url_resumen($url): string {
-	$url = is_string($url) ? trim($url) : '';
-	if ($url === '' || preg_match('/[\x00-\x20\x7f<>"\x27\\\\]/', $url) || at_rt_internas([$url])) { return ''; }
-	$partes = parse_url($url);
-	if (!is_array($partes) || !in_array(strtolower($partes['scheme'] ?? ''), ['http', 'https'], true) || empty($partes['host']) || isset($partes['user']) || isset($partes['pass'])) { return ''; }
-	return $url;
-}
-
 /** Tarjeta (HTML de correo, solo estilos en línea y tablas) de un prospecto del resumen semanal.
  *  $t = ['tipo' => normal|preparacion|propuesta|revision, 'nombre', 'negocio', 'dias' => int (desde la propuesta),
  *  'n' => int (recordatorio que toca), 'max' => int, 'canales' => string[] (correo|whatsapp), 'textos' => ['quedamos',
  *  'proponemos', 'partir', 'recomendacion'?], 'url_presentacion', 'enlaces' => ['aprobar', 'cambios', 'omitir', 'ver'],
  *  'url_panel'? (solo para propuesta y revisión)].
  *  Solo 'normal' lleva textos y botones; los otros tres tipos muestran un aviso sin botones (un tipo desconocido se
- *  trata como 'revision', nunca como aprobable). Sin <img>: la miniatura es un bloque HTML (D8). Todo se escapa. */
+ *  trata como 'revision', nunca como aprobable). Sin <img>: la miniatura es un bloque HTML (D8). Todo se escapa.
+ *  Todo enlace pasa por at_rt_url_correo(): solo HTTPS, sin controles ni credenciales y sin D8; el que no sirva se omite. */
 function at_rt_tarjeta_html(array $t): string {
 	$h = fn($s): string => htmlspecialchars((string) $s, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 	$limpio = function ($v): string {
@@ -250,7 +241,8 @@ function at_rt_tarjeta_html(array $t): string {
 	if (in_array('correo', $canales, true)) { $linea[] = 'correo ✓'; }
 	if (in_array('whatsapp', $canales, true)) { $linea[] = 'WhatsApp ✓'; }
 	$enlaces = is_array($t['enlaces'] ?? null) ? $t['enlaces'] : [];
-	$panel = at_rt_url_resumen($t['url_panel'] ?? '');
+	$https = fn($u): string => is_string($u) ? at_rt_url_correo(trim($u)) : '';
+	$panel = $https($t['url_panel'] ?? '');
 	$enlace = fn(string $url, string $etiqueta): string => '<a href="' . $h($url) . '" style="color:#1e40af">' . $etiqueta . '</a>';
 
 	$html = '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;border:1px solid #d6dde6;border-radius:10px;border-collapse:separate;margin:0 0 14px"><tr><td style="padding:12px;font-family:Arial,sans-serif;font-size:14px;line-height:1.45;color:#111">';
@@ -282,15 +274,15 @@ function at_rt_tarjeta_html(array $t): string {
 		. '</td><td valign="top" style="font-size:12.5px;color:#333">' . $partes . '</td></tr></table>';
 
 	$vistas = [];
-	$url = at_rt_url_resumen($t['url_presentacion'] ?? '');
+	$url = $https($t['url_presentacion'] ?? '');
 	if ($url !== '') { $vistas[] = $enlace($url, 'Ver la presentación completa'); }
-	$url = at_rt_url_resumen($enlaces['ver'] ?? '');
+	$url = $https($enlaces['ver'] ?? '');
 	if ($url !== '') { $vistas[] = $enlace($url, 'Ver el correo tal como le llega'); }
 	if ($vistas) { $html .= '<div style="margin:8px 0 10px;font-size:12.5px">👀 ' . implode(' · ', $vistas) . '</div>'; }
 
 	$botones = '';
 	foreach (['aprobar' => ['✅ Aprobar y enviar', 'background:#16a34a;color:#fff;font-weight:bold'], 'cambios' => ['✏️ Pedir cambios', 'background:#f59e0b;color:#111;font-weight:bold'], 'omitir' => ['⏭️ Esta semana no', 'background:#e5e7eb;color:#111']] as $accion => [$rotulo, $estilo]) {
-		$url = at_rt_url_resumen($enlaces[$accion] ?? '');
+		$url = $https($enlaces[$accion] ?? '');
 		if ($url !== '') { $botones .= '<a href="' . $h($url) . '" style="display:inline-block;' . $estilo . ';border-radius:6px;padding:7px 12px;text-decoration:none;margin:0 8px 8px 0">' . $rotulo . '</a>'; }
 	}
 	if ($botones !== '') { $html .= '<div>' . $botones . '</div>'; }
@@ -302,14 +294,14 @@ function at_rt_tarjeta_html(array $t): string {
  *  $salieron: prospectos que terminaron su ciclo, [['nombre' => string, 'negocio' => string, 'motivo' => string], ...];
  *  'motivo' es el estado de cierre (agotado|agendo|cliente|aceptada|baja|rechazado|rechazada), que se muestra en
  *  español, o un texto libre, que se muestra tal cual.
- *  $url_panel: enlace «Abrir el panel Retomar» (si no es una URL http(s) válida, se omite). */
+ *  $url_panel: enlace «Abrir el panel Retomar» (si no es una URL HTTPS válida, se omite). */
 function at_rt_resumen_html(array $tarjetas, array $salieron, string $url_panel): string {
 	$h = fn($s): string => htmlspecialchars((string) $s, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 	$limpio = function ($v): string {
 		$v = is_string($v) ? trim($v) : '';
 		return ($v === '' || at_rt_internas([$v])) ? '' : $v;
 	};
-	$panel = at_rt_url_resumen($url_panel);
+	$panel = at_rt_url_correo(trim($url_panel));
 	$cuerpo = '';
 	$cuenta = 0;
 	foreach ($tarjetas as $t) {

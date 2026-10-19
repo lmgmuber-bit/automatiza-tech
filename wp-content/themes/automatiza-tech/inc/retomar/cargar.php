@@ -9,6 +9,7 @@ require_once __DIR__ . '/datos.php';
 require_once __DIR__ . '/render.php';
 require_once __DIR__ . '/redaccion.php';
 require_once __DIR__ . '/detectar.php';
+require_once __DIR__ . '/aprobacion.php';
 require_once __DIR__ . '/publica.php';
 require_once __DIR__ . '/envio.php';
 require_once __DIR__ . '/panel.php';

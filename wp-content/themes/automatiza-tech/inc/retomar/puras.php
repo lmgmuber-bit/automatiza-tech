@@ -98,11 +98,11 @@ function at_rt_correo_html(array $d): string {
 	if ($v['negocio'] !== '') { $html .= '<p>Queremos retomar lo que conversamos sobre ' . $h($v['negocio']) . '.</p>'; }
 	if ($v['quedamos'] !== '') { $html .= '<p>' . nl2br($h($v['quedamos']), false) . '</p>'; }
 	$html .= '<p>Podemos ajustarnos a lo que necesitas y a tu presupuesto, partiendo por lo prioritario. ¿Agendamos 20 minutos para conversarlo con Luis?</p>';
-	foreach (['url_ver' => 'Ver la presentación', 'url_agendar' => 'Agendar una reunión'] as $k => $etiqueta) {
+	foreach (['url_ver' => 'Ver resumen y demo', 'url_agendar' => 'Agendar 20 minutos'] as $k => $etiqueta) {
 		if ($v[$k] !== '') { $html .= '<p style="text-align:center"><a href="' . $h($v[$k]) . '" style="display:inline-block;padding:12px 24px;background:#1e40af;color:#fff;border-radius:24px;text-decoration:none">' . $etiqueta . '</a></p>'; }
 	}
 	$html .= '</div><div style="padding:18px;text-align:center;color:#64748b;font-size:12px">AutomatizaTech';
-	if ($v['url_baja'] !== '') { $html .= '<p><a href="' . $h($v['url_baja']) . '" style="color:#64748b">No me interesa, no volver a escribirme</a></p>'; }
+	if ($v['url_baja'] !== '') { $html .= '<p><a href="' . $h($v['url_baja']) . '" style="color:#64748b">Prefiero que no me escriban más</a></p>'; }
 	return $html . '</div></div></body></html>';
 }
 function at_rt_correo_texto(array $d): string {
@@ -111,7 +111,7 @@ function at_rt_correo_texto(array $d): string {
 	if ($v['negocio'] !== '') { $texto .= 'Queremos retomar lo que conversamos sobre ' . $v['negocio'] . ".\n\n"; }
 	if ($v['quedamos'] !== '') { $texto .= $v['quedamos'] . "\n\n"; }
 	$texto .= "Podemos ajustarnos a lo que necesitas y a tu presupuesto, partiendo por lo prioritario. ¿Agendamos 20 minutos para conversarlo con Luis?\n\n";
-	foreach (['url_ver' => 'Ver la presentación', 'url_agendar' => 'Agendar una reunión', 'url_baja' => 'No me interesa, no volver a escribirme'] as $k => $etiqueta) {
+	foreach (['url_ver' => 'Ver resumen y demo', 'url_agendar' => 'Agendar 20 minutos', 'url_baja' => 'Prefiero que no me escriban más'] as $k => $etiqueta) {
 		if ($v[$k] !== '') { $texto .= $etiqueta . ': ' . $v[$k] . "\n"; }
 	}
 	return $texto;

@@ -29,6 +29,13 @@ function at_rt_detener(array $s, string $motivo, string $ahora): void {
     if ($motivo === 'agendo') { at_rt_historia($s, 'retomar_agendo', '🔁 Agendó reunión'); }
 }
 
+/** Datos del correo al prospecto (at_rt_correo_html/texto): enlaces a su página pública por token, en HTTPS. Una sola
+ *  fuente para el envío y para «Ver el correo tal como le llega» de la aprobación, así la vista previa no se desfasa. */
+function at_rt_datos_correo(array $s): array {
+    $url = set_url_scheme(home_url('/retomar.php?t=' . $s['token']), 'https');
+    return ['nombre' => (string) $s['nombre'], 'negocio' => (string) $s['negocio'], 'quedamos' => (string) ($s['textos']['quedamos'] ?? ''), 'url_ver' => $url, 'url_agendar' => $url . '&agendar=1', 'url_baja' => $url . '&baja=1'];
+}
+
 /** Prueba manda sólo al equipo. El reloj inyecta su fecha; las llamadas manuales usan Santiago. */
 function at_rt_enviar(int $id, bool $prueba): array {
     return at_rt_entregar($id, $prueba, (new DateTimeImmutable('now', new DateTimeZone('America/Santiago')))->format('Y-m-d H:i:s'));
@@ -96,10 +103,9 @@ function at_rt_entregar(int $id, bool $prueba, string $ahora): array {
             }
             $r['motivo'] = 'diferido'; return $r;
         }
-        $url = set_url_scheme(home_url('/retomar.php?t=' . $s['token']), 'https');
-        $d = ['nombre' => $s['nombre'], 'negocio' => $s['negocio'], 'quedamos' => (string) ($s['textos']['quedamos'] ?? ''), 'url_ver' => $url, 'url_agendar' => $url . '&agendar=1', 'url_baja' => $url . '&baja=1'];
+        $d = at_rt_datos_correo($s);
         // Revisar los campos que salen, nunca render.view_url (iframe autorizado).
-        if (at_rt_internas($d) || stripos(wp_json_encode($d), 'easypanel') !== false || !at_rt_url_correo($url)) { $r['motivo'] = 'interno'; return $r; }
+        if (at_rt_internas($d) || stripos(wp_json_encode($d), 'easypanel') !== false || !at_rt_url_correo($d['url_ver'])) { $r['motivo'] = 'interno'; return $r; }
         $n = at_rt_envios_realizados($s['envios']) + 1;
         $destino = $prueba ? at_cc_correo_avisos() : $s['email'];
         if (!is_email($destino)) { $r['motivo'] = 'correo_invalido'; return $r; }

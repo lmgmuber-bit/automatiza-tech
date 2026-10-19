@@ -37,7 +37,7 @@ $html = at_rt_correo_html($d);
 $texto = at_rt_correo_texto($d);
 ok(!str_contains($html, '<script') && str_contains($html, '&lt;script&gt;') && str_contains($html, '&amp; negocio'), 'escape XSS');
 foreach (['url_ver', 'url_agendar', 'url_baja'] as $k) { ok(str_contains($html, htmlspecialchars($d[$k], ENT_QUOTES, 'UTF-8')) && str_contains($texto, $d[$k]), 'correo incluye ' . $k); }
-ok(str_contains($html, 'Ver la presentación') && str_contains($html, 'Agendar una reunión') && str_contains($html, 'No me interesa, no volver a escribirme') && str_contains($texto, 'te saluda el equipo de AutomatizaTech'), 'CTA y voz equipo');
+ok(str_contains($html, 'Ver resumen y demo') && str_contains($html, 'Agendar 20 minutos') && str_contains($html, 'Prefiero que no me escriban más') && str_contains($texto, 'Ver resumen y demo: ') && str_contains($texto, 'te saluda el equipo de AutomatizaTech'), 'CTA de la maqueta aprobada y voz equipo');
 foreach (['javascript:alert(1)', 'http://example.com', '//example.com', 'https://example.com/" onerror="alert(1)', "https://example.com/\r\nBcc:test@example.com", 'https://example.com/%0d%0aBcc:test@example.com', 'mailto:test@example.com', 'https://', 'https://demo.easypanel.host/'] as $mal) {
 	$hostil = array_replace($d, ['url_ver' => $mal, 'url_agendar' => $mal, 'url_baja' => $mal, 'logo' => $mal]);
 	ok(!str_contains(at_rt_correo_html($hostil), 'href=') && !str_contains(at_rt_correo_html($hostil), '<img') && !str_contains(at_rt_correo_texto($hostil), $mal) && at_rt_cabeceras_baja($mal) === [], 'URLs hostiles excluidas ' . json_encode($mal));

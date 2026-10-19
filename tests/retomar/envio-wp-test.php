@@ -72,7 +72,7 @@ ok(!$r['ok'] && at_rt_obtener($p['id'])['estado']==='pausado' && at_rt_obtener($
 $p=rt_env_fixture(['telefono'=>'']); $antes=count($mails); $r=at_rt_enviar($p['id'],true);
 ok($r['ok'] && $r['whatsapp']===null && at_rt_obtener($p['id'])['envios']===[] && count($mails)===$antes+1, 'prueba no consume contacto ni WA');
 ok($mails[$antes]['to']===at_cc_correo_avisos() && str_starts_with($mails[$antes]['subject'],'[Prueba] '), 'prueba se dirige al equipo y rotula asunto');
-ok(str_contains($alternativas[0], 'Ver la presentación: https://') && !str_contains($alternativas[0], '<html'), 'correo tiene alternativa de texto real');
+ok(str_contains($alternativas[0], 'Ver resumen y demo: https://') && !str_contains($alternativas[0], '<html'), 'correo tiene alternativa de texto real');
 $wpdb->insert($wpdb->prefix . 'crm_clientes', ['nombre' => '[PRUEBA]', 'email' => $marca . '-crm@example.com', 'tipo' => 'prospecto']);
 $crm = (int) $wpdb->insert_id;
 register_shutdown_function(static function () use ($wpdb, $crm) { $wpdb->delete($wpdb->prefix . 'crm_historial', ['cliente_id' => $crm]); $wpdb->delete($wpdb->prefix . 'crm_clientes', ['id' => $crm]); });

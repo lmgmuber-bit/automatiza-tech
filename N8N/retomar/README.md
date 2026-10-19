@@ -16,6 +16,14 @@ python -B build_retomar_render.py
 python -B build_retomar_reloj.py
 ```
 
+Probar los nodos Code de «Retomar · Redactar» (Node plano, sin red ni credenciales; sale con código distinto de cero si algo falla):
+
+```powershell
+node probar_retomar_redactar.js
+```
+
+Extrae el código de «Preparar pedido», «Leer respuesta» y «Falla de contexto» del export y lo ejecuta con datos ficticios: respuesta válida, respuestas que no son JSON o vienen incompletas (`ok:false`), portada con estadio, fachada o calle (se reemplaza y sigue llamándose `portada`), láminas repetidas o ajenas, condiciones de los IF y URLs. Correrlo siempre después de regenerar `retomar-redactar.json`. Con un argumento (`node probar_retomar_redactar.js salida.json`) deja el callback de la respuesta válida para pasarlo por el validador de WordPress en el sitio local.
+
 `build_retomar_redactar.py` toma los ayudantes de JavaScript `json_guard.py` y `fotos_guard.py` de `../propuestas-v3` (los mismos de los flujos de propuestas y del plan de trabajo). El generador del reloj reutiliza el routing público Graph `v22.0` del nodo `Send WhatsApp` del export local `../PROD/Followup_WhatsApp_Send.json`; esa versión no se verificó en vivo y Eje debe validarla al desplegar. Ninguno instala dependencias ni lee claves.
 
 ## Retomar · Redactar
@@ -27,7 +35,7 @@ WordPress llama al webhook con `{id, generacion}` y no espera a la IA. Reglas de
 - **El contexto ya viene sin montos** (WordPress descarta las líneas con precios) y el prompt prohíbe cualquier monto: nada de `$`, `CLP`, `USD`, `UF`, «pesos», «dólares» ni cifras con separador de miles. Si aun así la IA los escribe, WordPress lo detecta, pide la redacción otra vez (una sola vez) y el flujo no hace nada más; con dos intentos pasa a «revisión» manual.
 - **Prompt:** español de Chile, voz del equipo en plural («te dejamos», «podemos»), `quedamos`, `proponemos` y `partir` de hasta 600 caracteres y 6 líneas, `recomendacion` de hasta 300 caracteres y 3 líneas, ajustada al presupuesto y proponiendo partir por etapas. Un encargo de foto por lámina de `slides_foto` (`portada`, `cierre`, `demo`): escena fotográfica 16:9 del rubro del prospecto, con personas y sin texto, letreros, etiquetas ni logos. Salida estricta `{"textos": {...}, "image_briefs": [{"slide": "…", "prompt": "…"}]}`.
 - **Sin modo JSON del nodo:** el nodo OpenAI heredado (`n8n-nodes-base.openAi` v1) no tiene opción de formato de respuesta (se comprobó en su definición), igual que los flujos del plan de trabajo. El prompt exige JSON y «Leer respuesta» lo lee con `leerJsonModelo` (acepta un bloque de código y una llave de más al final, nada más).
-- **Fotos sin texto:** «Leer respuesta» descarta encargos de láminas no permitidas o repetidos y pasa los demás por `limpiarFotos` (`fotos_guard.py`): si un encargo pide letreros, pantallas, papeles o productos con etiqueta lo cambia por una escena neutra y lo avisa en `nota`; siempre agrega el cierre «no signs, no labels, no text, no lettering, no logos, …».
+- **Fotos sin texto:** «Leer respuesta» descarta encargos de láminas no permitidas o repetidos y pasa los demás por `limpiarFotos` (`fotos_guard.py`): si un encargo pide letreros, pantallas, papeles o productos con etiqueta lo cambia por una escena neutra y lo avisa en `nota`; siempre agrega el cierre «no signs, no labels, no text, no lettering, no logos, …». Las reglas de portada del filtro (fondo sin estadios, fachadas, calles ni muros, y primer plano con el fondo desenfocado) están escritas para la lámina `cover`: el nodo traduce `portada` a `cover` al entrar y la devuelve como `portada` al salir.
 - **Llegó tarde:** si la `generacion` del contexto ya no es la del webhook (WordPress pidió otra redacción), el flujo termina sin gastar en GPT-4o.
 - **Falla de la IA o respuesta ilegible:** callback con `ok: false` y una `nota` fija (sin copiar mensajes de red ni de OpenAI, que pueden traer direcciones o claves) más el número de ejecución para buscarla en n8n.
 - **Respuestas del callback.** 200: terminado (incluido `{reintento: true}`: WordPress vuelve a pedir la redacción por su cuenta). 409: el pedido ya no es el vigente; termina y nunca reintenta. 422: la validación falló y WordPress **ya dejó la redacción en «error» con el motivo exacto**; el flujo termina sin mandar `ok: false`, porque un segundo POST pisaría ese motivo con uno más pobre. Si el callback no llega (red o caída de WordPress), la redacción queda «pendiente» y, si el seguimiento sigue activo y ya le toca, el reloj la vuelve a pedir pasadas 6 horas (como máximo una vez cada 24 h); por eso el flujo no reintenta.
@@ -78,4 +86,4 @@ Antes de activar el reloj con WhatsApp, Luis/Eje debe autorizar el piloto y la a
 
 Superficies: exports, generadores y renderer son internos; los workflows no crean rutas públicas. Los enlaces a `retomar.php` usan el token del sistema existente; no publicar exports con datos de ejecuciones. SEO para estos artefactos internos: NOT_APPLICABLE.
 
-Entrega: los exports (`retomar-redactar.json`, `retomar-render.json`, `retomar-reloj.json`), sus generadores y este README son entregables permanentes para Eje; **no se suben por FTP a PROD**. Los JSON se importan únicamente en n8n bajo autorización. Los generadores y la documentación tampoco se suben al webroot público. No hay temporales ni secretos que subir.
+Entrega: los exports (`retomar-redactar.json`, `retomar-render.json`, `retomar-reloj.json`), sus generadores, `probar_retomar_redactar.js` y este README son entregables permanentes para Eje; **no se suben por FTP a PROD**. Los JSON se importan únicamente en n8n bajo autorización. Los generadores y la documentación tampoco se suben al webroot público. No hay temporales ni secretos que subir.

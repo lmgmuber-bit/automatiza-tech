@@ -120,10 +120,13 @@ for (const b of (Array.isArray(r.image_briefs) ? r.image_briefs : [])) {
   encargos.push({ slide: b.slide, prompt: b.prompt });
 }
 // Reglas de fotos (fotos_guard.py): sin texto, letreros ni etiquetas; siempre con el cierre de prohibiciones.
-const f = limpiarFotos(encargos);
+// El filtro aplica sus reglas de portada (fondo sin estadios, fachadas ni calles; primer plano desenfocado) a la lámina
+// «cover»; la de Retomar se llama «portada». Se traduce al entrar y se deshace al salir: el callback conserva «portada».
+const f = limpiarFotos(encargos.map((b) => ({ slide: b.slide === 'portada' ? 'cover' : b.slide, prompt: b.prompt })));
+const limpias = f.limpias.map((b) => ({ slide: b.slide === 'cover' ? 'portada' : b.slide, prompt: b.prompt }));
 const notas = [];
 if (f.reemplazadas) notas.push(f.reemplazadas + ' encargo(s) de foto se cambiaron por una escena neutra porque pedían texto, pantallas o productos con etiqueta.');
-return [{ json: { id, callback: { generacion, ok: true, textos, image_briefs: f.limpias, nota: notas.join(' ') } } }];"""
+return [{ json: { id, callback: { generacion, ok: true, textos, image_briefs: limpias, nota: notas.join(' ') } } }];"""
 
 CODE_FALLA_CONTEXTO = r"""// Sin copiar mensajes de red: pueden traer direcciones internas del servidor.
 const hook = $('Webhook').first().json.body || {};

@@ -238,7 +238,8 @@ function at_rt_entregar(int $id, bool $prueba, string $ahora): array {
                 // Ya confirmado y fuera del candado: la presentación nueva se pide sola, con la huella del contenido actual
                 // (las fotos de encargos sin cambios se reutilizan). Sin flujo configurado queda `pendiente` con su nota; si
                 // n8n falla, at_rt_pedir_render lo deja en `error`. En ambos casos la emisión sigue detenida (exige `listo`).
-                try { at_rt_pedir_render($id); }
+                // Solo el reloj llega aquí (no es prueba): espera lo mismo que sus otros pedidos a n8n (Ruling 12).
+                try { at_rt_pedir_render($id, at_rt_timeout_reloj()); }
                 catch (Throwable $e) { error_log('Retomar: no se pudo pedir la presentación tras vencer la aprobación: ' . $e->getMessage()); }
             }
             $r['motivo'] = 'aprobacion_vencida'; return $r;
@@ -273,10 +274,22 @@ function at_rt_entregar(int $id, bool $prueba, string $ahora): array {
 }
 
 /**
- * Reloj por hora (n8n lo llama cada hora). En toda pasada, en este orden: detecta propuestas estancadas, vuelve a pedir
- * las redacciones atascadas (Ruling 7) y manda el correo semanal si le toca (at_rt_resumen decide día y hora). Solo en día
- * hábil y dentro de la ventana 10:00–13:00 entrega lo que Luis aprobó. Cada paso corre aunque el anterior falle. Sin el
- * esquema listo no hace nada. Devuelve {enviados, diferidos, detenidos, whatsapp, detectados, redacciones, resumen}.
+ * Segundos que espera un pedido a n8n iniciado por el reloj (redacción y presentación). Más corto que los 15 s del panel:
+ * n8n corta la llamada al reloj a los 30 s y los pedidos de WhatsApp solo le llegan en la respuesta (Ruling 12).
+ */
+function at_rt_timeout_reloj(): int { return 5; }
+
+/** Pedidos de redacción que inicia una pasada del reloj, detección y reintentos juntos; el resto espera la siguiente hora. */
+function at_rt_tope_pedidos_reloj(): int { return 3; }
+
+/**
+ * Reloj por hora (n8n lo llama cada hora). Ruling 12: primero, solo en día hábil y dentro de la ventana 10:00–13:00,
+ * entrega lo que Luis aprobó; así la lista de WhatsApp queda armada antes de cualquier trabajo lento. Después, en toda
+ * pasada: detecta propuestas estancadas, vuelve a pedir las redacciones atascadas (Ruling 7) y manda el correo semanal si
+ * le toca (at_rt_resumen decide día y hora). Detección y reintentos juntos inician como máximo at_rt_tope_pedidos_reloj()
+ * pedidos de redacción, cada uno con at_rt_timeout_reloj(): un detectado que no cupo queda con la redacción vacía y lo
+ * toma el reintento de una pasada siguiente. Cada paso corre aunque el anterior falle. Sin el esquema listo no hace nada.
+ * Devuelve {enviados, diferidos, detenidos, whatsapp, detectados, redacciones, resumen}.
  */
 function at_rt_tick(string $ahora): array {
     global $wpdb;
@@ -285,23 +298,28 @@ function at_rt_tick(string $ahora): array {
     try { $d = new DateTimeImmutable($ahora, new DateTimeZone('America/Santiago')); } catch (Exception $e) { return $r; }
     $d = $d->setTimezone(new DateTimeZone('America/Santiago'));
     $cuando = $d->format('Y-m-d H:i:s');
+    if (at_rt_es_habil($d->format('Y-m-d')) && at_rt_en_ventana($d->format('H:i'))) {
+        $ids = $wpdb->get_col($wpdb->prepare("SELECT id FROM {$wpdb->prefix}at_retomar WHERE estado='activo' AND proximo_at<=%s ORDER BY id", $d->format('Y-m-d')));
+        foreach ($ids as $id) {
+            try { $e = at_rt_entregar((int) $id, false, $cuando); }
+            catch (Throwable $ex) { error_log('Retomar: el envío #' . (int) $id . ' del reloj falló: ' . $ex->getMessage()); continue; }
+            if ($e['ok']) { $r['enviados']++; }
+            elseif ($e['motivo'] === 'diferido') { $r['diferidos']++; }
+            elseif (at_rt_estado_por_motivo($e['motivo']) !== '') { $r['detenidos']++; }
+            if ($e['whatsapp']) { $r['whatsapp'][] = $e['whatsapp']; }
+        }
+    }
+    $cupo = at_rt_tope_pedidos_reloj();
     try {
-        $detectados = at_rt_detectar($cuando);
+        $detectados = at_rt_detectar($cuando, $cupo);
         $r['detectados'] = count($detectados['creados']) + count($detectados['espera']);
+        // La detección pide la redacción de los primeros activos que crea, hasta el cupo (at_rt_detectar).
+        $cupo -= min($cupo, count($detectados['creados']));
     } catch (Throwable $e) { error_log('Retomar: la detección del reloj falló: ' . $e->getMessage()); }
-    try { $r['redacciones'] = count(at_rt_reintentar_redacciones($cuando)); }
+    try { $r['redacciones'] = count(at_rt_reintentar_redacciones($cuando, $cupo)); }
     catch (Throwable $e) { error_log('Retomar: el reintento de redacciones del reloj falló: ' . $e->getMessage()); }
     try { $r['resumen'] = at_rt_resumen($cuando); }
     catch (Throwable $e) { error_log('Retomar: el resumen semanal del reloj falló: ' . $e->getMessage()); }
-    if (!at_rt_es_habil($d->format('Y-m-d')) || !at_rt_en_ventana($d->format('H:i'))) { return $r; }
-    $ids = $wpdb->get_col($wpdb->prepare("SELECT id FROM {$wpdb->prefix}at_retomar WHERE estado='activo' AND proximo_at<=%s ORDER BY id", $d->format('Y-m-d')));
-    foreach ($ids as $id) {
-        $e = at_rt_entregar((int) $id, false, $cuando);
-        if ($e['ok']) { $r['enviados']++; }
-        elseif ($e['motivo'] === 'diferido') { $r['diferidos']++; }
-        elseif (at_rt_estado_por_motivo($e['motivo']) !== '') { $r['detenidos']++; }
-        if ($e['whatsapp']) { $r['whatsapp'][] = $e['whatsapp']; }
-    }
     return $r;
 }
 

@@ -63,10 +63,11 @@ function at_rt_red_nueva(array $seg, string $pedido, bool $reintento, string $pe
 /**
  * Avisa a n8n con {id, generacion}; '' si respondió 2xx. Si falla, la redacción queda en «error» siempre que siga siendo
  * ese mismo pedido y siga pendiente (CAS sobre el JSON leído: un callback o un pedido nuevo no se reemplaza).
+ * $timeout: segundos de espera (15 desde el panel o la aprobación; el reloj pasa at_rt_timeout_reloj()).
  */
-function at_rt_red_avisar(int $id, string $generacion): string {
+function at_rt_red_avisar(int $id, string $generacion, int $timeout = 15): string {
 	global $wpdb;
-	$error = at_pt_llamar_n8n(at_rt_red_flujo(), ['id' => $id, 'generacion' => $generacion]);
+	$error = at_pt_llamar_n8n(at_rt_red_flujo(), ['id' => $id, 'generacion' => $generacion], $timeout);
 	if ($error === '') { return ''; }
 	$crudo = $wpdb->get_var($wpdb->prepare("SELECT redaccion FROM {$wpdb->prefix}at_retomar WHERE id=%d", $id));
 	$actual = json_decode((string) $crudo, true);
@@ -82,8 +83,9 @@ function at_rt_red_avisar(int $id, string $generacion): string {
  * 'sin_flujo' si no hay AT_N8N_RETOMAR_REDACTAR (no cambia nada) o el motivo del error (deja redaccion.estado = 'error').
  * El pedido de quien lo hace vive en redaccion.pedido; las notas no se tocan aquí. redaccion.pedida_at queda con $ahora
  * (la hora de la pasada del reloj o de la detección, «Y-m-d H:i[:s]» de Chile) o, sin ella, con la hora de Chile actual.
+ * $timeout: segundos que se espera a n8n (15 desde el panel o la aprobación; el reloj pasa at_rt_timeout_reloj()).
  */
-function at_rt_pedir_redaccion(int $id, string $pedido = '', string $ahora = ''): string {
+function at_rt_pedir_redaccion(int $id, string $pedido = '', string $ahora = '', int $timeout = 15): string {
 	if (at_rt_red_flujo() === '') { return 'sin_flujo'; }
 	$cuando = at_rt_ahora($ahora);
 	$pedida_at = $cuando !== null ? $cuando->format('Y-m-d H:i:s') : at_rt_ahora_chile();
@@ -97,7 +99,7 @@ function at_rt_pedir_redaccion(int $id, string $pedido = '', string $ahora = '')
 	} finally {
 		$wpdb->query('ROLLBACK'); // Sin efecto después de COMMIT; libera el candado ante cualquier retorno/error.
 	}
-	return at_rt_red_avisar($id, $redaccion['generacion']);
+	return at_rt_red_avisar($id, $redaccion['generacion'], $timeout);
 }
 
 /**
@@ -148,10 +150,12 @@ function at_rt_red_reservar_reintento(int $id, string $ahora): ?string {
 /**
  * Pasada del reloj (Ruling 7): vuelve a pedir la redacción de los seguimientos activos que ya tocan y quedaron atascados
  * (at_rt_red_atascada), una vez cada 24 h por seguimiento y con el mismo pedido que traían. Sin flujo configurado o con una
- * hora ilegible no hace nada. La reserva va bajo candado y el pedido a n8n (HTTP) fuera de él. Devuelve los ids pedidos.
+ * hora ilegible no hace nada. La reserva va bajo candado y el pedido a n8n (HTTP) fuera de él, con at_rt_timeout_reloj().
+ * $max: cuántos pedidos como máximo en esta pasada (Ruling 12; negativo = sin tope); los que no caben se piden en la
+ * pasada siguiente, en orden de id. Devuelve los ids pedidos.
  */
-function at_rt_reintentar_redacciones(string $ahora): array {
-	if (at_rt_red_flujo() === '') { return []; }
+function at_rt_reintentar_redacciones(string $ahora, int $max = -1): array {
+	if (at_rt_red_flujo() === '' || $max === 0) { return []; }
 	$fecha = at_rt_ahora($ahora);
 	if ($fecha === null) { return []; }
 	$cuando = $fecha->format('Y-m-d H:i:s');
@@ -160,9 +164,10 @@ function at_rt_reintentar_redacciones(string $ahora): array {
 	$ids = $wpdb->get_col($wpdb->prepare("SELECT id FROM {$wpdb->prefix}at_retomar WHERE estado='activo' AND proximo_at<=%s ORDER BY id", $fecha->format('Y-m-d')));
 	$pedidos = [];
 	foreach ($ids as $id) {
+		if ($max > 0 && count($pedidos) >= $max) { break; } // Sin reservar: el que no cupo sigue libre para la pasada siguiente.
 		$pedido = at_rt_red_reservar_reintento((int) $id, $cuando);
 		if ($pedido === null) { continue; }
-		at_rt_pedir_redaccion((int) $id, $pedido, $cuando);
+		at_rt_pedir_redaccion((int) $id, $pedido, $cuando, at_rt_timeout_reloj());
 		$pedidos[] = (int) $id;
 	}
 	return $pedidos;

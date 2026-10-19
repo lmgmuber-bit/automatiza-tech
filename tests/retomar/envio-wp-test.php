@@ -322,9 +322,11 @@ ok(at_rt_entregar($spn['id'], false, '2026-10-19 10:30:00')['motivo'] === 'sin_a
 if (!defined('AT_N8N_RETOMAR_RENDER')) { define('AT_N8N_RETOMAR_RENDER', 'https://example.com/prueba-render'); }
 $pedido_render = null;
 // El bloqueo de HTTP del bootstrap sigue: SOLO el flujo de render obtiene respuesta simulada.
-$render_simulado = static function ($pre, $args, $url) use (&$pedido_render) {
+$timeout_render = null;
+$render_simulado = static function ($pre, $args, $url) use (&$pedido_render, &$timeout_render) {
     if ($url !== AT_N8N_RETOMAR_RENDER) { return $pre; }
     $pedido_render = json_decode($args['body'], true);
+    $timeout_render = $args['timeout'] ?? null;
     return ['response' => ['code' => 200], 'body' => '{}', 'headers' => []];
 };
 add_filter('pre_http_request', $render_simulado, PHP_INT_MAX, 3);
@@ -333,6 +335,7 @@ $wpdb->update($wpdb->prefix . 'automatiza_propuestas', ['flujo' => 'v3'], ['id' 
 $r = at_rt_entregar($auto['id'], false, '2026-10-19 10:30:00'); $f = at_rt_obtener($auto['id']);
 ok($r['motivo'] === 'aprobacion_vencida' && rt_env_correos($auto['email']) === 0 && ($f['aprobacion']['estado'] ?? '') === 'por_aprobar', 'flujo de la propuesta cambiado después de aprobar: no sale y la aprobación vence');
 ok(($f['render']['estado'] ?? '') === 'pendiente' && is_array($pedido_render) && ($pedido_render['id'] ?? 0) === $auto['id'] && ($f['render']['generacion'] ?? '') === ($pedido_render['generacion'] ?? null) && hash_equals(at_rt_huella_render($f), (string) ($f['render']['huella'] ?? '')) && !hash_equals($auto['render']['huella'], (string) ($f['render']['huella'] ?? '')), 'el reloj pide solo una presentación nueva con la huella del contenido actual');
+ok($timeout_render === 5, 'Ruling 12: la presentación que pide el reloj espera 5 s a n8n');
 ok(at_rt_emitir_aprobacion($auto['id'], '2026-10-19 10:35:00') === null, 'mientras se rehace la presentación no se puede volver a aprobar');
 $vista = new WP_REST_Request('POST', '/automatiza-tech/v1/retomar/' . $auto['id'] . '/vista');
 $vista->set_header('Content-Type', 'application/json'); $vista->set_header('X-AT-Secret', AT_REST_SECRET);

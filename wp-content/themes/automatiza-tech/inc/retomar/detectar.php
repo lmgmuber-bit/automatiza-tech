@@ -55,9 +55,11 @@ function at_rt_detectar_fichas(string $email): array {
 
 /**
  * Evalúa una propuesta y, si es candidata, crea su seguimiento. Devuelve ['id' => int, 'estado' => string] o null si no entra.
- * $hoy ('Y-m-d') y $activado ('Y-m-d H:i:s') salen de la fecha de la pasada, nunca del reloj del servidor.
+ * $hoy ('Y-m-d') y $activado ('Y-m-d H:i:s') salen de la fecha de la pasada, nunca del reloj del servidor. Con $pedir en
+ * false (la pasada ya usó su cupo de pedidos) el seguimiento activo queda con la redacción vacía: la pide el reintento
+ * del reloj (at_rt_reintentar_redacciones) en una pasada siguiente.
  */
-function at_rt_detectar_propuesta(array $p, string $hoy, string $activado): ?array {
+function at_rt_detectar_propuesta(array $p, string $hoy, string $activado, bool $pedir = true): ?array {
 	global $wpdb;
 	$email = strtolower(trim((string) ($p['client_email'] ?? '')));
 	if (!is_email($email)) { return null; }
@@ -90,8 +92,9 @@ function at_rt_detectar_propuesta(array $p, string $hoy, string $activado): ?arr
 	]);
 	if ($id <= 0) { return null; }
 	at_rt_historia(['id' => $id, 'crm_cliente_id' => $fichas['id']], 'retomar_detectado', '🔁 Entró a Retomar');
-	// pedida_at con la hora de la pasada: así el reintento del reloj (Ruling 7) mide el atasco con el mismo reloj.
-	if (!$espera) { at_rt_pedir_redaccion($id, '', $activado); }
+	// pedida_at con la hora de la pasada: así el reintento del reloj (Ruling 7) mide el atasco con el mismo reloj. La
+	// detección es parte del reloj: espera a n8n lo mismo que sus otros pedidos (Ruling 12).
+	if (!$espera && $pedir) { at_rt_pedir_redaccion($id, '', $activado, at_rt_timeout_reloj()); }
 	return ['id' => $id, 'estado' => $estado];
 }
 
@@ -102,9 +105,11 @@ function at_rt_detectar_propuesta(array $p, string $hoy, string $activado): ?arr
  * más nueva ya está aceptada, en borrador, lista o reciente, una más vieja que siga en `sent` no dispara nada, porque la
  * persona ya tiene otra propuesta en juego. Sin esquema listo o con una fecha ilegible no hace nada. Un candado de MySQL
  * evita que dos pasadas simultáneas den de alta dos veces la misma propuesta; si otra está en curso, esta no hace nada y la
- * siguiente repite la búsqueda.
+ * siguiente repite la búsqueda. $max_pedidos (Ruling 12; negativo = sin tope): se pide la redacción de los primeros
+ * $max_pedidos activos creados; los demás se crean igual con la redacción vacía y los toma el reintento del reloj. Así
+ * quien llama sabe que hizo min(count(creados), $max_pedidos) pedidos.
  */
-function at_rt_detectar(string $ahora): array {
+function at_rt_detectar(string $ahora, int $max_pedidos = -1): array {
 	global $wpdb;
 	$resultado = ['creados' => [], 'espera' => []];
 	if (!at_rt_esquema_listo()) { return $resultado; }
@@ -120,7 +125,8 @@ function at_rt_detectar(string $ahora): array {
 			$correo = strtolower(trim((string) $propuesta['client_email']));
 			if (isset($vistos[$correo])) { continue; }
 			$vistos[$correo] = true;
-			$nuevo = at_rt_detectar_propuesta($propuesta, $fecha->format('Y-m-d'), $fecha->format('Y-m-d H:i:s'));
+			$pedir = $max_pedidos < 0 || count($resultado['creados']) < $max_pedidos;
+			$nuevo = at_rt_detectar_propuesta($propuesta, $fecha->format('Y-m-d'), $fecha->format('Y-m-d H:i:s'), $pedir);
 			if ($nuevo === null) { continue; }
 			$resultado[$nuevo['estado'] === 'activo' ? 'creados' : 'espera'][] = $nuevo['id'];
 		}

@@ -40,7 +40,7 @@ add_filter('pre_wp_mail', static function ($v, $d) use (&$mails, &$falla_mail) {
 // El bloqueo de HTTP del bootstrap sigue: SOLO el flujo de redacción responde (simulado) y se anota cada pedido.
 add_filter('pre_http_request', static function ($pre, $args, $url) use (&$pedidos_redaccion) {
 	if ($url !== AT_N8N_RETOMAR_REDACTAR) { return $pre; }
-	$pedidos_redaccion[] = json_decode($args['body'], true);
+	$pedidos_redaccion[] = json_decode($args['body'], true) + ['timeout' => $args['timeout'] ?? null];
 	return ['response' => ['code' => 200], 'body' => '{}', 'headers' => []];
 }, PHP_INT_MAX, 3);
 // Ruling 3: el resumen (at_rt_lista), el reloj y la detección leen toda la base local. Se acotan a los correos de esta
@@ -277,7 +277,8 @@ $atascadas = [
 	'error' => [['estado' => 'error', 'pedida_at' => '2026-11-08 09:00:00', 'pedido' => '[PRUEBA] Pedido de Luis'], true, []],
 	'pendiente hace 7 h' => [['estado' => 'pendiente', 'pedida_at' => '2026-11-09 02:00:00'], true, []],
 	'pendiente hace 4 h' => [['estado' => 'pendiente', 'pedida_at' => '2026-11-09 04:30:00'], false, []],
-	'vacía' => [[], true, []],
+	// Detectado + 3 atascadas = 4 pedidos: con el tope de 3 por pasada (Ruling 12), esta espera la pasada siguiente.
+	'vacía (cuarto pedido: espera el tope)' => [[], false, []],
 	'error con reintento del reloj hace 2 h' => [['estado' => 'error', 'pedida_at' => '2026-11-09 07:00:00', 'reintento_at' => '2026-11-09 07:00:00'], false, []],
 	'revisión' => [['estado' => 'revision', 'pedida_at' => '2026-11-01 09:00:00'], false, []],
 	'pausado' => [['estado' => 'error', 'pedida_at' => '2026-11-01 09:00:00'], false, ['estado' => 'pausado']],
@@ -298,8 +299,9 @@ $det = (int) $wpdb->get_var($wpdb->prepare("SELECT id FROM {$wpdb->prefix}at_ret
 ok($filtros['deteccion'] > 0 && $filtros['reloj'] > 0 && $filtros['lista'] > 0, 'los filtros de la prueba acotaron de verdad la detección, el reloj y el resumen');
 ok($r['detectados'] === 1 && $det > 0 && at_rt_obtener($det)['estado'] === 'activo', 'lunes 09:05: el reloj detecta la propuesta estancada');
 $pedidos = array_column($pedidos_redaccion, 'id');
-$esperados = [$seg_at['error'], $seg_at['pendiente hace 7 h'], $seg_at['vacía']];
-ok(($pedidos[0] ?? 0) === $det && array_slice($pedidos, 1) === $esperados && $r['redacciones'] === 3, 'primero se pide la redacción del detectado y después se reintentan solo las atascadas');
+$esperados = [$seg_at['error'], $seg_at['pendiente hace 7 h']];
+ok(($pedidos[0] ?? 0) === $det && array_slice($pedidos, 1) === $esperados && $r['redacciones'] === 2, 'primero se pide la redacción del detectado y después se reintentan las atascadas, hasta 3 pedidos por pasada');
+ok(array_unique(array_column($pedidos_redaccion, 'timeout')) === [5], 'los pedidos que hace el reloj esperan 5 s a n8n');
 foreach ($atascadas as $caso => [$redaccion, $reintenta]) {
 	$red = at_rt_obtener($seg_at[$caso])['redaccion'];
 	ok($reintenta ? (($red['estado'] ?? '') === 'pendiente' && ($red['pedida_at'] ?? '') === '2026-11-09 09:05:00' && ($red['reintento_at'] ?? '') === '2026-11-09 09:05:00') : $red === $redaccion, 'redacción ' . $caso . ': ' . ($reintenta ? 'se vuelve a pedir con la hora del reloj' : 'no se vuelve a pedir'));
@@ -312,12 +314,55 @@ $html_tk = end($mails)['message'];
 ok(str_contains(rt_res_tarjeta($html_tk, '[PRUEBA] Tomas Reloj'), '✅ Aprobar y enviar') && str_contains(rt_res_tarjeta($html_tk, '[PRUEBA] Ulises Detectado'), 'En preparación') && str_contains(rt_res_tarjeta($html_tk, '[PRUEBA] Ulises Detectado'), 'hace 20 días'), 'el resumen del reloj trae el listo y el recién detectado en preparación');
 $antes = count($mails);
 $r = at_rt_tick('2026-11-09 09:35:00');
-ok($r['resumen']['motivo'] === 'no_toca' && $r['detectados'] === 0 && $r['redacciones'] === 0 && count($mails) === $antes, 'otra pasada en la misma hora: ni resumen ni pedidos repetidos');
+$vacia = at_rt_obtener($seg_at['vacía (cuarto pedido: espera el tope)'])['redaccion'];
+ok($r['resumen']['motivo'] === 'no_toca' && $r['detectados'] === 0 && $r['redacciones'] === 1 && count($mails) === $antes, 'otra pasada en la misma hora: ni resumen ni pedidos repetidos');
+ok(($vacia['estado'] ?? '') === 'pendiente' && ($vacia['pedida_at'] ?? '') === '2026-11-09 09:35:00', 'la que esperó por el tope se pide en la pasada siguiente');
 $apr = at_rt_resolver_aprobacion($tomas['id'], 'aprobar', rt_res_q($tomas['id'], 'aprobar'), '2026-11-09 09:40:00');
 ok($apr['ok'] && ($apr['programado'] ?? '') === '2026-11-09', 'Luis aprueba desde el resumen: sale hoy');
 $r = at_rt_tick('2026-11-09 10:30:00');
 ok($r['enviados'] === 1 && count(rt_res_correos($tomas['email'])) === 1 && at_rt_obtener($tomas['id'])['aprobacion']['estado'] === 'enviado', 'lunes 10:30: el reloj manda el aprobado');
 ok($r['resumen']['motivo'] === 'no_toca' && count($mails) === $antes + 1 && $r['redacciones'] === 0, 'y no repite el resumen ni los pedidos de redacción');
+// ---- Ruling 12: en la ventana, el envío de lo aprobado va primero (la lista de WhatsApp queda armada antes de cualquier
+// pedido lento a n8n) y una pasada inicia como máximo 3 pedidos de redacción (detección + reintentos), cada uno a 5 s ----
+$tp = $marca . '-tope';
+$GLOBALS['rt_res_prefijo'] = $tp;
+$eventos = [];
+add_filter('pre_wp_mail', static function ($v, $d) use (&$eventos) { $eventos[] = 'correo:' . $d['to']; return $v; }, 90, 2);
+// Antes que el bloqueo del bootstrap: anota cada intento de HTTP al flujo de redacción y su timeout, sin responder.
+add_filter('pre_http_request', static function ($pre, $args, $url) use (&$eventos) {
+	if ($url === AT_N8N_RETOMAR_REDACTAR) { $eventos[] = 'http:' . (int) (json_decode($args['body'], true)['id'] ?? 0) . ':' . ($args['timeout'] ?? ''); }
+	return $pre;
+}, 1, 3);
+$solo_http = static fn(array $ev): array => array_values(array_filter($ev, static fn($e) => str_starts_with($e, 'http:')));
+$vale = rt_res_seg(['nombre' => '[PRUEBA] Vale Whatsapp', 'proximo_at' => '2026-11-23', 'telefono' => '+56900000009', 'wa_autorizado' => 1], [], $tp);
+at_rt_guardar($vale['id'], ['aprobacion' => ['estado' => 'aprobado', 'n' => 1, 'nonce' => str_repeat('b', 16), 'huella' => $vale['render']['huella'], 'emitido_at' => '2026-11-16 09:00:00', 'vence' => rt_res_ts('2026-11-23 09:00:00'), 'usada' => true, 'resuelto_at' => '2026-11-16 09:05:00', 'programado' => '2026-11-23']]);
+$atasco = [];
+foreach (['Uno', 'Dos'] as $cual) {
+	$s = rt_res_seg(['nombre' => '[PRUEBA] Atasco ' . $cual, 'proximo_at' => '2026-11-23'], [], $tp);
+	at_rt_guardar($s['id'], ['redaccion' => ['estado' => 'error', 'pedida_at' => '2026-11-20 10:00:00'], 'render' => ['estado' => 'pendiente']]);
+	$atasco[] = $s['id'];
+}
+$props_tope = [];
+for ($i = 1; $i <= 4; $i++) { $props_tope[] = rt_res_prop(['client_email' => $tp . '-prop' . $i . '@example.com', 'client_name' => '[PRUEBA] Detectado ' . $i, 'flujo' => 'v3', 'created_at' => '2026-11-02 10:00:00']); }
+update_option('at_rt_resumen_semana', '2026-W47');
+$antes = count($mails);
+$r = at_rt_tick('2026-11-23 10:30:00');
+$http = $solo_http($eventos);
+$detectados_tope = array_map(static fn($pid) => (int) $wpdb->get_var($wpdb->prepare("SELECT id FROM {$wpdb->prefix}at_retomar WHERE propuesta_id = %d LIMIT 1", $pid)), $props_tope);
+ok($r['enviados'] === 1 && count($r['whatsapp']) === 1 && ($r['whatsapp'][0]['id'] ?? 0) === $vale['id'], 'en la ventana el reloj devuelve su pedido de WhatsApp aunque después haga pedidos a n8n');
+ok(($eventos[0] ?? '') === 'correo:' . $vale['email'] && array_search($http[0] ?? '', $eventos, true) > 0, 'el correo aprobado sale antes de cualquier pedido de redacción');
+ok($r['detectados'] === 4 && count(array_filter($detectados_tope)) === 4 && count($http) === 3 && $r['redacciones'] === 0, 'cuatro detectados pero solo 3 pedidos de redacción en la pasada (tope)');
+ok(array_unique(array_map(static fn($e) => substr($e, strrpos($e, ':') + 1), $http)) === ['5'], 'los pedidos del reloj usan un timeout de 5 s');
+$sin_pedir = array_values(array_filter($detectados_tope, static fn($id) => at_rt_obtener($id)['redaccion'] === []));
+ok(count($sin_pedir) === 1 && at_rt_obtener($sin_pedir[0])['estado'] === 'activo', 'el detectado que no cupo queda activo con la redacción vacía, para el reintento');
+ok(at_rt_obtener($atasco[0])['redaccion'] === ['estado' => 'error', 'pedida_at' => '2026-11-20 10:00:00'] && at_rt_obtener($atasco[1])['redaccion'] === ['estado' => 'error', 'pedida_at' => '2026-11-20 10:00:00'], 'sin cupo, las atascadas esperan la pasada siguiente');
+ok(count($mails) === $antes + 2 && ($mails[$antes]['to'] ?? '') === $vale['email'] && ($mails[$antes + 1]['to'] ?? '') === $destino, 'el resumen semanal sale después del envío al prospecto');
+$eventos = [];
+$r = at_rt_tick('2026-11-23 11:30:00');
+ok($solo_http($eventos) === ['http:' . $atasco[0] . ':5', 'http:' . $atasco[1] . ':5', 'http:' . $sin_pedir[0] . ':5'] && $r['redacciones'] === 3 && $r['detectados'] === 0, 'la pasada siguiente pide las dos atascadas y el detectado que esperaba: otra vez 3');
+$eventos = [];
+$r = at_rt_tick('2026-11-23 12:30:00');
+ok($solo_http($eventos) === [] && $r['redacciones'] === 0 && $r['enviados'] === 0, 'con todo pedido, la tercera pasada no llama a n8n');
 // Sin el esquema listo el reloj no hace nada.
 update_option('at_rt_schema', '1', false);
 $antes = count($mails); $pedidos_redaccion = [];

@@ -308,9 +308,15 @@ ok(rt_red_callback($k, rt_red_bien(['generacion' => $gen_k1]))->get_status() ===
 // ---- Ruling 7: cada pedido guarda pedida_at (hora de Chile) para que el reloj sepa si la redacción quedó atascada ----
 $chile = static fn(): int => (new DateTimeImmutable('now', new DateTimeZone('America/Santiago')))->getTimestamp();
 $q = rt_red_seg();
+$timeouts = [];
+// Antes que el bloqueo del bootstrap: anota el timeout de cada pedido al flujo de redacción, sin responder.
+add_filter('pre_http_request', static function ($pre, $args, $url) use (&$timeouts) { if ($url === AT_N8N_RETOMAR_REDACTAR) { $timeouts[] = $args['timeout'] ?? null; } return $pre; }, 1, 3);
 $simular = true; at_rt_pedir_redaccion($q, '[PRUEBA] Pedido'); $simular = false;
+ok($timeouts === [15], 'Ruling 12: un pedido del panel o de la aprobación mantiene su timeout de 15 s');
 $pa = (string) (at_rt_obtener($q)['redaccion']['pedida_at'] ?? '');
 ok(preg_match('/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/D', $pa) === 1 && at_rt_ahora($pa) !== null && abs(at_rt_ahora($pa)->getTimestamp() - $chile()) <= 120, 'el pedido guarda pedida_at con la hora de Chile');
+$simular = true; at_rt_pedir_redaccion($q, '[PRUEBA] Pedido', '2026-10-19 08:00:00', at_rt_timeout_reloj()); $simular = false;
+ok($timeouts === [15, 5] && at_rt_timeout_reloj() === 5, 'el reloj pide con su timeout de 5 s');
 $simular = true; at_rt_pedir_redaccion($q, '[PRUEBA] Pedido', '2026-10-19 09:05:00'); $simular = false;
 ok((at_rt_obtener($q)['redaccion']['pedida_at'] ?? '') === '2026-10-19 09:05:00', 'el reloj pasa su hora y queda como pedida_at');
 at_rt_pedir_redaccion($q, '', '2026-10-19 10:05:00'); // HTTP bloqueado: el pedido falla

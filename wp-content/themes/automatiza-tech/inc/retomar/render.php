@@ -111,7 +111,8 @@ function at_rt_huella_render(array $seg): string {
 	return hash('sha256', wp_json_encode($p));
 }
 
-function at_rt_pedir_render(int $id): string {
+/** Pide la presentación al flujo de n8n. $timeout: segundos de espera (15 desde el panel; el reloj pasa at_rt_timeout_reloj()). */
+function at_rt_pedir_render(int $id, int $timeout = 15): string {
 	if (!defined('AT_N8N_RETOMAR_RENDER') || AT_N8N_RETOMAR_RENDER === '') { return 'sin_flujo'; }
 	global $wpdb;
 	if ($wpdb->query('START TRANSACTION') === false) { return 'No se pudo reservar la presentación.'; }
@@ -133,7 +134,7 @@ function at_rt_pedir_render(int $id): string {
 	} finally {
 		$wpdb->query('ROLLBACK'); // Sin efecto después de COMMIT; libera el candado ante cualquier retorno/error.
 	}
-	$error = at_pt_llamar_n8n(AT_N8N_RETOMAR_RENDER, ['id' => $id, 'generacion' => $generacion, 'render' => $payload]);
+	$error = at_pt_llamar_n8n(AT_N8N_RETOMAR_RENDER, ['id' => $id, 'generacion' => $generacion, 'render' => $payload], $timeout);
 	if ($error !== '') {
 		$actual = at_rt_obtener($id);
 		if ($actual && ($actual['render']['generacion'] ?? '') === $generacion && ($actual['render']['estado'] ?? '') === 'pendiente') {

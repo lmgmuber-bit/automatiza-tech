@@ -56,6 +56,31 @@ at_rt_guardar($s['id'], ['render' => ['view_url' => 'https://example.com/no-auto
 ok(!str_contains(at_rt_pagina(['t' => $s['token']], 'GET', [])['html'], '<iframe'), 'iframe rechaza URL ajena');
 $r = at_rt_pagina(['t' => $s['token'], 'agendar' => 1], 'GET', []);
 ok(str_contains($r['html'], 'name="fecha"') && str_contains($r['html'], 'name="hora"') && str_contains($r['html'], 'name="token"') && at_rt_obtener($s['id'])['estado'] === 'activo', 'GET agenda ofrece formulario sin mutación');
+// La página es como ver-plan.php: iframe a pantalla completa, barra y diálogo con el selector de horarios de la portada.
+$rt_cfg = static function (string $html): ?array {
+    return preg_match('/window\.AT_RT_VER = (\{.*?\});<\/script>/', $html, $m) ? json_decode($m[1], true) : null;
+};
+at_rt_guardar($s['id'], ['render' => ['estado' => 'listo', 'view_url' => $vista]]);
+$r = at_rt_pagina(['t' => $s['token']], 'GET', []);
+$cfg = $rt_cfg($r['html']);
+ok($r['http'] === 200 && str_contains($r['html'], '<body class="at-pt-ver at-rt-ver">') && str_contains($r['html'], '<nav class="at-pt-barra"') && str_contains($r['html'], 'plan-ver.css'), 'ver: iframe a pantalla completa con la barra y el CSS del plan');
+ok(str_contains($r['html'], 'referrerpolicy="no-referrer"') && str_contains($r['html'], '<meta name="referrer" content="no-referrer">') && str_contains($r['html'], 'noindex'), 'ver: sin referente ni índice');
+ok(str_contains($r['html'], 'data-at-rt-abrir>📅 Agendar 20 minutos</a>') && str_contains($r['html'], esc_url(home_url('/retomar.php?t=' . $s['token']) . '&agendar=1') . '" data-at-rt-abrir'), 'ver: «Agendar 20 minutos» abre el diálogo y sin JavaScript lleva a agendar=1');
+ok(str_contains($r['html'], '<a class="at-rt-baja" href="' . esc_url(home_url('/retomar.php?t=' . $s['token']) . '&baja=1') . '">No me interesa</a>'), 'ver: «No me interesa» discreto a la baja de siempre');
+ok(str_contains($r['html'], '<dialog id="at-rt-agenda"') && str_contains($r['html'], 'id="at-fecha"') && str_contains($r['html'], 'id="at-slots"') && str_contains($r['html'], 'id="at-scheduled-time"') && str_contains($r['html'], 'name="sitio_web"'), 'ver: diálogo con los campos que usa at-agenda.js y el campo trampa');
+ok(str_contains($r['html'], 'at-agenda.js') && str_contains($r['html'], 'retomar-ver.js') && str_contains($r['html'], 'appointments-config'), 'ver: carga el selector de horarios de la portada y retomar-ver.js');
+ok(is_array($cfg) && $cfg['t'] === $s['token'] && $cfg['token'] === at_rt_token_agenda_hoy($s['token']) && $cfg['abrir'] === false && str_ends_with($cfg['url'], 'automatiza-tech/v1/retomar-agenda'), 'ver: configuración con t, token del día y la ruta REST de Retomar, diálogo cerrado');
+ok(!str_contains($r['html'], '<noscript>') && !str_contains($r['html'], 'name="fecha"'), 'ver: sin agendar=1 no va el formulario sin JavaScript');
+ok($r['cabeceras'] === ['X-Robots-Tag' => 'noindex, nofollow', 'Cache-Control' => 'no-store, no-cache, must-revalidate, max-age=0', 'Pragma' => 'no-cache', 'Referrer-Policy' => 'no-referrer', 'Content-Type' => 'text/html; charset=UTF-8'], 'ver: mismas cabeceras de siempre');
+$r = at_rt_pagina(['t' => $s['token'], 'agendar' => 1], 'GET', []);
+$cfg = $rt_cfg($r['html']);
+ok(is_array($cfg) && $cfg['abrir'] === true && str_contains($r['html'], '<iframe') && str_contains($r['html'], '<noscript><section class="at-rt-sinjs"') && str_contains($r['html'], 'action="' . esc_url(home_url('/retomar.php?t=' . $s['token']) . '&agendar=1') . '"'), 'agendar=1: misma página con el diálogo abierto y el formulario de respaldo sin JavaScript');
+ok($r['cabeceras']['Cache-Control'] === 'no-store, no-cache, must-revalidate, max-age=0' && $r['cabeceras']['Referrer-Policy'] === 'no-referrer' && $r['cabeceras']['X-Robots-Tag'] === 'noindex, nofollow', 'agendar=1: mismas cabeceras');
+$r = at_rt_pagina(['t' => $s['token'], 'agendar' => 1], 'POST', ['token' => 'malo', 'fecha' => '2030-01-01', 'hora' => '10:00', 'sitio_web' => '']);
+ok($r['http'] === 403 && str_contains($r['html'], 'role="status"') && str_contains($r['html'], 'name="fecha"') && at_rt_obtener($s['id'])['estado'] === 'activo', 'POST del formulario sin JavaScript sigue agendando por at_rt_agendar (token malo: 403 y vuelve el formulario)');
+$r = at_rt_pagina(['t' => $s['token'], 'agendar' => 1], 'POST', ['t' => str_repeat('f', 32), 'token' => at_rt_token_agenda_hoy($s['token']), 'fecha' => '', 'hora' => '', 'sitio_web' => 'spam']);
+ok($r['http'] === 400 && at_rt_obtener($s['id'])['estado'] === 'activo', 'POST sin JavaScript usa el token de la URL, no uno del cuerpo');
+$ips[] = (string) ($_SERVER['REMOTE_ADDR'] ?? '');
 $dias = [];
 foreach (['monday','tuesday','wednesday','thursday','friday','saturday','sunday'] as $d) { $dias[$d] = ['enabled' => true, 'start' => '09:00', 'end' => '22:00']; }
 update_option('automatiza_chat_schedule', $dias + ['holidays' => '']);
@@ -82,6 +107,10 @@ ok($r['ok'] && $f && $f->client_email === $s['email'] && $f->status === 'schedul
 ok($f && str_starts_with($f->notes, 'Retomar #' . $s['id'] . ' ·') && !str_contains($f->notes, $s['token']) && !str_contains($f->notes, 'http'), 'notas guardan id numérico sin token ni URLs');
 ok(count($correos) >= 1, 'patrón de notificación de correo invocado con transporte bloqueado');
 ok(rt_agenda_pedir($s, $fecha, '19:00')['clave'] === 'ya_agendada', 'una única reunión futura por seguimiento');
+$html = at_rt_pagina(['t' => $s['token'], 'agendar' => 1], 'GET', [])['html'];
+ok(str_contains($html, 'Ya tienes tu llamada de seguimiento el ') && !str_contains($html, '<dialog') && !str_contains($html, 'data-at-rt-abrir') && str_contains($html, '<iframe'), 'con la llamada ya agendada la barra lo dice en vez del botón, sin diálogo');
+$html = at_rt_pagina(['t' => $s['token']], 'GET', [])['html'];
+ok(str_contains($html, substr($hora, 0, 5) . '.</p>') && str_contains($html, 'No me interesa'), 'y muestra la hora agendada');
 $q = rt_publica_fixture();
 ok(rt_agenda_pedir($q, $fecha, $hora)['clave'] === 'hora_ocupada', 'slot ocupado no puede duplicarse');
 $req = new WP_REST_Request('POST', '/automatiza-tech/v1/retomar-agenda');

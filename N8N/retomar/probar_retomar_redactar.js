@@ -103,6 +103,11 @@ const sinPrimerPlano = leer(respuesta([{ slide: 'portada', prompt: 'Two bakers k
 ok(sinPrimerPlano.slide === 'portada' && /close-up/i.test(sinPrimerPlano.prompt) && /blurred/i.test(sinPrimerPlano.prompt), 'portada sin primer plano: se le agrega primer plano con fondo desenfocado');
 const conPrimerPlano = leer(respuesta([{ slide: 'portada', prompt: PORTADA_OK }])).callback.image_briefs[0];
 ok(!/close-up, shallow depth of field, background completely blurred/.test(conPrimerPlano.prompt), 'portada que ya es primer plano: no se le repite el agregado');
+// Personas en una tienda (19-oct, Botillería): el primer plano les cortaba la cabeza. Plano medio con fondo desenfocado.
+const equipoTienda = leer(respuesta([{ slide: 'cierre', prompt: 'A team celebrating together in a liquor store' }])).callback.image_briefs[0];
+ok(!/close-up/i.test(equipoTienda.prompt) && /entire heads/i.test(equipoTienda.prompt) && /blurred/i.test(equipoTienda.prompt), 'cierre con personas en tienda: plano medio con cabezas completas y fondo desenfocado');
+const tiendaSola = leer(respuesta([{ slide: 'cierre', prompt: 'Shelves of a quiet liquor store at night' }])).callback.image_briefs[0];
+ok(/close-up/i.test(tiendaSola.prompt), 'cierre en tienda sin personas: sigue en primer plano');
 ok(resultadosPortada.every((r) => r.callback.image_briefs.every((b) => ['portada', 'quedamos', 'cierre', 'demo'].includes(b.slide))), 'ningún callback deja «cover» como nombre de lámina');
 // Lo que pide texto o etiquetas en cualquier lámina se reemplaza
 const cartel = leer(respuesta([{ slide: 'cierre', prompt: 'A woman holding a menu with a sign saying OPEN' }]));

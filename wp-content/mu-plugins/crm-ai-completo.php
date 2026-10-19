@@ -1982,6 +1982,7 @@ class AutomatizaTech_CRM_AI {
                 Ficha: <?php echo esc_html($cliente['nombre'] ?? ''); ?>
                 <span class="cliente-badge <?php echo esc_attr($cliente['tipo'] ?? ''); ?>"><?php echo ucfirst($cliente['tipo'] ?? ''); ?></span>
             </h1>
+            <?php if (is_array($cliente) && function_exists('at_rt_boton_ficha') && current_user_can('manage_options')) { at_rt_boton_ficha($cliente); } ?>
             
             <div class="ficha-grid">
                 <!-- Columna Izquierda: Datos del Cliente -->

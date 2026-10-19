@@ -346,6 +346,17 @@ $pc = rt_env_fixture(['telefono' => '']);
 $durante = static function ($v, $mail) use ($pc) { if ($mail['to'] === $pc['email']) { at_rt_guardar($pc['id'], ['render' => ['estado' => 'pendiente', 'generacion' => str_repeat('c', 16), 'huella' => $pc['render']['huella'], 'nota' => '']]); } return $v; };
 add_filter('pre_wp_mail', $durante, 150, 2); $r = at_rt_entregar($pc['id'], false, '2026-10-19 10:30:00'); remove_filter('pre_wp_mail', $durante, 150); $f = at_rt_obtener($pc['id']);
 ok($r['ok'] && ($f['render']['publicada']['view_url'] ?? '') === $pc['render']['view_url'] && ($f['render']['publicada']['huella'] ?? '') === $pc['render']['huella'] && ($f['render']['estado'] ?? '') === 'pendiente', 'C1: si la presentación se rehace mientras sale el correo, queda publicada la que se aprobó');
+// Re-revisión: un Guardar del panel durante el SMTP del primer envío cambia la aprobación, pero el correo que salió era el
+// aprobado: la versión publicada es la aprobada y la página del prospecto la muestra (no «Estamos preparando» ni la nueva).
+$pg = rt_env_fixture(['telefono' => '']);
+$gen_pg = str_repeat('e', 16); $vista_pg = 'https://' . at_pt_host_renderer() . '/p/' . $pg['token'] . '-' . $gen_pg . '-retomar/index.html';
+at_rt_guardar($pg['id'], ['render' => array_merge($pg['render'], ['generacion' => $gen_pg, 'view_url' => $vista_pg])]);
+$pg = at_rt_obtener($pg['id']);
+$durante = static function ($v, $mail) use ($pg) { if ($mail['to'] === $pg['email']) { at_rt_panel_escribir($pg['id'], ['render' => ['estado' => 'pendiente', 'nota' => 'Contenido guardado']], '2026-10-19 10:30:01'); } return $v; };
+add_filter('pre_wp_mail', $durante, 150, 2); $r = at_rt_entregar($pg['id'], false, '2026-10-19 10:30:00'); remove_filter('pre_wp_mail', $durante, 150); $f = at_rt_obtener($pg['id']);
+ok($r['ok'] && rt_env_correos($pg['email']) === 1 && ($f['render']['estado'] ?? '') === 'pendiente' && ($f['render']['publicada'] ?? null) === ['view_url' => $vista_pg, 'pdf_url' => '', 'huella' => $pg['render']['huella'], 'generacion' => $gen_pg], 'C1: un Guardar del panel durante el correo no impide publicar la versión aprobada que salió');
+$html_pg = at_rt_pagina(['t' => $f['token']], 'GET', [])['html'];
+ok(str_contains($html_pg, esc_url($vista_pg)) && !str_contains($html_pg, 'Estamos preparando'), 'C1: la página del prospecto muestra la versión aprobada que recibió');
 // «Enviar prueba al equipo» funciona sin aprobación y no crea ninguna.
 $pr = rt_env_fixture(['telefono' => '', 'aprobacion' => []]); $antes = count($mails);
 $r = at_rt_enviar($pr['id'], true); $f = at_rt_obtener($pr['id']);

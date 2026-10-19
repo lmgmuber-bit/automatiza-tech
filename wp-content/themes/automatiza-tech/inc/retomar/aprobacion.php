@@ -39,10 +39,19 @@ function at_rt_aprobacion_url(int $id, string $accion, string $nonce, int $vence
  * vence, usada:false} bajo FOR UPDATE y devuelve los cuatro enlaces; null si no corresponde. Emitir otra vez rota el nonce.
  * Nunca pisa un `aprobado` vigente (misma huella que el render `listo`): si Luis aprobó mientras se armaba el resumen, su
  * aprobación queda y esta emisión devuelve null. Un aprobado con huella vieja sí se reemplaza.
+ * Tampoco emite si el contenido cambió por fuera de las rutas de guardado de Retomar sin rehacer la presentación (la
+ * propuesta vinculada, su flujo o sus fotos): cada «Aprobar» respondería «cambio» semana tras semana. En ese caso, bajo el
+ * mismo candado, el render queda desactualizado con el criterio del vencimiento (at_rt_render_desfasado, conservando
+ * render.publicada): `pendiente` con pedido_at = $ahora (se ve «En preparación», no «Necesita revisión»), o `error` si el
+ * contenido ya no se puede presentar. Después del COMMIT pide la presentación nueva con at_rt_timeout_reloj(); $cupo es lo
+ * que le queda a la pasada del reloj de su tope de pedidos a n8n (null fuera del reloj: sin tope) y se descuenta. Sin cupo
+ * queda `pendiente` y la pide el reintento de presentaciones de una pasada siguiente (at_rt_reintentar_renders). Devuelve null.
  */
-function at_rt_emitir_aprobacion(int $id, string $ahora): ?array {
+function at_rt_emitir_aprobacion(int $id, string $ahora, ?int &$cupo = null): ?array {
 	$fecha = at_rt_ahora($ahora);
 	if ($fecha === null || $id <= 0 || wp_salt('auth') === '') { return null; }
+	$cuando = $fecha->format('Y-m-d H:i:s');
+	$desfasado = null;
 	global $wpdb;
 	if ($wpdb->query('START TRANSACTION') === false) { return null; }
 	try {
@@ -53,18 +62,33 @@ function at_rt_emitir_aprobacion(int $id, string $ahora): ?array {
 		if (($s['redaccion']['estado'] ?? '') !== 'lista' || ($s['render']['estado'] ?? '') !== 'listo' || !is_string($huella) || $huella === '') { return null; }
 		$previa = is_array($s['aprobacion']) ? $s['aprobacion'] : [];
 		if (($previa['estado'] ?? '') === 'aprobado' && is_string($previa['huella'] ?? null) && hash_equals($huella, $previa['huella'])) { return null; }
-		$aprobacion = [
-			'estado' => 'por_aprobar',
-			'n' => at_rt_envios_realizados($s['envios']) + 1,
-			'nonce' => bin2hex(random_bytes(8)),
-			'huella' => $huella,
-			'emitido_at' => $fecha->format('Y-m-d H:i:s'),
-			'vence' => $fecha->getTimestamp() + at_rt_aprobacion_vida(),
-			'usada' => false,
-		];
-		if (!at_rt_guardar($id, ['aprobacion' => $aprobacion]) || $wpdb->query('COMMIT') === false) { return null; }
+		$desfasado = at_rt_render_desfasado($s, 'El contenido cambió después de la presentación: la rehacemos antes de ofrecerla para aprobar.', 'El contenido cambió después de la presentación y ya no se puede armar:', $cuando);
+		if ($desfasado !== null) {
+			if (!at_rt_guardar($id, ['render' => $desfasado]) || $wpdb->query('COMMIT') === false) { return null; }
+		} else {
+			$aprobacion = [
+				'estado' => 'por_aprobar',
+				'n' => at_rt_envios_realizados($s['envios']) + 1,
+				'nonce' => bin2hex(random_bytes(8)),
+				'huella' => $huella,
+				'emitido_at' => $cuando,
+				'vence' => $fecha->getTimestamp() + at_rt_aprobacion_vida(),
+				'usada' => false,
+			];
+			if (!at_rt_guardar($id, ['aprobacion' => $aprobacion]) || $wpdb->query('COMMIT') === false) { return null; }
+		}
 	} finally {
 		$wpdb->query('ROLLBACK'); // Sin efecto después de COMMIT; libera el candado ante cualquier retorno o error.
+	}
+	if ($desfasado !== null) {
+		// Ya confirmado y fuera del candado: el pedido llama a n8n por HTTP. Sin flujo de presentación no gasta cupo (queda
+		// `pendiente` con su nota, como en el vencimiento); si n8n falla, at_rt_pedir_render lo deja en `error`.
+		if ($desfasado['estado'] === 'pendiente' && at_rt_render_flujo() !== '' && ($cupo === null || $cupo > 0)) {
+			if ($cupo !== null) { $cupo--; }
+			try { at_rt_pedir_render($id, at_rt_timeout_reloj(), $cuando); }
+			catch (Throwable $e) { error_log('Retomar: no se pudo pedir la presentación desactualizada #' . $id . ': ' . $e->getMessage()); }
+		}
+		return null;
 	}
 	$enlaces = [];
 	foreach (at_rt_aprobacion_acciones() as $accion) { $enlaces[$accion] = at_rt_aprobacion_url($id, $accion, $aprobacion['nonce'], $aprobacion['vence']); }

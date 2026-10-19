@@ -145,10 +145,13 @@ function at_rt_resumen_tipo(array $s, string $ahora): string {
  * Tarjeta del resumen para el seguimiento $s a la hora $ahora, o null si no va. Si toca aprobar, emite la aprobación con
  * esa hora (rota el nonce: los botones de un correo anterior responden «cambio») y la tarjeta lleva los textos y los cuatro
  * enlaces; «Ver la presentación completa» es el enlace «ver» con el ancla #presentacion (Ruling 17). Unos textos con un
- * enlace interno no se ofrecen para aprobar (D8). Si la emisión no se pudo porque, entretanto, Luis ya lo aprobó (la
- * emisión nunca pisa un aprobado vigente), no va tarjeta; cualquier otra emisión fallida va como «Necesita revisión».
+ * enlace interno no se ofrecen para aprobar (D8). Si la emisión no se pudo, la tarjeta sale con el tipo que tiene ahora
+ * el seguimiento: ninguna si, entretanto, Luis ya lo aprobó (la emisión nunca pisa un aprobado vigente); «En preparación»
+ * o «Necesita revisión» si la emisión encontró la presentación desactualizada (el contenido cambió por fuera de Retomar:
+ * quedó `pendiente` y se pidió de nuevo, o en `error`); cualquier otra emisión fallida va como «Necesita revisión».
+ * $cupo: pedidos a n8n que le quedan a la pasada del reloj (null fuera del reloj), lo usa la emisión.
  */
-function at_rt_resumen_tarjeta(array $s, string $ahora): ?array {
+function at_rt_resumen_tarjeta(array $s, string $ahora, ?int &$cupo = null): ?array {
 	$hoy = substr($ahora, 0, 10);
 	$tipo = at_rt_resumen_tipo($s, $ahora);
 	if ($tipo === '') { return null; }
@@ -156,11 +159,12 @@ function at_rt_resumen_tarjeta(array $s, string $ahora): ?array {
 	if ($tipo === 'normal' && at_rt_red_interno(array_merge([(string) $s['nombre'], (string) $s['negocio']], array_values($textos)))) { $tipo = 'revision'; }
 	$t = at_rt_resumen_base($s, $hoy) + ['tipo' => $tipo];
 	if ($tipo !== 'normal') { return $t; }
-	$enlaces = at_rt_emitir_aprobacion((int) $s['id'], $ahora);
+	$enlaces = at_rt_emitir_aprobacion((int) $s['id'], $ahora, $cupo);
 	if ($enlaces === null) {
 		$actual = at_rt_obtener((int) $s['id']);
-		if ($actual && at_rt_resumen_tipo($actual, $ahora) === '') { return null; }
-		$t['tipo'] = 'revision';
+		$ahora_tipo = $actual ? at_rt_resumen_tipo($actual, $ahora) : 'revision';
+		if ($ahora_tipo === '') { return null; }
+		$t['tipo'] = $ahora_tipo === 'normal' ? 'revision' : $ahora_tipo;
 		return $t;
 	}
 	return $t + ['textos' => $textos, 'url_presentacion' => $enlaces['ver'] . '#presentacion', 'enlaces' => $enlaces];
@@ -187,9 +191,11 @@ function at_rt_resumen_salidas(array $lista, string $desde): array {
  *  - Enviado: at_rt_resumen_semana = semana ISO de $ahora y at_rt_resumen_desde = $ahora (motivo 'enviado').
  * Otros motivos: 'no_toca', 'ocupado' (otro resumen en curso), 'fecha', 'esquema', 'destino' (correo inválido) e
  * 'interno' (D8: nunca debería pasar; no se envía ni se marca).
+ * $cupo: lo que le queda a la pasada del reloj de su tope de pedidos a n8n (at_rt_tick lo pasa y lo ve gastado); null fuera
+ * del reloj («Enviarme el resumen ahora»): sin tope.
  * Devuelve {enviado, tarjetas, motivo}.
  */
-function at_rt_resumen(string $ahora, bool $forzar = false): array {
+function at_rt_resumen(string $ahora, bool $forzar = false, ?int &$cupo = null): array {
 	$r = ['enviado' => false, 'tarjetas' => 0, 'motivo' => ''];
 	$fecha = at_rt_ahora($ahora);
 	if ($fecha === null) { $r['motivo'] = 'fecha'; return $r; }
@@ -210,7 +216,7 @@ function at_rt_resumen(string $ahora, bool $forzar = false): array {
 		$lista = at_rt_lista();
 		$tarjetas = [];
 		foreach ($lista as $s) {
-			try { $t = at_rt_resumen_tarjeta($s, $ahora); }
+			try { $t = at_rt_resumen_tarjeta($s, $ahora, $cupo); }
 			catch (Throwable $e) { error_log('Retomar: no se pudo armar la tarjeta #' . (int) $s['id'] . ' del resumen: ' . $e->getMessage()); $t = null; }
 			if ($t !== null) { $tarjetas[] = $t; }
 		}

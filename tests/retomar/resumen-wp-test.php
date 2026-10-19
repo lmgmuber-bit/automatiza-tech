@@ -465,6 +465,81 @@ $r = at_rt_tick('2026-12-01 10:35:00');
 ok(($r['renders'] ?? null) === 0 && count($pedidos_render) === 2, 'una vez cada 24 h: la tercera pasada no vuelve a pedirlas');
 ok(at_rt_reintentar_renders('no es una fecha', 3) === [] && at_rt_reintentar_renders('2026-12-01 11:35:00', 0) === [], 'con una hora ilegible o sin cupo no se pide nada');
 
+// ---- Re-revisión de la ola final: el contenido cambia por fuera de las rutas de guardado de Retomar (la propuesta vinculada
+// pasa a v3) sin reiniciar el render. La tarjeta no se ofrece para aprobar —cada «Aprobar» respondería «cambio»—: la
+// presentación queda desactualizada (conservando la publicada), se pide de nuevo y, con la nueva lista, se aprueba ----
+// En PROD el sitio es HTTPS; el sitio local no, y el enlace a la propuesta v3 (home_url) debe ser HTTPS para presentarse.
+$https_dr = static fn($url) => set_url_scheme($url, 'https');
+add_filter('home_url', $https_dr);
+$dr = $marca . '-deriva';
+$GLOBALS['rt_res_prefijo'] = $dr;
+$p_dr = rt_res_prop(['flujo' => 'v2']);
+$deriva = rt_res_seg(['nombre' => '[PRUEBA] Deriva Externa', 'propuesta_id' => $p_dr, 'proximo_at' => '2026-12-07'], [], $dr);
+$pub_dr = ['view_url' => 'https://' . at_pt_host_renderer() . '/p/' . $deriva['token'] . '-' . str_repeat('9', 16) . '-retomar/index.html', 'pdf_url' => '', 'huella' => 'publicada', 'generacion' => str_repeat('9', 16)];
+at_rt_guardar($deriva['id'], ['render' => array_merge($deriva['render'], ['publicada' => $pub_dr])]);
+$e_dr = at_rt_emitir_aprobacion($deriva['id'], '2026-11-30 09:00:00');
+$ap_dr = at_rt_obtener($deriva['id'])['aprobacion'];
+ok(is_array($e_dr) && at_rt_panel_revision(at_rt_obtener($deriva['id']), '2026-12-07 09:00:00') === 'Lista para aprobar', 'deriva: antes del cambio externo, lista para aprobar');
+$huella_dr = (string) at_rt_obtener($deriva['id'])['render']['huella'];
+$wpdb->update($wpdb->prefix . 'automatiza_propuestas', ['flujo' => 'v3'], ['id' => $p_dr]);
+ok(at_rt_huella_render(at_rt_obtener($deriva['id'])) !== $huella_dr, 'deriva: la propuesta vinculada pasó a v3 por fuera y el contenido ya no es el de la presentación');
+// Contenido que ya no se puede presentar (siete líneas guardadas por fuera, sin pasar por el panel): «Necesita revisión».
+$rota = rt_res_seg(['nombre' => '[PRUEBA] Deriva Rota', 'proximo_at' => '2026-12-07'], [], $dr);
+at_rt_guardar($rota['id'], ['render' => array_merge($rota['render'], ['publicada' => $pub_dr]), 'textos' => array_merge($rota['textos'], ['quedamos' => implode("\n", array_fill(0, 7, '[PRUEBA] línea'))])]);
+$pedidos_render = [];
+update_option('at_rt_resumen_semana', '2026-W49');
+$antes = count($mails);
+$r = at_rt_resumen('2026-12-07 09:00:00');
+$html_dr = (string) (end($mails)['message'] ?? '');
+$t_dr = rt_res_tarjeta($html_dr, '[PRUEBA] Deriva Externa');
+$f_dr = at_rt_obtener($deriva['id']);
+ok($r['enviado'] && count($mails) === $antes + 1 && str_contains($t_dr, 'En preparación') && !str_contains($t_dr, 'retomar-aprobar.php') && !str_contains($t_dr, '✅ Aprobar y enviar'), 'deriva: la tarjeta del resumen es «En preparación», sin botones de aprobar');
+ok($f_dr['aprobacion'] === $ap_dr, 'deriva: no se emite una aprobación nueva');
+ok($pedidos_render === [['id' => $deriva['id'], 'timeout' => 5]] && ($f_dr['render']['estado'] ?? '') === 'pendiente' && ($f_dr['render']['pedido_at'] ?? '') === '2026-12-07 09:00:00' && ($f_dr['render']['huella'] ?? '') === at_rt_huella_render($f_dr), 'deriva: la presentación queda pendiente y se pide de nuevo (5 s) con la huella del contenido actual');
+ok(($f_dr['render']['publicada'] ?? null) === $pub_dr, 'deriva: la versión publicada se conserva');
+ok(at_rt_resumen_tipo($f_dr, '2026-12-07 09:00:00') === 'preparacion' && at_rt_panel_revision($f_dr, '2026-12-07 09:00:00') === 'Preparando la presentación', 'deriva: el panel la ve en preparación, ya no «Lista para aprobar»');
+$f_rota = at_rt_obtener($rota['id']);
+ok(str_contains(rt_res_tarjeta($html_dr, '[PRUEBA] Deriva Rota'), 'Necesita revisión') && ($f_rota['render']['estado'] ?? '') === 'error' && str_contains((string) ($f_rota['render']['nota'] ?? ''), 'Corrígelo en el panel Retomar') && ($f_rota['render']['publicada'] ?? null) === $pub_dr && $f_rota['aprobacion'] === [], 'deriva a un contenido que no se puede presentar: «Necesita revisión», presentación en error con nota, la publicada intacta y sin emitir');
+$gen_dr = (string) $f_dr['render']['generacion'];
+$cb_dr = new WP_REST_Request('POST', '/automatiza-tech/v1/retomar/' . $deriva['id'] . '/vista');
+$cb_dr->set_header('Content-Type', 'application/json');
+$cb_dr->set_header('X-AT-Secret', AT_REST_SECRET);
+$cb_dr->set_body(wp_json_encode(['ok' => true, 'generacion' => $gen_dr, 'view_url' => 'https://' . at_pt_host_renderer() . '/p/' . $deriva['token'] . '-' . $gen_dr . '-retomar/index.html', 'pdf_url' => '']));
+ok(rest_do_request($cb_dr)->get_status() === 200 && (at_rt_obtener($deriva['id'])['render']['estado'] ?? '') === 'listo', 'deriva: llega la presentación nueva (callback listo con la huella nueva)');
+$r = at_rt_resumen('2026-12-14 09:00:00');
+$t_dr = rt_res_tarjeta((string) (end($mails)['message'] ?? ''), '[PRUEBA] Deriva Externa');
+$apr_dr = at_rt_resolver_aprobacion($deriva['id'], 'aprobar', rt_res_q($deriva['id'], 'aprobar'), '2026-12-14 09:30:00');
+ok($r['enviado'] && str_contains($t_dr, '✅ Aprobar y enviar') && $apr_dr['ok'] && ($apr_dr['motivo'] ?? '') === '', 'deriva: el resumen siguiente la ofrece para aprobar y «Aprobar» funciona, sin «cambio»');
+// Dentro del reloj, los pedidos que nacen de la emisión respetan el tope de 3 por pasada: dos redacciones atascadas + una
+// presentación desactualizada llenan el cupo; la otra queda pendiente («En preparación», no «Necesita revisión») y la pide
+// el reintento de presentaciones de una pasada siguiente (I4: a las 6 h).
+$dt = $marca . '-derivatk';
+$GLOBALS['rt_res_prefijo'] = $dt;
+foreach (['Uno', 'Dos'] as $cual) {
+	$s = rt_res_seg(['nombre' => '[PRUEBA] Deriva atascada ' . $cual, 'proximo_at' => '2026-12-21'], [], $dt);
+	at_rt_guardar($s['id'], ['redaccion' => ['estado' => 'error', 'pedida_at' => '2026-12-18 10:00:00'], 'render' => $espera_red]);
+}
+$dt_ids = [];
+foreach (['Uno', 'Dos'] as $cual) {
+	$pid = rt_res_prop(['flujo' => 'v2']);
+	$dt_ids[$cual] = rt_res_seg(['nombre' => '[PRUEBA] Deriva reloj ' . $cual, 'propuesta_id' => $pid, 'proximo_at' => '2026-12-21'], [], $dt)['id'];
+	$wpdb->update($wpdb->prefix . 'automatiza_propuestas', ['flujo' => 'v3'], ['id' => $pid]);
+}
+$dt_antes = at_rt_obtener($dt_ids['Uno'])['render'];
+update_option('at_rt_resumen_semana', '2026-W51');
+$pedidos_render = []; $pedidos_redaccion = [];
+$filtros = ['lista' => 0, 'reloj' => 0, 'deteccion' => 0];
+$r = at_rt_tick('2026-12-21 09:05:00');
+$html_dt = (string) (end($mails)['message'] ?? '');
+$f_uno = at_rt_obtener($dt_ids['Uno']);
+ok($filtros['lista'] > 0 && $r['redacciones'] === 2 && $r['resumen']['enviado'] && $pedidos_render === [['id' => $dt_ids['Dos'], 'timeout' => 5]], 'reloj: 2 redacciones + 1 presentación desactualizada pedida desde el resumen = el tope de 3');
+ok(($f_uno['render']['estado'] ?? '') === 'pendiente' && ($f_uno['render']['pedido_at'] ?? '') === '2026-12-21 09:05:00' && ($f_uno['render']['generacion'] ?? null) === ($dt_antes['generacion'] ?? null), 'reloj: la que no cupo queda pendiente con la hora de la pasada, sin pedirla');
+ok(str_contains(rt_res_tarjeta($html_dt, '[PRUEBA] Deriva reloj Uno'), 'En preparación') && str_contains(rt_res_tarjeta($html_dt, '[PRUEBA] Deriva reloj Dos'), 'En preparación') && at_rt_resumen_tipo($f_uno, '2026-12-21 09:05:00') === 'preparacion', 'reloj: las dos van «En preparación», ninguna «Necesita revisión»');
+$pedidos_render = [];
+$r = at_rt_tick('2026-12-21 15:06:00');
+ok(in_array(['id' => $dt_ids['Uno'], 'timeout' => 5], $pedidos_render, true) && ($r['renders'] ?? 0) >= 1, 'reloj: la que esperó el tope la pide el reintento de presentaciones de una pasada siguiente');
+remove_filter('home_url', $https_dr);
+
 // Sin el esquema listo el reloj no hace nada.
 update_option('at_rt_schema', '1', false);
 $antes = count($mails); $pedidos_redaccion = [];

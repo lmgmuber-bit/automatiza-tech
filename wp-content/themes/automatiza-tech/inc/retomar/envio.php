@@ -113,8 +113,8 @@ function at_rt_aprobacion_calza(array $s, int $n): bool {
  * solo si sigue siendo la misma aprobación que se revisó ($ap): nunca pisa una decisión tomada entretanto.
  * Si además el contenido actual ya no es el de la presentación (cambió algo fuera de las rutas de guardado de Retomar:
  * la propuesta vinculada, su flujo o sus fotos), el render queda desactualizado bajo el mismo candado —`pendiente`, o
- * `error` si el contenido ya no se puede presentar—: la emisión exige `listo`, así nadie vuelve a aprobar una
- * presentación vieja que vencería otra vez en cada reloj.
+ * `error` si el contenido ya no se puede presentar (at_rt_render_desfasado, el mismo criterio que la emisión)—: la
+ * emisión exige `listo`, así nadie vuelve a aprobar una presentación vieja que vencería otra vez en cada reloj.
  * Devuelve '' si no venció nada, 'aprobacion' si solo venció la aprobación, 'render' si hay que pedir otra presentación
  * (lo hace quien llama, fuera del candado) y 'error' si el contenido necesita revisión en el panel.
  */
@@ -130,16 +130,10 @@ function at_rt_vencer_aprobacion(int $id, array $ap, string $ahora): string {
         $envios[] = ['tipo' => 'diferido', 'fecha' => substr($ahora, 0, 10), 'at' => $ahora, 'nota' => 'aprobacion_vencida'];
         $campos = ['aprobacion' => at_rt_aprobacion_muerta($ap, $ahora), 'envios' => $envios];
         $resultado = 'aprobacion';
-        $render = $s['render'];
-        try {
-            $actual = at_rt_huella_render($s);
-            if (!is_string($render['huella'] ?? null) || !hash_equals($render['huella'], $actual)) {
-                $campos['render'] = array_merge($render, ['estado' => 'pendiente', 'nota' => 'El contenido cambió después de la presentación: hay que rehacerla antes de volver a aprobar.']);
-                $resultado = 'render';
-            }
-        } catch (InvalidArgumentException $e) {
-            $campos['render'] = array_merge($render, ['estado' => 'error', 'nota' => 'El contenido cambió después de aprobar y la presentación ya no se puede armar: ' . $e->getMessage() . ' Corrígelo en el panel Retomar.']);
-            $resultado = 'error';
+        $desfasado = at_rt_render_desfasado($s, 'El contenido cambió después de la presentación: hay que rehacerla antes de volver a aprobar.', 'El contenido cambió después de aprobar y la presentación ya no se puede armar:');
+        if ($desfasado !== null) {
+            $campos['render'] = $desfasado;
+            $resultado = $desfasado['estado'] === 'error' ? 'error' : 'render';
         }
         if (!at_rt_guardar($id, $campos)) { return ''; }
         return $wpdb->query('COMMIT') !== false ? $resultado : '';
@@ -177,9 +171,10 @@ function at_rt_enviar(int $id, bool $prueba): array {
  * revisada antes del correo: si salió y la fila aún tiene esa misma aprobación, se consume en esta misma transacción
  * ({estado:'enviado', n, at}); si cambió entretanto no se pisa y tampoco se pide el WhatsApp. El WhatsApp sale solo si
  * estaba en la foto del destinatario de la aprobación Y hoy sigue autorizado Y el interruptor está encendido (Ruling 18).
- * Ruling 17: al consumir con éxito la aprobación, render.publicada = {view_url, pdf_url, huella, generacion} del render que
- * se revisó antes del correo ($render_aprobado, el que calzó), y no del que haya ahora: si la presentación se rehízo
- * durante SMTP, el prospecto igual ve la que Luis aprobó. La página del prospecto (retomar.php) muestra esa versión.
+ * Ruling 17: cuando el correo aprobado sale, render.publicada = {view_url, pdf_url, huella, generacion} del render que se
+ * revisó antes del correo ($render_aprobado, el que calzó), y no del que haya ahora: si la presentación se rehízo o la
+ * aprobación cambió durante SMTP, el prospecto igual ve la que Luis aprobó y recibió. La página del prospecto (retomar.php)
+ * muestra esa versión.
  */
 function at_rt_finalizar_entrega(int $id, int $n, bool $ok, string $ahora, array $aprobacion, array $render_aprobado): ?array {
     global $wpdb;
@@ -198,7 +193,10 @@ function at_rt_finalizar_entrega(int $id, int $n, bool $ok, string $ahora, array
         // El correo ya salió: la aprobación queda usada aunque una parada (baja, agendó) llegara durante SMTP.
         // Ruling 10: si el correo falló, lo aprobado no sobrevive: el seguimiento queda en pausa y la aprobación muerta.
         if ($aprobada) { $campos['aprobacion'] = $s['aprobacion'] = $ok ? ['estado' => 'enviado', 'n' => $n, 'at' => $ahora] : at_rt_aprobacion_muerta($s['aprobacion'], $ahora); }
-        if ($aprobada && $ok) {
+        // El correo que salió era el aprobado ($aprobacion se revisó contra él antes de SMTP): se publica aunque la aprobación
+        // de la fila haya cambiado durante el envío (p. ej. un Guardar del panel). Si no, la página del prospecto diría «Estamos
+        // preparando» y después mostraría una versión que nadie aprobó. El consumo de la aprobación sigue exigiendo $aprobada.
+        if ($ok && ($aprobacion['estado'] ?? '') === 'aprobado') {
             $publicada = [];
             foreach (['view_url', 'pdf_url', 'huella', 'generacion'] as $k) { $publicada[$k] = is_string($render_aprobado[$k] ?? null) ? $render_aprobado[$k] : ''; }
             $campos['render'] = $s['render'] = array_merge(is_array($s['render']) ? $s['render'] : [], ['publicada' => $publicada]);
@@ -314,9 +312,10 @@ function at_rt_tope_pedidos_reloj(): int { return 3; }
  * entrega lo que Luis aprobó; así la lista de WhatsApp queda armada antes de cualquier trabajo lento. Después, en toda
  * pasada: detecta propuestas estancadas, vuelve a pedir las redacciones atascadas (Ruling 7), vuelve a pedir las
  * presentaciones que llevan más de 6 h esperando (I4, at_rt_reintentar_renders) y manda el correo semanal si le toca
- * (at_rt_resumen decide día y hora). Detección y reintentos juntos inician como máximo at_rt_tope_pedidos_reloj() pedidos
- * a n8n, cada uno con at_rt_timeout_reloj(): un detectado que no cupo queda con la redacción vacía y lo toma el reintento
- * de una pasada siguiente. Cada paso corre aunque el anterior falle. Sin el esquema listo no hace nada.
+ * (at_rt_resumen decide día y hora). Detección, reintentos y las presentaciones desactualizadas que encuentra la emisión del
+ * resumen inician juntos como máximo at_rt_tope_pedidos_reloj() pedidos a n8n, cada uno con at_rt_timeout_reloj(): un
+ * detectado que no cupo queda con la redacción vacía, y una presentación que no cupo queda `pendiente`; los toma el
+ * reintento de una pasada siguiente. Cada paso corre aunque el anterior falle. Sin el esquema listo no hace nada.
  * Devuelve {enviados, diferidos, detenidos, whatsapp, detectados, redacciones, renders, resumen}.
  */
 function at_rt_tick(string $ahora): array {
@@ -348,9 +347,12 @@ function at_rt_tick(string $ahora): array {
         $r['redacciones'] = count(at_rt_reintentar_redacciones($cuando, $cupo));
         $cupo -= min($cupo, $r['redacciones']);
     } catch (Throwable $e) { error_log('Retomar: el reintento de redacciones del reloj falló: ' . $e->getMessage()); }
-    try { $r['renders'] = $cupo > 0 ? count(at_rt_reintentar_renders($cuando, $cupo)) : 0; }
-    catch (Throwable $e) { error_log('Retomar: el reintento de presentaciones del reloj falló: ' . $e->getMessage()); }
-    try { $r['resumen'] = at_rt_resumen($cuando); }
+    try {
+        $r['renders'] = $cupo > 0 ? count(at_rt_reintentar_renders($cuando, $cupo)) : 0;
+        $cupo -= min($cupo, $r['renders']);
+    } catch (Throwable $e) { error_log('Retomar: el reintento de presentaciones del reloj falló: ' . $e->getMessage()); }
+    // El resumen gasta lo que quede del cupo: una emisión que encuentra la presentación desactualizada la pide de nuevo.
+    try { $r['resumen'] = at_rt_resumen($cuando, false, $cupo); }
     catch (Throwable $e) { error_log('Retomar: el resumen semanal del reloj falló: ' . $e->getMessage()); }
     return $r;
 }

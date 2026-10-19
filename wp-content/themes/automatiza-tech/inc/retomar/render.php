@@ -128,6 +128,23 @@ function at_rt_render_heredar(array $anterior, array $nuevo, bool $reintento = t
 }
 
 /**
+ * ¿La presentación del seguimiento $s quedó vieja porque el contenido cambió por fuera de las rutas de guardado de Retomar
+ * (la propuesta vinculada, su flujo o sus fotos)? null si la huella del contenido actual calza con render.huella. Si no
+ * calza, devuelve el render `pendiente` con $nota (y render.pedido_at = $pedido_at si se pasa); si el contenido ya no se
+ * puede presentar (at_rt_huella_render lanza), el render en `error` con «$error_prefijo <motivo> Corrígelo en el panel
+ * Retomar.». Todo lo demás del render se conserva, render.publicada incluida. Lo usan el vencimiento de una aprobación
+ * (envio.php) y la emisión (aprobacion.php), siempre bajo FOR UPDATE: quien llama guarda el resultado y pide el render nuevo
+ * fuera del candado.
+ */
+function at_rt_render_desfasado(array $s, string $nota, string $error_prefijo, string $pedido_at = ''): ?array {
+	$render = is_array($s['render'] ?? null) ? $s['render'] : [];
+	try { $actual = at_rt_huella_render($s); }
+	catch (InvalidArgumentException $e) { return array_merge($render, ['estado' => 'error', 'nota' => $error_prefijo . ' ' . $e->getMessage() . ' Corrígelo en el panel Retomar.']); }
+	if (is_string($render['huella'] ?? null) && hash_equals($render['huella'], $actual)) { return null; }
+	return array_merge($render, ['estado' => 'pendiente', 'nota' => $nota], $pedido_at !== '' ? ['pedido_at' => $pedido_at] : []);
+}
+
+/**
  * Pide la presentación al flujo de n8n. $timeout: segundos de espera (15 desde el panel; el reloj pasa at_rt_timeout_reloj()).
  * Deja render.pedido_at con $ahora (la hora de la pasada del reloj, «Y-m-d H:i[:s]» de Chile) o, sin ella, con la hora de
  * Chile actual: el reloj y el resumen la usan para ver si la presentación quedó atascada (I4). El render nuevo conserva la

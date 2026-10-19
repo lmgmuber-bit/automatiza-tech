@@ -1,5 +1,6 @@
 #!/usr/bin/env node
-// Prueba de los nodos Code de «Retomar · Redactar» (retomar-redactar.json). Node plano: sin red, sin credenciales, sin n8n.
+// Prueba de los nodos Code de «Retomar · Redactar» (retomar-redactar.json) y del nodo «Preparar WhatsApp» de
+// «Retomar · Reloj y WhatsApp» (retomar-reloj.json). Node plano: sin red, sin credenciales, sin n8n.
 //
 //   node N8N/retomar/probar_retomar_redactar.js [archivo-de-salida.json]
 //
@@ -63,6 +64,14 @@ ok(pedido.tiene_demo === true && !('demo_urls' in pedido) && !('id' in pedido) &
 ok(pedido.propuesta.transcripcion.length === 12000 && pedido.historial.length === 10, 'pedido: recorta la transcripción a 12000 y el historial a 10');
 ok(pedido.slides_foto.join() === 'portada,cierre,demo', 'pedido: conserva las láminas con foto');
 ok(JSON.parse(correr('Preparar pedido', { body: { id: 1 } }, {}).mensaje).slides_foto.join() === 'portada,cierre', 'pedido: contexto vacío no lanza y pide portada y cierre');
+// Las notas crecen por el final (cada «Pedir cambios» se agrega abajo): se conservan las ÚLTIMAS 2000, no las primeras.
+const notasLargas = JSON.parse(JSON.stringify(ctx));
+notasLargas.body.notas = 'viejo '.repeat(500) + 'Cambio pedido hoy: más corto';
+const conNotas = JSON.parse(correr('Preparar pedido', notasLargas, {}).mensaje);
+ok(conNotas.notas === notasLargas.body.notas.slice(-2000) && conNotas.notas.endsWith('Cambio pedido hoy: más corto'), 'pedido: de las notas viajan las últimas 2000 (lo más reciente)');
+ok(pedido.notas === ctx.body.notas, 'pedido: unas notas cortas viajan enteras');
+const prompt = nodo['Redactar'].parameters.prompt.messages[0].content;
+ok(['«lucas»', '«mil»', '«millones»', '«USD500»'].every((p) => prompt.includes(p)), 'el prompt prohíbe también las cifras con lucas, mil o millones y las siglas pegadas a la cifra (lo mismo que rechaza WordPress)');
 
 // 2) Leer respuesta: respuesta válida
 const valida = leer(respuesta([
@@ -142,6 +151,16 @@ ok(evaluar('¿Es el pedido vigente?', ctx) === true && evaluar('¿Es el pedido v
 ok(nodo['Leer contexto'].parameters.url === '=https://automatizatech.cl/?rest_route=/automatiza-tech/v1/retomar/{{ parseInt($json.body.id, 10) }}/contexto', 'URL de contexto');
 ok(nodo['Guardar redacción'].parameters.url === '=https://automatizatech.cl/?rest_route=/automatiza-tech/v1/retomar/{{ $json.id }}/redaccion', 'URL de guardar redacción');
 ok(wf.active === false, 'el export sigue inactivo');
+
+// 9) «Retomar · Reloj y WhatsApp» (retomar-reloj.json): el botón «Ver y agendar» de la plantilla abre la página del
+// prospecto con la presentación (t=<token>), no el formulario de agenda; el de la baja, la baja.
+const reloj = JSON.parse(fs.readFileSync(path.join(__dirname, 'retomar-reloj.json'), 'utf8'));
+const preparar = reloj.nodes.find((n) => n.name === 'Preparar WhatsApp').parameters.jsCode;
+const pedidoWa = { id: 7, n: 2, telefono: '56900000000', nombre: 'Persona Ejemplo', negocio: 'Negocio Demostracion', token: 'a1b2c3' };
+const salidaWa = new Function('$input', preparar)({ all: () => [{ json: { whatsapp: [pedidoWa] } }] });
+const botones = salidaWa[0].json.payload.template.components.filter((c) => c.type === 'button');
+ok(botones.length === 2 && botones[0].parameters[0].text === 't=a1b2c3' && botones[1].parameters[0].text === 't=a1b2c3&baja=1', 'reloj: «Ver y agendar» lleva t=<token> (la página con la presentación) y «No me interesa» t=<token>&baja=1');
+ok(reloj.active === false && reloj.nodes.find((n) => n.name === 'Reloj').parameters.rule.interval[0].expression === '0 5 * * * *', 'reloj: el export sigue inactivo y corre al minuto 5 de cada hora');
 
 console.log(fallas ? '\n' + fallas + ' FALLAS' : '\nTODO OK');
 process.exit(fallas ? 1 : 0);

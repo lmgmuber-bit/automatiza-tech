@@ -53,7 +53,7 @@ Qué va en cada texto (cada uno se muestra en su lámina de la presentación):
 Reglas de redacción:
 - Español de Chile, cercano y profesional, en la voz del equipo en plural («te dejamos», «podemos», «te proponemos»), tuteando. Frases simples y concretas. Sin presionar, sin culpar por el silencio y sin urgencia falsa.
 - Largo, que revisa el sistema (si te pasas, la respuesta se rechaza): quedamos, proponemos y partir, cada uno de 1 a 600 caracteres y como máximo 6 líneas; recomendacion, como máximo 300 caracteres y 3 líneas.
-- NINGÚN monto ni precio, de ningún tipo: no escribas «$», «CLP», «USD», «UF», «pesos», «dólares», cifras con separador de miles ni descuentos con cifras. Si los datos traen precios, ignóralos. Del presupuesto habla solo con palabras («ajustarnos a tu presupuesto»).
+- NINGÚN monto ni precio, de ningún tipo: no escribas «$», «US$», «CLP», «USD» ni «UF» (tampoco pegadas a una cifra, como «USD500»), ni una cifra seguida de «pesos», «dólares», «lucas», «mil» o «millones», ni cifras con separador de miles ni descuentos con cifras. Si los datos traen precios, ignóralos. Del presupuesto habla solo con palabras («ajustarnos a tu presupuesto»).
 - No inventes: ni nombres de personas, teléfonos, correos, direcciones, plazos, cifras, funcionalidades ni resultados que no estén en los datos. Si falta información sobre lo conversado, redacta en general y con amabilidad sobre el negocio y lo propuesto, sin inventar detalles.
 - No escribas enlaces: la presentación ya los trae. No saludes ni te despidas dentro de los textos y no repitas el nombre del prospecto más de una vez.
 - Texto plano: sin Markdown, sin viñetas con símbolos y sin emojis. Usa saltos de línea solo si ayudan a leer.
@@ -69,6 +69,8 @@ CODE_PEDIDO = r"""// Lo que ve el modelo: el contexto que WordPress ya dejó sin
 // No se le mandan ni el id ni la generación, ni las direcciones de las demos: los textos no llevan enlaces.
 const c = ($input.first().json || {}).body || {};
 const cadena = (v, max) => String(v == null ? '' : v).slice(0, max);
+// Las notas crecen por el final (WordPress agrega abajo cada «Pedir cambios»): de ellas se mandan las ÚLTIMAS max.
+const final = (v, max) => String(v == null ? '' : v).slice(-max);
 const prop = esObjetoPlano(c.propuesta) ? c.propuesta : {};
 const actuales = esObjetoPlano(c.textos_actuales) ? c.textos_actuales : {};
 const laminas = (Array.isArray(c.slides_foto) ? c.slides_foto : []).filter((s) => ['portada', 'cierre', 'demo'].includes(s));
@@ -78,7 +80,7 @@ const datos = {
   tiene_demo: Array.isArray(c.demo_urls) && c.demo_urls.length > 0,
   estado_propuesta: cadena(prop.status, 30),
   propuesta: { resumen: cadena(prop.resumen, 1200), transcripcion: cadena(prop.transcripcion, 12000) },
-  notas: cadena(c.notas, 2000),
+  notas: final(c.notas, 2000),
   pedido: cadena(c.pedido, 2000),
   textos_actuales: {
     quedamos: cadena(actuales.quedamos, 600), proponemos: cadena(actuales.proponemos, 600),

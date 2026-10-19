@@ -4,6 +4,10 @@ Corre en el minuto 5 de cada hora, todos los días (`0 5 * * * *`, zona America/
 toca (envíos aprobados, detección, reintentos de redacción y correo semanal) y respeta por su cuenta la ventana de envío del
 prospecto; como hace todo eso dentro de la misma petición, el nodo «Tick» espera hasta 120 s.
 
+El botón «Ver y agendar» de la plantilla `retomar_propuesta` (URL `retomar.php?{{1}}`) lleva el sufijo `t=<token>`: abre la
+página del prospecto con la presentación, «Agendar» y «No me interesa» (no el formulario de agenda). El sufijo es dinámico,
+así que la plantilla aprobada por Meta no cambia.
+
 El routing Graph v22.0 se toma del export local Followup_WhatsApp_Send.json.
 Eje debe validarlo al desplegar. Sólo se referencian nombres de credenciales.
 """
@@ -25,7 +29,7 @@ for (const [i, item] of $input.all().entries()) {
         {type: 'body', parameters: [
           {type: 'text', text: String(w.nombre)}, {type: 'text', text: String(w.negocio)}]},
         {type: 'button', sub_type: 'url', index: '0',
-          parameters: [{type: 'text', text: 't=' + token + '&agendar=1'}]},
+          parameters: [{type: 'text', text: 't=' + token}]},
         {type: 'button', sub_type: 'url', index: '1',
           parameters: [{type: 'text', text: 't=' + token + '&baja=1'}]}
       ]}

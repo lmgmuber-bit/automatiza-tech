@@ -20,4 +20,6 @@ Parámetros de cuerpo: `{{1}}` = nombre; `{{2}}` = negocio. Ejemplos ficticios: 
 
 En cada botón `{{1}}` recibe el sufijo completo; es independiente del parámetro del cuerpo. No cargar datos de clientes como ejemplos. El workflow codifica el token con `encodeURIComponent`.
 
+Desde la fase 2 (19-oct-2026) el flujo manda en el botón 0 el sufijo `t=<token>`, sin `&agendar=1`: «Ver y agendar» abre la página del prospecto, que muestra la presentación y trae «Agendar» y «No me interesa». La tabla conserva el ejemplo con el que se envió la plantilla a Meta; como el sufijo es dinámico, la plantilla no cambia ni hay que volver a enviarla.
+
 Un rechazo, incluido `131049`, se registra como error sin reintento automático. La entrega al destinatario no está garantizada por una respuesta de aceptación de Graph.

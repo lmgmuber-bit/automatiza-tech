@@ -8,12 +8,15 @@ global $wpdb;
 if (!defined('AT_N8N_RETOMAR_REDACTAR')) { define('AT_N8N_RETOMAR_REDACTAR', 'https://example.invalid/webhook/retomar-redactar'); }
 $marca = 'rt-det-' . strtolower(wp_generate_password(10, false, false));
 $ahora = '2026-10-19 09:00:00'; $hoy = '2026-10-19';
-$pids = []; $emails = []; $crm_ids = []; $esquema_original = get_option('at_rt_schema');
+$pids = []; $emails = []; $crm_ids = []; $esquema_original = get_option('at_rt_schema'); $filtro_aplicado = 0;
 $tel_baja = '56900990099'; $origen_baja = 'rt-det-prueba';
 // Aislar el SELECT de propuestas de la detección: sólo se ven las propuestas de esta prueba (Ruling 3).
-add_filter('query', static function ($sql) use (&$pids, $wpdb) {
-    if (str_starts_with($sql, 'SELECT id, client_email') && str_contains($sql, "FROM {$wpdb->prefix}automatiza_propuestas WHERE status IN")) {
-        $sql = str_replace(' ORDER BY id', ' AND id IN (' . implode(',', $pids ?: [0]) . ') ORDER BY id', $sql);
+// $filtro_aplicado cuenta las veces que el filtro cambió de verdad la consulta (si la consulta cambia de forma, la prueba lo avisa).
+add_filter('query', static function ($sql) use (&$pids, &$filtro_aplicado, $wpdb) {
+    if (str_starts_with($sql, 'SELECT id, client_email') && str_contains($sql, "FROM {$wpdb->prefix}automatiza_propuestas WHERE client_email <> ''")) {
+        $acotado = str_replace(' ORDER BY id DESC', ' AND id IN (' . implode(',', $pids ?: [0]) . ') ORDER BY id DESC', $sql);
+        if ($acotado !== $sql) { $filtro_aplicado++; }
+        $sql = $acotado;
     }
     return $sql;
 });
@@ -79,7 +82,7 @@ $ficha_ajena = rt_det_prop(['phone' => '']); $crm_cerrado = rt_det_crm($ficha_aj
 $ev_reciente = rt_det_prop(['created_at' => rt_det_dia(40)]);              // el envío registrado en el historial es de hace 5 días -> no
 rt_det_evento($ev_reciente['id'], 'propuesta_enviada', ['completed_date' => substr(rt_det_dia(5), 0, 10)]);
 rt_det_evento($ev_reciente['id'], 'propuesta_enviada', ['completed_date' => substr(rt_det_dia(35), 0, 10)]);
-rt_det_evento($ev_reciente['id'], 'email', ['completed_date' => substr(rt_det_dia(60), 0, 10)]);
+rt_det_evento($ev_reciente['id'], 'email', ['completed_date' => substr(rt_det_dia(2), 0, 10)]);   // un correo común, más nuevo: no es un envío
 $ev_viejo = rt_det_prop(['created_at' => rt_det_dia(3)]);                  // el registro de envío es de hace 25 días -> entra
 rt_det_evento($ev_viejo['id'], 'propuesta_enviada', ['completed_date' => substr(rt_det_dia(30), 0, 10)]);
 rt_det_evento($ev_viejo['id'], 'propuesta_enviada', ['completed_date' => substr(rt_det_dia(25), 0, 10)]);
@@ -88,12 +91,27 @@ $mayus_previo = rt_det_prop(['client_email' => strtoupper($marca) . '-PREVIO@EXA
 $previo = at_rt_crear(['nombre' => '[PRUEBA]', 'email' => strtolower($marca) . '-previo@example.com', 'estado' => 'baja']);
 $sin_correo = rt_det_prop(['client_email' => '']);
 $mal_correo = rt_det_prop(['client_email' => 'esto-no-es-un-correo']);
-$gemela_a = rt_det_prop(); $gemela_b = rt_det_prop(['client_email' => $gemela_a['email']]);   // mismo correo en dos propuestas
+// Envío desde el panel (at_cc_tras_envio): se anota como correo, no como propuesta_enviada. Borrador de hace 40 días, enviada hace 5.
+$titulo_panel = 'Propuesta enviada por correo, con el botón para aceptarla';
+$panel_reciente = rt_det_prop(['created_at' => rt_det_dia(40)]);
+rt_det_evento($panel_reciente['id'], 'email', ['title' => $titulo_panel, 'completed_date' => substr(rt_det_dia(5), 0, 10)]);
+// Varias propuestas del mismo correo: sólo cuenta la más reciente, sea cual sea su estado.
+$g_vieja = rt_det_prop(['flujo' => null, 'created_at' => rt_det_dia(60)]); $g_v3 = rt_det_prop(['client_email' => $g_vieja['email']]);       // Gamma vieja + v3 de 20 días -> manda la v3
+$h_vieja = rt_det_prop(['flujo' => null, 'created_at' => rt_det_dia(60)]); $h_v3 = rt_det_prop(['client_email' => $h_vieja['email'], 'created_at' => rt_det_dia(5)]);   // Gamma vieja + v3 reciente -> nada
+$d_a = rt_det_prop(['created_at' => rt_det_dia(40)]); $d_b = rt_det_prop(['client_email' => $d_a['email']]);                                    // dos v3 -> manda la nueva
+$n_vieja = rt_det_prop(['created_at' => rt_det_dia(40)]); $n_aceptada = rt_det_prop(['client_email' => $n_vieja['email'], 'status' => 'aceptada']);   // la nueva ya aceptó -> nada
+$l_vieja = rt_det_prop(['created_at' => rt_det_dia(40)]); $l_lista = rt_det_prop(['client_email' => $l_vieja['email'], 'status' => 'lista', 'created_at' => rt_det_dia(3)]);   // la nueva está lista, sin enviar -> nada
 
 // --- Fecha de envío ------------------------------------------------------------------------------------
 $f_sin_evento = at_rt_fecha_envio_propuesta(['id' => $v3['id'], 'created_at' => rt_det_dia(20)]);
 ok($f_sin_evento === substr(rt_det_dia(20), 0, 10) && preg_match('/^\d{4}-\d{2}-\d{2}$/D', $f_sin_evento) === 1, 'sin registro de envío: la fecha de creación, en Y-m-d estricto');
 ok(at_rt_fecha_envio_propuesta(['id' => $ev_reciente['id'], 'created_at' => rt_det_dia(40)]) === substr(rt_det_dia(5), 0, 10), 'con registros de envío: el más reciente (y un correo común no cuenta)');
+ok(at_rt_fecha_envio_propuesta(['id' => $panel_reciente['id'], 'created_at' => rt_det_dia(40)]) === substr(rt_det_dia(5), 0, 10), 'el envío desde el panel (correo «Propuesta enviada por correo...») cuenta como fecha de envío');
+$ev_mixto = rt_det_prop(['status' => 'draft']);
+rt_det_evento($ev_mixto['id'], 'email', ['title' => $titulo_panel, 'completed_date' => substr(rt_det_dia(12), 0, 10)]);
+rt_det_evento($ev_mixto['id'], 'propuesta_enviada', ['completed_date' => substr(rt_det_dia(8), 0, 10)]);
+rt_det_evento($ev_mixto['id'], 'email', ['title' => 'Otro correo del historial', 'completed_date' => substr(rt_det_dia(1), 0, 10)]);
+ok(at_rt_fecha_envio_propuesta(['id' => $ev_mixto['id'], 'created_at' => rt_det_dia(40)]) === substr(rt_det_dia(8), 0, 10), 'entre el envío del panel y una nota manual manda el más reciente; otro correo no cuenta');
 $ev_creado = rt_det_prop(['status' => 'draft']); rt_det_evento($ev_creado['id'], 'propuesta_enviada', ['created_at' => rt_det_dia(12)]);
 ok(at_rt_fecha_envio_propuesta(['id' => $ev_creado['id'], 'created_at' => rt_det_dia(40)]) === substr(rt_det_dia(12), 0, 10), 'un registro sin fechas propias usa el día en que se anotó');
 $ev_programado = rt_det_prop(['status' => 'draft']); rt_det_evento($ev_programado['id'], 'propuesta_enviada', ['scheduled_date' => substr(rt_det_dia(9), 0, 10)]);
@@ -115,7 +133,9 @@ $otra->get_var("SELECT RELEASE_LOCK('{$wpdb->prefix}at_rt_detectar')");
 ok($tomado === '1' && $ocupado === ['creados' => [], 'espera' => []] && rt_det_cuantos($pids) === 0, 'otra pasada en curso: no se duplica ni se crea nada');
 
 // --- Primera pasada --------------------------------------------------------------------------------------
+ok($filtro_aplicado === 0, 'las pasadas que no llegan a leer propuestas no consultan la tabla');
 $r1 = at_rt_detectar($ahora);
+ok($filtro_aplicado === 1, 'el filtro de la prueba acotó de verdad el SELECT de propuestas de la detección');
 $s_v3 = rt_det_seguimiento($v3['id']);
 ok($s_v3 !== null && $s_v3['estado'] === 'activo' && $s_v3['propuesta_id'] === $v3['id'], 'sent v3 de hace 20 días: seguimiento activo con propuesta_id');
 ok($s_v3['activado_at'] === $ahora && $s_v3['proximo_at'] === $hoy && $s_v3['wa_autorizado'] === 0 && $s_v3['canales'] === 'correo,whatsapp', 'activado ahora, próximo hoy, sin WhatsApp autorizado y con los dos canales');
@@ -144,12 +164,18 @@ ok($s_aj !== null && $s_aj['crm_cliente_id'] === null && $s_aj['telefono'] === '
 $s_may = rt_det_seguimiento($mayusculas['id']);
 ok($s_may !== null && $s_may['email'] === strtolower($mayusculas['email']), 'correo con mayúsculas: el seguimiento queda en minúsculas');
 ok(rt_det_seguimiento($mayus_previo['id']) === null && $previo > 0, 'ya hay un seguimiento (en cualquier estado) con ese correo, aunque con otras mayúsculas: no entra');
-$s_ga = rt_det_seguimiento($gemela_a['id']);
-ok($s_ga !== null && rt_det_seguimiento($gemela_b['id']) === null, 'dos propuestas con el mismo correo en la misma pasada: un solo seguimiento (el de la primera)');
+ok(rt_det_seguimiento($panel_reciente['id']) === null, 'borrador de hace 40 días enviado desde el panel hace 5: no entra');
+$s_g = rt_det_seguimiento($g_v3['id']);
+ok($s_g !== null && $s_g['estado'] === 'activo' && $s_g['propuesta_id'] === $g_v3['id'] && rt_det_seguimiento($g_vieja['id']) === null, 'Gamma vieja + v3 enviada hace 20 días: el seguimiento es de la v3 (activo), no de la Gamma');
+ok(rt_det_seguimiento($h_vieja['id']) === null && rt_det_seguimiento($h_v3['id']) === null, 'Gamma de hace 60 días + v3 de hace 5: nada, la persona acaba de recibir una propuesta');
+$s_d = rt_det_seguimiento($d_b['id']);
+ok($s_d !== null && $s_d['propuesta_id'] === $d_b['id'] && rt_det_seguimiento($d_a['id']) === null, 'dos v3 del mismo correo: el seguimiento queda en la más nueva');
+ok(rt_det_seguimiento($n_vieja['id']) === null && rt_det_seguimiento($n_aceptada['id']) === null, 'la propuesta más nueva ya está aceptada: la vieja enviada no dispara nada');
+ok(rt_det_seguimiento($l_vieja['id']) === null && rt_det_seguimiento($l_lista['id']) === null, 'la propuesta más nueva está lista sin enviar: la vieja enviada no dispara nada');
 ok(rt_det_seguimiento($sin_correo['id']) === null && rt_det_seguimiento($mal_correo['id']) === null, 'sin correo o con correo inválido: no entra');
-$esperados_creados = [$s_v3['id'], rt_det_seguimiento($catorce['id'])['id'], $s_evv['id'], $s_pro['id'], $s_aj['id'], $s_may['id'], $s_ga['id']];
+$esperados_creados = [$s_v3['id'], rt_det_seguimiento($catorce['id'])['id'], $s_evv['id'], $s_pro['id'], $s_aj['id'], $s_may['id'], $s_g['id'], $s_d['id']];
 $esperados_espera = [$s_sf['id'], $s_ant['id']];
-sort($esperados_creados); $creados = $r1['creados']; sort($creados); $espera = $r1['espera']; sort($espera);
+sort($esperados_creados); sort($esperados_espera); $creados = $r1['creados']; sort($creados); $espera = $r1['espera']; sort($espera);
 ok($creados === $esperados_creados && $espera === $esperados_espera, 'el resultado lista exactamente los seguimientos nuevos');
 
 // --- Segunda pasada: nada nuevo ------------------------------------------------------------------------

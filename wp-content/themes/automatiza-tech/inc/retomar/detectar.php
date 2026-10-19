@@ -1,17 +1,22 @@
 <?php
 /**
  * Detección automática de Retomar: busca las propuestas enviadas que quedaron sin respuesta y da de alta su seguimiento.
- * Regla (at_rt_es_candidata): propuesta `sent` o `evaluando`, enviada hace 14 días o más, sin ficha CRM `cliente` con ese
- * correo, sin baja y sin seguimiento previo con ese correo. No envía nada al prospecto: el seguimiento queda esperando la
- * redacción (activo) o una propuesta con la plantilla AT (espera_propuesta), y sale solo cuando Luis lo aprueba.
+ * Regla (at_rt_es_candidata), aplicada a la propuesta más reciente de cada correo: `sent` o `evaluando`, enviada hace 14 días
+ * o más, sin ficha CRM `cliente` con ese correo, sin baja y sin seguimiento previo con ese correo. No envía nada al
+ * prospecto: el seguimiento queda esperando la redacción (activo) o una propuesta con la plantilla AT (espera_propuesta),
+ * y sale solo cuando Luis lo aprueba.
  */
 if (!defined('ABSPATH')) { exit; }
 
 /**
  * Día ('Y-m-d' estricto) en que se envió la propuesta; '' si no hay ninguna fecha válida (la regla lo trata como reciente).
- * Fuente: el historial de Seguimiento de la propuesta (`automatiza_propuestas_details`) guarda cada envío como un evento
- * público de tipo `propuesta_enviada`; se usa el más reciente, con la misma prioridad de fecha que la línea de tiempo
- * (completed_date, luego scheduled_date, luego el día en que se anotó). Sin ese evento, el día de `created_at` de la propuesta.
+ * Fuente: el historial de Seguimiento de la propuesta (`automatiza_propuestas_details`). Cuenta como envío:
+ *  - el envío desde el panel, que at_cc_tras_envio() (cierre-cliente/whatsapp.php) anota como tipo `email` con el título
+ *    «Propuesta enviada por correo, con el botón para aceptarla» y completed_date = hoy (nunca como `propuesta_enviada`);
+ *  - las notas manuales de tipo `propuesta_enviada`.
+ * Se usa el evento más reciente, con la misma prioridad de fecha que la línea de tiempo (completed_date, luego
+ * scheduled_date, luego el día en que se anotó). Sin ninguno, el día de `created_at` de la propuesta (en una v3, el día del
+ * borrador de la reunión: solo sirve si nunca se registró el envío). Cualquier otro correo del historial no cuenta.
  * $p es la fila de `automatiza_propuestas` (basta `id` y `created_at`).
  */
 function at_rt_fecha_envio_propuesta(array $p): string {
@@ -19,7 +24,11 @@ function at_rt_fecha_envio_propuesta(array $p): string {
 	$id = (int) ($p['id'] ?? 0);
 	$ultimo = '';
 	if ($id > 0) {
-		$eventos = $wpdb->get_results($wpdb->prepare("SELECT completed_date, scheduled_date, created_at FROM {$wpdb->prefix}automatiza_propuestas_details WHERE propuesta_id = %d AND detail_type = 'propuesta_enviada'", $id), ARRAY_A);
+		$eventos = $wpdb->get_results($wpdb->prepare(
+			"SELECT completed_date, scheduled_date, created_at FROM {$wpdb->prefix}automatiza_propuestas_details WHERE propuesta_id = %d AND (detail_type = 'propuesta_enviada' OR (detail_type = 'email' AND title LIKE %s))",
+			$id,
+			$wpdb->esc_like('Propuesta enviada por correo') . '%'
+		), ARRAY_A);
 		foreach ((array) $eventos as $evento) {
 			foreach (['completed_date', 'scheduled_date', 'created_at'] as $campo) {
 				$dia = at_pt_ymd((string) ($evento[$campo] ?? ''));
@@ -88,8 +97,11 @@ function at_rt_detectar_propuesta(array $p, string $hoy, string $activado): ?arr
 /**
  * Pasada de detección a la hora de Chile $ahora ('Y-m-d H:i[:s]'). Devuelve los seguimientos que creó:
  * `creados` = activos (ya se pidió su redacción) y `espera` = en espera_propuesta (la propuesta no usa la plantilla AT);
- * son listas distintas. Sin esquema listo o con una fecha ilegible no hace nada. Un candado de MySQL evita que dos pasadas
- * simultáneas den de alta dos veces la misma propuesta; si otra está en curso, esta no hace nada y la siguiente repite la búsqueda.
+ * son listas distintas. Por cada correo solo se evalúa su propuesta más reciente (mayor id), sea cual sea su estado: si la
+ * más nueva ya está aceptada, en borrador, lista o reciente, una más vieja que siga en `sent` no dispara nada, porque la
+ * persona ya tiene otra propuesta en juego. Sin esquema listo o con una fecha ilegible no hace nada. Un candado de MySQL
+ * evita que dos pasadas simultáneas den de alta dos veces la misma propuesta; si otra está en curso, esta no hace nada y la
+ * siguiente repite la búsqueda.
  */
 function at_rt_detectar(string $ahora): array {
 	global $wpdb;
@@ -101,8 +113,12 @@ function at_rt_detectar(string $ahora): array {
 	$tomado = (string) $wpdb->get_var($wpdb->prepare('SELECT GET_LOCK(%s, 0)', $candado));
 	if ($tomado === '0') { return $resultado; }
 	try {
-		$propuestas = $wpdb->get_results("SELECT id, client_email, client_name, company_name, phone, status, flujo, created_at FROM {$wpdb->prefix}automatiza_propuestas WHERE status IN ('sent','evaluando') ORDER BY id", ARRAY_A);
+		$propuestas = $wpdb->get_results("SELECT id, client_email, client_name, company_name, phone, status, flujo, created_at FROM {$wpdb->prefix}automatiza_propuestas WHERE client_email <> '' ORDER BY id DESC", ARRAY_A);
+		$vistos = [];
 		foreach ((array) $propuestas as $propuesta) {
+			$correo = strtolower(trim((string) $propuesta['client_email']));
+			if (isset($vistos[$correo])) { continue; }
+			$vistos[$correo] = true;
 			$nuevo = at_rt_detectar_propuesta($propuesta, $fecha->format('Y-m-d'), $fecha->format('Y-m-d H:i:s'));
 			if ($nuevo === null) { continue; }
 			$resultado[$nuevo['estado'] === 'activo' ? 'creados' : 'espera'][] = $nuevo['id'];

@@ -26,7 +26,7 @@ function at_rt_red_sin_montos(string $texto): string {
 
 /** Láminas con foto generada para este seguimiento: la de la demo solo si no trae una imagen propia. */
 function at_rt_red_slides(array $seg): array {
-	return trim((string) ($seg['imagen_url'] ?? '')) === '' ? ['portada', 'cierre', 'demo'] : ['portada', 'cierre'];
+	return trim((string) ($seg['imagen_url'] ?? '')) === '' ? ['portada', 'quedamos', 'cierre', 'demo'] : ['portada', 'quedamos', 'cierre'];
 }
 
 /** Nota de error o de revisión que se guarda y se muestra en el panel: texto plano, sin enlaces y de hasta 1000 caracteres. */
@@ -305,7 +305,7 @@ function at_rt_red_validar(array $p, array $slides): array|WP_Error {
 	$textos['recomendacion'] = $recomendacion;
 	$crudos = $p['image_briefs'] ?? [];
 	if (!is_array($crudos) || $crudos !== array_values($crudos)) { return at_rt_red_invalida('image_briefs debe ser una lista de {slide, prompt}.'); }
-	if (count($crudos) > count(at_rt_laminas_foto())) { return at_rt_red_invalida('Los encargos de foto admiten máximo 3 láminas.'); }
+	if (count($crudos) > count(at_rt_laminas_foto())) { return at_rt_red_invalida('Los encargos de foto admiten máximo 4 láminas.'); }
 	$vistas = [];
 	$briefs = [];
 	foreach ($crudos as $b) {

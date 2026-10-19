@@ -107,7 +107,8 @@ test('validación de image_briefs, images y recomendacion', () => {
   const mal = (d, re) => { const r = validateRetomarPayload(d); assert.equal(r.ok, false); assert.match(r.errors.join(' | '), re); };
   ok(retomarEjemplo());
   ok(retomarEjemplo({ image_briefs: [], images: {}, recomendacion: '' }));
-  ok(retomarEjemplo({ image_briefs: ['portada', 'cierre', 'demo'].map((slide) => ({ slide, prompt: 'x'.repeat(1200) })) }));
+  ok(retomarEjemplo({ image_briefs: ['portada', 'quedamos', 'cierre', 'demo'].map((slide) => ({ slide, prompt: 'x'.repeat(1200) })) }));
+  ok(retomarEjemplo({ images: { quedamos: 'https://example.com/q.png' } }));
   ok(retomarEjemplo({ images: { portada: 'https://example.com/p.png', demo: 'http://127.0.0.1:3000/p/x/img/demo.png' } }));
   ok(retomarEjemplo({ recomendacion: 'a'.repeat(300) }));
   ok(retomarEjemplo({ recomendacion: 'uno\ndos\ntres' }));
@@ -119,7 +120,7 @@ test('validación de image_briefs, images y recomendacion', () => {
   mal(retomarEjemplo({ image_briefs: [null] }), /image_briefs\[0\]/);
   mal(retomarEjemplo({ image_briefs: {} }), /image_briefs debe ser un arreglo/);
   mal(retomarEjemplo({ image_briefs: [{ slide: 'portada', prompt: 'a' }, { slide: 'portada', prompt: 'b' }] }), /portada.*repet|repet.*portada/);
-  mal(retomarEjemplo({ image_briefs: [1, 2, 3, 4].map((n) => ({ slide: 'portada', prompt: `p${n}` })) }), /hasta 3/);
+  mal(retomarEjemplo({ image_briefs: [1, 2, 3, 4, 5].map((n) => ({ slide: 'portada', prompt: `p${n}` })) }), /hasta 4/);
   mal(retomarEjemplo({ images: { otra: 'https://example.com/p.png' } }), /images\.otra/);
   mal(retomarEjemplo({ images: { portada: 'ftp://example.com/p.png' } }), /images\.portada/);
   mal(retomarEjemplo({ images: { portada: 5 } }), /images\.portada/);
@@ -159,4 +160,27 @@ test('POST /render despacha retomar sin llamar imágenes cuando no trae image_br
     for (const [p, exports] of originals) require.cache[p].exports = exports;
     delete require.cache[serverPath];
   }
+});
+
+test('la lámina 2 usa la foto «quedamos» de fondo con el mismo degradado; sin ella queda el degradado de siempre', () => {
+  const con = renderRetomarHtml(retomarEjemplo(), { quedamos: 'img/q.jpg' });
+  assert.ok(seccion(con, 2).includes("url('img/q.jpg')"), 'images.quedamos es el fondo de la lámina 2');
+  assert.ok(!seccion(con, 1).includes('img/q.jpg') && !seccion(con, 3).includes('img/q.jpg'), 'y no se cuela en otras láminas');
+  const sin = renderRetomarHtml(retomarEjemplo(), {});
+  assert.ok(!seccion(sin, 2).includes('url('), 'sin foto, la lámina 2 conserva el degradado');
+  const fondoCon = seccion(con, 2).match(/class="slide-bg" style="([^"]*)"/)[1];
+  const fondoPortada = seccion(renderRetomarHtml(retomarEjemplo(), { portada: 'img/q.jpg' }), 1).match(/class="slide-bg" style="([^"]*)"/)[1];
+  assert.equal(fondoCon.replace(/linear-gradient\([^)]*\)/g, 'G'), fondoPortada.replace(/linear-gradient\([^)]*\)/g, 'G'), 'mismo tratamiento que la portada');
+  assert.match(renderRetomarHtml(retomarEjemplo(), { quedamos: 'javascript:alert(1)' }), /<section/, 'una URL insegura no rompe');
+  assert.ok(!seccion(renderRetomarHtml(retomarEjemplo(), { quedamos: 'javascript:alert(1)' }), 2).includes('javascript:'), 'ni se usa como fondo');
+});
+
+test('la regla de la imagen de la demo no alcanza al logo de la marca de agua', () => {
+  const html = renderRetomarHtml(retomarEjemplo({ demo_imagen: 'https://example.com/demo.png' }));
+  assert.ok(!/\.retomar-demo img\s*\{/.test(html), 'ya no hay una regla genérica sobre img de la lámina de la demo');
+  assert.match(html, /\.retomar-demo \.retomar-demo-img\s*\{/, 'la regla apunta solo a la imagen de la demo');
+  const demo = seccion(html, 3);
+  assert.equal((demo.match(/<img /g) || []).length, 2, 'la lámina trae la marca de agua y la imagen de la demo');
+  assert.ok(/<img class="retomar-demo-img" src="https:\/\/example\.com\/demo\.png"/.test(demo), 'la imagen de la demo lleva la clase propia');
+  assert.ok(/<div class="at-watermark"><img (?!class="retomar-demo-img")/.test(demo), 'y el logo no la lleva');
 });

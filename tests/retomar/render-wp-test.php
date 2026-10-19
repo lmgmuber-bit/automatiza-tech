@@ -146,13 +146,16 @@ foreach ([
 	'lámina repetida' => [['slide' => 'portada', 'prompt' => 'x'], ['slide' => 'portada', 'prompt' => 'y']],
 	'prompt vacío' => [['slide' => 'portada', 'prompt' => '  ']],
 	'prompt de más de 1200' => [['slide' => 'portada', 'prompt' => str_repeat('a', 1201)]],
-	'más de tres encargos' => [['slide' => 'portada', 'prompt' => 'a'], ['slide' => 'cierre', 'prompt' => 'b'], ['slide' => 'demo', 'prompt' => 'c'], ['slide' => 'demo', 'prompt' => 'd']],
+	'más de cuatro encargos' => [['slide' => 'portada', 'prompt' => 'a'], ['slide' => 'quedamos', 'prompt' => 'b'], ['slide' => 'cierre', 'prompt' => 'c'], ['slide' => 'demo', 'prompt' => 'd'], ['slide' => 'demo', 'prompt' => 'e']],
 	'encargo que no es un objeto' => ['portada'],
 ] as $caso => $briefs) {
 	$malo = $f; $malo['redaccion']['image_briefs'] = $briefs;
 	try { at_rt_armar_render($malo); ok(false, "rechaza encargos inválidos: {$caso}"); }
 	catch (InvalidArgumentException $e) { ok(true, "rechaza encargos inválidos: {$caso}"); }
 }
+// Un encargo de la cuarta lámina «quedamos» viaja como cualquier otro y se reutiliza por hash.
+$cuatro = $f; $cuatro['redaccion']['image_briefs'] = [['slide' => 'portada', 'prompt' => $prompt_p], ['slide' => 'quedamos', 'prompt' => 'q'], ['slide' => 'cierre', 'prompt' => $prompt_c], ['slide' => 'demo', 'prompt' => 'd']];
+ok(array_column(at_rt_armar_render($cuatro)['image_briefs'], 'slide') === ['portada', 'quedamos', 'cierre', 'demo'], 'cuatro encargos (con quedamos) son válidos y viajan al renderer');
 foreach (['recomendación de más de 300' => str_repeat('á', 301), 'recomendación de más de 3 líneas' => "a\nb\nc\nd"] as $caso => $texto) {
 	$malo = $f; $malo['textos']['recomendacion'] = $texto;
 	try { at_rt_armar_render($malo); ok(false, "rechaza {$caso}"); }

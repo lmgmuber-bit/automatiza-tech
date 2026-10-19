@@ -91,9 +91,9 @@ ok(array_keys($ctx) === ['id', 'generacion', 'nombre', 'negocio', 'demo_urls', '
 ok($ctx['id'] === $c && $ctx['generacion'] === str_repeat('b', 16) && $ctx['nombre'] === '[PRUEBA] Persona' && $ctx['negocio'] === '[PRUEBA] Negocio' && $ctx['demo_urls'] === ['https://example.com/demo'], 'identidad, generación y demos');
 ok($ctx['reglas'] === ['max_caracteres' => 600, 'max_lineas' => 6, 'max_recomendacion' => 300, 'sin_montos' => true], 'reglas de redacción');
 ok($ctx['textos_actuales'] === ['quedamos' => '[PRUEBA] Quedamos', 'proponemos' => '[PRUEBA] Proponemos', 'partir' => '[PRUEBA] Partir', 'recomendacion' => '[PRUEBA] Recomendación'], 'textos actuales sin el proyecto');
-ok($ctx['slides_foto'] === ['portada', 'cierre', 'demo'], 'sin imagen del seguimiento: también se encarga la foto de la demo');
+ok($ctx['slides_foto'] === ['portada', 'quedamos', 'cierre', 'demo'], 'sin imagen del seguimiento: también se encarga la foto de la demo (y siempre la de «quedamos»)');
 at_rt_guardar($c, ['imagen_url' => 'https://example.com/captura.png']);
-ok(at_rt_contexto_redaccion($c)['slides_foto'] === ['portada', 'cierre'], 'con imagen del seguimiento: solo portada y cierre');
+ok(at_rt_contexto_redaccion($c)['slides_foto'] === ['portada', 'quedamos', 'cierre'], 'con imagen del seguimiento: portada, quedamos y cierre');
 ok(array_keys($ctx['propuesta']) === ['status', 'flujo', 'transcripcion', 'resumen'] && $ctx['propuesta']['status'] === 'sent' && $ctx['propuesta']['flujo'] === 'v3', 'estado y flujo de la propuesta');
 ok(mb_strlen($ctx['propuesta']['transcripcion']) <= 12000 && mb_strlen($ctx['propuesta']['transcripcion']) > 10000 && str_contains($ctx['propuesta']['transcripcion'], 'Hablamos de la agenda'), 'transcripción de hasta 12000 caracteres');
 ok(!str_contains($ctx['propuesta']['transcripcion'], '120.000') && str_contains($ctx['propuesta']['transcripcion'], 'Quedó pendiente el diseño.'), 'la transcripción pierde solo las líneas con montos');
@@ -182,7 +182,7 @@ $invalidos = [
 	'encargo que no es objeto' => ['image_briefs' => ['portada']],
 	'encargo sin prompt' => ['image_briefs' => [['slide' => 'portada']]],
 	'prompt de 1201 caracteres' => ['image_briefs' => [['slide' => 'portada', 'prompt' => str_repeat('a', 1201)]]],
-	'más de tres encargos' => ['image_briefs' => [['slide' => 'portada', 'prompt' => 'a'], ['slide' => 'cierre', 'prompt' => 'b'], ['slide' => 'demo', 'prompt' => 'c'], ['slide' => 'demo', 'prompt' => 'd']]],
+	'más de cuatro encargos' => ['image_briefs' => [['slide' => 'portada', 'prompt' => 'a'], ['slide' => 'quedamos', 'prompt' => 'b'], ['slide' => 'cierre', 'prompt' => 'c'], ['slide' => 'demo', 'prompt' => 'd'], ['slide' => 'demo', 'prompt' => 'e']]],
 	'enlace interno en un encargo' => ['image_briefs' => [['slide' => 'portada', 'prompt' => 'Foto como https://oculto.easypanel.host/x']]],
 	'image_briefs que no es lista' => ['image_briefs' => 'portada'],
 	'ok que no es booleano' => ['ok' => 'true'],
@@ -211,6 +211,10 @@ $antes_q = at_rt_obtener($q);
 ok(rt_red_callback($q, ['ok' => 'x'])->get_status() === 409 && rt_red_callback($q, ['ok' => true, 'textos' => 'mal'])->get_status() === 409, 'ya resuelta: ni una respuesta mal formada vuelve a tocar nada (409)');
 $despues_q = at_rt_obtener($q);
 ok($despues_q['textos'] === $antes_q['textos'] && $despues_q['redaccion'] === $antes_q['redaccion'] && $despues_q['render'] === $antes_q['render'], 'ya resuelta: textos, redacción y render intactos');
+// La lámina «quedamos» se acepta siempre que el seguimiento la pida, con o sin imagen propia; sin pedirla, se rechaza.
+$_q = ['image_briefs' => [['slide' => 'quedamos', 'prompt' => '[PRUEBA] Escena tranquila del rubro, sin texto']]] + rt_red_bien();
+ok(!is_wp_error(at_rt_red_validar($_q, ['portada', 'quedamos', 'cierre'])) && at_rt_red_validar($_q, ['portada', 'quedamos', 'cierre'])['image_briefs'][0]['slide'] === 'quedamos', 'lámina quedamos con foto pedida: se acepta');
+ok(is_wp_error(at_rt_red_validar($_q, ['portada', 'cierre'])), 'lámina quedamos sin que se haya pedido: se rechaza');
 // La lámina «demo» solo se acepta cuando el seguimiento no trae imagen propia.
 $demo = ['image_briefs' => [['slide' => 'demo', 'prompt' => '[PRUEBA] Pantalla de una agenda, sin texto']]];
 at_rt_guardar($d, ['imagen_url' => 'https://example.com/captura.png']);

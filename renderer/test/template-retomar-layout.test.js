@@ -33,3 +33,20 @@ test('seis láminas caben en Chromium 1920×1080, pantalla e impresión, sin red
     }
   } finally { await browser.close(); }
 });
+
+test('el logo de la marca de agua mide lo mismo en la lámina de la demo que en las demás', async () => {
+  const browser = await chromium.launch({ args: ['--disable-dev-shm-usage', '--no-sandbox'] });
+  try {
+    const page = await browser.newPage({ viewport: { width: 1920, height: 1080 } });
+    await page.route('**/*', (route) => route.abort());
+    await page.setContent(renderRetomarHtml(retomarEjemplo({ demo_imagen: 'https://example.com/demo.png' })), { waitUntil: 'load' });
+    await page.evaluate(() => { document.body.className = 'mode-list'; });
+    const logos = await page.evaluate(() => [...document.querySelectorAll('.slide')].map((s) => {
+      const r = s.querySelector('.at-watermark img').getBoundingClientRect();
+      return [Math.round(r.width), Math.round(r.height)];
+    }));
+    assert.equal(logos.length, 6);
+    assert.ok(logos.every(([w, h]) => w === logos[0][0] && h === logos[0][1]), `el logo mide igual en las seis láminas: ${JSON.stringify(logos)}`);
+    assert.ok(logos[2][1] < 200, 'y en la lámina de la demo no se estira a la altura de la imagen (600 px)');
+  } finally { await browser.close(); }
+});

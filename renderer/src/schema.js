@@ -123,8 +123,8 @@ function validateEstadoPayload(body) {
 }
 
 // Retomar (fase 2): las únicas láminas con foto. Los encargos (image_briefs) los genera Higgsfield y las fotos
-// ya hechas (images) llegan con su URL; ambos hablan de estas mismas tres láminas y de ninguna otra.
-const RETOMAR_SLIDES_FOTO = ['portada', 'cierre', 'demo'];
+// ya hechas (images) llegan con su URL; ambos hablan de estas mismas cuatro láminas y de ninguna otra.
+const RETOMAR_SLIDES_FOTO = ['portada', 'quedamos', 'cierre', 'demo'];
 const RETOMAR_MAX_PROMPT = 1200;
 const RETOMAR_MAX_RECOMENDACION = 300;
 

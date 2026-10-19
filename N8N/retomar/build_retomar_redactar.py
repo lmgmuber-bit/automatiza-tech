@@ -58,11 +58,11 @@ Reglas de redacción:
 - No escribas enlaces: la presentación ya los trae. No saludes ni te despidas dentro de los textos y no repitas el nombre del prospecto más de una vez.
 - Texto plano: sin Markdown, sin viñetas con símbolos y sin emojis. Usa saltos de línea solo si ayudan a leer.
 Encargos de foto (image_briefs):
-- Exactamente uno por cada lámina de slides_foto y ninguno más. Las láminas son «portada» (fondo de la primera lámina), «cierre» (lámina final) y «demo» (junto a la demo).
+- Exactamente uno por cada lámina de slides_foto y ninguno más. Las láminas son «portada» (fondo de la primera lámina), «quedamos» (fondo de la segunda lámina, «En qué quedamos»), «cierre» (lámina final) y «demo» (junto a la demo).
 - Cada uno es una fotografía realista, cálida y horizontal 16:9 de una escena del RUBRO de este prospecto (deduce el rubro del negocio, de la propuesta y de lo conversado): su gente trabajando o atendiendo, sus clientes, sus productos y sus lugares. Siempre con personas en acción.
 - Muestra el MUNDO DEL PROSPECTO, nunca el trabajo de AutomatizaTech: nada de computadores, celulares con pantalla, oficinas, reuniones, papeles, planos ni gráficos.
 - SIN texto de ningún tipo: nada de letreros, carteles, menús, pizarras, hojas, etiquetas, envases con texto, poleras con letras ni logos. Si un producto del rubro lleva etiqueta (botellas, cajas, libros), descríbelo sin etiqueta, de espaldas o liso (por ejemplo «unlabeled bottle»). En una tienda o local, primer plano con el fondo desenfocado.
-- portada: primer plano de las manos o de un detalle del oficio, con el fondo completamente desenfocado. cierre: una escena esperanzadora del rubro (una entrega que llega, el equipo del negocio celebrando). demo: el negocio atendiendo con calma a una persona.
+- portada: primer plano de las manos o de un detalle del oficio, con el fondo completamente desenfocado. quedamos: una escena serena del rubro que invite a retomar una conversación pendiente (el equipo del negocio haciendo una pausa tranquila en su trabajo, luz suave), con fondo desenfocado y sin nada que compita con el texto que irá encima. cierre: una escena esperanzadora del rubro (una entrega que llega, el equipo del negocio celebrando). demo: el negocio atendiendo con calma a una persona.
 - Cada prompt va en inglés, tiene de 40 a 60 palabras (máximo 400 caracteres) y termina con: «no signs, no labels, no text, no lettering, no logos, no watermarks»."""
 
 CODE_PEDIDO = r"""// Lo que ve el modelo: el contexto que WordPress ya dejó sin líneas con montos (la IA no ve precios) y las láminas con foto.
@@ -73,7 +73,7 @@ const cadena = (v, max) => String(v == null ? '' : v).slice(0, max);
 const final = (v, max) => String(v == null ? '' : v).slice(-max);
 const prop = esObjetoPlano(c.propuesta) ? c.propuesta : {};
 const actuales = esObjetoPlano(c.textos_actuales) ? c.textos_actuales : {};
-const laminas = (Array.isArray(c.slides_foto) ? c.slides_foto : []).filter((s) => ['portada', 'cierre', 'demo'].includes(s));
+const laminas = (Array.isArray(c.slides_foto) ? c.slides_foto : []).filter((s) => ['portada', 'quedamos', 'cierre', 'demo'].includes(s));
 const datos = {
   nombre: cadena(c.nombre, 100),
   negocio: cadena(c.negocio, 150),
@@ -88,7 +88,7 @@ const datos = {
   },
   historial: (Array.isArray(c.historial) ? c.historial : []).slice(0, 10).map((h) => cadena(h, 200)),
   reglas: esObjetoPlano(c.reglas) ? c.reglas : {},
-  slides_foto: laminas.length ? laminas : ['portada', 'cierre'],
+  slides_foto: laminas.length ? laminas : ['portada', 'quedamos', 'cierre'],
 };
 return [{ json: { mensaje: JSON.stringify(datos) } }];"""
 
@@ -98,7 +98,7 @@ const hook = $('Webhook').first().json.body || {};
 const ctx = $('Leer contexto').first().json.body || {};
 const id = parseInt(hook.id, 10) || 0;
 const generacion = String(hook.generacion || '');
-const permitidas = (Array.isArray(ctx.slides_foto) ? ctx.slides_foto : []).filter((s) => ['portada', 'cierre', 'demo'].includes(s));
+const permitidas = (Array.isArray(ctx.slides_foto) ? ctx.slides_foto : []).filter((s) => ['portada', 'quedamos', 'cierre', 'demo'].includes(s));
 const fallo = (motivo) => [{ json: { id, callback: { generacion, ok: false, nota: motivo + ' (ejecución ' + $execution.id + ')' } } }];
 const ia = $('Redactar').first().json || {};
 const crudo = ia.message && ia.message.content;

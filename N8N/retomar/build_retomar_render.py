@@ -3,7 +3,7 @@
 Credenciales existentes referidas únicamente por nombre; sus valores nunca se exportan.
 El POST autenticado recibe {id, generacion, render}; cualquier respuesta/error del renderer llega
 al callback con ok booleano y las fotos que el renderer dejó guardadas (`fotos` = images.urls: lámina => URL; {} si no hay).
-El render espera hasta 300 s al renderer (puede generar hasta tres fotos). La URL interna se guarda solo para iframe/PDF en WP.
+El render espera hasta 300 s al renderer (puede generar hasta cuatro fotos). La URL interna se guarda solo para iframe/PDF en WP.
 """
 import json
 from pathlib import Path

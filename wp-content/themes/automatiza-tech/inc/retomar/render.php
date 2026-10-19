@@ -2,22 +2,22 @@
 /** Render de Retomar: láminas públicas, encargos de foto con reutilización y callback privado del renderer. */
 if (!defined('ABSPATH')) { exit; }
 
-/** Las únicas láminas con foto generada; son las mismas tres que acepta el renderer. */
-function at_rt_laminas_foto(): array { return ['portada', 'cierre', 'demo']; }
+/** Las únicas láminas con foto generada; son las mismas cuatro que acepta el renderer. */
+function at_rt_laminas_foto(): array { return ['portada', 'quedamos', 'cierre', 'demo']; }
 
 /**
  * Encargos de foto vigentes: [{slide, prompt}] en el orden de la redacción. Rechaza lo que el renderer rechazaría
- * (lámina desconocida o repetida, prompt vacío o de más de 1200 caracteres, más de tres) en vez de recortarlo.
+ * (lámina desconocida o repetida, prompt vacío o de más de 1200 caracteres, más de cuatro) en vez de recortarlo.
  */
 function at_rt_encargos_foto(array $seg): array {
 	$crudos = is_array($seg['redaccion']['image_briefs'] ?? null) ? $seg['redaccion']['image_briefs'] : [];
-	if (count($crudos) > count(at_rt_laminas_foto())) { throw new InvalidArgumentException('Los encargos de foto admiten máximo 3 láminas.'); }
+	if (count($crudos) > count(at_rt_laminas_foto())) { throw new InvalidArgumentException('Los encargos de foto admiten máximo 4 láminas.'); }
 	$vistas = [];
 	$encargos = [];
 	foreach ($crudos as $b) {
 		$slide = is_array($b) ? ($b['slide'] ?? null) : null;
 		$prompt = is_array($b) ? ($b['prompt'] ?? null) : null;
-		if (!is_string($slide) || !in_array($slide, at_rt_laminas_foto(), true)) { throw new InvalidArgumentException('Cada encargo de foto debe ser de una lámina conocida (portada, cierre o demo).'); }
+		if (!is_string($slide) || !in_array($slide, at_rt_laminas_foto(), true)) { throw new InvalidArgumentException('Cada encargo de foto debe ser de una lámina conocida (portada, quedamos, cierre o demo).'); }
 		if (isset($vistas[$slide])) { throw new InvalidArgumentException("Encargo de foto repetido para la lámina {$slide}."); }
 		if (!is_string($prompt) || trim($prompt) === '' || mb_strlen($prompt) > 1200) { throw new InvalidArgumentException("Encargo de foto de {$slide}: de 1 a 1200 caracteres."); }
 		$vistas[$slide] = true;

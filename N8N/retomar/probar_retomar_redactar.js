@@ -42,7 +42,7 @@ const ctx = {
     propuesta: { status: 'sent', flujo: 'v3', transcripcion: 'x'.repeat(13000), resumen: 'Resumen' },
     historial: Array.from({ length: 14 }, (_, i) => 'Evento ' + i),
     reglas: { max_caracteres: 600, max_lineas: 6, max_recomendacion: 300, sin_montos: true },
-    slides_foto: ['portada', 'cierre', 'demo'],
+    slides_foto: ['portada', 'quedamos', 'cierre', 'demo'],
   },
 };
 const textos = {
@@ -62,8 +62,8 @@ const respuesta = (briefs, t = textos) => JSON.stringify({ textos: t, image_brie
 const pedido = JSON.parse(correr('Preparar pedido', ctx, {}).mensaje);
 ok(pedido.tiene_demo === true && !('demo_urls' in pedido) && !('id' in pedido) && !('generacion' in pedido), 'pedido: sin id, generación ni direcciones de demo; tiene_demo=true');
 ok(pedido.propuesta.transcripcion.length === 12000 && pedido.historial.length === 10, 'pedido: recorta la transcripción a 12000 y el historial a 10');
-ok(pedido.slides_foto.join() === 'portada,cierre,demo', 'pedido: conserva las láminas con foto');
-ok(JSON.parse(correr('Preparar pedido', { body: { id: 1 } }, {}).mensaje).slides_foto.join() === 'portada,cierre', 'pedido: contexto vacío no lanza y pide portada y cierre');
+ok(pedido.slides_foto.join() === 'portada,quedamos,cierre,demo', 'pedido: conserva las láminas con foto');
+ok(JSON.parse(correr('Preparar pedido', { body: { id: 1 } }, {}).mensaje).slides_foto.join() === 'portada,quedamos,cierre', 'pedido: contexto vacío no lanza y pide portada, quedamos y cierre');
 // Las notas crecen por el final (cada «Pedir cambios» se agrega abajo): se conservan las ÚLTIMAS 2000, no las primeras.
 const notasLargas = JSON.parse(JSON.stringify(ctx));
 notasLargas.body.notas = 'viejo '.repeat(500) + 'Cambio pedido hoy: más corto';
@@ -76,11 +76,12 @@ ok(['«lucas»', '«mil»', '«millones»', '«USD500»'].every((p) => prompt.in
 // 2) Leer respuesta: respuesta válida
 const valida = leer(respuesta([
   { slide: 'portada', prompt: PORTADA_OK + ', no text' },
+  { slide: 'quedamos', prompt: 'Baker pausing calmly beside a window, soft morning light, blurred background' },
   { slide: 'cierre', prompt: 'Smiling shop owner handing a wrapped package to a customer, warm light' },
   { slide: 'demo', prompt: 'Cafe staff serving a customer calmly, shallow depth of field' },
 ]));
 ok(valida.id === 41 && valida.callback.ok === true && valida.callback.generacion === GEN, 'respuesta válida: ok:true con el id y la generación del webhook');
-ok(valida.callback.image_briefs.map((b) => b.slide).join() === 'portada,cierre,demo', 'respuesta válida: tres encargos con las láminas de Retomar');
+ok(valida.callback.image_briefs.map((b) => b.slide).join() === 'portada,quedamos,cierre,demo', 'respuesta válida: cuatro encargos con las láminas de Retomar (incluida «quedamos»)');
 ok(valida.callback.image_briefs.every((b) => b.prompt.endsWith(CIERRE + ', no subtitles, no captions')), 'respuesta válida: todos los encargos terminan con las prohibiciones');
 ok(valida.callback.nota === '' && valida.callback.textos.recomendacion === textos.recomendacion, 'respuesta válida: sin nota y con los cuatro textos');
 if (process.argv[2]) fs.writeFileSync(process.argv[2], JSON.stringify({ buenos: valida.callback }));
@@ -102,7 +103,7 @@ const sinPrimerPlano = leer(respuesta([{ slide: 'portada', prompt: 'Two bakers k
 ok(sinPrimerPlano.slide === 'portada' && /close-up/i.test(sinPrimerPlano.prompt) && /blurred/i.test(sinPrimerPlano.prompt), 'portada sin primer plano: se le agrega primer plano con fondo desenfocado');
 const conPrimerPlano = leer(respuesta([{ slide: 'portada', prompt: PORTADA_OK }])).callback.image_briefs[0];
 ok(!/close-up, shallow depth of field, background completely blurred/.test(conPrimerPlano.prompt), 'portada que ya es primer plano: no se le repite el agregado');
-ok(resultadosPortada.every((r) => r.callback.image_briefs.every((b) => ['portada', 'cierre', 'demo'].includes(b.slide))), 'ningún callback deja «cover» como nombre de lámina');
+ok(resultadosPortada.every((r) => r.callback.image_briefs.every((b) => ['portada', 'quedamos', 'cierre', 'demo'].includes(b.slide))), 'ningún callback deja «cover» como nombre de lámina');
 // Lo que pide texto o etiquetas en cualquier lámina se reemplaza
 const cartel = leer(respuesta([{ slide: 'cierre', prompt: 'A woman holding a menu with a sign saying OPEN' }]));
 ok(!/sign saying/.test(JSON.stringify(cartel.callback.image_briefs)) && /neutra/.test(cartel.callback.nota), 'cierre con letrero: se reemplaza y la nota lo avisa');
@@ -113,8 +114,11 @@ const ajenas = leer(respuesta([
 ]));
 ok(ajenas.callback.image_briefs.map((b) => b.slide).join() === 'portada', 'encargos repetidos, ajenos o vacíos se descartan');
 const sinDemo = JSON.parse(JSON.stringify(ctx));
-sinDemo.body.slides_foto = ['portada', 'cierre'];
+sinDemo.body.slides_foto = ['portada', 'quedamos', 'cierre'];
 ok(leer(respuesta([{ slide: 'demo', prompt: 'Cafe staff serving a customer calmly' }]), sinDemo).callback.image_briefs.length === 0, 'sin lámina demo permitida, su encargo se descarta');
+const sinQuedamos = JSON.parse(JSON.stringify(ctx));
+sinQuedamos.body.slides_foto = ['portada', 'cierre'];
+ok(leer(respuesta([{ slide: 'quedamos', prompt: 'Baker pausing calmly beside a window' }]), sinQuedamos).callback.image_briefs.length === 0, 'sin lámina quedamos permitida, su encargo se descarta');
 
 // 5) Formas de la respuesta de la IA
 const base = respuesta([{ slide: 'portada', prompt: PORTADA_OK }]);

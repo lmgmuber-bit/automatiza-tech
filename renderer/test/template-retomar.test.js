@@ -60,7 +60,76 @@ test('archivos HTML/PDF de UID retomar llevan noindex y no filtran referencia si
   } finally { await new Promise((resolve) => server.close(resolve)); }
 });
 
-test('POST /render despacha retomar sin llamar imágenes aunque llegue image_briefs', async () => {
+const seccion = (html, n) => html.split('<section')[n];
+
+test('images de la fase 2 ganan sobre fotos y demo_imagen; sin ellas rige lo de siempre', () => {
+  const html = renderRetomarHtml(retomarEjemplo(), { portada: 'img/p.jpg', cierre: 'img/c.png', demo: 'img/d.webp' });
+  const portada = seccion(html, 1);
+  assert.ok(portada.includes("url('img/p.jpg')"), 'la portada usa la foto generada');
+  assert.ok(!portada.includes('https://example.com/portada.jpg'), 'y no la de fotos.portada');
+  assert.ok(seccion(html, 6).includes("url('img/c.png')") && !seccion(html, 6).includes('https://example.com/cierre.jpg'));
+  const demo = seccion(html, 3);
+  assert.ok(demo.includes('src="img/d.webp"') && !demo.includes('https://example.com/demo.png'), 'images.demo reemplaza demo_imagen');
+  // Sin images (o con valores vacíos) se conservan las fotos del payload, como en la fase 1.
+  for (const vacio of [undefined, {}, { portada: '', cierre: null, demo: undefined }]) {
+    const igual = renderRetomarHtml(retomarEjemplo(), vacio);
+    assert.ok(seccion(igual, 1).includes("url('https://example.com/portada.jpg')"));
+    assert.ok(seccion(igual, 6).includes("url('https://example.com/cierre.jpg')"));
+    assert.ok(seccion(igual, 3).includes('src="https://example.com/demo.png"'));
+  }
+});
+
+test('images solo acepta img/<archivo> o https: el resto cae a las fotos del payload', () => {
+  const html = renderRetomarHtml(retomarEjemplo(), { portada: 'img/../../secreto.png', cierre: 'http://example.com/c.jpg', demo: 'javascript:alert(1)' });
+  assert.ok(seccion(html, 1).includes("url('https://example.com/portada.jpg')"));
+  assert.ok(seccion(html, 6).includes("url('https://example.com/cierre.jpg')"));
+  assert.ok(seccion(html, 3).includes('src="https://example.com/demo.png"'));
+  assert.ok(!html.includes('secreto.png') && !html.includes('javascript:') && !html.includes('http://example.com'));
+  // Una foto que quedó remota por https también se acepta.
+  assert.ok(renderRetomarHtml(retomarEjemplo(), { portada: 'https://cdn.example.com/p.png' }).includes("url('https://cdn.example.com/p.png')"));
+});
+
+test('recomendacion aparece en la lámina «Para partir», escapada, y solo ahí', () => {
+  const sin = renderRetomarHtml(retomarEjemplo());
+  assert.ok(!sin.includes('class="retomar-reco"'));
+  const html = renderRetomarHtml(retomarEjemplo({ recomendacion: 'Partamos por la agenda <b>y</b> sumemos lo demás después.' }));
+  const partir = seccion(html, 5);
+  assert.ok(partir.includes('Partamos por la agenda &lt;b&gt;y&lt;/b&gt; sumemos lo demás después.'));
+  assert.ok(!html.includes('<b>y</b>'));
+  assert.equal((html.match(/Partamos por la agenda/g) || []).length, 1, 'una sola vez, en la lámina 5');
+  assert.ok(partir.includes('class="retomar-reco"'));
+  // Una recomendación vacía o solo espacios no dibuja el recuadro.
+  assert.ok(!renderRetomarHtml(retomarEjemplo({ recomendacion: '   ' })).includes('class="retomar-reco"'));
+});
+
+test('validación de image_briefs, images y recomendacion', () => {
+  const ok = (d) => assert.deepEqual(validateRetomarPayload(d).errors, [], JSON.stringify(d).slice(0, 80));
+  const mal = (d, re) => { const r = validateRetomarPayload(d); assert.equal(r.ok, false); assert.match(r.errors.join(' | '), re); };
+  ok(retomarEjemplo());
+  ok(retomarEjemplo({ image_briefs: [], images: {}, recomendacion: '' }));
+  ok(retomarEjemplo({ image_briefs: ['portada', 'cierre', 'demo'].map((slide) => ({ slide, prompt: 'x'.repeat(1200) })) }));
+  ok(retomarEjemplo({ images: { portada: 'https://example.com/p.png', demo: 'http://127.0.0.1:3000/p/x/img/demo.png' } }));
+  ok(retomarEjemplo({ recomendacion: 'a'.repeat(300) }));
+  ok(retomarEjemplo({ recomendacion: 'uno\ndos\ntres' }));
+  mal(retomarEjemplo({ image_briefs: [{ slide: 'otra', prompt: 'foto' }] }), /image_briefs\[0\]\.slide/);
+  mal(retomarEjemplo({ image_briefs: [{ slide: 'cover', prompt: 'foto' }] }), /image_briefs\[0\]\.slide/);
+  mal(retomarEjemplo({ image_briefs: [{ slide: 'portada', prompt: 'x'.repeat(1201) }] }), /image_briefs\[0\]\.prompt/);
+  mal(retomarEjemplo({ image_briefs: [{ slide: 'portada', prompt: '   ' }] }), /image_briefs\[0\]\.prompt/);
+  mal(retomarEjemplo({ image_briefs: [{ slide: 'portada' }] }), /image_briefs\[0\]\.prompt/);
+  mal(retomarEjemplo({ image_briefs: [null] }), /image_briefs\[0\]/);
+  mal(retomarEjemplo({ image_briefs: {} }), /image_briefs debe ser un arreglo/);
+  mal(retomarEjemplo({ image_briefs: [{ slide: 'portada', prompt: 'a' }, { slide: 'portada', prompt: 'b' }] }), /portada.*repet|repet.*portada/);
+  mal(retomarEjemplo({ image_briefs: [1, 2, 3, 4].map((n) => ({ slide: 'portada', prompt: `p${n}` })) }), /hasta 3/);
+  mal(retomarEjemplo({ images: { otra: 'https://example.com/p.png' } }), /images\.otra/);
+  mal(retomarEjemplo({ images: { portada: 'ftp://example.com/p.png' } }), /images\.portada/);
+  mal(retomarEjemplo({ images: { portada: 5 } }), /images\.portada/);
+  mal(retomarEjemplo({ images: [] }), /images debe ser un objeto/);
+  mal(retomarEjemplo({ recomendacion: 'a'.repeat(301) }), /recomendacion admite hasta 300 caracteres y 3 líneas/);
+  mal(retomarEjemplo({ recomendacion: 'a\nb\nc\nd' }), /recomendacion admite hasta 300 caracteres y 3 líneas/);
+  mal(retomarEjemplo({ recomendacion: 7 }), /recomendacion debe ser texto/);
+});
+
+test('POST /render despacha retomar sin llamar imágenes cuando no trae image_briefs ni images', async () => {
   const modules = ['higgsfield', 'images-store', 'photo-manifest', 'render'];
   const originals = modules.map((m) => { const p = require.resolve(`../src/${m}`); require(p); return [p, require.cache[p].exports]; });
   let html = ''; let calls = 0;
@@ -74,9 +143,16 @@ test('POST /render despacha retomar sin llamar imágenes aunque llegue image_bri
   await new Promise((resolve) => server.once('listening', resolve));
   try {
     const post = (d) => fetch(`http://127.0.0.1:${server.address().port}/render`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(d) });
-    const r = await post(retomarEjemplo({ image_briefs: [{ slide: 'cover', prompt: 'no generar' }] }));
-    assert.equal(r.status, 200); assert.equal(calls, 0); assert.match(html, /En qué quedamos/);
-    assert.equal((await r.json()).images.requested, 0);
+    for (const extra of [{}, { image_briefs: [], images: {} }]) {
+      const r = await post(retomarEjemplo(extra));
+      assert.equal(r.status, 200); assert.equal(calls, 0); assert.match(html, /En qué quedamos/);
+      const cuerpo = await r.json();
+      assert.equal(cuerpo.images.requested, 0);
+      assert.deepEqual(cuerpo.images.urls, {});
+    }
+    // Un encargo de una lámina que no existe ya no se ignora: es un pedido inválido y no toca nada.
+    assert.equal((await post(retomarEjemplo({ image_briefs: [{ slide: 'cover', prompt: 'no generar' }] }))).status, 400);
+    assert.equal(calls, 0);
     assert.equal((await post(retomarEjemplo({ unique_id: '../escape' }))).status, 400);
   } finally {
     await new Promise((resolve) => server.close(resolve));

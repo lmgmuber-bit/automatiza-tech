@@ -10,7 +10,7 @@ test('seis láminas caben en Chromium 1920×1080, pantalla e impresión, sin red
     const page = await browser.newPage({ viewport: { width: 1920, height: 1080 } });
     await page.route('**/*', (route) => route.abort());
     for (const media of ['screen', 'print']) {
-      for (const datos of [retomarEjemplo(), retomarEjemplo({ company_name: 'W'.repeat(120), client_name: 'W'.repeat(120), proyecto: 'W'.repeat(180), quedamos: 'W'.repeat(600), proponemos: 'W'.repeat(600), partir: 'W'.repeat(600), demo_urls: Array.from({ length: 6 }, (_, i) => `https://example.com/demo${i}`) })]) {
+      for (const datos of [retomarEjemplo(), retomarEjemplo({ company_name: 'W'.repeat(120), client_name: 'W'.repeat(120), proyecto: 'W'.repeat(180), quedamos: 'W'.repeat(600), proponemos: 'W'.repeat(600), partir: 'W'.repeat(600), recomendacion: 'W'.repeat(300), demo_urls: Array.from({ length: 6 }, (_, i) => `https://example.com/demo${i}`) })]) {
       await page.emulateMedia({ media });
       await page.setContent(renderRetomarHtml(datos), { waitUntil: 'load' });
       await page.evaluate(() => { document.body.className = 'mode-list'; document.documentElement.style.setProperty('--zoom', '1'); });

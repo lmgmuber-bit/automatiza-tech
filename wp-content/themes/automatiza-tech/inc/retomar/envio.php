@@ -67,20 +67,38 @@ function at_rt_aprobacion_calza(array $s, int $n): bool {
  * El contenido cambió después de aprobar: la aprobación vuelve a `por_aprobar` con los enlaces muertos (usada) para que
  * el correo semanal la emita de nuevo, y queda anotado {tipo:'diferido', nota:'aprobacion_vencida'}. Bajo FOR UPDATE y
  * solo si sigue siendo la misma aprobación que se revisó ($ap): nunca pisa una decisión tomada entretanto.
+ * Si además el contenido actual ya no es el de la presentación (cambió algo fuera de las rutas de guardado de Retomar:
+ * la propuesta vinculada, su flujo o sus fotos), el render queda desactualizado bajo el mismo candado —`pendiente`, o
+ * `error` si el contenido ya no se puede presentar—: la emisión exige `listo`, así nadie vuelve a aprobar una
+ * presentación vieja que vencería otra vez en cada reloj.
+ * Devuelve '' si no venció nada, 'aprobacion' si solo venció la aprobación, 'render' si hay que pedir otra presentación
+ * (lo hace quien llama, fuera del candado) y 'error' si el contenido necesita revisión en el panel.
  */
-function at_rt_vencer_aprobacion(int $id, array $ap, string $ahora): bool {
+function at_rt_vencer_aprobacion(int $id, array $ap, string $ahora): string {
     global $wpdb;
-    if ($wpdb->query('START TRANSACTION') === false) { return false; }
+    if ($wpdb->query('START TRANSACTION') === false) { return ''; }
     try {
         $fila = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$wpdb->prefix}at_retomar WHERE id=%d FOR UPDATE", $id), ARRAY_A);
-        if (!$fila) { return false; }
+        if (!$fila) { return ''; }
         $s = at_rt_fila($fila);
-        if ($s['aprobacion'] !== $ap || ($ap['estado'] ?? '') !== 'aprobado') { return false; }
+        if ($s['aprobacion'] !== $ap || ($ap['estado'] ?? '') !== 'aprobado') { return ''; }
         $envios = $s['envios'];
         $envios[] = ['tipo' => 'diferido', 'fecha' => substr($ahora, 0, 10), 'at' => $ahora, 'nota' => 'aprobacion_vencida'];
-        $aprobacion = array_merge(array_diff_key($ap, ['programado' => true]), ['estado' => 'por_aprobar', 'usada' => true, 'vencida_at' => $ahora]);
-        if (!at_rt_guardar($id, ['aprobacion' => $aprobacion, 'envios' => $envios])) { return false; }
-        return $wpdb->query('COMMIT') !== false;
+        $campos = ['aprobacion' => array_merge(array_diff_key($ap, ['programado' => true]), ['estado' => 'por_aprobar', 'usada' => true, 'vencida_at' => $ahora]), 'envios' => $envios];
+        $resultado = 'aprobacion';
+        $render = $s['render'];
+        try {
+            $actual = at_rt_huella_render($s);
+            if (!is_string($render['huella'] ?? null) || !hash_equals($render['huella'], $actual)) {
+                $campos['render'] = array_merge($render, ['estado' => 'pendiente', 'nota' => 'El contenido cambió después de la presentación: hay que rehacerla antes de volver a aprobar.']);
+                $resultado = 'render';
+            }
+        } catch (InvalidArgumentException $e) {
+            $campos['render'] = array_merge($render, ['estado' => 'error', 'nota' => 'El contenido cambió después de aprobar y la presentación ya no se puede armar: ' . $e->getMessage() . ' Corrígelo en el panel Retomar.']);
+            $resultado = 'error';
+        }
+        if (!at_rt_guardar($id, $campos)) { return ''; }
+        return $wpdb->query('COMMIT') !== false ? $resultado : '';
     } finally {
         $wpdb->query('ROLLBACK'); // Sin efecto después de COMMIT; libera el candado ante cualquier retorno o error.
     }
@@ -187,7 +205,13 @@ function at_rt_entregar(int $id, bool $prueba, string $ahora): array {
         $n = at_rt_envios_realizados($s['envios']) + 1;
         // Lo aprobado debe ser exactamente lo que sale; si cambió después de aprobar, vuelve a pedir aprobación.
         if (!$prueba && !at_rt_aprobacion_calza($s, $n)) {
-            at_rt_vencer_aprobacion($id, $s['aprobacion'], $ahora);
+            if (at_rt_vencer_aprobacion($id, $s['aprobacion'], $ahora) === 'render') {
+                // Ya confirmado y fuera del candado: la presentación nueva se pide sola, con la huella del contenido actual
+                // (las fotos de encargos sin cambios se reutilizan). Sin flujo configurado queda `pendiente` con su nota; si
+                // n8n falla, at_rt_pedir_render lo deja en `error`. En ambos casos la emisión sigue detenida (exige `listo`).
+                try { at_rt_pedir_render($id); }
+                catch (Throwable $e) { error_log('Retomar: no se pudo pedir la presentación tras vencer la aprobación: ' . $e->getMessage()); }
+            }
             $r['motivo'] = 'aprobacion_vencida'; return $r;
         }
         $destino = $prueba ? at_cc_correo_avisos() : $s['email'];

@@ -218,16 +218,18 @@ register_shutdown_function(static function () use ($wpdb, $reunion) { $wpdb->del
 $r = at_rt_entregar($ag['id'], false, '2026-10-19 10:30:00'); $f = at_rt_obtener($ag['id']);
 ok($reunion > 0 && $r['motivo'] === 'agendo' && rt_env_correos($ag['email']) === 0 && $f['estado'] === 'agendo' && $f['proximo_at'] === null, 'aprobado y luego agenda una reunión: no sale nada y queda en agendó');
 // Lo aprobado debe ser exactamente lo que sale: si cambió después de aprobar, no sale y vuelve a pedir aprobación.
+// [cambio, ¿la presentación quedó vieja?]: si el contenido actual ya no es el del render, el render deja de estar `listo`.
 $vencidas = [
-    'huella del render distinta' => static function (array $s): void { at_rt_guardar($s['id'], ['render' => array_merge($s['render'], ['huella' => hash('sha256', 'otra presentación')])]); },
-    'textos cambiados sin rehacer la presentación' => static function (array $s): void { at_rt_guardar($s['id'], ['textos' => ['quedamos' => '[PRUEBA] Texto nuevo que nadie aprobó']]); },
-    'recordatorio n distinto' => static function (array $s): void { at_rt_guardar($s['id'], ['aprobacion' => array_merge($s['aprobacion'], ['n' => 2])]); },
-    'redacción pendiente' => static function (array $s): void { at_rt_guardar($s['id'], ['redaccion' => ['estado' => 'pendiente']]); },
+    'huella del render distinta' => [static function (array $s): void { at_rt_guardar($s['id'], ['render' => array_merge($s['render'], ['huella' => hash('sha256', 'otra presentación')])]); }, true],
+    'textos cambiados sin rehacer la presentación' => [static function (array $s): void { at_rt_guardar($s['id'], ['textos' => ['quedamos' => '[PRUEBA] Texto nuevo que nadie aprobó']]); }, true],
+    'recordatorio n distinto' => [static function (array $s): void { at_rt_guardar($s['id'], ['aprobacion' => array_merge($s['aprobacion'], ['n' => 2])]); }, false],
+    'redacción pendiente' => [static function (array $s): void { at_rt_guardar($s['id'], ['redaccion' => ['estado' => 'pendiente']]); }, false],
 ];
-foreach ($vencidas as $caso => $cambiar) {
+foreach ($vencidas as $caso => [$cambiar, $render_viejo]) {
     $v = rt_env_fixture(['telefono' => '+56900000011']); $cambiar($v);
     $r = at_rt_entregar($v['id'], false, '2026-10-19 10:30:00'); $f = at_rt_obtener($v['id']); $ultimo = end($f['envios']) ?: [];
     ok(!$r['ok'] && $r['motivo'] === 'aprobacion_vencida' && $r['whatsapp'] === null && rt_env_correos($v['email']) === 0 && at_rt_envios_realizados($f['envios']) === 0 && $f['enviando'] === null && $f['estado'] === 'activo', 'aprobado con ' . $caso . ': no sale nada (aprobacion_vencida)');
+    ok($render_viejo ? ($f['render']['estado'] ?? '') !== 'listo' : ($f['render']['estado'] ?? '') === 'listo', 'aprobado con ' . $caso . ': ' . ($render_viejo ? 'la presentación vieja deja de estar lista' : 'la presentación sigue lista'));
     ok(($f['aprobacion']['estado'] ?? '') === 'por_aprobar' && ($f['aprobacion']['usada'] ?? null) === true && !isset($f['aprobacion']['programado']) && ($ultimo['tipo'] ?? '') === 'diferido' && ($ultimo['nota'] ?? '') === 'aprobacion_vencida', 'aprobado con ' . $caso . ': la aprobación vuelve a por_aprobar con los enlaces muertos y queda anotado');
     $r = at_rt_entregar($v['id'], false, '2026-10-19 11:30:00');
     ok($r['motivo'] === 'sin_aprobacion' && rt_env_correos($v['email']) === 0 && count(at_rt_obtener($v['id'])['envios']) === count($f['envios']), 'aprobado con ' . $caso . ': el reloj siguiente no envía ni repite la anotación');
@@ -277,6 +279,41 @@ $pp = $rt_env_propuesta('lista', 'v3'); $spp = rt_env_fixture(['telefono' => '',
 ok(at_rt_enviar($spp['id'], true)['ok'] && $rt_env_estado_prop($pp) === 'lista' && $rt_env_notas_prop($pp) === [], 'la prueba al equipo no pasa la propuesta a sent');
 $pn = $rt_env_propuesta('lista', 'v3'); $spn = rt_env_fixture(['telefono' => '', 'propuesta_id' => $pn, 'aprobacion' => []]);
 ok(at_rt_entregar($spn['id'], false, '2026-10-19 10:30:00')['motivo'] === 'sin_aprobacion' && $rt_env_estado_prop($pn) === 'lista', 'sin aprobación la propuesta sigue en lista');
+// Ronda 1: el contenido cambia fuera de Retomar después de aprobar (aquí, el flujo de la propuesta vinculada). El reloj
+// vence la aprobación y pide solo una presentación nueva; con ella lista, la aprobación nueva sí sale (sin bucle).
+if (!defined('AT_N8N_RETOMAR_RENDER')) { define('AT_N8N_RETOMAR_RENDER', 'https://example.com/prueba-render'); }
+$pedido_render = null;
+// El bloqueo de HTTP del bootstrap sigue: SOLO el flujo de render obtiene respuesta simulada.
+$render_simulado = static function ($pre, $args, $url) use (&$pedido_render) {
+    if ($url !== AT_N8N_RETOMAR_RENDER) { return $pre; }
+    $pedido_render = json_decode($args['body'], true);
+    return ['response' => ['code' => 200], 'body' => '{}', 'headers' => []];
+};
+add_filter('pre_http_request', $render_simulado, PHP_INT_MAX, 3);
+$pf = $rt_env_propuesta('sent', 'v2'); $auto = rt_env_fixture(['telefono' => '', 'propuesta_id' => $pf]);
+$wpdb->update($wpdb->prefix . 'automatiza_propuestas', ['flujo' => 'v3'], ['id' => $pf]);
+$r = at_rt_entregar($auto['id'], false, '2026-10-19 10:30:00'); $f = at_rt_obtener($auto['id']);
+ok($r['motivo'] === 'aprobacion_vencida' && rt_env_correos($auto['email']) === 0 && ($f['aprobacion']['estado'] ?? '') === 'por_aprobar', 'flujo de la propuesta cambiado después de aprobar: no sale y la aprobación vence');
+ok(($f['render']['estado'] ?? '') === 'pendiente' && is_array($pedido_render) && ($pedido_render['id'] ?? 0) === $auto['id'] && ($f['render']['generacion'] ?? '') === ($pedido_render['generacion'] ?? null) && hash_equals(at_rt_huella_render($f), (string) ($f['render']['huella'] ?? '')) && !hash_equals($auto['render']['huella'], (string) ($f['render']['huella'] ?? '')), 'el reloj pide solo una presentación nueva con la huella del contenido actual');
+ok(at_rt_emitir_aprobacion($auto['id'], '2026-10-19 10:35:00') === null, 'mientras se rehace la presentación no se puede volver a aprobar');
+$vista = new WP_REST_Request('POST', '/automatiza-tech/v1/retomar/' . $auto['id'] . '/vista');
+$vista->set_header('Content-Type', 'application/json'); $vista->set_header('X-AT-Secret', AT_REST_SECRET);
+$vista->set_body(wp_json_encode(['ok' => true, 'generacion' => $pedido_render['generacion'] ?? '', 'view_url' => 'https://' . at_pt_host_renderer() . '/p/' . ($pedido_render['render']['unique_id'] ?? '') . '/']));
+ok(rest_do_request($vista)->get_status() === 200 && at_rt_obtener($auto['id'])['render']['estado'] === 'listo', 'el renderer devuelve la presentación nueva lista');
+$enlaces = at_rt_emitir_aprobacion($auto['id'], '2026-10-19 11:00:00');
+parse_str((string) parse_url((string) ($enlaces['aprobar'] ?? ''), PHP_URL_QUERY), $q);
+$aprobado = at_rt_resolver_aprobacion($auto['id'], 'aprobar', $q, '2026-10-19 11:05:00');
+ok(is_array($enlaces) && $aprobado['ok'] && ($aprobado['programado'] ?? '') === '2026-10-19', 'se emite y se aprueba la versión nueva');
+$r = rt_env_tick_solo([$auto['id']], '2026-10-19 11:30:00'); $f = at_rt_obtener($auto['id']);
+$vencimientos = count(array_filter($f['envios'], static fn($e) => ($e['nota'] ?? '') === 'aprobacion_vencida'));
+ok($r['enviados'] === 1 && rt_env_correos($auto['email']) === 1 && ($f['aprobacion']['estado'] ?? '') === 'enviado' && $vencimientos === 1, 'la aprobación nueva sale en el reloj siguiente, sin volver a vencer');
+// Contenido que ya no se puede presentar: el render queda en error con una nota clara y no se pide nada al renderer.
+$pedido_render = null; $ce = rt_env_fixture(['telefono' => '']);
+at_rt_guardar($ce['id'], ['textos' => ['quedamos' => str_repeat('a', 601)]]);
+$r = at_rt_entregar($ce['id'], false, '2026-10-19 10:30:00'); $f = at_rt_obtener($ce['id']);
+ok($r['motivo'] === 'aprobacion_vencida' && rt_env_correos($ce['email']) === 0 && ($f['render']['estado'] ?? '') === 'error' && str_starts_with((string) ($f['render']['nota'] ?? ''), 'El contenido cambió después de aprobar y la presentación ya no se puede armar') && $pedido_render === null, 'contenido que ya no se puede presentar: render en error con nota clara y sin pedir otra presentación');
+ok(at_rt_emitir_aprobacion($ce['id'], '2026-10-19 10:35:00') === null, 'con la presentación en error no se vuelve a emitir la aprobación');
+remove_filter('pre_http_request', $render_simulado, PHP_INT_MAX);
 remove_filter('home_url', $https_local);
 // Interruptor del WhatsApp automático (pedido de Luis, 18-oct): apagado = solo correo, sin pedido de WhatsApp.
 update_option('at_rt_wa_automatico', '0');

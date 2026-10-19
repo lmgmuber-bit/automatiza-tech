@@ -90,24 +90,41 @@ async function prepararImagenes({ imageBriefs, dataImages, outputDir, higgsfield
   return { images, report, requested, reusedThisCall };
 }
 
-// WordPress devuelve las fotos de Retomar que ya existen con su URL pública (…/p/<unique_id>/img/<archivo>).
-// Si esa URL es de esta misma carpeta y el archivo sigue en disco, se usa el archivo en vez de bajarlo de sí
-// mismo: sin vuelta por la red, y sin que un fallo de esa descarga deje la foto fuera de images.urls (WordPress
-// la daría por perdida y volvería a pagarla). Cualquier otra URL, o un archivo que ya no está, sigue el camino de
-// siempre. El nombre del archivo debe ser un nombre simple: nunca se arma una ruta con lo que trae la URL.
-async function fotosPropias(images, { baseUrl, uniqueId, outputDir }) {
-  const prefijo = `${baseUrl}/p/${uniqueId}/img/`;
+// WordPress devuelve las fotos de Retomar que ya existen con su URL pública (…/p/<carpeta>/img/<archivo>). Si esa URL es
+// de esta misma carpeta, o de otra versión del mismo seguimiento (…/p/<token>(-<generación>)?-retomar/img/<archivo>: cada
+// «Pedir cambios» escribe en una carpeta nueva), y el archivo sigue en disco, se usa ese archivo en vez de bajarlo de sí
+// mismo: el de esta carpeta tal cual y el de una hermana copiado al img/ de esta. Sin vuelta por la red, y sin que un fallo
+// de esa descarga deje la foto fuera de images.urls (WordPress la daría por perdida y volvería a pagarla). Cualquier otra
+// URL (otro seguimiento, otra forma), o un archivo que ya no está, sigue el camino de siempre. La carpeta y el nombre se
+// validan con expresiones exactas, sin «..» ni subcarpetas: nunca se arma una ruta con lo que trae la URL sin validarlo, la
+// lectura no sale de publicDir y solo se copia un archivo regular (ni enlaces ni carpetas).
+async function fotosPropias(images, { baseUrl, uniqueId, outputDir, publicDir }) {
+  const prefijo = `${baseUrl}/p/`;
+  const token = (/^([A-Za-z0-9_]+?)(?:-[a-f0-9]{16})?-retomar$/.exec(uniqueId) || [])[1] || '';
+  const hermana = token ? new RegExp(`^${token}(?:-[a-f0-9]{16})?-retomar$`) : null;
+  const raiz = path.resolve(publicDir);
   const resultado = {};
   for (const [slide, url] of Object.entries(images)) {
     resultado[slide] = url;
     if (typeof url !== 'string' || !url.startsWith(prefijo)) continue;
-    const archivo = url.slice(prefijo.length);
+    const partes = url.slice(prefijo.length).split('/');
+    if (partes.length !== 3 || partes[1] !== 'img') continue;
+    const [carpeta, , archivo] = partes;
     if (!/^[A-Za-z0-9_-]+[.](?:png|jpe?g|webp)$/i.test(archivo)) continue;
+    if (carpeta !== uniqueId && !(hermana && hermana.test(carpeta))) continue;
+    const destino = path.join(outputDir, 'img', archivo);
     try {
-      await fs.access(path.join(outputDir, 'img', archivo));
+      if (carpeta === uniqueId) {
+        await fs.access(destino);
+      } else {
+        const origen = path.resolve(raiz, carpeta, 'img', archivo);
+        if (path.relative(raiz, origen).startsWith('..') || !(await fs.lstat(origen)).isFile()) continue;
+        await fs.mkdir(path.join(outputDir, 'img'), { recursive: true });
+        await fs.copyFile(origen, destino);
+      }
       resultado[slide] = `img/${archivo}`;
     } catch {
-      // Ya no está en disco: se intenta bajar como cualquier otra foto.
+      // Ya no está en disco (o no se pudo copiar): se intenta bajar como cualquier otra foto.
     }
   }
   return resultado;
@@ -217,7 +234,7 @@ function createApp({ publicDir, baseUrl, higgsfieldCredentials, renderKey = '' }
 
     let fotos;
     try {
-      const dataImages = esRetomar ? await fotosPropias(imagesEntrantes, { baseUrl, uniqueId: data.unique_id, outputDir }) : imagesEntrantes;
+      const dataImages = esRetomar ? await fotosPropias(imagesEntrantes, { baseUrl, uniqueId: data.unique_id, outputDir, publicDir }) : imagesEntrantes;
       fotos = await prepararImagenes({ imageBriefs, dataImages, outputDir, higgsfieldCredentials });
     } catch (err) {
       console.error('POST /render failed:', err.stack || err.message);

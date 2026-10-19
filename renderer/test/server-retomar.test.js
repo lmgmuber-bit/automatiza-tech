@@ -166,6 +166,56 @@ test('si la foto con URL propia ya no está en el disco, se intenta bajar como c
   });
 });
 
+// Cada «Pedir cambios» escribe una carpeta nueva (<token>-<generación>-retomar): la foto que WordPress reutiliza viene con
+// la URL de la carpeta de una generación anterior del mismo seguimiento.
+const TOKEN = 'a'.repeat(32);
+const NUEVA = `${TOKEN}-${'c'.repeat(16)}-retomar`;
+
+test('una foto de otra generación del mismo seguimiento se copia del disco a la carpeta nueva, sin descargarla', async () => {
+  await conCarpeta(async ({ dir, app, registro }) => {
+    for (const anterior of [`${TOKEN}-${'b'.repeat(16)}-retomar`, `${TOKEN}-retomar`]) {
+      await fs.mkdir(path.join(dir, anterior, 'img'), { recursive: true });
+      await fs.writeFile(path.join(dir, anterior, 'img', 'portada.png'), `PNG de ${anterior}`);
+    }
+    const anterior = `${TOKEN}-${'b'.repeat(16)}-retomar`;
+    const sinGeneracion = `${TOKEN}-retomar`;
+    await fs.writeFile(path.join(dir, sinGeneracion, 'img', 'cierre.webp'), 'WEBP sin generación');
+    const res = await post(app, retomarEjemplo({
+      unique_id: NUEVA,
+      images: { portada: `${BASE}/p/${anterior}/img/portada.png`, cierre: `${BASE}/p/${sinGeneracion}/img/cierre.webp` },
+    }));
+    assert.equal(res.status, 200);
+    assert.deepEqual(registro.descargas, [], 'ni se baja de sí mismo');
+    assert.deepEqual(registro.prompts, []);
+    assert.deepEqual(res.body.images.urls, { portada: `${BASE}/p/${NUEVA}/img/portada.png`, cierre: `${BASE}/p/${NUEVA}/img/cierre.webp` }, 'images.urls apunta a la carpeta nueva');
+    assert.equal(await fs.readFile(path.join(dir, NUEVA, 'img', 'portada.png'), 'utf8'), `PNG de ${anterior}`, 'se copió el archivo de la generación anterior');
+    assert.equal(await fs.readFile(path.join(dir, NUEVA, 'img', 'cierre.webp'), 'utf8'), 'WEBP sin generación');
+    assert.equal(await fs.readFile(path.join(dir, anterior, 'img', 'portada.png'), 'utf8'), `PNG de ${anterior}`, 'la carpeta anterior queda intacta');
+    const html = await fs.readFile(path.join(dir, NUEVA, 'index.html'), 'utf8');
+    assert.ok(html.includes("url('img/portada.png')") && html.includes("url('img/cierre.webp')"), 'el HTML usa las fotos copiadas');
+  });
+});
+
+test('fotos de otro seguimiento, rutas con trampa o archivos que ya no están no se leen del disco: van por la descarga', async () => {
+  await conCarpeta(async ({ dir, app, registro }) => {
+    const otro = `${'d'.repeat(32)}-${'b'.repeat(16)}-retomar`;
+    await fs.mkdir(path.join(dir, otro, 'img'), { recursive: true });
+    await fs.writeFile(path.join(dir, otro, 'img', 'portada.png'), 'PNG de otro seguimiento');
+    await fs.mkdir(path.join(dir, 'secreto', 'img'), { recursive: true });
+    await fs.writeFile(path.join(dir, 'secreto', 'img', 'cierre.png'), 'no debe salir');
+    const urls = {
+      portada: `${BASE}/p/${otro}/img/portada.png`,
+      cierre: `${BASE}/p/${TOKEN}-retomar/../secreto/img/cierre.png`,
+      demo: `${BASE}/p/${TOKEN}-${'e'.repeat(16)}-retomar/img/demo.png`,
+    };
+    const res = await post(app, retomarEjemplo({ unique_id: NUEVA, images: urls }));
+    assert.equal(res.status, 200);
+    assert.deepEqual([...registro.descargas].sort(), Object.values(urls).sort(), 'las tres siguen el camino normal de la descarga');
+    assert.notEqual(await fs.readFile(path.join(dir, NUEVA, 'img', 'portada.png'), 'utf8'), 'PNG de otro seguimiento', 'nunca se copia la foto de otro seguimiento');
+    assert.equal(await fs.readFile(path.join(dir, 'secreto', 'img', 'cierre.png'), 'utf8'), 'no debe salir');
+  });
+});
+
 test('sin image_briefs ni images no hay ninguna llamada a Higgsfield ni descarga (fase 1)', async () => {
   await conCarpeta(async ({ dir, app, registro }) => {
     for (const extra of [{}, { image_briefs: [], images: {} }]) {

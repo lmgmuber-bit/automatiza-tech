@@ -89,10 +89,45 @@ function at_rt_pedir_redaccion(int $id, string $pedido = ''): string {
 	return at_rt_red_avisar($id, $redaccion['generacion']);
 }
 
-/** Resumen de la propuesta para la IA: extracto de su prompt de contenido, sin tablas de precios ni líneas con montos. */
+/** Una línea de texto de la propuesta: «Título: texto» si es un objeto, el texto si es una cadena; '' si no es ninguna. */
+function at_rt_red_linea_prosa($item, string $clave_titulo, string $clave_texto): string {
+	if (is_array($item)) {
+		$titulo = is_scalar($item[$clave_titulo] ?? null) ? trim((string) $item[$clave_titulo]) : '';
+		$texto = is_scalar($item[$clave_texto] ?? null) ? trim((string) $item[$clave_texto]) : '';
+		$linea = ($titulo !== '' && $texto !== '') ? $titulo . ': ' . $texto : $titulo . $texto;
+	} else {
+		$linea = is_scalar($item) ? trim((string) $item) : '';
+	}
+	// Un elemento de lista es una sola línea: así el filtro de montos lo descarta entero y no deja media frase.
+	return trim((string) preg_replace('/\s*[\r\n]+\s*/', ' ', $linea));
+}
+
+/**
+ * Resumen de la propuesta para la IA. El prompt de contenido de una propuesta v3 es un JSON de una sola línea con precios
+ * (pricing_rows, pricing_note) y el correo al cliente: si decodifica, el resumen se arma SOLO con las claves de prosa
+ * (lista blanca) y nunca con esas; si no decodifica se trata como texto (sin filas de tabla markdown). En los dos casos
+ * después se descartan las líneas con montos y se corta a 1200 caracteres.
+ */
 function at_rt_red_resumen(string $prompt): string {
-	$sin_tablas = array_filter(preg_split('/\r\n|\r|\n/', $prompt), static fn(string $linea): bool => !preg_match('/^\s*\|/', $linea));
-	$limpio = preg_replace("/\n{3,}/", "\n\n", at_rt_red_sin_montos(implode("\n", $sin_tablas)));
+	$d = function_exists('at_cc_json_de_payload') ? at_cc_json_de_payload($prompt) : json_decode($prompt, true);
+	if (is_array($d)) {
+		$lineas = [];
+		foreach (['challenge_title', 'challenge_text', 'solution_title', 'solution_text'] as $k) {
+			if (is_scalar($d[$k] ?? null) && trim((string) $d[$k]) !== '') { $lineas[] = trim((string) $d[$k]); }
+		}
+		foreach (['benefits' => ['title', 'text'], 'how_it_works' => ['step_title', 'step_text'], 'next_steps' => ['title', 'text']] as $k => [$titulo, $texto]) {
+			foreach (array_slice(is_array($d[$k] ?? null) ? array_values($d[$k]) : [], 0, 12) as $item) {
+				$linea = at_rt_red_linea_prosa($item, $titulo, $texto);
+				if ($linea !== '') { $lineas[] = $linea; }
+			}
+		}
+		$texto = implode("\n", $lineas);
+	} elseif (preg_match('/^\s*[\[{]/', $prompt)) {
+		return ''; // Parece JSON pero no se pudo leer: jamás se entrega crudo (llevaría los precios).
+	} else {
+		$texto = implode("\n", array_filter(preg_split('/\r\n|\r|\n/', $prompt), static fn(string $linea): bool => !preg_match('/^\s*\|/', $linea)));
+	}
+	$limpio = preg_replace("/\n{3,}/", "\n\n", at_rt_red_sin_montos($texto));
 	return rtrim(mb_substr((string) $limpio, 0, 1200));
 }
 
@@ -205,17 +240,28 @@ function at_rt_red_validar(array $p, array $slides): array|WP_Error {
 }
 
 /**
- * Callback de n8n con la redacción. Bajo FOR UPDATE y validado por generación (409 si no es el pedido vigente); un fallo
- * de transporte (estado «error») no impide aceptar la respuesta del mismo pedido, porque puede ser un falso negativo.
- * Una respuesta ya resuelta (lista o en revisión) no se acepta otra vez.
+ * Respuesta mal formada del pedido vigente (ya bajo el candado): no se guarda ni un texto ni un encargo, pero la
+ * redacción pasa a «error» con el motivo (sin enlaces) para que no quede «pendiente» para siempre. Una respuesta corregida
+ * con la misma generación se sigue aceptando. Hace COMMIT y devuelve el 422.
+ */
+function at_rt_red_rechazar(int $id, array $redaccion, WP_Error $invalida): WP_Error {
+	global $wpdb;
+	if (!at_rt_guardar($id, ['redaccion' => array_merge($redaccion, ['estado' => 'error', 'nota' => at_rt_red_nota($invalida->get_error_message())])])) { return new WP_Error('retomar_guardar', 'No se pudo guardar el motivo del rechazo.', ['status' => 500]); }
+	if ($wpdb->query('COMMIT') === false) { return new WP_Error('retomar_guardar', 'No se pudo confirmar el motivo del rechazo.', ['status' => 500]); }
+	return $invalida;
+}
+
+/**
+ * Callback de n8n con la redacción. Bajo FOR UPDATE y validado por generación (409 si no es el pedido vigente, sin tocar
+ * nada); un fallo de transporte (estado «error») no impide aceptar la respuesta del mismo pedido, porque puede ser un
+ * falso negativo. Una respuesta ya resuelta (lista o en revisión) no se acepta otra vez.
  *  - ok:false → estado «error» con la nota sin enlaces.
- *  - Con errores de forma → 422 y no se guarda nada.
+ *  - Con errores de forma del pedido vigente → 422, no se guarda ningún texto y la redacción queda en «error» con el motivo.
  *  - Con montos (en los textos o en un encargo) → la primera vez se pide de nuevo (intentos 2, responde {reintento:true},
  *    siempre HTTP 200); con intentos ≥ 2 → «revision», sin guardar textos.
  *  - Válida → textos con origen «ia», estado «lista», encargos de foto guardados y presentación pedida.
  */
 function at_rt_guardar_redaccion(int $id, array $p): array|WP_Error {
-	if (!isset($p['ok']) || !is_bool($p['ok'])) { return new WP_Error('retomar_callback', 'ok debe ser booleano.', ['status' => 422]); }
 	global $wpdb;
 	if ($wpdb->query('START TRANSACTION') === false) { return new WP_Error('retomar_guardar', 'No se pudo reservar la redacción.', ['status' => 500]); }
 	$respuesta = null;
@@ -230,12 +276,17 @@ function at_rt_guardar_redaccion(int $id, array $p): array|WP_Error {
 		if (!is_string($generacion) || !preg_match('/^[a-f0-9]{16}$/D', $generacion) || !hash_equals((string) ($r['generacion'] ?? ''), $generacion) || in_array($r['estado'] ?? '', ['lista', 'revision'], true)) {
 			return new WP_Error('retomar_generacion', 'La respuesta pertenece a una redacción anterior o ya resuelta.', ['status' => 409]);
 		}
+		// Solo una respuesta mal formada del pedido VIGENTE marca error (las de otro pedido ya salieron con 409 sin tocar nada).
+		$invalida = isset($p['ok']) && is_bool($p['ok']) ? null : at_rt_red_invalida('ok debe ser booleano.');
+		if ($invalida === null && $p['ok']) {
+			$v = at_rt_red_validar($p, at_rt_red_slides($s));
+			if (is_wp_error($v)) { $invalida = $v; }
+		}
+		if ($invalida !== null) { return at_rt_red_rechazar($id, $r, $invalida); }
 		if (!$p['ok']) {
 			$campos = ['redaccion' => array_merge($r, ['estado' => 'error', 'nota' => at_rt_red_nota($p['nota'] ?? '')])];
 			$respuesta = ['ok' => true, 'estado' => 'error'];
 		} else {
-			$v = at_rt_red_validar($p, at_rt_red_slides($s));
-			if (is_wp_error($v)) { return $v; }
 			$montos = false;
 			foreach (array_merge(array_values($v['textos']), array_column($v['image_briefs'], 'prompt')) as $texto) {
 				if (at_rt_tiene_montos($texto)) { $montos = true; break; }

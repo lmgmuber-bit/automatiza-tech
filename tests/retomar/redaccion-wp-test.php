@@ -98,6 +98,38 @@ ok(array_keys($ctx['propuesta']) === ['status', 'flujo', 'transcripcion', 'resum
 ok(mb_strlen($ctx['propuesta']['transcripcion']) <= 12000 && mb_strlen($ctx['propuesta']['transcripcion']) > 10000 && str_contains($ctx['propuesta']['transcripcion'], 'Hablamos de la agenda'), 'transcripción de hasta 12000 caracteres');
 ok(!str_contains($ctx['propuesta']['transcripcion'], '120.000') && str_contains($ctx['propuesta']['transcripcion'], 'Quedó pendiente el diseño.'), 'la transcripción pierde solo las líneas con montos');
 ok(str_contains($ctx['propuesta']['resumen'], 'agenda automática') && str_contains($ctx['propuesta']['resumen'], 'recordatorios y reportes') && !str_contains($ctx['propuesta']['resumen'], '|') && !str_contains($ctx['propuesta']['resumen'], 'USD') && mb_strlen($ctx['propuesta']['resumen']) <= 1200, 'el resumen sale de la propuesta sin tablas de precios ni montos');
+// Una propuesta v3 guarda su contenido como JSON de una sola línea con precios y correo: el resumen sale solo de la prosa.
+$json_v3 = static function (array $filas, array $extra = []): string {
+	return wp_json_encode($extra + [
+		'unique_id' => 'x', 'client_name' => '[PRUEBA]', 'company_name' => '[PRUEBA]',
+		'challenge_title' => 'El desafío de la agenda', 'challenge_text' => "Hoy las reservas se anotan a mano.\nSe pierden clientes por no responder a tiempo.",
+		'solution_title' => 'Una agenda que responde sola', 'solution_text' => 'Un asistente que confirma las horas y envía recordatorios.',
+		'benefits' => [['title' => 'Menos ausencias', 'text' => 'Los recordatorios bajan las inasistencias.'], ['title' => 'Más tiempo', 'text' => 'Ahorra más de $50.000 al mes en horas perdidas.']],
+		'how_it_works' => [['step_title' => 'Conectamos la agenda', 'step_text' => "Se enlaza con el calendario del negocio.\nSin cambiar nada."]],
+		'pricing_rows' => $filas, 'pricing_note' => 'Precios en dólares más IVA, pago inicial del 50 por ciento',
+		'next_steps' => ['Agendar una llamada de seguimiento', 'Aprobar el alcance'],
+		'correo_cliente' => ['asunto' => 'Tu propuesta', 'saludo' => 'Hola, aquí va correo-secreto-X'],
+	], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+};
+$filas_sin_marca = [['service' => 'Servicio-Precio-X', 'price_usd' => 0, 'price_label' => '300 dólares + IVA'], ['service' => 'Servicio-Precio-Y', 'price_usd' => 0, 'price_label' => '1500 pesos al mes'], ['service' => 'Servicio-Precio-Z', 'price_usd' => 0, 'price_label' => '300']];
+$filas_con_marca = [['service' => 'Servicio-Precio-X', 'price_usd' => 0, 'price_label' => 'USD 300 + IVA']];
+$beneficios_limpios = [['title' => 'Menos ausencias', 'text' => 'Los recordatorios bajan las inasistencias.']];
+foreach (['precios sin marca (dólares, pesos, solo cifra)' => [$filas_sin_marca, []], 'precio con marca (USD)' => [$filas_con_marca, []], 'nada en la prosa ni en los precios trae marca de monto' => [$filas_sin_marca, ['benefits' => $beneficios_limpios]]] as $caso => [$filas, $extra]) {
+	$res_json = at_rt_red_resumen($json_v3($filas, $extra));
+	ok(str_contains($res_json, 'Hoy las reservas se anotan a mano.') && str_contains($res_json, 'Una agenda que responde sola') && str_contains($res_json, 'Menos ausencias: Los recordatorios') && str_contains($res_json, 'Conectamos la agenda: Se enlaza con el calendario del negocio. Sin cambiar nada.') && str_contains($res_json, 'Agendar una llamada de seguimiento'), "resumen de una propuesta JSON ({$caso}): trae la prosa (desafío, solución, beneficios, pasos y próximos pasos)");
+	ok(!preg_match('/Servicio-Precio|dólares|pesos|300|1500|IVA|correo-secreto|pricing|correo_cliente|[{}"]/u', $res_json) && !str_contains($res_json, 'Más tiempo') && !at_rt_tiene_montos($res_json) && mb_strlen($res_json) <= 1200, "resumen de una propuesta JSON ({$caso}): sin precios, correo ni JSON crudo, y el elemento con monto se descarta entero");
+}
+$res_cerco = at_rt_red_resumen("```json\n" . $json_v3($filas_sin_marca) . "\n```");
+ok(str_contains($res_cerco, 'Una agenda que responde sola') && !str_contains($res_cerco, 'Servicio-Precio') && !str_contains($res_cerco, '```'), 'JSON entre cercos de código: también se lee y se filtra');
+ok(at_rt_red_resumen(substr($json_v3($filas_sin_marca), 0, -40)) === '', 'JSON truncado (no se puede leer): resumen vacío, nunca el JSON crudo');
+ok(at_rt_red_resumen('{"pricing_rows":[{"price_label":"300 dólares"}]}') === '' && at_rt_red_resumen('[]') === '', 'JSON sin claves de prosa: resumen vacío');
+$largo = at_rt_red_resumen($json_v3($filas_sin_marca, ['solution_text' => str_repeat('Una frase larga sobre la agenda. ', 80)]));
+ok(mb_strlen($largo) <= 1200 && $largo !== '', 'el resumen de una propuesta JSON se corta a 1200 caracteres');
+$wpdb->insert($wpdb->prefix . 'automatiza_propuestas', ['client_email' => $marca . '-json@example.com', 'client_name' => '[PRUEBA]', 'company_name' => '[PRUEBA]', 'unique_link_id' => substr(md5($marca . 'json'), 0, 12), 'status' => 'sent', 'flujo' => 'v3', 'transcript_text' => 'Hablamos de la agenda.', 'gamma_prompt_text' => $json_v3($filas_sin_marca), 'system_prompt_text' => '', 'created_at' => current_time('mysql')]);
+$props[] = $prop_json = (int) $wpdb->insert_id;
+$ctx_json = at_rt_contexto_redaccion(rt_red_seg(['propuesta_id' => $prop_json]));
+$ctx_texto = wp_json_encode($ctx_json, JSON_UNESCAPED_UNICODE);
+ok(str_contains($ctx_json['propuesta']['resumen'], 'Una agenda que responde sola') && !preg_match('/Servicio-Precio|dólares|pesos|IVA|correo-secreto|pricing/u', $ctx_texto), 'contexto de una propuesta v3 real (JSON): la IA recibe la prosa y ningún precio ni correo');
 ok(count($ctx['historial']) === 10 && $ctx['historial'][0] === 'Último contacto' && !in_array('Cotización de $50.000 enviada', $ctx['historial'], true), 'historial: los 10 títulos más recientes y sin montos');
 ok($ctx['notas'] === 'Quiere algo simple' && $ctx['pedido'] === 'Habla de la agenda', 'notas y pedido pierden las líneas con montos');
 $con_montos_ctx = array_filter([$ctx['propuesta']['transcripcion'], $ctx['propuesta']['resumen'], $ctx['notas'], $ctx['pedido'], implode("\n", $ctx['historial']), implode("\n", $ctx['textos_actuales'])], 'at_rt_tiene_montos');
@@ -122,13 +154,16 @@ at_rt_pedir_redaccion($d, '');
 $simular = false;
 $base_d = at_rt_obtener($d);
 $gen = $base_d['redaccion']['generacion'];
-$sin_cambios = static function () use ($d, &$base_d): bool { $n = at_rt_obtener($d); return $n['textos'] === $base_d['textos'] && $n['redaccion'] === $base_d['redaccion'] && $n['render'] === $base_d['render'] && $n['notas'] === $base_d['notas']; };
+// 409: no cambia nada, ni el estado. 422 del pedido vigente: no cambia ningún texto, render ni nota de Luis; solo la redacción pasa a error con el motivo.
+$identico = static function () use ($d, &$base_d): bool { $n = at_rt_obtener($d); return $n['textos'] === $base_d['textos'] && $n['redaccion'] === $base_d['redaccion'] && $n['render'] === $base_d['render'] && $n['notas'] === $base_d['notas']; };
+$sin_cambios = static function () use ($d, &$base_d): bool { $n = at_rt_obtener($d); return $n['textos'] === $base_d['textos'] && $n['render'] === $base_d['render'] && $n['notas'] === $base_d['notas'] && array_diff_key($n['redaccion'], ['estado' => 1, 'nota' => 1]) === array_diff_key($base_d['redaccion'], ['estado' => 1, 'nota' => 1]); };
 foreach (['generación de otro pedido' => str_repeat('a', 16), 'generación que no es hex16' => 'zz', 'generación vacía' => ''] as $caso => $g) {
-	ok(rt_red_callback($d, rt_red_bien(['generacion' => $g]))->get_status() === 409 && $sin_cambios(), "callback con {$caso}: 409 y nada cambia");
+	ok(rt_red_callback($d, rt_red_bien(['generacion' => $g]))->get_status() === 409 && $identico(), "callback con {$caso}: 409 y nada cambia");
 }
 $sin_gen = new WP_REST_Request('POST', '/automatiza-tech/v1/retomar/' . $d . '/redaccion');
 $sin_gen->set_header('X-AT-Secret', AT_REST_SECRET); $sin_gen->set_header('Content-Type', 'application/json'); $sin_gen->set_body(wp_json_encode(rt_red_bien()));
-ok(rest_do_request($sin_gen)->get_status() === 409 && $sin_cambios(), 'callback sin generación: 409');
+ok(rest_do_request($sin_gen)->get_status() === 409 && $identico(), 'callback sin generación: 409');
+ok(rt_red_callback($d, ['ok' => 'x', 'textos' => 'mal', 'generacion' => str_repeat('a', 16)])->get_status() === 409 && $identico() && at_rt_obtener($d)['redaccion']['estado'] === 'pendiente', 'respuesta mal formada de OTRO pedido: 409 y no marca error');
 
 $invalidos = [
 	'texto de 601 caracteres' => ['textos' => ['quedamos' => str_repeat('a', 601)]],
@@ -159,8 +194,23 @@ foreach ($invalidos as $caso => $cambio) {
 		elseif ($v === null) { unset($cuerpo[$k]); }
 		else { $cuerpo[$k] = $v; }
 	}
-	ok(rt_red_callback($d, $cuerpo)->get_status() === 422 && $sin_cambios(), "callback inválido ({$caso}): 422 y no se guarda nada");
+	$res422 = rt_red_callback($d, $cuerpo);
+	$rd = at_rt_obtener($d)['redaccion'];
+	ok($res422->get_status() === 422 && $sin_cambios() && $rd['estado'] === 'error' && $rd['nota'] !== '' && !str_contains($rd['nota'], 'http') && $rd['generacion'] === $gen, "callback inválido ({$caso}): 422, no se guarda ningún texto y la redacción queda en error con el motivo");
 }
+// Una respuesta mal formada del pedido vigente marca error con el motivo (no queda «pendiente» para siempre); la corregida con la misma generación se acepta.
+$q = rt_red_seg();
+$simular = true; at_rt_pedir_redaccion($q, ''); $simular = false;
+$gq = at_rt_obtener($q)['redaccion']['generacion'];
+ok(at_rt_obtener($q)['redaccion']['estado'] === 'pendiente', 'antes de responder la redacción está pendiente');
+$res = rt_red_callback($q, rt_red_bien(['textos' => ['quedamos' => str_repeat('a', 601)] + rt_red_bien()['textos']]));
+$rq = at_rt_obtener($q)['redaccion'];
+ok($res->get_status() === 422 && $rq['estado'] === 'error' && $rq['generacion'] === $gq && stripos($rq['nota'], 'quedamos') !== false && at_rt_obtener($q)['textos']['quedamos'] === '[PRUEBA] Quedamos antes', 'respuesta mal formada: 422, estado error con el motivo en la nota y textos intactos');
+ok(rt_red_callback($q, rt_red_bien())->get_status() === 200 && at_rt_obtener($q)['redaccion']['estado'] === 'lista' && at_rt_obtener($q)['redaccion']['nota'] === '[PRUEBA] Redactado con IA', 'la respuesta corregida con la misma generación se acepta aunque el estado fuera error');
+$antes_q = at_rt_obtener($q);
+ok(rt_red_callback($q, ['ok' => 'x'])->get_status() === 409 && rt_red_callback($q, ['ok' => true, 'textos' => 'mal'])->get_status() === 409, 'ya resuelta: ni una respuesta mal formada vuelve a tocar nada (409)');
+$despues_q = at_rt_obtener($q);
+ok($despues_q['textos'] === $antes_q['textos'] && $despues_q['redaccion'] === $antes_q['redaccion'] && $despues_q['render'] === $antes_q['render'], 'ya resuelta: textos, redacción y render intactos');
 // La lámina «demo» solo se acepta cuando el seguimiento no trae imagen propia.
 $demo = ['image_briefs' => [['slide' => 'demo', 'prompt' => '[PRUEBA] Pantalla de una agenda, sin texto']]];
 at_rt_guardar($d, ['imagen_url' => 'https://example.com/captura.png']);

@@ -10,7 +10,7 @@ function ok($valor, string $mensaje): void {
 	if (!$valor) { $fallas++; }
 	echo ($valor ? 'ok ' : 'FALLA ') . $mensaje . "\n";
 }
-$funciones = ['intervalo', 'max', 'es_habil', 'en_ventana', 'proximo', 'canales', 'motivo_parada', 'estado_por_motivo', 'token', 'token_valido', 'asunto', 'correo_html', 'correo_texto', 'cabeceras_baja', 'internas'];
+$funciones = ['intervalo', 'max', 'es_habil', 'en_ventana', 'proximo', 'canales', 'motivo_parada', 'estado_por_motivo', 'token', 'token_valido', 'asunto', 'correo_html', 'correo_texto', 'cabeceras_baja', 'internas', 'tiene_montos', 'es_candidata', 'necesita_propuesta', 'semana', 'toca_resumen', 'programar', 'firma', 'firma_valida', 'tarjeta_html', 'resumen_html'];
 foreach ($funciones as $f) { ok(function_exists('at_rt_' . $f), 'interfaz at_rt_' . $f); }
 if ($fallas) { echo "$total pruebas, $fallas fallas\n"; exit(1); }
 ok(at_rt_intervalo(3) === 7 && at_rt_intervalo(10) === 10, 'intervalo mínimo');
@@ -21,7 +21,7 @@ foreach (['09:59' => false, '10:00' => true, '12:59' => true, '13:00' => false, 
 ok(at_rt_proximo('2026-10-16', 7) === '2026-10-23', 'próximo viernes');
 ok(at_rt_proximo('2026-10-17', 7) === '2026-10-26', 'próximo sábado avanza a lunes');
 ok(at_rt_proximo('2026-10-16', 1) === '2026-10-23', 'próximo aplica mínimo semanal');
-foreach ([1, 2, 3, 4] as $n) { ok(at_rt_canales($n, 4, 'correo,whatsapp', true, '56900000000') === (($n === 1 || $n === 4) ? ['correo', 'whatsapp'] : ['correo']), 'canales envío ' . $n); }
+foreach ([1, 2, 3, 4] as $n) { ok(at_rt_canales($n, 4, 'correo,whatsapp', true, '56900000000') === ['correo', 'whatsapp'], 'canales envío ' . $n . ' lleva WhatsApp'); }
 ok(at_rt_canales(1, 4, 'correo,whatsapp', false, '56900000000') === ['correo'], 'sin autorización');
 ok(at_rt_canales(1, 4, 'correo,whatsapp', true, '') === ['correo'], 'sin teléfono');
 ok(at_rt_canales(1, 4, 'correo,no-whatsapp', true, '56900000000') === ['correo'], 'canal exacto');
@@ -58,5 +58,92 @@ ok(str_starts_with($m2, 'Hola 👋 Te saluda') && str_contains($m2, 'conversamos
 $wa = at_rt_url_wa_manual('56900000000', "Hola & chao\nfin");
 ok($wa === 'https://wa.me/56900000000?text=' . rawurlencode("Hola & chao\nfin"), 'manual: wa.me con el texto codificado');
 ok(at_rt_url_wa_manual('', 'x') === '', 'manual: sin teléfono no hay enlace');
+// Fase 2 (aprobación semanal): reglas puras.
+foreach (['$680.000', '680.000', '1.500', 'USD 500', '2 UF', 'CLP', 'unos 1,500 pesos'] as $texto) { ok(at_rt_tiene_montos($texto) === true, 'montos detecta ' . $texto); }
+foreach (['en 2 semanas', 'fase 1 en 30 días', 'año 2026', '10:00 a 13:00', 'UFO', ''] as $texto) { ok(at_rt_tiene_montos($texto) === false, 'montos no confunde «' . $texto . '»'); }
+$hoy = '2026-10-18';
+$cliente_ok = ['crm_tipo' => 'prospecto', 'baja' => false, 'existe' => false];
+ok(at_rt_es_candidata(['status' => 'sent', 'enviada' => '2026-10-04'], $cliente_ok, $hoy) === '', 'candidata: sent hace exactamente 14 días');
+ok(at_rt_es_candidata(['status' => 'sent', 'enviada' => '2026-10-05'], $cliente_ok, $hoy) === 'reciente', 'candidata: sent hace 13 días es reciente');
+ok(at_rt_es_candidata(['status' => 'evaluando', 'enviada' => '2026-09-01'], $cliente_ok, $hoy) === '', 'candidata: evaluando antigua');
+foreach (['aceptada', 'archivada', 'pending', 'rechazada', 'lista'] as $estado) { ok(at_rt_es_candidata(['status' => $estado, 'enviada' => '2026-09-01'], $cliente_ok, $hoy) === 'estado', 'candidata: estado ' . $estado); }
+$antigua = ['status' => 'sent', 'enviada' => '2026-09-01'];
+ok(at_rt_es_candidata($antigua, ['crm_tipo' => 'cliente'] + $cliente_ok, $hoy) === 'cliente', 'candidata: cliente del CRM');
+ok(at_rt_es_candidata($antigua, ['baja' => true] + $cliente_ok, $hoy) === 'baja', 'candidata: con baja');
+ok(at_rt_es_candidata($antigua, ['existe' => true] + $cliente_ok, $hoy) === 'existe', 'candidata: ya tiene seguimiento');
+ok(at_rt_es_candidata(['status' => 'lista', 'enviada' => '2026-10-17'], ['crm_tipo' => 'cliente', 'baja' => true, 'existe' => true], $hoy) === 'estado', 'candidata: el estado se revisa primero');
+ok(at_rt_es_candidata(['status' => 'sent', 'enviada' => '2026-10-17'], ['crm_tipo' => 'cliente', 'baja' => true, 'existe' => true], $hoy) === 'reciente', 'candidata: luego lo reciente');
+ok(at_rt_es_candidata($antigua, ['crm_tipo' => 'cliente', 'baja' => true, 'existe' => true], $hoy) === 'cliente', 'candidata: luego cliente');
+ok(at_rt_es_candidata($antigua, ['baja' => true, 'existe' => true] + $cliente_ok, $hoy) === 'baja', 'candidata: luego baja');
+ok(at_rt_es_candidata(['status' => 'sent', 'enviada' => ''], $cliente_ok, $hoy) === 'reciente' && at_rt_es_candidata(['status' => 'sent', 'enviada' => 'basura'], $cliente_ok, $hoy) === 'reciente', 'candidata: sin fecha de envío válida no se toca');
+ok(at_rt_es_candidata(['status' => 'sent', 'enviada' => '2026-10-11'], $cliente_ok, $hoy, 7) === '' && at_rt_es_candidata(['status' => 'sent', 'enviada' => '2026-10-12'], $cliente_ok, $hoy, 7) === 'reciente', 'candidata: días mínimos configurables');
+ok(at_rt_necesita_propuesta('v3') === false && at_rt_necesita_propuesta(null) === true && at_rt_necesita_propuesta('') === true && at_rt_necesita_propuesta('gamma') === true, 'propuesta nueva solo si el flujo no es v3');
+ok(at_rt_semana('2026-10-19 09:00:00') === '2026-W43', 'semana ISO del lunes 19-oct');
+ok(at_rt_semana('2027-01-01 10:00:00') === '2026-W53', 'semana ISO de fin de año');
+ok(at_rt_semana('2026-10-18 23:30:00') === '2026-W42' && at_rt_semana('2026-10-19 00:30:00') === '2026-W43', 'semana: domingo 23:30 y lunes 00:30 son semanas distintas');
+ok(at_rt_semana('2026-10-19T09:00:00') === '2026-W43' && at_rt_semana('2026-10-19') === '2026-W43' && at_rt_semana('2026-02-30 10:00:00') === '' && at_rt_semana('basura') === '', 'semana: formatos admitidos y fechas inválidas');
+ok(at_rt_toca_resumen('2026-10-19 08:59', 1, '09:00', '') === false, 'toca: lunes antes de la hora');
+ok(at_rt_toca_resumen('2026-10-19 09:00', 1, '09:00', '2026-W42') === true, 'toca: lunes a la hora');
+ok(at_rt_toca_resumen('2026-10-19 09:00:00', 1, '09:00', '') === true, 'toca: acepta segundos');
+ok(at_rt_toca_resumen('2026-10-20 10:00', 1, '09:00', '') === true, 'toca: el martes recupera un lunes perdido');
+ok(at_rt_toca_resumen('2026-10-20 10:00', 1, '09:00', '2026-W43') === false, 'toca: ya se envió esta semana');
+ok(at_rt_toca_resumen('2026-10-18 23:30', 1, '09:00', '2026-W42') === false, 'toca: domingo 23:30 de una semana ya enviada');
+ok(at_rt_toca_resumen('2026-10-18 23:30', 1, '09:00', '2026-W41') === true, 'toca: domingo 23:30 de una semana pendiente');
+ok(at_rt_toca_resumen('2026-10-19 00:30', 1, '09:00', '2026-W42') === false, 'toca: lunes 00:30 es antes de la hora');
+ok(at_rt_toca_resumen('2026-10-21 08:00', 3, '08:30', '') === false && at_rt_toca_resumen('2026-10-21 08:30', 3, '08:30', '') === true && at_rt_toca_resumen('2026-10-20 23:59', 3, '08:30', '') === false, 'toca: otro día configurado');
+ok(at_rt_toca_resumen('basura', 1, '09:00', '') === false, 'toca: fecha inválida no envía');
+ok(at_rt_programar('2026-10-23 12:59') === '2026-10-23', 'programar: viernes antes de las 13:00 es hoy');
+ok(at_rt_programar('2026-10-23 13:00') === '2026-10-26', 'programar: viernes 13:00 pasa al lunes');
+ok(at_rt_programar('2026-10-24 09:00') === '2026-10-26', 'programar: sábado pasa al lunes');
+ok(at_rt_programar('2026-10-19 07:00') === '2026-10-19' && at_rt_programar('2026-10-19 13:00:00') === '2026-10-20', 'programar: lunes temprano es hoy, lunes tarde es martes');
+$sal = 'sal-de-prueba-sin-secreto';
+$f = at_rt_firma(7, 'aprobar', 'abcdef0123456789', 1792000000, $sal);
+ok($f === substr(hash_hmac('sha256', 'rta|7|aprobar|abcdef0123456789|1792000000', $sal), 0, 32) && preg_match('/^[0-9a-f]{32}$/D', $f) === 1, 'firma: 32 hex del HMAC exacto');
+ok(at_rt_firma_valida($f, 7, 'aprobar', 'abcdef0123456789', 1792000000, $sal) === true, 'firma válida con los mismos datos');
+ok(at_rt_firma_valida($f, 7, 'omitir', 'abcdef0123456789', 1792000000, $sal) === false, 'firma falsa si cambia la acción');
+ok(at_rt_firma_valida($f, 7, 'aprobar', 'abcdef0123456780', 1792000000, $sal) === false, 'firma falsa si cambia el nonce');
+ok(at_rt_firma_valida($f, 7, 'aprobar', 'abcdef0123456789', 1792000001, $sal) === false, 'firma falsa si cambia el vencimiento');
+ok(at_rt_firma_valida($f, 8, 'aprobar', 'abcdef0123456789', 1792000000, $sal) === false, 'firma falsa si cambia el id');
+ok(at_rt_firma_valida($f, 7, 'aprobar', 'abcdef0123456789', 1792000000, 'otra-sal') === false && at_rt_firma_valida('', 7, 'aprobar', 'abcdef0123456789', 1792000000, $sal) === false, 'firma falsa con otra sal o vacía');
+foreach (['aprobar', 'cambios', 'omitir', 'ver'] as $accion) { ok(at_rt_firma_valida(at_rt_firma(7, $accion, 'abcdef0123456789', 1792000000, $sal), 7, $accion, 'abcdef0123456789', 1792000000, $sal) === true, 'firma acción ' . $accion); }
+ok(at_rt_firma_valida(at_rt_firma(7, 'borrar', 'abcdef0123456789', 1792000000, $sal), 7, 'borrar', 'abcdef0123456789', 1792000000, $sal) === false, 'firma: solo valen las cuatro acciones');
+// WhatsApp ya no es solo del primero y el último envío.
+foreach ([1, 2, 3, 4] as $n) { ok(at_rt_canales($n, 4, 'correo,whatsapp', true, '+56900000000') === ['correo', 'whatsapp'], 'canales (aprobados): WhatsApp en el envío ' . $n); }
+ok(at_rt_canales(2, 4, 'correo,whatsapp', false, '+56900000000') === ['correo'] && at_rt_canales(2, 4, 'correo', true, '+56900000000') === ['correo'] && at_rt_canales(2, 4, 'correo,whatsapp', true, '  ') === ['correo'], 'canales (aprobados): sin autorización, sin canal o sin teléfono solo correo');
+// Tarjeta y resumen semanal.
+$enlaces = ['aprobar' => 'https://example.com/retomar-aprobar.php?a=aprobar&t=1', 'cambios' => 'https://example.com/retomar-aprobar.php?a=cambios&t=2', 'omitir' => 'https://example.com/retomar-aprobar.php?a=omitir&t=3', 'ver' => 'https://example.com/retomar-aprobar.php?a=ver&t=4'];
+$tarjeta = ['tipo' => 'normal', 'nombre' => '[PRUEBA] Ana', 'negocio' => '[PRUEBA] Panadería', 'dias' => 20, 'n' => 1, 'max' => 4, 'canales' => ['correo', 'whatsapp'], 'textos' => ['quedamos' => "Conversamos del pedido\nde la semana", 'proponemos' => 'Ajustamos todo al presupuesto', 'partir' => 'Una primera etapa corta', 'recomendacion' => 'Partir por la tienda en línea'], 'url_presentacion' => 'https://example.com/retomar.php?t=abc&v=1', 'enlaces' => $enlaces];
+$h = at_rt_tarjeta_html($tarjeta);
+foreach (['✅ Aprobar y enviar', '✏️ Pedir cambios', '⏭️ Esta semana no', 'Recordatorio 1 de 4', '[PRUEBA] Ana', '[PRUEBA] Panadería', 'propuesta enviada hace 20 días', 'correo ✓', 'WhatsApp ✓', 'Conversamos del pedido', 'Ajustamos todo al presupuesto', 'Una primera etapa corta', 'Partir por la tienda en línea', 'Ver la presentación completa', 'Ver el correo tal como le llega'] as $esperado) { ok(str_contains($h, $esperado), 'tarjeta normal contiene «' . $esperado . '»'); }
+foreach ($enlaces as $k => $u) { ok(str_contains($h, 'href="' . htmlspecialchars($u, ENT_QUOTES, 'UTF-8') . '"'), 'tarjeta normal enlaza ' . $k); }
+ok(str_contains($h, 'href="' . htmlspecialchars($tarjeta['url_presentacion'], ENT_QUOTES, 'UTF-8') . '"') && !str_contains($h, '<img') && !str_contains($h, '<script') && str_contains($h, 'linear-gradient'), 'tarjeta normal: presentación enlazada, miniatura en HTML y sin <img');
+ok(!str_contains(at_rt_tarjeta_html(array_replace($tarjeta, ['canales' => ['correo']])), 'WhatsApp'), 'tarjeta: sin WhatsApp si no sale por WhatsApp');
+ok(str_contains(at_rt_tarjeta_html(array_replace($tarjeta, ['dias' => 1])), 'hace 1 día') && str_contains(at_rt_tarjeta_html(array_replace($tarjeta, ['dias' => 0])), 'enviada hoy'), 'tarjeta: singular y hoy');
+$sin_reco = $tarjeta;
+unset($sin_reco['textos']['recomendacion']);
+ok(!str_contains(at_rt_tarjeta_html($sin_reco), 'Recomendación'), 'tarjeta: sin recomendación no hay recomendación');
+$tp = at_rt_tarjeta_html(array_replace($tarjeta, ['tipo' => 'propuesta', 'url_panel' => 'https://example.com/panel']));
+ok(str_contains($tp, 'Necesita propuesta nueva') && !str_contains($tp, 'Aprobar') && !str_contains($tp, 'Pedir cambios') && !str_contains($tp, 'Esta semana no') && !str_contains($tp, 'retomar-aprobar.php') && !str_contains($tp, 'Conversamos del pedido') && str_contains($tp, 'href="https://example.com/panel"'), 'tarjeta propuesta: aviso, sin botones ni enlaces de aprobación, con enlace al panel');
+$tpre = at_rt_tarjeta_html(array_replace($tarjeta, ['tipo' => 'preparacion']));
+ok(str_contains($tpre, 'En preparación') && !str_contains($tpre, 'Aprobar') && !str_contains($tpre, 'retomar-aprobar.php'), 'tarjeta preparación: sin botones');
+$trev = at_rt_tarjeta_html(array_replace($tarjeta, ['tipo' => 'revision']));
+ok(str_contains($trev, 'Necesita revisión') && !str_contains($trev, 'Aprobar') && !str_contains($trev, 'retomar-aprobar.php'), 'tarjeta revisión: sin botones');
+$tdesc = at_rt_tarjeta_html(array_replace($tarjeta, ['tipo' => 'aprobado']));
+ok(str_contains($tdesc, 'Necesita revisión') && !str_contains($tdesc, 'Aprobar') && !str_contains($tdesc, 'retomar-aprobar.php'), 'tarjeta: un tipo desconocido nunca es aprobable');
+$th = at_rt_tarjeta_html(array_replace($tarjeta, ['nombre' => '<script>x</script>', 'negocio' => '<script>x</script>', 'textos' => ['quedamos' => '<script>x</script>', 'proponemos' => '<b onclick="x">', 'partir' => '"><img src=x>', 'recomendacion' => '<script>x</script>']]));
+ok(!str_contains($th, '<script') && !str_contains($th, '<img') && !str_contains($th, '<b onclick') && str_contains($th, '&lt;script&gt;x&lt;/script&gt;'), 'tarjeta: todo texto sale escapado');
+$tmal = at_rt_tarjeta_html(array_replace($tarjeta, ['url_presentacion' => 'javascript:alert(1)', 'enlaces' => ['aprobar' => 'javascript:alert(1)', 'cambios' => 'https://demo.easypanel.host/x', 'omitir' => "https://example.com/\" onclick=\"x", 'ver' => '//example.com/ver']]));
+ok(!str_contains($tmal, 'javascript:') && !str_contains($tmal, 'easypanel') && !str_contains($tmal, 'onclick="x') && !str_contains($tmal, 'href="//') && !str_contains($tmal, 'Aprobar y enviar'), 'tarjeta: URLs hostiles o internas no se dibujan');
+ok(!str_contains(strtolower(at_rt_tarjeta_html(array_replace($tarjeta, ['nombre' => 'easypanel interno', 'textos' => ['quedamos' => 'easypanel', 'proponemos' => 'x', 'partir' => 'y']]))), 'easypanel'), 'tarjeta: D8 también en los textos visibles');
+$salieron = [['nombre' => '[PRUEBA] Beto', 'negocio' => '[PRUEBA] Taller', 'motivo' => 'agendo'], ['nombre' => '<script>x</script>', 'negocio' => '', 'motivo' => 'agotado'], ['nombre' => 'Cata', 'negocio' => 'Café', 'motivo' => 'baja'], ['nombre' => 'Dani', 'negocio' => '', 'motivo' => 'Motivo libre']];
+$r = at_rt_resumen_html([$tarjeta, array_replace($tarjeta, ['tipo' => 'propuesta', 'nombre' => '[PRUEBA] Eva']), array_replace($tarjeta, ['tipo' => 'preparacion', 'nombre' => '[PRUEBA] Fer'])], $salieron, 'https://example.com/wp-admin/admin.php?page=at-retomar&x=1');
+foreach (['Nada sale sin tu aprobación.', '✅ Aprobar y enviar', 'Necesita propuesta nueva', 'En preparación', 'Salieron de Retomar', '[PRUEBA] Beto', '[PRUEBA] Taller', 'agendó', 'Abrir el panel Retomar', '10:00 a 13:00', '3 prospectos'] as $esperado) { ok(str_contains($r, $esperado), 'resumen contiene «' . $esperado . '»'); }
+ok(str_contains($r, 'href="https://example.com/wp-admin/admin.php?page=at-retomar&amp;x=1"') && !str_contains($r, '<img') && !str_contains($r, '<script') && str_contains($r, '&lt;script&gt;x&lt;/script&gt;'), 'resumen: panel enlazado, sin <img y con escape');
+ok(str_contains($r, 'Motivo libre') && str_contains($r, 'pidió no recibir más') && !str_contains($r, '>agotado<') && !str_contains($r, '>baja<'), 'resumen: los motivos conocidos se traducen y el libre se respeta');
+ok(str_contains(at_rt_resumen_html([$tarjeta], [], 'https://example.com/panel'), '1 prospecto ') && !str_contains(at_rt_resumen_html([$tarjeta], [], 'https://example.com/panel'), 'Salieron de Retomar'), 'resumen: singular y sin lista de salidas');
+ok(str_contains(at_rt_resumen_html([], $salieron, 'https://example.com/panel'), 'Salieron de Retomar') && !str_contains(at_rt_resumen_html([], $salieron, 'https://example.com/panel'), 'Aprobar y enviar'), 'resumen: solo salidas');
+ok(str_contains(at_rt_resumen_html([at_rt_tarjeta_html($tarjeta)], [], 'https://example.com/panel'), '✅ Aprobar y enviar'), 'resumen: acepta tarjetas ya dibujadas');
+$rm = at_rt_resumen_html([array_replace($tarjeta, ['url_presentacion' => 'https://demo.easypanel.host/x'])], [], 'javascript:alert(1)');
+ok(!str_contains($rm, 'easypanel') && !str_contains($rm, 'javascript:') && !str_contains($rm, 'href="javascript'), 'resumen: enlaces hostiles no se dibujan');
 echo "$total pruebas, $fallas fallas\n";
 exit($fallas ? 1 : 0);

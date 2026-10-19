@@ -262,3 +262,26 @@ test('final proposals have no draft badge', () => {
   const html = renderProposalHtml(DATA);
   assert.ok(!html.includes('class="at-draft-badge"'));
 });
+
+// Botón a la demo (19-oct, Umbría): una lámina extra puede llevar un botón con enlace en vez de la URL en el texto.
+test('an extra section can carry a button to the demo, shown in the draft too', () => {
+  const html = renderProposalHtml({
+    ...DATA,
+    extra_slides: [{ eyebrow: 'Avance real', title: 'Tu demo', bullets: [{ title: 'Demo', text: 'lista' }],
+      button: { label: 'Ver demo', url: 'https://automatizatech.cl/demos/umbria/' } }],
+  });
+  assert.match(html, /<a class="demo-button" href="https:\/\/automatizatech\.cl\/demos\/umbria\/" target="_blank" rel="noopener noreferrer" style="[^"]*">Ver demo<\/a>/);
+  assert.ok(!/is-draft [^{]*\.demo-button/.test(html), 'el borrador no debe ocultar el botón de la demo');
+});
+
+test('a button with a non-https link or no label is not rendered', () => {
+  for (const button of [
+    { label: 'Ver demo', url: 'javascript:alert(1)' },
+    { label: 'Ver demo', url: 'http://example.com/' },
+    { label: '', url: 'https://example.com/' },
+    'https://example.com/',
+  ]) {
+    const html = renderProposalHtml({ ...DATA, extra_slides: [{ title: 'Tu demo', text: 'x', button }] });
+    assert.ok(!html.includes('class="demo-button"'), JSON.stringify(button));
+  }
+});

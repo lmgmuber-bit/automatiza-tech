@@ -43,7 +43,7 @@
         "specifyBody": "json",
         "jsonBody": "={{ $json.body.render }}",
         "options": {
-          "timeout": 180000,
+          "timeout": 300000,
           "redirect": {
             "redirect": {
               "followRedirects": false
@@ -74,7 +74,7 @@
         0
       ],
       "parameters": {
-        "jsCode": "const respuesta = $input.first().json || {};\nconst hook = $('Webhook').first().json.body || {};\nlet body = respuesta.body || {};\nif (typeof body === 'string') { try { body = JSON.parse(body); } catch (_) { body = {}; } }\nconst estado = Number(respuesta.statusCode) || 0;\nconst ok = estado >= 200 && estado < 300 && typeof body.view_url === 'string' && !!body.view_url;\n// Sin copiar mensajes de red: pueden contener URLs internas o datos de infraestructura.\nconst detalles = Array.isArray(body.details) ? body.details.filter(x => typeof x === 'string').join('; ') : '';\nconst nota = ok ? '' : ('No se pudo generar la presentación (HTTP ' + estado + '). ' + detalles)\n  .replace(/https?:\\/\\/\\S+/gi, '[enlace omitido]').slice(0, 1000);\nreturn [{json: {id: Number(hook.id), callback: {ok, generacion: hook.generacion,\n  view_url: ok ? body.view_url : '', pdf_url: ok && typeof body.pdf_url === 'string' ? body.pdf_url : '', nota}}}];"
+        "jsCode": "const respuesta = $input.first().json || {};\nconst hook = $('Webhook').first().json.body || {};\nlet body = respuesta.body || {};\nif (typeof body === 'string') { try { body = JSON.parse(body); } catch (_) { body = {}; } }\nconst estado = Number(respuesta.statusCode) || 0;\nconst ok = estado >= 200 && estado < 300 && typeof body.view_url === 'string' && !!body.view_url;\n// Sin copiar mensajes de red: pueden contener URLs internas o datos de infraestructura.\nconst detalles = Array.isArray(body.details) ? body.details.filter(x => typeof x === 'string').join('; ') : '';\nconst nota = ok ? '' : ('No se pudo generar la presentación (HTTP ' + estado + '). ' + detalles)\n  .replace(/https?:\\/\\/\\S+/gi, '[enlace omitido]').slice(0, 1000);\nreturn [{json: {id: Number(hook.id), callback: {ok, generacion: hook.generacion,\n  view_url: ok ? body.view_url : '', pdf_url: ok && typeof body.pdf_url === 'string' ? body.pdf_url : '', nota,\n  fotos: body.images && body.images.urls || {}}}}];"
       }
     },
     {

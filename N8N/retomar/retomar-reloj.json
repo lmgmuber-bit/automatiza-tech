@@ -16,7 +16,7 @@
           "interval": [
             {
               "field": "cronExpression",
-              "expression": "0 15 10 * * 1-5"
+              "expression": "0 5 * * * *"
             }
           ]
         }
@@ -37,7 +37,7 @@
         "authentication": "genericCredentialType",
         "genericAuthType": "httpHeaderAuth",
         "options": {
-          "timeout": 30000,
+          "timeout": 120000,
           "redirect": {
             "redirect": {
               "followRedirects": false

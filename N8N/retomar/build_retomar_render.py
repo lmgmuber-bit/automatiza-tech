@@ -2,7 +2,8 @@
 
 Credenciales existentes referidas únicamente por nombre; sus valores nunca se exportan.
 El POST autenticado recibe {id, generacion, render}; cualquier respuesta/error del renderer llega
-al callback con ok booleano. La URL interna se guarda solo para iframe/PDF en WP.
+al callback con ok booleano y las fotos que el renderer dejó guardadas (`fotos` = images.urls: lámina => URL; {} si no hay).
+El render espera hasta 300 s al renderer (puede generar hasta tres fotos). La URL interna se guarda solo para iframe/PDF en WP.
 """
 import json
 from pathlib import Path
@@ -23,7 +24,8 @@ const detalles = Array.isArray(body.details) ? body.details.filter(x => typeof x
 const nota = ok ? '' : ('No se pudo generar la presentación (HTTP ' + estado + '). ' + detalles)
   .replace(/https?:\/\/\S+/gi, '[enlace omitido]').slice(0, 1000);
 return [{json: {id: Number(hook.id), callback: {ok, generacion: hook.generacion,
-  view_url: ok ? body.view_url : '', pdf_url: ok && typeof body.pdf_url === 'string' ? body.pdf_url : '', nota}}}];"""
+  view_url: ok ? body.view_url : '', pdf_url: ok && typeof body.pdf_url === 'string' ? body.pdf_url : '', nota,
+  fotos: body.images && body.images.urls || {}}}}];"""
 
 
 def node(id_, name, kind, version, x, parameters, **extra):
@@ -39,7 +41,7 @@ nodes = [
          {'method': 'POST', 'url': RENDERER, 'authentication': 'genericCredentialType',
           'genericAuthType': 'httpHeaderAuth', 'sendBody': True, 'specifyBody': 'json',
           'jsonBody': '={{ $json.body.render }}',
-          'options': {'timeout': 180000, 'redirect': {'redirect': {'followRedirects': False}},
+          'options': {'timeout': 300000, 'redirect': {'redirect': {'followRedirects': False}},
                       'response': {'response': {'fullResponse': True, 'neverError': True}}}},
          credentials=AUTH_RENDER, onError='continueRegularOutput'),
     node('rt3', 'Resultado', 'code', 2, 520, {'jsCode': RESULTADO}),

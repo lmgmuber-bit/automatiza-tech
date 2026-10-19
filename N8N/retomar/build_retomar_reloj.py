@@ -1,5 +1,9 @@
 """Genera el reloj + WhatsApp de Retomar, siempre INACTIVO y sin red.
 
+Corre en el minuto 5 de cada hora, todos los días (`0 5 * * * *`, zona America/Santiago). WordPress decide en cada pasada qué
+toca (envíos aprobados, detección, reintentos de redacción y correo semanal) y respeta por su cuenta la ventana de envío del
+prospecto; como hace todo eso dentro de la misma petición, el nodo «Tick» espera hasta 120 s.
+
 El routing Graph v22.0 se toma del export local Followup_WhatsApp_Send.json.
 Eje debe validarlo al desplegar. Sólo se referencian nombres de credenciales.
 """
@@ -68,10 +72,10 @@ def build():
         raise ValueError('Routing local inesperado: Eje debe revisar antes de generar')
     nodes = [
         node('rr1', 'Reloj', 'scheduleTrigger', 1.2, 0,
-             {'rule': {'interval': [{'field': 'cronExpression', 'expression': '0 15 10 * * 1-5'}]}}),
+             {'rule': {'interval': [{'field': 'cronExpression', 'expression': '0 5 * * * *'}]}}),
         node('rr2', 'Tick', 'httpRequest', 4.1, 240,
              {'method': 'POST', 'url': WP + 'tick', 'authentication': 'genericCredentialType',
-              'genericAuthType': 'httpHeaderAuth', 'options': {'timeout': 30000,
+              'genericAuthType': 'httpHeaderAuth', 'options': {'timeout': 120000,
               'redirect': {'redirect': {'followRedirects': False}}}}, credentials=AUTH_WP),
         node('rr3', 'Preparar WhatsApp', 'code', 2, 480, {'jsCode': PREPARAR}),
         node('rr4', 'Enviar WhatsApp', 'httpRequest', 4.1, 720,

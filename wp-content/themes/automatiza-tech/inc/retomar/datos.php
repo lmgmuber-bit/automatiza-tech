@@ -6,7 +6,7 @@ if (!defined('ABSPATH')) {
 
 /** Solo estos campos pueden cambiar; identidad técnica y token se asignan al crear. */
 function at_rt_campos(array $campos): ?array {
-	$permitidos = ['crm_cliente_id', 'propuesta_id', 'nombre', 'negocio', 'email', 'telefono', 'wa_autorizado', 'propuesta_url', 'demo_urls', 'imagen_url', 'textos', 'max_envios', 'intervalo_dias', 'canales', 'estado', 'render', 'envios', 'activado_at', 'proximo_at', 'enviando'];
+	$permitidos = ['crm_cliente_id', 'propuesta_id', 'nombre', 'negocio', 'email', 'telefono', 'wa_autorizado', 'propuesta_url', 'demo_urls', 'imagen_url', 'textos', 'max_envios', 'intervalo_dias', 'canales', 'estado', 'render', 'envios', 'activado_at', 'proximo_at', 'enviando', 'notas', 'redaccion', 'aprobacion', 'fotos'];
 	$d = array_intersect_key($campos, array_flip($permitidos));
 	foreach (['crm_cliente_id', 'propuesta_id'] as $k) {
 		if (array_key_exists($k, $d)) { $d[$k] = (int) $d[$k] > 0 ? (int) $d[$k] : null; }
@@ -17,10 +17,11 @@ function at_rt_campos(array $campos): ?array {
 	if (isset($d['email'])) { $d['email'] = strtolower(sanitize_email(trim((string) $d['email']))); }
 	if (isset($d['telefono'])) { $d['telefono'] = at_pt_telefono_wa((string) $d['telefono']); }
 	if (isset($d['wa_autorizado'])) { $d['wa_autorizado'] = empty($d['wa_autorizado']) ? 0 : 1; }
+	if (array_key_exists('notas', $d)) { $d['notas'] = sanitize_textarea_field((string) $d['notas']); }
 	foreach (['propuesta_url', 'imagen_url'] as $k) {
 		if (isset($d[$k])) { $d[$k] = esc_url_raw((string) $d[$k], ['https']); }
 	}
-	foreach (['demo_urls', 'textos', 'render', 'envios'] as $k) {
+	foreach (['demo_urls', 'textos', 'render', 'envios', 'redaccion', 'aprobacion', 'fotos'] as $k) {
 		if (array_key_exists($k, $d)) {
 			if (!is_array($d[$k])) { return null; }
 			$d[$k] = wp_json_encode($d[$k], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
@@ -29,7 +30,7 @@ function at_rt_campos(array $campos): ?array {
 	}
 	if (isset($d['max_envios'])) { $d['max_envios'] = at_rt_max((int) $d['max_envios']); }
 	if (isset($d['intervalo_dias'])) { $d['intervalo_dias'] = min(255, at_rt_intervalo((int) $d['intervalo_dias'])); }
-	if (isset($d['estado']) && !in_array($d['estado'], ['borrador', 'activo', 'pausado', 'agendo', 'respondio', 'cliente', 'baja', 'agotado', 'rechazado'], true)) { return null; }
+	if (isset($d['estado']) && !in_array($d['estado'], ['borrador', 'activo', 'pausado', 'agendo', 'respondio', 'cliente', 'baja', 'agotado', 'rechazado', 'espera_propuesta'], true)) { return null; }
 	foreach (['activado_at', 'proximo_at', 'enviando'] as $k) {
 		if (array_key_exists($k, $d)) {
 			if ($d[$k] === '' || $d[$k] === null) { $d[$k] = null; continue; }
@@ -45,10 +46,11 @@ function at_rt_campos(array $campos): ?array {
 function at_rt_fila(array $fila): array {
 	foreach (['id', 'max_envios', 'intervalo_dias', 'wa_autorizado'] as $k) { $fila[$k] = (int) $fila[$k]; }
 	foreach (['crm_cliente_id', 'propuesta_id'] as $k) { $fila[$k] = $fila[$k] === null ? null : (int) $fila[$k]; }
-	foreach (['demo_urls', 'textos', 'render', 'envios'] as $k) {
-		$json = json_decode((string) $fila[$k], true);
+	foreach (['demo_urls', 'textos', 'render', 'envios', 'redaccion', 'aprobacion', 'fotos'] as $k) {
+		$json = json_decode((string) ($fila[$k] ?? ''), true);
 		$fila[$k] = is_array($json) ? $json : [];
 	}
+	$fila['notas'] = (string) ($fila['notas'] ?? '');
 	return $fila;
 }
 
@@ -58,7 +60,7 @@ function at_rt_crear(array $campos): int {
 	$d = at_rt_campos($campos);
 	if ($d === null) { return 0; }
 	$ahora = current_time('mysql');
-	$d += ['demo_urls' => '[]', 'textos' => '[]', 'render' => '[]', 'envios' => '[]'];
+	$d += ['demo_urls' => '[]', 'textos' => '[]', 'render' => '[]', 'envios' => '[]', 'redaccion' => '[]', 'aprobacion' => '[]', 'fotos' => '[]', 'notas' => ''];
 	$d['creado_at'] = $d['actualizado_at'] = $ahora;
 	if ($wpdb->insert($wpdb->prefix . 'at_retomar', $d) === false) { return 0; }
 	$id = (int) $wpdb->insert_id;
@@ -67,6 +69,24 @@ function at_rt_crear(array $campos): int {
 		return 0;
 	}
 	return $id;
+}
+
+/**
+ * Configuración del resumen semanal: día ISO-8601 (1 = lunes ... 7 = domingo), hora HH:MM de Chile y
+ * correo de destino. Un valor fuera de rango vuelve al defecto: lunes, 09:00 y el correo de avisos.
+ */
+function at_rt_config(): array {
+	$dia = trim((string) get_option('at_rt_resumen_dia', '1'));
+	$hora = trim((string) get_option('at_rt_resumen_hora', '09:00'));
+	$destino = trim((string) get_option('at_rt_resumen_destino', ''));
+	if (!is_email($destino)) {
+		$destino = function_exists('at_cc_correo_avisos') ? at_cc_correo_avisos() : (string) get_option('admin_email');
+	}
+	return [
+		'dia' => preg_match('/^[1-7]$/D', $dia) ? (int) $dia : 1,
+		'hora' => preg_match('/^([01]\d|2[0-3]):[0-5]\d$/D', $hora) ? $hora : '09:00',
+		'destino' => $destino,
+	];
 }
 
 function at_rt_obtener(int $id): ?array {

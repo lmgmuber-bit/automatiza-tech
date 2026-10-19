@@ -1,6 +1,6 @@
 <?php
 require __DIR__ . '/wp-bootstrap.php';
-exigir('at_rt_crear', 'at_rt_obtener', 'at_rt_por_token', 'at_rt_guardar', 'at_rt_lista', 'at_rt_agregar_envio', 'at_rt_en_bajas', 'at_rt_dar_baja', 'at_rt_revertir_baja', 'at_rt_contexto_parada');
+exigir('at_rt_crear', 'at_rt_campos', 'at_rt_config', 'at_rt_obtener', 'at_rt_por_token', 'at_rt_guardar', 'at_rt_lista', 'at_rt_agregar_envio', 'at_rt_en_bajas', 'at_rt_dar_baja', 'at_rt_revertir_baja', 'at_rt_contexto_parada');
 at_rt_migrar_esquema();
 global $wpdb;
 $marca = 'prueba-rt-' . strtolower(wp_generate_password(12, false, false));
@@ -71,4 +71,51 @@ foreach (['2026-10-18 09:59:59', '2026-10-18 10:00:00', '2026-10-18 10:00:01'] a
 at_rt_guardar($id, ['activado_at' => null]);
 ok(!at_rt_contexto_parada(at_rt_obtener($id))['reunion'], 'sin activación no atribuye reuniones');
 ok(!at_rt_dar_baja(PHP_INT_MAX, 'prueba') && !at_rt_revertir_baja(PHP_INT_MAX, '[PRUEBA]'), 'bajas inexistentes fallan');
+// Fase 2: textos, redacción, aprobación y fotos.
+ok($s['notas'] === '' && $s['redaccion'] === [] && $s['aprobacion'] === [] && $s['fotos'] === [], 'crear sin campos nuevos deja notas vacías y arrays vacíos');
+$fotos = ['portada' => ['url' => 'https://x/a.jpg', 'hash' => 'h']];
+$id2 = rt_fixture(['redaccion' => ['estado' => 'lista'], 'aprobacion' => ['estado' => 'por_aprobar', 'n' => 1], 'fotos' => $fotos, 'notas' => 'nota']);
+$s2 = at_rt_obtener($id2);
+ok($id2 > 0 && $s2['redaccion'] === ['estado' => 'lista'] && $s2['aprobacion'] === ['estado' => 'por_aprobar', 'n' => 1] && $s2['fotos'] === $fotos && $s2['notas'] === 'nota', 'crear y obtener devuelven los mismos arrays y la nota');
+ok(at_rt_guardar($id2, ['notas' => "Primera línea\nSegunda línea", 'aprobacion' => ['estado' => 'aprobado', 'n' => 2, 'usada' => false], 'fotos' => []]), 'guardar acepta notas y JSON nuevos');
+$s2 = at_rt_obtener($id2);
+ok($s2['notas'] === "Primera línea\nSegunda línea" && $s2['aprobacion']['estado'] === 'aprobado' && $s2['aprobacion']['usada'] === false && $s2['fotos'] === [] && $s2['redaccion'] === ['estado' => 'lista'], 'guardar cambia solo lo enviado y conserva los saltos de línea de la nota');
+ok(at_rt_guardar($id2, ['notas' => '<b>sin</b> etiquetas']) && at_rt_obtener($id2)['notas'] === 'sin etiquetas', 'la nota se limpia de etiquetas');
+foreach (['redaccion', 'aprobacion', 'fotos'] as $k) {
+	ok(at_rt_campos([$k => 'texto']) === null && !at_rt_guardar($id2, [$k => 'texto']), "{$k} rechaza un valor que no sea arreglo");
+}
+ok(at_rt_obtener($id2)['aprobacion']['estado'] === 'aprobado', 'un guardado rechazado no cambia la fila');
+$wpdb->update($wpdb->prefix . 'at_retomar', ['redaccion' => '"suelto"', 'aprobacion' => 'no es json', 'fotos' => '', 'notas' => ''], ['id' => $id2]);
+$s2 = at_rt_obtener($id2);
+ok($s2['redaccion'] === [] && $s2['aprobacion'] === [] && $s2['fotos'] === [] && $s2['notas'] === '', 'JSON corrupto o escalar se lee como arreglo vacío');
+ok(at_rt_campos(['estado' => 'espera_propuesta']) !== null && at_rt_campos(['estado' => 'inventado']) === null, 'espera_propuesta es un estado válido y un estado inventado no');
+$id3 = rt_fixture(['estado' => 'espera_propuesta']);
+ok($id3 > 0 && at_rt_obtener($id3)['estado'] === 'espera_propuesta', 'crear con estado espera_propuesta');
+
+// Configuración del resumen semanal: valores fuera de rango vuelven al defecto.
+$previas = [];
+foreach (['at_rt_resumen_dia', 'at_rt_resumen_hora', 'at_rt_resumen_destino'] as $opcion) {
+	$previas[$opcion] = get_option($opcion, null);
+	delete_option($opcion);
+}
+register_shutdown_function(static function () use ($previas) {
+	foreach ($previas as $opcion => $valor) {
+		if ($valor === null) { delete_option($opcion); } else { update_option($opcion, $valor, false); }
+	}
+});
+ok(at_rt_config() === ['dia' => 1, 'hora' => '09:00', 'destino' => at_cc_correo_avisos()], 'config sin opciones devuelve lunes 09:00 y el correo de avisos');
+foreach (['9' => 1, '0' => 1, '8' => 1, 'x' => 1, '1abc' => 1, '' => 1, '2' => 2, '7' => 7] as $dia => $esperado) {
+	update_option('at_rt_resumen_dia', (string) $dia, false);
+	ok(at_rt_config()['dia'] === $esperado, "día '{$dia}' da {$esperado}");
+}
+foreach (['25:00' => '09:00', '24:00' => '09:00', '9:00' => '09:00', '10:60' => '09:00', 'abc' => '09:00', '' => '09:00', '00:00' => '00:00', '14:30' => '14:30', '23:59' => '23:59'] as $hora => $esperada) {
+	update_option('at_rt_resumen_hora', (string) $hora, false);
+	ok(at_rt_config()['hora'] === $esperada, "hora '{$hora}' da {$esperada}");
+}
+update_option('at_rt_resumen_destino', 'esto no es un correo', false);
+ok(at_rt_config()['destino'] === at_cc_correo_avisos(), 'destino inválido vuelve al correo de avisos');
+update_option('at_rt_resumen_destino', '  rt-destino@example.com ', false);
+ok(at_rt_config()['destino'] === 'rt-destino@example.com', 'destino válido se usa, sin espacios');
+update_option('at_rt_resumen_destino', '', false);
+ok(at_rt_config()['destino'] === at_cc_correo_avisos(), 'destino vacío usa el correo de avisos');
 fin();

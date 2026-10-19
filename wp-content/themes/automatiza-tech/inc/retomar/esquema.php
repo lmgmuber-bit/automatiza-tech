@@ -1,12 +1,17 @@
 <?php
-/** Esquema local del módulo Retomar, versión 1. */
+/** Esquema local del módulo Retomar, versión 2 (suma notas, redacción, aprobación y fotos). */
 if (!defined('ABSPATH')) {
 	exit;
 }
 
+/** Columnas que suma la versión 2; sin ellas el esquema no está listo aunque la opción lo diga. */
+function at_rt_columnas_v2(): array {
+	return ['notas', 'redaccion', 'aprobacion', 'fotos'];
+}
+
 function at_rt_esquema_listo(): bool {
 	global $wpdb;
-	if (get_option('at_rt_schema') !== '1') {
+	if (get_option('at_rt_schema') !== '2') {
 		return false;
 	}
 	foreach (['at_retomar', 'at_retomar_bajas'] as $sufijo) {
@@ -15,10 +20,11 @@ function at_rt_esquema_listo(): bool {
 			return false;
 		}
 	}
-	return true;
+	$existentes = $wpdb->get_col("SHOW COLUMNS FROM {$wpdb->prefix}at_retomar", 0);
+	return !array_diff(at_rt_columnas_v2(), is_array($existentes) ? $existentes : []);
 }
 
-/** Crea las tablas sin alterar filas existentes; no registra éxito si falta alguna. */
+/** Crea las tablas o suma las columnas nuevas sin alterar filas existentes; no registra éxito si falta algo. */
 function at_rt_migrar_esquema(): void {
 	global $wpdb;
 	if (at_rt_esquema_listo()) {
@@ -53,6 +59,10 @@ function at_rt_migrar_esquema(): void {
 		enviando datetime DEFAULT NULL,
 		creado_at datetime NOT NULL,
 		actualizado_at datetime NOT NULL,
+		notas text NOT NULL,
+		redaccion longtext NOT NULL,
+		aprobacion longtext NOT NULL,
+		fotos longtext NOT NULL,
 		PRIMARY KEY  (id),
 		KEY token (token),
 		KEY email (email),
@@ -76,5 +86,9 @@ function at_rt_migrar_esquema(): void {
 			return;
 		}
 	}
-	update_option('at_rt_schema', '1', false);
+	$existentes = $wpdb->get_col("SHOW COLUMNS FROM {$tabla}", 0);
+	if (!is_array($existentes) || array_diff(at_rt_columnas_v2(), $existentes)) {
+		return;
+	}
+	update_option('at_rt_schema', '2', false);
 }

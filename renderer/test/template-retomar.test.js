@@ -184,3 +184,17 @@ test('la regla de la imagen de la demo no alcanza al logo de la marca de agua', 
   assert.ok(/<img class="retomar-demo-img" src="https:\/\/example\.com\/demo\.png"/.test(demo), 'la imagen de la demo lleva la clase propia');
   assert.ok(/<div class="at-watermark"><img (?!class="retomar-demo-img")/.test(demo), 'y el logo no la lleva');
 });
+
+test('las fotos de Retomar se encuadran desde arriba (no cortan cabezas) y propuesta, plan y estado siguen centrados', () => {
+  const html = renderRetomarHtml(retomarEjemplo(), { portada: 'img/p.jpg', quedamos: 'img/q.jpg', cierre: 'img/c.jpg' });
+  for (const n of [1, 2, 6]) {
+    const estilo = seccion(html, n).match(/class="slide-bg" style="([^"]*)"/)[1];
+    assert.match(estilo, /url\('img\/[pqc]\.jpg'\)/, `lámina ${n} con foto`);
+    assert.match(estilo, /background-position: center;.*background-position: center top;$/, `lámina ${n}: la última declaración ancla la foto arriba`);
+  }
+  assert.match(html, /\.retomar-panel > \.slide-bg, \.retomar-cover > \.slide-bg \{ transform-origin: center top; \}/, 'el acercamiento lento crece hacia abajo');
+  const sinFoto = seccion(renderRetomarHtml(retomarEjemplo(), {}), 2).match(/class="slide-bg" style="([^"]*)"/)[1];
+  assert.ok(!sinFoto.includes('background-position'), 'sin foto queda solo el degradado');
+  const { backgroundStyle } = require('../src/template');
+  assert.ok(!backgroundStyle('https://example.com/f.jpg', 0, 'cover').includes('top'), 'el estilo compartido (propuesta, plan, estado) no cambia');
+});

@@ -14,6 +14,7 @@ const enlace = (url, label, clase = '') => {
 };
 
 const ESTILO_RETOMAR = `
+  .retomar-panel > .slide-bg, .retomar-cover > .slide-bg { transform-origin: center top; }
   .retomar-head { position: absolute; left: 300px; top: 66px; right: 100px; z-index: 2; }
   .retomar-head h2 { color: #fff; font-size: 52px; line-height: 1.18; margin-top: 12px; overflow-wrap: anywhere; }
   .retomar-content { position: absolute; left: 100px; right: 100px; top: 320px; bottom: 110px; z-index: 2; }
@@ -39,7 +40,9 @@ function renderRetomarHtml(datos, images = {}) {
   const fotos = d.fotos && typeof d.fotos === 'object' ? d.fotos : {};
   const generadas = images && typeof images === 'object' && !Array.isArray(images) ? images : {};
   const foto = (slide, original) => fotoGenerada(generadas[slide]) || urlSegura(original);
-  const fondo = (url, index) => `<div class="slide-bg" style="${backgroundStyle(url, index, 'cover')}"></div>`;
+  // Las fotos son de personas: el encuadre se ancla arriba (y el acercamiento lento de at-kenburns crece hacia abajo,
+  // regla transform-origin de ESTILO_RETOMAR) para no cortar cabezas. Solo en Retomar: propuesta, plan y estado siguen centrados.
+  const fondo = (url, index) => `<div class="slide-bg" style="${backgroundStyle(url, index, 'cover')}${url ? ' background-position: center top;' : ''}"></div>`;
   const panel = (n, title, content, clase = '', photo = '') => `<section class="slide retomar-panel ${clase}">${fondo(photo, n)}${logoMark()}
     <div class="retomar-head"><p class="eyebrow">${n} · Retomemos la conversación</p><h2>${texto(title)}</h2></div>
     <div class="retomar-content">${content}</div></section>`;

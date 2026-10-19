@@ -50,3 +50,21 @@ test('el logo de la marca de agua mide lo mismo en la lámina de la demo que en 
     assert.ok(logos[2][1] < 200, 'y en la lámina de la demo no se estira a la altura de la imagen (600 px)');
   } finally { await browser.close(); }
 });
+
+test('en Chromium las fotos de fondo quedan ancladas arriba y el acercamiento lento no recorta la parte de arriba', async () => {
+  const browser = await chromium.launch({ args: ['--disable-dev-shm-usage', '--no-sandbox'] });
+  try {
+    const page = await browser.newPage({ viewport: { width: 1920, height: 1080 } });
+    await page.route('**/*', (route) => route.abort());
+    await page.setContent(renderRetomarHtml(retomarEjemplo(), { portada: 'img/p.jpg', quedamos: 'img/q.jpg', cierre: 'img/c.jpg' }), { waitUntil: 'load' });
+    const fondos = await page.evaluate(() => [...document.querySelectorAll('.slide')].map((s) => {
+      const cs = getComputedStyle(s.querySelector('.slide-bg'));
+      return { foto: cs.backgroundImage.includes('url('), pos: cs.backgroundPositionY, origen: cs.transformOrigin };
+    }));
+    for (const n of [0, 1, 5]) {
+      assert.ok(fondos[n].foto, `lámina ${n + 1} con foto`);
+      assert.match(fondos[n].pos, /^0%(, 0%)*$/, `lámina ${n + 1}: foto (y su degradado) anclada arriba`);
+      assert.match(fondos[n].origen, /^(960px 0px|50% 0%)$/, `lámina ${n + 1}: el acercamiento crece desde arriba`);
+    }
+  } finally { await browser.close(); }
+});

@@ -15,7 +15,7 @@ $mails = []; $falla_mail = false; $pedidos_redaccion = [];
 $filtros = ['lista' => 0, 'reloj' => 0, 'deteccion' => 0];
 $GLOBALS['rt_res_prefijo'] = $marca;
 $originales = [];
-foreach (['at_rt_resumen_semana', 'at_rt_resumen_desde', 'at_rt_resumen_destino', 'at_rt_resumen_dia', 'at_rt_resumen_hora', 'at_rt_wa_automatico'] as $o) { $originales[$o] = get_option($o, null); }
+foreach (['at_rt_resumen_semana', 'at_rt_resumen_desde', 'at_rt_resumen_destino', 'at_rt_resumen_copia', 'at_rt_resumen_dia', 'at_rt_resumen_hora', 'at_rt_wa_automatico'] as $o) { $originales[$o] = get_option($o, null); }
 $esquema_original = get_option('at_rt_schema');
 register_shutdown_function(static function () use (&$ids, &$pids, $marca, $originales, $esquema_original, $wpdb) {
 	update_option('at_rt_schema', $esquema_original, false);
@@ -29,6 +29,7 @@ register_shutdown_function(static function () use (&$ids, &$pids, $marca, $origi
 	$wpdb->query($wpdb->prepare("DELETE FROM {$wpdb->prefix}at_retomar_bajas WHERE email LIKE %s", $wpdb->esc_like($marca) . '%'));
 });
 update_option('at_rt_resumen_destino', $destino);
+delete_option('at_rt_resumen_copia');
 update_option('at_rt_resumen_dia', '1');
 update_option('at_rt_resumen_hora', '09:00');
 update_option('at_rt_wa_automatico', '1');
@@ -171,6 +172,7 @@ ok(count($mails) === 1 && count($al_destino) === 1, 'un solo correo y va al dest
 $html = $al_destino[0]['message'] ?? '';
 ok(($al_destino[0]['subject'] ?? '') === '🔁 Retomar · 8 prospectos para revisar esta semana', 'asunto «🔁 Retomar · 8 prospectos para revisar esta semana»');
 ok(in_array('Content-Type: text/html; charset=UTF-8', (array) ($al_destino[0]['headers'] ?? []), true), 'el resumen va en HTML');
+ok(array_filter((array) ($al_destino[0]['headers'] ?? []), static fn($h) => stripos((string) $h, 'cc:') === 0) === [], 'sin copia configurada, el resumen no lleva Cc');
 ok(substr_count($html, '✅ Aprobar y enviar') === 2 && str_contains($html, 'retomar-aprobar.php') && substr_count($html, 'Necesita propuesta nueva') === 1 && substr_count($html, 'En preparación') === 2 && substr_count($html, 'Necesita revisión') === 3, 'dos para aprobar, una sin propuesta nueva, dos en preparación y tres en revisión');
 ok(rt_res_sin_internos($html) && rt_res_enlaces_del_sitio($html), 'D8: sin easypanel ni el host del renderer, y todo enlace es HTTPS del sitio');
 ok(!str_contains($html, '<img') && !str_contains($html, 's.w.org'), 'sin imágenes: la miniatura es un bloque HTML y los emojis van como texto');
@@ -249,6 +251,7 @@ $rita = rt_res_seg(['nombre' => '[PRUEBA] Rita Aviso'], ['aprobacion' => ['estad
 $antes = count($mails);
 ok(at_rt_aviso_listo($rita['id']) === true, 'el aviso sale');
 $aviso = $mails[$antes] ?? [];
+ok(array_filter((array) ($aviso['headers'] ?? []), static fn($h) => stripos((string) $h, 'cc:') === 0) === [], 'sin copia configurada, el aviso no lleva Cc');
 ok(count($mails) === $antes + 1 && ($aviso['to'] ?? '') === $destino && ($aviso['subject'] ?? '') === '🔁 Retomar · Recordatorio corregido: [PRUEBA] Rita Aviso', 'un correo al destino con el asunto del recordatorio corregido');
 $ap_rita = at_rt_obtener($rita['id'])['aprobacion'];
 ok(($ap_rita['estado'] ?? '') === 'por_aprobar' && ($ap_rita['usada'] ?? null) === false && str_contains($aviso['message'] ?? '', rt_res_esc(at_rt_aprobacion_url($rita['id'], 'aprobar', (string) ($ap_rita['nonce'] ?? ''), (int) ($ap_rita['vence'] ?? 0)))), 'emite una aprobación nueva (sale de «cambios») con sus enlaces');
@@ -267,6 +270,24 @@ ok(at_rt_aviso_listo($sara['id']) === false && count($mails) === $antes + 1 && a
 $teo = rt_res_seg(['nombre' => '[PRUEBA] Teo Sinrender'], ['aprobacion' => $cambios]);
 at_rt_guardar($teo['id'], ['render' => array_merge($teo['render'], ['estado' => 'pendiente'])]);
 ok(at_rt_aviso_listo($teo['id']) === false && count($mails) === $antes + 1, 'sin presentación lista no hay nada que avisar');
+
+// ---- Copia (CC): el resumen y el aviso van también a la copia, con una cabecera Cc ----
+$copia = $marca . '-copia@example.com';
+$semana_guardada = get_option('at_rt_resumen_semana'); $desde_guardado = get_option('at_rt_resumen_desde');
+update_option('at_rt_resumen_copia', $copia);
+$antes = count($mails);
+$r = at_rt_resumen('2026-10-19 12:00:00', true);
+$resumen_cc = $mails[$antes] ?? [];
+ok($r['enviado'] && count($mails) === $antes + 1 && ($resumen_cc['to'] ?? '') === $destino && in_array('Cc: ' . $copia, (array) ($resumen_cc['headers'] ?? []), true) && in_array('Content-Type: text/html; charset=UTF-8', (array) ($resumen_cc['headers'] ?? []), true), 'con copia, el resumen va al destino con la cabecera Cc y sigue en HTML');
+$uma = rt_res_seg(['nombre' => '[PRUEBA] Uma Copia'], ['aprobacion' => ['estado' => 'cambios', 'n' => 1, 'usada' => true]]);
+$antes = count($mails);
+ok(at_rt_aviso_listo($uma['id']) === true && count($mails) === $antes + 1 && in_array('Cc: ' . $copia, (array) ($mails[$antes]['headers'] ?? []), true) && ($mails[$antes]['to'] ?? '') === $destino, 'con copia, el aviso va al destino con la cabecera Cc');
+update_option('at_rt_resumen_copia', $destino);
+$antes = count($mails);
+at_rt_guardar($uma['id'], ['aprobacion' => ['estado' => 'cambios', 'n' => 2, 'usada' => true]]);
+ok(at_rt_aviso_listo($uma['id']) === true && array_filter((array) ($mails[$antes]['headers'] ?? []), static fn($h) => stripos((string) $h, 'cc:') === 0) === [], 'con la copia igual al destino no se agrega Cc');
+delete_option('at_rt_resumen_copia');
+update_option('at_rt_resumen_semana', $semana_guardada); update_option('at_rt_resumen_desde', $desde_guardado);
 
 // ---- Reloj por hora: detectar → reintentar redacciones → resumen → (en la ventana) envío ----
 $tk = $marca . '-tk';

@@ -49,11 +49,14 @@ function at_rt_resumen_limpio($v): string {
 /**
  * Correo HTML a Luis; false si wp_mail falla o lanza. WordPress cambia los emojis de un correo HTML por <img> de s.w.org
  * (wp_staticize_emoji_for_email): estos correos no llevan imágenes (Ruling 1), así que se mandan con los emojis como texto.
+ * Si $copia es un correo, también le llega (cabecera Cc).
  */
-function at_rt_correo_luis(string $destino, string $asunto, string $html): bool {
+function at_rt_correo_luis(string $destino, string $asunto, string $html, string $copia = ''): bool {
 	$prioridad = has_filter('wp_mail', 'wp_staticize_emoji_for_email');
 	if ($prioridad !== false) { remove_filter('wp_mail', 'wp_staticize_emoji_for_email', $prioridad); }
-	try { return (bool) wp_mail($destino, $asunto, $html, ['Content-Type: text/html; charset=UTF-8']); }
+	$cabeceras = ['Content-Type: text/html; charset=UTF-8'];
+	if ($copia !== '') { $cabeceras[] = 'Cc: ' . $copia; }
+	try { return (bool) wp_mail($destino, $asunto, $html, $cabeceras); }
 	catch (Throwable $e) { error_log('Retomar: wp_mail lanzó al enviar a Luis: ' . $e->getMessage()); return false; }
 	finally { if ($prioridad !== false) { add_filter('wp_mail', 'wp_staticize_emoji_for_email', $prioridad); } }
 }
@@ -235,7 +238,7 @@ function at_rt_resumen(string $ahora, bool $forzar = false, ?int &$cupo = null):
 		if (at_rt_correo_interno($html)) { error_log('Retomar: el resumen semanal traía un enlace interno y no se envió.'); $r['motivo'] = 'interno'; return $r; }
 		$n = count($tarjetas);
 		$asunto = $n > 0 ? '🔁 Retomar · ' . $n . ($n === 1 ? ' prospecto' : ' prospectos') . ' para revisar esta semana' : '🔁 Retomar · resumen de la semana';
-		if (!at_rt_correo_luis($cfg['destino'], $asunto, $html)) {
+		if (!at_rt_correo_luis($cfg['destino'], $asunto, $html, $cfg['copia'])) {
 			error_log('Retomar: no se pudo enviar el resumen semanal; se reintenta en la pasada siguiente.');
 			$r['motivo'] = 'correo_error';
 			return $r;
@@ -278,7 +281,7 @@ function at_rt_aviso_listo(int $id): bool {
 		error_log('Retomar: el recordatorio corregido #' . $id . ' trae un enlace interno; no se avisa.');
 		return false;
 	}
-	$destino = at_rt_config()['destino'];
+	$cfg = at_rt_config(); $destino = $cfg['destino'];
 	if (!is_email($destino)) { error_log('Retomar: el destino del aviso no es un correo válido.'); return false; }
 	$enlaces = at_rt_emitir_aprobacion($id, $ahora);
 	if ($enlaces === null) { return false; }
@@ -286,7 +289,7 @@ function at_rt_aviso_listo(int $id): bool {
 	$html = at_rt_aviso_html($t);
 	if (at_rt_correo_interno($html)) { error_log('Retomar: el aviso del recordatorio corregido #' . $id . ' traía un enlace interno y no se envió.'); return false; }
 	$quien = $t['nombre'] !== '' ? $t['nombre'] : ($t['negocio'] !== '' ? $t['negocio'] : 'prospecto sin nombre');
-	if (!at_rt_correo_luis($destino, '🔁 Retomar · Recordatorio corregido: ' . $quien, $html)) {
+	if (!at_rt_correo_luis($destino, '🔁 Retomar · Recordatorio corregido: ' . $quien, $html, $cfg['copia'])) {
 		error_log('Retomar: no se pudo enviar el aviso del recordatorio corregido #' . $id . '.');
 		return false;
 	}

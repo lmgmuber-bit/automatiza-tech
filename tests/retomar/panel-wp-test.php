@@ -11,7 +11,7 @@ $ids = []; $props = []; $users = []; $crms = []; $emails = [];
 $tag = 'rt-panel-' . strtolower(wp_generate_password(9, false, false));
 $GLOBALS['rt_pn_prefijo'] = $tag;
 $originales = [];
-foreach (['at_rt_resumen_dia', 'at_rt_resumen_hora', 'at_rt_resumen_destino', 'at_rt_resumen_semana', 'at_rt_resumen_desde', 'at_rt_wa_automatico'] as $o) { $originales[$o] = get_option($o, null); }
+foreach (['at_rt_resumen_dia', 'at_rt_resumen_hora', 'at_rt_resumen_destino', 'at_rt_resumen_copia', 'at_rt_resumen_semana', 'at_rt_resumen_desde', 'at_rt_wa_automatico'] as $o) { $originales[$o] = get_option($o, null); }
 register_shutdown_function(static function () use (&$ids, &$props, &$users, &$crms, &$emails, $originales, $tag, $wpdb) {
 	foreach ($originales as $o => $v) { $v === null ? delete_option($o) : update_option($o, $v); }
 	$wpdb->query($wpdb->prepare("DELETE FROM {$wpdb->prefix}at_retomar WHERE email LIKE %s", $wpdb->esc_like($tag) . '%'));
@@ -238,7 +238,7 @@ ok(is_wp_error($r) && str_contains($r->get_error_message(), 'rechazada') && at_r
 // ---- Configuración del resumen semanal ----
 $destino = $tag . '-luis@example.com';
 $r = panel_action('config', 0, ['dia' => '3', 'hora' => '08:30', 'destino' => $destino]);
-ok(!is_wp_error($r) && get_option('at_rt_resumen_dia') === '3' && get_option('at_rt_resumen_hora') === '08:30' && get_option('at_rt_resumen_destino') === $destino && at_rt_config() === ['dia' => 3, 'hora' => '08:30', 'destino' => $destino], 'config guarda día, hora y destino');
+ok(!is_wp_error($r) && get_option('at_rt_resumen_dia') === '3' && get_option('at_rt_resumen_hora') === '08:30' && get_option('at_rt_resumen_destino') === $destino && at_rt_config() === ['dia' => 3, 'hora' => '08:30', 'destino' => $destino, 'copia' => ''], 'config guarda día, hora y destino (sin copia)');
 foreach ([['dia' => '3', 'hora' => '25:00', 'destino' => $destino], ['dia' => '3', 'hora' => '8:30', 'destino' => $destino], ['dia' => '8', 'hora' => '08:30', 'destino' => $destino], ['dia' => '0', 'hora' => '08:30', 'destino' => $destino], ['dia' => '3', 'hora' => '09:00', 'destino' => 'no-es-correo']] as $mala) {
 	$r = panel_action('config', 0, $mala);
 	ok(is_wp_error($r) && get_option('at_rt_resumen_dia') === '3' && get_option('at_rt_resumen_hora') === '08:30' && get_option('at_rt_resumen_destino') === $destino, 'config con ' . json_encode($mala) . ': error y no cambia nada');
@@ -251,6 +251,20 @@ ok(!is_wp_error($r) && at_rt_config()['dia'] === 7 && at_rt_config()['hora'] ===
 $r = panel_action('config', 0, ['dia' => '1', 'hora' => '09:00', 'destino' => '']);
 ok(!is_wp_error($r) && get_option('at_rt_resumen_destino') === '' && at_rt_config()['destino'] === at_cc_correo_avisos(), 'destino vacío vuelve al correo de avisos');
 panel_action('config', 0, ['dia' => '1', 'hora' => '09:00', 'destino' => $destino]);
+// Copia (CC) opcional: vacía se permite; inválida o demasiado larga da error y no cambia nada.
+$copia = $tag . '-copia@example.com';
+$r = panel_action('config', 0, ['dia' => '1', 'hora' => '09:00', 'destino' => $destino, 'copia' => $copia]);
+ok(!is_wp_error($r) && get_option('at_rt_resumen_copia') === $copia && at_rt_config()['copia'] === $copia, 'config guarda la copia');
+foreach (['no-es-correo', str_repeat('a', 185) . '@example.com'] as $mala_copia) {
+	$r = panel_action('config', 0, ['dia' => '2', 'hora' => '10:00', 'destino' => $destino, 'copia' => $mala_copia]);
+	ok(is_wp_error($r) && $r->get_error_code() === 'copia' && get_option('at_rt_resumen_copia') === $copia && get_option('at_rt_resumen_dia') === '1' && get_option('at_rt_resumen_hora') === '09:00', 'copia inválida: error y no cambia nada');
+}
+$r = panel_action('config', 0, ['dia' => '1', 'hora' => '09:00', 'destino' => $destino, 'copia' => '']);
+ok(!is_wp_error($r) && get_option('at_rt_resumen_copia') === '' && at_rt_config()['copia'] === '', 'copia vacía se permite y la quita');
+panel_action('config', 0, ['dia' => '1', 'hora' => '09:00', 'destino' => $destino, 'copia' => $copia]);
+$pagina = rt_pn_pagina([]);
+ok(str_contains($pagina, 'Copia (opcional)') && str_contains($pagina, 'name="copia"') && str_contains($pagina, 'value="' . esc_attr($copia) . '"'), 'el formulario de configuración muestra el campo «Copia (opcional)» con su valor');
+panel_action('config', 0, ['dia' => '1', 'hora' => '09:00', 'destino' => $destino, 'copia' => '']);
 
 // ---- «Enviarme el resumen ahora» ----
 $sid = rt_pn_lista(['nombre' => '[PRUEBA] Para el resumen']);

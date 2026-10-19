@@ -73,9 +73,10 @@ function at_rt_crear(array $campos): int {
 
 /**
  * Configuración del resumen semanal: día ISO-8601 (1 = lunes ... 7 = domingo), hora HH:MM de Chile y
- * correo de destino. Un valor fuera de rango vuelve al defecto: lunes, 09:00 y el correo de avisos. El domingo con una
+ * correo de destino, más una copia (CC) opcional. Un valor fuera de rango vuelve al defecto: lunes, 09:00 y el correo de avisos. El domingo con una
  * hora posterior a su última pasada del reloj (at_rt_resumen_hora_valida) tampoco sirve: el resumen nunca saldría, así
- * que esa combinación vuelve entera al defecto (lunes 09:00).
+ * que esa combinación vuelve entera al defecto (lunes 09:00). La copia es '' salvo que sea un correo válido de hasta 190
+ * caracteres y distinto del destino efectivo (sin distinguir mayúsculas).
  */
 function at_rt_config(): array {
 	$dia = trim((string) get_option('at_rt_resumen_dia', '1'));
@@ -84,10 +85,12 @@ function at_rt_config(): array {
 	if (!is_email($destino)) {
 		$destino = function_exists('at_cc_correo_avisos') ? at_cc_correo_avisos() : (string) get_option('admin_email');
 	}
+	$copia = trim((string) get_option('at_rt_resumen_copia', ''));
+	if (strlen($copia) > 190 || !is_email($copia) || strtolower($copia) === strtolower($destino)) { $copia = ''; }
 	$dia = preg_match('/^[1-7]$/D', $dia) ? (int) $dia : 1;
 	$hora = preg_match('/^([01]\d|2[0-3]):[0-5]\d$/D', $hora) ? $hora : '09:00';
 	if (!at_rt_resumen_hora_valida($dia, $hora)) { [$dia, $hora] = [1, '09:00']; }
-	return ['dia' => $dia, 'hora' => $hora, 'destino' => $destino];
+	return ['dia' => $dia, 'hora' => $hora, 'destino' => $destino, 'copia' => $copia];
 }
 
 function at_rt_obtener(int $id): ?array {

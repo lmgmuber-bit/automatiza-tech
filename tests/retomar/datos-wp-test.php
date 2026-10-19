@@ -109,7 +109,7 @@ ok(at_rt_contexto_parada(at_rt_obtener($ajeno))['crm_tipo'] === '' && at_rt_cont
 
 // Configuración del resumen semanal: valores fuera de rango vuelven al defecto.
 $previas = [];
-foreach (['at_rt_resumen_dia', 'at_rt_resumen_hora', 'at_rt_resumen_destino'] as $opcion) {
+foreach (['at_rt_resumen_dia', 'at_rt_resumen_hora', 'at_rt_resumen_destino', 'at_rt_resumen_copia'] as $opcion) {
 	$previas[$opcion] = get_option($opcion, null);
 	delete_option($opcion);
 }
@@ -118,7 +118,7 @@ register_shutdown_function(static function () use ($previas) {
 		if ($valor === null) { delete_option($opcion); } else { update_option($opcion, $valor, false); }
 	}
 });
-ok(at_rt_config() === ['dia' => 1, 'hora' => '09:00', 'destino' => at_cc_correo_avisos()], 'config sin opciones devuelve lunes 09:00 y el correo de avisos');
+ok(at_rt_config() === ['dia' => 1, 'hora' => '09:00', 'destino' => at_cc_correo_avisos(), 'copia' => ''], 'config sin opciones devuelve lunes 09:00, el correo de avisos y sin copia');
 foreach (['9' => 1, '0' => 1, '8' => 1, 'x' => 1, '1abc' => 1, '' => 1, '2' => 2, '7' => 7] as $dia => $esperado) {
 	update_option('at_rt_resumen_dia', (string) $dia, false);
 	ok(at_rt_config()['dia'] === $esperado, "día '{$dia}' da {$esperado}");
@@ -144,4 +144,19 @@ update_option('at_rt_resumen_destino', '  rt-destino@example.com ', false);
 ok(at_rt_config()['destino'] === 'rt-destino@example.com', 'destino válido se usa, sin espacios');
 update_option('at_rt_resumen_destino', '', false);
 ok(at_rt_config()['destino'] === at_cc_correo_avisos(), 'destino vacío usa el correo de avisos');
+// Copia (CC) opcional: un correo válido de hasta 190 caracteres y distinto del destino; si no, ''.
+update_option('at_rt_resumen_destino', 'rt-destino@example.com', false);
+update_option('at_rt_resumen_copia', '  rt-copia@example.com ', false);
+ok(at_rt_config()['copia'] === 'rt-copia@example.com', 'copia válida se usa, sin espacios');
+update_option('at_rt_resumen_copia', 'esto no es un correo', false);
+ok(at_rt_config()['copia'] === '', 'copia inválida queda vacía');
+update_option('at_rt_resumen_copia', str_repeat('a', 180) . '@example.com', false);
+ok(at_rt_config()['copia'] === '', 'copia de más de 190 caracteres queda vacía');
+update_option('at_rt_resumen_copia', 'RT-Destino@Example.com', false);
+ok(at_rt_config()['copia'] === '', 'copia igual al destino (sin mayúsculas) queda vacía');
+update_option('at_rt_resumen_destino', '', false);
+update_option('at_rt_resumen_copia', strtolower(at_cc_correo_avisos()), false);
+ok(at_rt_config()['copia'] === '', 'copia igual al destino por defecto (correo de avisos) queda vacía');
+update_option('at_rt_resumen_copia', '', false);
+ok(at_rt_config()['copia'] === '', 'copia vacía da vacío');
 fin();

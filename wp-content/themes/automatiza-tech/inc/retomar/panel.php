@@ -104,14 +104,15 @@ function at_rt_panel_ejecutar(string $accion, array $p) {
 }
 /** Días de la semana (ISO-8601, 1 = lunes) para el resumen semanal. */
 function at_rt_panel_dias(): array { return [1=>'lunes',2=>'martes',3=>'miércoles',4=>'jueves',5=>'viernes',6=>'sábado',7=>'domingo']; }
-/** Día, hora (de Chile) y destino del correo semanal. Valida todo antes de guardar: con un dato malo no cambia nada. */
+/** Día, hora (de Chile), destino y copia (CC, opcional) del correo semanal. Valida todo antes de guardar: con un dato malo no cambia nada. */
 function at_rt_panel_config(array $p) {
-    $dia = trim((string)($p['dia'] ?? '')); $hora = trim((string)($p['hora'] ?? '')); $destino = trim((string)($p['destino'] ?? ''));
+    $dia = trim((string)($p['dia'] ?? '')); $hora = trim((string)($p['hora'] ?? '')); $destino = trim((string)($p['destino'] ?? '')); $copia = trim((string)($p['copia'] ?? ''));
     if (!preg_match('/^[1-7]$/D', $dia)) { return new WP_Error('dia','Elige un día de la semana.'); }
     if (!preg_match('/^([01]\d|2[0-3]):[0-5]\d$/D', $hora)) { return new WP_Error('hora','Escribe la hora como HH:MM, entre 00:00 y 23:59 (por ejemplo 09:00).'); }
     if (!at_rt_resumen_hora_valida((int)$dia, $hora)) { return new WP_Error('hora','El domingo el resumen puede salir a más tardar a las ' . sprintf('23:%02d', at_rt_minuto_reloj()) . ', la última pasada del reloj de ese día: más tarde ya es otra semana y nunca saldría. Elige una hora más temprana u otro día.'); }
     if ($destino !== '' && (strlen($destino) > 190 || !is_email($destino))) { return new WP_Error('destino','El correo de destino no es válido (máximo 190 caracteres). Déjalo vacío para usar el de avisos del equipo.'); }
-    at_rt_resumen_marcar(['at_rt_resumen_dia'=>$dia,'at_rt_resumen_hora'=>$hora,'at_rt_resumen_destino'=>sanitize_email($destino)]);
+    if ($copia !== '' && (strlen($copia) > 190 || !is_email($copia))) { return new WP_Error('copia','El correo de copia no es válido (máximo 190 caracteres). Déjalo vacío si no quieres copia.'); }
+    at_rt_resumen_marcar(['at_rt_resumen_dia'=>$dia,'at_rt_resumen_hora'=>$hora,'at_rt_resumen_destino'=>sanitize_email($destino),'at_rt_resumen_copia'=>sanitize_email($copia)]);
     return ['id'=>0,'mensaje'=>'Configuración guardada. El resumen sale los ' . at_rt_panel_dias()[(int)$dia] . ' a las ' . $hora . ' (hora de Chile).'];
 }
 /** «Enviarme el resumen ahora»: arma y manda el resumen de la semana aunque ya haya salido. */
@@ -338,7 +339,8 @@ function at_rt_panel(): void {
     echo '<div class="rt-grid"><p><label for="rt-dia">Día de envío</label><select id="rt-dia" name="dia">';
     foreach (at_rt_panel_dias() as $n=>$nombre) { echo '<option value="'.$n.'" '.selected($cfg['dia'],$n,false).'>'.esc_html(ucfirst($nombre)).'</option>'; }
     echo '</select></p><p><label for="rt-hora">Hora de envío (Santiago)</label><input id="rt-hora" type="time" name="hora" value="'.esc_attr($cfg['hora']).'" required></p></div>';
-    echo '<p><label for="rt-destino">Correo de destino (vacío = el de avisos del equipo)</label><input id="rt-destino" type="email" name="destino" maxlength="190" value="'.esc_attr((string)get_option('at_rt_resumen_destino','')).'" placeholder="'.esc_attr($cfg['destino']).'"></p><button class="button">Guardar configuración</button></form>';
+    echo '<p><label for="rt-destino">Correo de destino (vacío = el de avisos del equipo)</label><input id="rt-destino" type="email" name="destino" maxlength="190" value="'.esc_attr((string)get_option('at_rt_resumen_destino','')).'" placeholder="'.esc_attr($cfg['destino']).'"></p>';
+    echo '<p><label for="rt-copia">Copia (opcional)</label><input id="rt-copia" type="email" name="copia" maxlength="190" value="'.esc_attr((string)get_option('at_rt_resumen_copia','')).'"></p><button class="button">Guardar configuración</button></form>';
     at_rt_panel_form_inicio('resumen',0); echo '<button class="button button-primary">📬 Enviarme el resumen ahora</button></form></div>';
     echo '<div class="rt-tabla"><table class="widefat striped"><caption class="screen-reader-text">Seguimientos de prospectos</caption><thead><tr><th>Prospecto</th><th>Estado</th><th>Revisión</th><th>Envíos / máximo</th><th>Próximo</th><th>Último resultado</th></tr></thead><tbody>';
     foreach (at_rt_lista() as $f) {

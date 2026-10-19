@@ -1,11 +1,13 @@
 <?php
 require __DIR__ . '/wp-bootstrap.php';
-exigir('at_rt_armar_render', 'at_rt_pedir_render', 'at_rt_rest_vista');
+exigir('at_rt_armar_render', 'at_rt_pedir_render', 'at_rt_rest_vista', 'at_rt_huella_render', 'at_rt_url_foto_valida');
 if (!defined('AT_REST_SECRET')) { define('AT_REST_SECRET', bin2hex(random_bytes(24))); }
 global $wpdb;
 $ids = [];
-register_shutdown_function(static function () use (&$ids, $wpdb) {
+$props = [];
+register_shutdown_function(static function () use (&$ids, &$props, $wpdb) {
 	foreach ($ids as $id) { $wpdb->delete($wpdb->prefix . 'at_retomar', ['id' => $id]); }
+	foreach ($props as $id) { $wpdb->delete($wpdb->prefix . 'automatiza_propuestas', ['id' => $id]); }
 });
 foreach (['Uno', 'Otro'] as $nombre) {
 	$ids[] = at_rt_crear(['nombre' => '[PRUEBA] ' . $nombre, 'negocio' => '[PRUEBA] Negocio', 'email' => 'render@example.com', 'telefono' => '+56900000000', 'demo_urls' => ['https://example.com/demo'], 'textos' => ['quedamos' => '[PRUEBA] Quedamos', 'proponemos' => '[PRUEBA] Proponemos', 'partir' => '[PRUEBA] Prioridades']]);
@@ -31,7 +33,7 @@ function rt_callback(int $id, array $body, bool $auth = true) {
 	return rest_do_request($r);
 }
 $generacion = str_repeat('a', 16);
-at_rt_guardar($ids[0], ['render' => ['generacion' => $generacion, 'huella' => hash('sha256', wp_json_encode($p)), 'uid' => $s['token'] . '-' . $generacion . '-retomar', 'estado' => 'pendiente']]);
+at_rt_guardar($ids[0], ['render' => ['generacion' => $generacion, 'huella' => at_rt_huella_render($s), 'uid' => $s['token'] . '-' . $generacion . '-retomar', 'estado' => 'pendiente']]);
 $base = 'https://' . at_pt_host_renderer() . '/p/' . $s['token'] . '-' . $generacion . '-retomar/';
 ok(rt_callback($ids[0], ['ok' => true], false)->get_status() === 401, 'callback sin secreto 401');
 ok(rt_callback($ids[0], ['ok' => true, 'view_url' => $base, 'pdf_url' => $base . 'presentation.pdf'])->get_status() === 200 && at_rt_obtener($ids[0])['render']['estado'] === 'listo' && at_rt_obtener($ids[0])['render']['view_url'] === $base, 'callback listo conserva vista propia');
@@ -88,4 +90,183 @@ at_rt_guardar($ids[0], ['textos' => ['quedamos' => str_repeat('a', 601)]]);
 $capturado = null;
 ok(at_rt_pedir_render($ids[0]) !== '' && $capturado === null && at_rt_obtener($ids[0])['render']['estado'] === 'error', 'error claro por límite antes de llamar n8n');
 ok(is_wp_error(wp_remote_get('https://example.com/no-permitido')), 'HTTP externo sigue bloqueado por defecto');
+// ---- Fase 2: encargos de foto, fotos reutilizadas, recomendación y propuesta solo si es v3 ----
+function rt_url_foto(array $seg, string $generacion, string $archivo = 'portada.jpg', ?string $host = null): string {
+	return 'https://' . ($host ?? at_pt_host_renderer()) . '/p/' . $seg['token'] . '-' . $generacion . '-retomar/img/' . $archivo;
+}
+function rt_semilla_propuesta(array $extra = []): array {
+	global $wpdb, $props;
+	$uid = substr(md5(uniqid('rt', true)), 0, 12);
+	$wpdb->insert($wpdb->prefix . 'automatiza_propuestas', $extra + ['client_email' => 'render-prop@example.com', 'client_name' => '[PRUEBA]', 'company_name' => '[PRUEBA]', 'unique_link_id' => $uid, 'status' => 'sent', 'gamma_prompt_text' => '', 'system_prompt_text' => '', 'created_at' => current_time('mysql')]);
+	$props[] = (int) $wpdb->insert_id;
+	return [(int) $wpdb->insert_id, $uid];
+}
+$prompt_p = '[PRUEBA] Oficina luminosa con una mesa de trabajo ordenada, sin texto ni letreros';
+$prompt_c = '[PRUEBA] Mesa de reunión al atardecer con dos tazas de café, sin texto ni etiquetas';
+$ids[] = $enc = at_rt_crear(['nombre' => '[PRUEBA] Encargos', 'negocio' => '[PRUEBA] Negocio', 'email' => 'render-fotos@example.com', 'telefono' => '+56900000001', 'demo_urls' => ['https://example.com/demo'], 'textos' => ['quedamos' => '[PRUEBA] Quedamos', 'proponemos' => '[PRUEBA] Proponemos', 'partir' => '[PRUEBA] Prioridades', 'recomendacion' => '[PRUEBA] Recomendamos partir por lo más urgente.']]);
+at_rt_guardar($enc, ['redaccion' => ['estado' => 'lista', 'origen' => 'ia', 'image_briefs' => [['slide' => 'portada', 'prompt' => $prompt_p], ['slide' => 'cierre', 'prompt' => $prompt_c]]]]);
+$f = at_rt_obtener($enc);
+$p1 = at_rt_armar_render($f);
+ok(array_column($p1['image_briefs'], 'prompt', 'slide') === ['portada' => $prompt_p, 'cierre' => $prompt_c], 'encargos nuevos van en image_briefs');
+ok(!array_key_exists('images', $p1) && !property_exists(json_decode(wp_json_encode($p1)), 'images'), 'sin fotos guardadas no viaja images (el renderer exige un objeto, no una lista)');
+ok($p1['recomendacion'] === '[PRUEBA] Recomendamos partir por lo más urgente.', 'la recomendación viaja al renderer');
+ok(at_rt_armar_render($s)['recomendacion'] === '' && at_rt_armar_render($s)['image_briefs'] === [], 'sin recomendación ni encargos viajan vacíos');
+
+$url_p = rt_url_foto($f, str_repeat('c', 16));
+at_rt_guardar($enc, ['fotos' => ['portada' => ['url' => $url_p, 'hash' => hash('sha256', $prompt_p)]]]);
+$f2 = at_rt_obtener($enc);
+$p2 = at_rt_armar_render($f2);
+ok($p2['images'] === ['portada' => $url_p] && array_column($p2['image_briefs'], 'slide') === ['cierre'], 'encargo igual al guardado va en images con su URL y no en image_briefs');
+ok(is_object(json_decode(wp_json_encode($p2))->images), 'images viaja como objeto JSON');
+ok(strpos(wp_json_encode($p2), at_pt_host_renderer()) !== false, 'la URL del renderer en images no dispara el chequeo D8 del payload');
+ok(at_rt_huella_render($f2) === at_rt_huella_render($f), 'reutilizar fotos no cambia la huella');
+$f3 = $f; $f3['fotos'] = ['portada' => ['url' => rt_url_foto($f, str_repeat('d', 16), 'otra.png'), 'hash' => hash('sha256', $prompt_p)], 'cierre' => ['url' => rt_url_foto($f, str_repeat('d', 16), 'cierre.webp'), 'hash' => hash('sha256', $prompt_c)]];
+ok(at_rt_huella_render($f3) === at_rt_huella_render($f) && at_rt_armar_render($f3)['image_briefs'] === [], 'otras URL de fotos con el mismo encargo dejan la misma huella y nada que generar');
+$cambia = $f2; $cambia['redaccion']['image_briefs'][0]['prompt'] = $prompt_p . ' más cálida';
+$pc = at_rt_armar_render($cambia);
+ok(array_column($pc['image_briefs'], 'slide') === ['portada', 'cierre'] && !isset($pc['images']), 'encargo cambiado (hash distinto) se vuelve a pedir y no se reutiliza la foto vieja');
+ok(at_rt_huella_render($cambia) !== at_rt_huella_render($f2), 'cambiar un encargo cambia la huella');
+$cambia = $f2; $cambia['textos']['recomendacion'] = '[PRUEBA] Otra recomendación.';
+ok(at_rt_huella_render($cambia) !== at_rt_huella_render($f2), 'cambiar la recomendación cambia la huella');
+$mixto = $f2; $mixto['fotos']['cierre'] = ['url' => rt_url_foto($f, str_repeat('c', 16), 'cierre.jpg'), 'hash' => hash('sha256', 'encargo viejo')];
+$pm = at_rt_armar_render($mixto);
+ok(array_keys($pm['images']) === ['portada'] && array_column($pm['image_briefs'], 'slide') === ['cierre'], 'foto con hash de otro encargo no se reutiliza');
+foreach ([
+	'foto de otro seguimiento' => ['url' => rt_url_foto(at_rt_obtener($ids[1]), str_repeat('c', 16)), 'hash' => hash('sha256', $prompt_p)],
+	'foto de otro host' => ['url' => rt_url_foto($f, str_repeat('c', 16), 'portada.jpg', 'example.com'), 'hash' => hash('sha256', $prompt_p)],
+	'foto sin hash' => ['url' => $url_p],
+	'foto con dato corrupto' => 'no es un arreglo',
+] as $caso => $foto) {
+	$malo = $f; $malo['fotos'] = ['portada' => $foto];
+	$pmalo = at_rt_armar_render($malo);
+	ok(!isset($pmalo['images']) && array_column($pmalo['image_briefs'], 'slide') === ['portada', 'cierre'], "{$caso}: no se reutiliza y el encargo se vuelve a pedir");
+}
+foreach ([
+	'lámina desconocida' => [['slide' => 'final', 'prompt' => 'x']],
+	'lámina repetida' => [['slide' => 'portada', 'prompt' => 'x'], ['slide' => 'portada', 'prompt' => 'y']],
+	'prompt vacío' => [['slide' => 'portada', 'prompt' => '  ']],
+	'prompt de más de 1200' => [['slide' => 'portada', 'prompt' => str_repeat('a', 1201)]],
+	'más de tres encargos' => [['slide' => 'portada', 'prompt' => 'a'], ['slide' => 'cierre', 'prompt' => 'b'], ['slide' => 'demo', 'prompt' => 'c'], ['slide' => 'demo', 'prompt' => 'd']],
+	'encargo que no es un objeto' => ['portada'],
+] as $caso => $briefs) {
+	$malo = $f; $malo['redaccion']['image_briefs'] = $briefs;
+	try { at_rt_armar_render($malo); ok(false, "rechaza encargos inválidos: {$caso}"); }
+	catch (InvalidArgumentException $e) { ok(true, "rechaza encargos inválidos: {$caso}"); }
+}
+foreach (['recomendación de más de 300' => str_repeat('á', 301), 'recomendación de más de 3 líneas' => "a\nb\nc\nd"] as $caso => $texto) {
+	$malo = $f; $malo['textos']['recomendacion'] = $texto;
+	try { at_rt_armar_render($malo); ok(false, "rechaza {$caso}"); }
+	catch (InvalidArgumentException $e) { ok(true, "rechaza {$caso}"); }
+}
+$borde = $f; $borde['textos']['recomendacion'] = str_repeat('á', 300);
+ok(at_rt_armar_render($borde)['recomendacion'] === str_repeat('á', 300), 'recomendación de 300 caracteres pasa');
+$invalido = $f; $invalido['demo_urls'] = ['https://oculto.easypanel.host/demo'];
+try { at_rt_armar_render($invalido); ok(false, 'con fotos en images, easypanel en demo_urls se sigue rechazando'); }
+catch (InvalidArgumentException $e) { ok(true, 'con fotos en images, easypanel en demo_urls se sigue rechazando'); }
+$invalido = $f2; $invalido['demo_urls'] = ['https://oculto.easypanel.host/demo'];
+try { at_rt_armar_render($invalido); ok(false, 'con fotos en images, easypanel en demo_urls se sigue rechazando'); }
+catch (InvalidArgumentException $e) { ok(true, 'con fotos en images, easypanel en demo_urls se sigue rechazando'); }
+
+// La propuesta vinculada solo se enlaza si es v3; la URL externa del seguimiento siempre se respeta.
+[$prop_null, $uid_null] = rt_semilla_propuesta();
+$wpdb->update($wpdb->prefix . 'automatiza_propuestas', ['flujo' => null], ['id' => $prop_null]);
+[$prop_old, $uid_old] = rt_semilla_propuesta(['flujo' => 'v2']);
+[$prop_v3, $uid_v3] = rt_semilla_propuesta(['flujo' => 'v3']);
+$https_local = static fn($url) => preg_replace('~^http:~', 'https:', $url); // el sitio local va por http; el payload exige https
+add_filter('home_url', $https_local);
+$con = fn(array $extra) => at_rt_armar_render(array_merge($f2, $extra))['propuesta_url'];
+ok($con(['propuesta_id' => $prop_null]) === '', 'propuesta vinculada con flujo NULL: sin propuesta_url');
+ok($con(['propuesta_id' => $prop_old]) === '', 'propuesta vinculada con otro flujo: sin propuesta_url');
+ok($con(['propuesta_id' => $prop_v3]) === home_url('/ver-presentacion.php?id=' . rawurlencode($uid_v3)), 'propuesta v3: ver-presentacion.php?id=...');
+ok($con(['propuesta_id' => 0]) === '' && $con(['propuesta_id' => PHP_INT_MAX]) === '', 'sin propuesta o inexistente: sin propuesta_url');
+ok($con(['propuesta_id' => $prop_null, 'propuesta_url' => 'https://example.com/mi-propuesta']) === 'https://example.com/mi-propuesta', 'propuesta externa con propuesta vinculada no v3: se enlaza la externa');
+ok($con(['propuesta_id' => $prop_v3, 'propuesta_url' => 'https://example.com/mi-propuesta']) === 'https://example.com/mi-propuesta', 'la propuesta externa del seguimiento gana sobre la v3');
+ok(strpos(wp_json_encode(at_rt_armar_render(array_merge($f2, ['propuesta_id' => $prop_null]))), $uid_null) === false && strpos(wp_json_encode(at_rt_armar_render(array_merge($f2, ['propuesta_id' => $prop_old]))), $uid_old) === false, 'el código de una propuesta no v3 no aparece en el payload');
+remove_filter('home_url', $https_local);
+
+// Callback con fotos: pedido real contra el flujo simulado, luego respuestas del renderer.
+function rt_aviso_registrado(): array { return $GLOBALS['rt_avisos']; }
+$GLOBALS['rt_avisos'] = [];
+$GLOBALS['rt_aviso_simulado'] = false;
+if (!function_exists('at_rt_aviso_listo')) {
+	$GLOBALS['rt_aviso_simulado'] = true;
+	function at_rt_aviso_listo(int $id) { $GLOBALS['rt_avisos'][] = $id; }
+}
+$ids[] = $cb = at_rt_crear(['nombre' => '[PRUEBA] Callback fotos', 'negocio' => '[PRUEBA] Negocio', 'email' => 'render-cb@example.com', 'telefono' => '+56900000002', 'demo_urls' => ['https://example.com/demo'], 'textos' => ['quedamos' => '[PRUEBA] Quedamos', 'proponemos' => '[PRUEBA] Proponemos', 'partir' => '[PRUEBA] Prioridades']]);
+at_rt_guardar($cb, ['redaccion' => ['estado' => 'lista', 'image_briefs' => [['slide' => 'portada', 'prompt' => $prompt_p], ['slide' => 'cierre', 'prompt' => $prompt_c]]], 'aprobacion' => ['estado' => 'cambios', 'n' => 1]]);
+$capturado = null;
+ok(at_rt_pedir_render($cb) === '' && count($capturado['render']['image_briefs']) === 2 && !isset($capturado['render']['images']), 'el pedido a n8n lleva los dos encargos y ninguna foto');
+$pedido1 = $capturado;
+$render1 = at_rt_obtener($cb)['render'];
+ok($render1['huella'] === at_rt_huella_render(at_rt_obtener($cb)), 'la huella guardada del pedido cubre textos y encargos');
+$seg_cb = at_rt_obtener($cb);
+$gen1 = $pedido1['generacion'];
+$vista1 = 'https://' . at_pt_host_renderer() . '/p/' . $pedido1['render']['unique_id'] . '/';
+$ok_base = ['ok' => true, 'view_url' => $vista1];
+$otro = at_rt_obtener($ids[1]);
+$malos = [
+	'URL de otro seguimiento' => ['portada' => rt_url_foto($otro, $gen1)],
+	'URL de otro host' => ['portada' => rt_url_foto($seg_cb, $gen1, 'portada.jpg', 'example.com')],
+	'URL http' => ['portada' => str_replace('https:', 'http:', rt_url_foto($seg_cb, $gen1))],
+	'URL de una generación anterior' => ['portada' => rt_url_foto($seg_cb, str_repeat('e', 16))],
+	'URL sin generación' => ['portada' => 'https://' . at_pt_host_renderer() . '/p/' . $seg_cb['token'] . '-retomar/img/portada.jpg'],
+	'extensión no permitida' => ['portada' => rt_url_foto($seg_cb, $gen1, 'portada.svg')],
+	'subcarpeta' => ['portada' => rt_url_foto($seg_cb, $gen1, 'a/portada.jpg')],
+	'ruta con ..' => ['portada' => rt_url_foto($seg_cb, $gen1, '../portada.jpg')],
+	'parámetros en la URL' => ['portada' => rt_url_foto($seg_cb, $gen1) . '?x=1'],
+	'una buena y una ajena' => ['portada' => rt_url_foto($seg_cb, $gen1), 'cierre' => rt_url_foto($otro, $gen1, 'cierre.jpg')],
+	'lámina desconocida' => ['final' => rt_url_foto($seg_cb, $gen1, 'final.jpg')],
+	'lámina sin encargo vigente' => ['demo' => rt_url_foto($seg_cb, $gen1, 'demo.jpg')],
+	'URL que no es texto' => ['portada' => ['x']],
+	'fotos que no es un objeto' => 'portada',
+	'fotos como lista' => [rt_url_foto($seg_cb, $gen1)],
+];
+foreach ($malos as $caso => $fotos) {
+	ok(rt_callback($cb, $ok_base + ['fotos' => $fotos])->get_status() === 422, "callback con fotos inválidas: {$caso} da 422");
+}
+$despues = at_rt_obtener($cb);
+ok($despues['fotos'] === [] && $despues['render']['estado'] === 'pendiente' && $despues['render'] === $render1, 'los 422 no guardan fotos ni tocan el render');
+ok($GLOBALS['rt_avisos'] === [], 'sin render listo no se avisa');
+ok(rt_callback($cb, ['ok' => false, 'nota' => '[PRUEBA] Falló', 'fotos' => ['portada' => rt_url_foto($seg_cb, $gen1)]])->get_status() === 200 && at_rt_obtener($cb)['render']['estado'] === 'error' && $GLOBALS['rt_avisos'] === [], 'un fallo del render no avisa');
+ok(array_keys(at_rt_obtener($cb)['fotos']) === ['portada'], 'una foto válida ya pagada se conserva aunque el render haya fallado');
+at_rt_guardar($cb, ['render' => $render1, 'fotos' => []]);
+ok(rt_callback($cb, $ok_base + ['fotos' => ['portada' => rt_url_foto($seg_cb, $gen1), 'cierre' => rt_url_foto($seg_cb, $gen1, 'cierre.webp')]])->get_status() === 200, 'callback con fotos del seguimiento y la generación vigente: 200');
+$g1 = at_rt_obtener($cb);
+ok($g1['fotos'] === ['portada' => ['url' => rt_url_foto($seg_cb, $gen1), 'hash' => hash('sha256', $prompt_p)], 'cierre' => ['url' => rt_url_foto($seg_cb, $gen1, 'cierre.webp'), 'hash' => hash('sha256', $prompt_c)]], 'cada foto se guarda con url y hash de su encargo vigente');
+ok($g1['render']['estado'] === 'listo' && $g1['render']['view_url'] === $vista1, 'el render queda listo');
+if ($GLOBALS['rt_aviso_simulado']) {
+	ok($GLOBALS['rt_avisos'] === [$cb], 'render listo tras «Pedir cambios»: se avisa una vez con el id del seguimiento');
+	ok(rt_callback($cb, $ok_base + ['fotos' => ['portada' => rt_url_foto($seg_cb, $gen1)]])->get_status() === 200 && $GLOBALS['rt_avisos'] === [$cb], 'repetir el mismo callback no vuelve a avisar');
+}
+
+// Segundo pedido sin cambios: las fotos viajan en images, no hay nada que generar y la huella es la misma.
+$huella1 = $render1['huella'];
+$capturado = null;
+ok(at_rt_pedir_render($cb) === '' && array_keys($capturado['render']['images']) === ['portada', 'cierre'] && $capturado['render']['image_briefs'] === [], 'segundo pedido: las fotos viajan en images y no hay encargos');
+ok($capturado['render']['images']['portada'] === rt_url_foto($seg_cb, $gen1) && at_rt_obtener($cb)['render']['huella'] === $huella1, 'segundo pedido: misma huella con las fotos reutilizadas');
+$pedido2 = $capturado;
+// El renderer devuelve solo la portada (la del cierre se perdió): la foto del cierre guardada no se borra.
+$nueva_p = rt_url_foto($seg_cb, $pedido2['generacion']);
+ok(rt_callback($cb, ['ok' => true, 'view_url' => 'https://' . at_pt_host_renderer() . '/p/' . $pedido2['render']['unique_id'] . '/', 'fotos' => ['portada' => $nueva_p]])->get_status() === 200, 'callback que devuelve solo una foto: 200');
+$g2 = at_rt_obtener($cb)['fotos'];
+ok($g2['portada']['url'] === $nueva_p && $g2['cierre'] === $g1['fotos']['cierre'], 'la lámina que falta en el callback conserva la foto guardada');
+ok(rt_callback($cb, ['ok' => true, 'view_url' => 'https://' . at_pt_host_renderer() . '/p/' . $pedido2['render']['unique_id'] . '/'])->get_status() === 200 && at_rt_obtener($cb)['fotos'] === $g2, 'callback sin fotos no toca las guardadas');
+// Cambiar un solo encargo: solo ese se vuelve a pedir y la huella cambia.
+at_rt_guardar($cb, ['redaccion' => ['estado' => 'lista', 'image_briefs' => [['slide' => 'portada', 'prompt' => $prompt_p], ['slide' => 'cierre', 'prompt' => $prompt_c . ' con luz cálida']]]]);
+$capturado = null;
+ok(at_rt_pedir_render($cb) === '' && array_keys($capturado['render']['images']) === ['portada'] && array_column($capturado['render']['image_briefs'], 'slide') === ['cierre'], 'encargo cambiado: la portada se reutiliza y solo el cierre se vuelve a pedir');
+ok(at_rt_obtener($cb)['render']['huella'] !== $huella1, 'encargo cambiado: otra huella');
+$pedido3 = $capturado;
+ok(rt_callback($cb, ['ok' => true, 'view_url' => 'https://' . at_pt_host_renderer() . '/p/' . $pedido3['render']['unique_id'] . '/', 'fotos' => ['cierre' => rt_url_foto($seg_cb, $pedido3['generacion'], 'cierre.png')]])->get_status() === 200, 'callback con la foto del encargo nuevo');
+$g3 = at_rt_obtener($cb)['fotos'];
+ok($g3['cierre']['hash'] === hash('sha256', $prompt_c . ' con luz cálida') && $g3['portada'] === $g2['portada'], 'el hash sigue al encargo vigente y la otra lámina queda igual');
+// Sin «Pedir cambios» no se avisa.
+if ($GLOBALS['rt_aviso_simulado']) {
+	$avisos_antes = $GLOBALS['rt_avisos'];
+	at_rt_guardar($cb, ['aprobacion' => ['estado' => 'por_aprobar', 'n' => 2]]);
+	$capturado = null;
+	ok(at_rt_pedir_render($cb) === '', 'pedido con la aprobación por aprobar');
+	$pedido4 = $capturado;
+	ok(rt_callback($cb, ['ok' => true, 'view_url' => 'https://' . at_pt_host_renderer() . '/p/' . $pedido4['render']['unique_id'] . '/'])->get_status() === 200 && at_rt_obtener($cb)['render']['estado'] === 'listo' && $GLOBALS['rt_avisos'] === $avisos_antes, 'render listo con aprobación por aprobar: no se avisa');
+}
 fin();

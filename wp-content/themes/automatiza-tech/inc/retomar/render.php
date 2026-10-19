@@ -1,6 +1,44 @@
 <?php
-/** Render de Retomar: láminas públicas y callback privado, sin generación de fotos. */
+/** Render de Retomar: láminas públicas, encargos de foto con reutilización y callback privado del renderer. */
 if (!defined('ABSPATH')) { exit; }
+
+/** Las únicas láminas con foto generada; son las mismas tres que acepta el renderer. */
+function at_rt_laminas_foto(): array { return ['portada', 'cierre', 'demo']; }
+
+/**
+ * Encargos de foto vigentes: [{slide, prompt}] en el orden de la redacción. Rechaza lo que el renderer rechazaría
+ * (lámina desconocida o repetida, prompt vacío o de más de 1200 caracteres, más de tres) en vez de recortarlo.
+ */
+function at_rt_encargos_foto(array $seg): array {
+	$crudos = is_array($seg['redaccion']['image_briefs'] ?? null) ? $seg['redaccion']['image_briefs'] : [];
+	if (count($crudos) > count(at_rt_laminas_foto())) { throw new InvalidArgumentException('Los encargos de foto admiten máximo 3 láminas.'); }
+	$vistas = [];
+	$encargos = [];
+	foreach ($crudos as $b) {
+		$slide = is_array($b) ? ($b['slide'] ?? null) : null;
+		$prompt = is_array($b) ? ($b['prompt'] ?? null) : null;
+		if (!is_string($slide) || !in_array($slide, at_rt_laminas_foto(), true)) { throw new InvalidArgumentException('Cada encargo de foto debe ser de una lámina conocida (portada, cierre o demo).'); }
+		if (isset($vistas[$slide])) { throw new InvalidArgumentException("Encargo de foto repetido para la lámina {$slide}."); }
+		if (!is_string($prompt) || trim($prompt) === '' || mb_strlen($prompt) > 1200) { throw new InvalidArgumentException("Encargo de foto de {$slide}: de 1 a 1200 caracteres."); }
+		$vistas[$slide] = true;
+		$encargos[] = ['slide' => $slide, 'prompt' => $prompt];
+	}
+	return $encargos;
+}
+
+/** Hash con el que se reconoce que una foto guardada corresponde a este encargo (y no a una versión anterior). */
+function at_rt_hash_encargo(string $prompt): string { return hash('sha256', $prompt); }
+
+/**
+ * URL de la foto ya hecha para este encargo, o '' si hay que pedirla: solo se reutiliza si su hash es el del encargo
+ * vigente y su URL es de una foto de este seguimiento en el renderer (cualquier generación).
+ */
+function at_rt_foto_reutilizable(array $seg, array $encargo): string {
+	$foto = $seg['fotos'][$encargo['slide']] ?? null;
+	if (!is_array($foto) || !is_string($foto['url'] ?? null) || !is_string($foto['hash'] ?? null)) { return ''; }
+	if (!hash_equals(at_rt_hash_encargo($encargo['prompt']), $foto['hash'])) { return ''; }
+	return at_rt_url_foto_valida($foto['url'], (string) ($seg['token'] ?? '')) ? $foto['url'] : '';
+}
 
 /** Rechaza entradas incompatibles en vez de perder contenido silenciosamente. */
 function at_rt_armar_render(array $seg, string $generacion = ''): array {
@@ -9,28 +47,49 @@ function at_rt_armar_render(array $seg, string $generacion = ''): array {
 	if (!preg_match('/^[a-f0-9]{32}$/D', $token)) { throw new InvalidArgumentException('El seguimiento no tiene token válido.'); }
 	if ($generacion !== '' && !preg_match('/^[a-f0-9]{16}$/D', $generacion)) { throw new InvalidArgumentException('Generación de render inválida.'); }
 	global $wpdb;
-	$uid = !empty($seg['propuesta_id']) ? (string) $wpdb->get_var($wpdb->prepare("SELECT unique_link_id FROM {$wpdb->prefix}automatiza_propuestas WHERE id = %d", (int) $seg['propuesta_id'])) : '';
+	$prop = !empty($seg['propuesta_id']) ? $wpdb->get_row($wpdb->prepare("SELECT unique_link_id, flujo FROM {$wpdb->prefix}automatiza_propuestas WHERE id = %d", (int) $seg['propuesta_id']), ARRAY_A) : null;
+	$uid = is_array($prop) ? (string) $prop['unique_link_id'] : '';
+	// Solo las propuestas hechas con la plantilla AT (flujo v3) se enlazan; la URL externa del seguimiento siempre se respeta.
+	$flujo = is_array($prop) && $prop['flujo'] !== null ? (string) $prop['flujo'] : null;
+	$enlace_v3 = $uid !== '' && !at_rt_necesita_propuesta($flujo) ? home_url('/ver-presentacion.php?id=' . rawurlencode($uid)) : '';
 	$fotos = $uid !== '' ? at_pt_fotos_propuesta_wp($uid) : [];
 	$imagen = (string) ($seg['imagen_url'] ?? '');
+	$recomendacion = is_string($t['recomendacion'] ?? null) ? trim($t['recomendacion']) : '';
+	$nuevos = [];
+	$reutilizadas = [];
+	foreach (at_rt_encargos_foto($seg) as $encargo) {
+		$url = at_rt_foto_reutilizable($seg, $encargo);
+		if ($url !== '') { $reutilizadas[$encargo['slide']] = $url; } else { $nuevos[] = $encargo; }
+	}
 	$p = [
 		'document_type' => 'retomar', 'unique_id' => $token . ($generacion !== '' ? '-' . $generacion : '') . '-retomar',
 		'company_name' => (string) ($seg['negocio'] ?? ''), 'client_name' => (string) ($seg['nombre'] ?? ''),
 		'proyecto' => (string) ($t['proyecto'] ?? $seg['negocio'] ?? ''),
 		'quedamos' => (string) ($t['quedamos'] ?? ''), 'proponemos' => (string) ($t['proponemos'] ?? ''), 'partir' => (string) ($t['partir'] ?? ''),
+		'recomendacion' => $recomendacion,
 		'demo_urls' => array_values((array) ($seg['demo_urls'] ?? [])), 'demo_imagen' => (string) ($seg['imagen_url'] ?? ''),
-		'propuesta_url' => (string) (($seg['propuesta_url'] ?? '') ?: ($uid !== '' ? home_url('/ver-presentacion.php?id=' . rawurlencode($uid)) : '')),
+		'propuesta_url' => (string) (($seg['propuesta_url'] ?? '') ?: $enlace_v3),
 		'agenda' => ['web_url' => home_url('/retomar.php?t=' . $token . '&agendar=1')],
 		'fotos' => ['portada' => (string) ($fotos['cover'] ?? $imagen), 'cierre' => (string) ($fotos['cierre'] ?? $imagen)],
+		'image_briefs' => $nuevos,
 	];
+	// images solo viaja con fotos: el renderer exige un objeto y una lista vacía en JSON ([]) no lo es.
+	if ($reutilizadas) { $p['images'] = $reutilizadas; }
 	foreach (['company_name' => 120, 'client_name' => 120, 'proyecto' => 180, 'quedamos' => 600, 'proponemos' => 600, 'partir' => 600] as $campo => $max) {
 		if (mb_strlen($p[$campo]) > $max) { throw new InvalidArgumentException("{$campo}: máximo {$max} caracteres para la presentación."); }
 		if (in_array($campo, ['quedamos', 'proponemos', 'partir'], true) && count(preg_split('/\r\n|\r|\n/', $p[$campo])) > 6) {
 			throw new InvalidArgumentException("{$campo}: máximo 6 líneas para la presentación.");
 		}
 	}
+	if (mb_strlen($recomendacion) > 300 || count(preg_split('/\r\n|\r|\n/', $recomendacion)) > 3) {
+		throw new InvalidArgumentException('recomendacion: máximo 300 caracteres y 3 líneas para la presentación.');
+	}
 	if (count($p['demo_urls']) > 6) { throw new InvalidArgumentException('La presentación admite máximo 6 demos.'); }
-	// Solo se comprueba el payload: render.view_url es interno y nunca se incorpora aquí.
-	if (stripos(wp_json_encode($p), 'easypanel') !== false || stripos(wp_json_encode($p), at_pt_host_renderer()) !== false) {
+	// Solo se comprueba el payload público: render.view_url es interno y nunca se incorpora aquí, y las URL de images
+	// (fotos ya validadas en el host del renderer) tampoco cuentan; easypanel en demos, propuesta o fotos sigue prohibido.
+	$publico = $p;
+	unset($publico['images']);
+	if (stripos(wp_json_encode($publico), 'easypanel') !== false || stripos(wp_json_encode($publico), at_pt_host_renderer()) !== false) {
 		throw new InvalidArgumentException('La presentación contiene un enlace interno: usa enlaces públicos.');
 	}
 	foreach (array_merge($p['demo_urls'], [$p['demo_imagen'], $p['propuesta_url']], array_values($p['fotos'])) as $url) {
@@ -39,6 +98,17 @@ function at_rt_armar_render(array $seg, string $generacion = ''): array {
 		}
 	}
 	return $p;
+}
+
+/**
+ * Huella del contenido de la presentación: textos, enlaces y encargos de foto (todos, estén o no ya hechos), sin las
+ * URL de las fotos. Así reutilizar una foto, o guardar otra URL del mismo encargo, no cambia la huella.
+ */
+function at_rt_huella_render(array $seg): string {
+	$p = at_rt_armar_render($seg);
+	unset($p['images']);
+	$p['image_briefs'] = at_rt_encargos_foto($seg);
+	return hash('sha256', wp_json_encode($p));
 }
 
 function at_rt_pedir_render(int $id): string {
@@ -51,7 +121,7 @@ function at_rt_pedir_render(int $id): string {
 		$s = at_rt_fila($fila);
 		$generacion = bin2hex(random_bytes(8));
 		try {
-			$huella = hash('sha256', wp_json_encode(at_rt_armar_render($s)));
+			$huella = at_rt_huella_render($s);
 			$payload = at_rt_armar_render($s, $generacion);
 		} catch (InvalidArgumentException $e) {
 			at_rt_guardar($id, ['render' => ['estado' => 'error', 'nota' => $e->getMessage()]]);
@@ -82,12 +152,24 @@ add_action('rest_api_init', static function () {
 	]);
 });
 
+/** Carpeta del seguimiento en el renderer como expresión regular (sin delimitadores); '' si el token o la generación no son válidos. */
+function at_rt_carpeta_render(string $token, string $generacion): string {
+	if (!preg_match('/^[a-f0-9]{32}$/D', $token) || ($generacion !== '' && !preg_match('/^[a-f0-9]{16}$/D', $generacion))) { return ''; }
+	$version = $generacion !== '' ? '-' . $generacion : '(?:-[a-f0-9]{16})?';
+	return 'https://' . preg_quote(at_pt_host_renderer(), '~') . '/p/' . $token . $version . '-retomar/';
+}
+
 /** Solo archivos exactos del seguimiento en el host del renderer: nada de iframes arbitrarios. */
 function at_rt_url_render_valida(string $url, string $token, bool $pdf = false, string $generacion = ''): bool {
-	if (!preg_match('/^[a-f0-9]{32}$/D', $token) || ($generacion !== '' && !preg_match('/^[a-f0-9]{16}$/D', $generacion))) { return false; }
-	$version = $generacion !== '' ? '-' . $generacion : '(?:-[a-f0-9]{16})?';
+	$carpeta = at_rt_carpeta_render($token, $generacion);
 	$archivo = $pdf ? 'presentation\\.pdf' : '(?:index\\.html)?';
-	return (bool) preg_match('~^https://' . preg_quote(at_pt_host_renderer(), '~') . '/p/' . $token . $version . '-retomar/' . $archivo . '$~D', $url);
+	return $carpeta !== '' && (bool) preg_match('~^' . $carpeta . $archivo . '$~D', $url);
+}
+
+/** Foto guardada por el renderer para el seguimiento: <carpeta>/img/<archivo simple>.(png|jpg|jpeg|webp), sin parámetros. */
+function at_rt_url_foto_valida(string $url, string $token, string $generacion = ''): bool {
+	$carpeta = at_rt_carpeta_render($token, $generacion);
+	return $carpeta !== '' && (bool) preg_match('~^' . $carpeta . 'img/[A-Za-z0-9_-]+\\.(?:png|jpe?g|webp)$~D', $url);
 }
 
 function at_rt_rest_vista(WP_REST_Request $r) {
@@ -95,12 +177,13 @@ function at_rt_rest_vista(WP_REST_Request $r) {
 	if (!is_array($p) || !isset($p['ok']) || !is_bool($p['ok'])) { return new WP_Error('retomar_callback', 'ok debe ser booleano.', ['status' => 422]); }
 	global $wpdb;
 	if ($wpdb->query('START TRANSACTION') === false) { return new WP_Error('retomar_guardar', 'No se pudo reservar el render.', ['status' => 500]); }
+	$avisar = false;
 	try {
 		$fila = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$wpdb->prefix}at_retomar WHERE id=%d FOR UPDATE", (int) $r['id']), ARRAY_A);
 		if (!$fila) { return new WP_Error('retomar_no_existe', 'No existe el seguimiento.', ['status' => 404]); }
 		$s = at_rt_fila($fila);
 		$generacion = $p['generacion'] ?? '';
-		try { $huella = hash('sha256', wp_json_encode(at_rt_armar_render($s))); }
+		try { $huella = at_rt_huella_render($s); }
 		catch (InvalidArgumentException $e) { $huella = ''; }
 		if (!is_string($generacion) || !preg_match('/^[a-f0-9]{16}$/D', $generacion) || !hash_equals((string) ($s['render']['generacion'] ?? ''), $generacion) || $huella === '' || !hash_equals((string) ($s['render']['huella'] ?? ''), $huella)) {
 			return new WP_Error('retomar_generacion', 'La respuesta pertenece a una presentación anterior.', ['status' => 409]);
@@ -109,13 +192,36 @@ function at_rt_rest_vista(WP_REST_Request $r) {
 		if (!is_string($view) || !is_string($pdf) || ($view !== '' && !at_rt_url_render_valida($view, $s['token'], false, $generacion)) || ($pdf !== '' && !at_rt_url_render_valida($pdf, $s['token'], true, $generacion)) || ($p['ok'] && $view === '')) {
 			return new WP_Error('retomar_url', 'El render debe pertenecer a este seguimiento y al renderer HTTPS autorizado.', ['status' => 422]);
 		}
+		// Fotos que el renderer dejó guardadas: lámina => URL. Cada una debe ser de este seguimiento y de esta generación,
+		// y de una lámina con encargo vigente (su hash es el del encargo). Lo que no viene no se borra: una foto hecha
+		// antes sigue valiendo mientras su encargo no cambie. Con una sola foto inválida no se guarda nada.
+		$fotos_recibidas = $p['fotos'] ?? [];
+		if (!is_array($fotos_recibidas)) { return new WP_Error('retomar_fotos', 'fotos debe ser un objeto lámina => URL.', ['status' => 422]); }
+		$hashes = [];
+		foreach (at_rt_encargos_foto($s) as $encargo) { $hashes[$encargo['slide']] = at_rt_hash_encargo($encargo['prompt']); }
+		$fotos = $s['fotos'];
+		foreach ($fotos_recibidas as $slide => $url) {
+			if (!is_string($slide) || !isset($hashes[$slide]) || !is_string($url) || !at_rt_url_foto_valida($url, $s['token'], $generacion)) {
+				return new WP_Error('retomar_fotos', 'Cada foto debe ser de una lámina con encargo y estar guardada en el renderer para este seguimiento.', ['status' => 422]);
+			}
+			$fotos[$slide] = ['url' => $url, 'hash' => $hashes[$slide]];
+		}
 		$nota = is_string($p['nota'] ?? '') ? sanitize_textarea_field($p['nota'] ?? '') : '';
 		// La nota se muestra en el panel; no conservar URLs internas en mensajes reutilizables.
 		$nota = preg_replace('~https?://\S+~i', '[enlace omitido]', $nota);
 		$render = array_merge($s['render'], ['estado' => $p['ok'] ? 'listo' : 'error', 'nota' => mb_substr($nota, 0, 1000)]);
 		if ($p['ok']) { $render['view_url'] = $view; $render['pdf_url'] = $pdf; }
-		if (!at_rt_guardar($s['id'], ['render' => $render])) { return new WP_Error('retomar_guardar', 'No se pudo guardar el render.', ['status' => 500]); }
+		$campos = ['render' => $render];
+		if ($fotos_recibidas) { $campos['fotos'] = $fotos; }
+		if (!at_rt_guardar($s['id'], $campos)) { return new WP_Error('retomar_guardar', 'No se pudo guardar el render.', ['status' => 500]); }
 		if ($wpdb->query('COMMIT') === false) { return new WP_Error('retomar_guardar', 'No se pudo confirmar el render.', ['status' => 500]); }
-		return new WP_REST_Response(['ok' => true, 'estado' => $render['estado']], 200);
+		// Avisa una sola vez, al pasar a listo, cuando Luis había pedido cambios; un callback repetido no vuelve a avisar.
+		$avisar = $render['estado'] === 'listo' && ($s['render']['estado'] ?? '') !== 'listo' && ($s['aprobacion']['estado'] ?? '') === 'cambios';
 	} finally { $wpdb->query('ROLLBACK'); }
+	if ($avisar && function_exists('at_rt_aviso_listo')) {
+		// El render ya quedó guardado: un fallo del aviso no debe hacer fracasar el callback.
+		try { at_rt_aviso_listo((int) $s['id']); }
+		catch (Throwable $e) { error_log('Retomar: el aviso de render listo falló: ' . $e->getMessage()); }
+	}
+	return new WP_REST_Response(['ok' => true, 'estado' => $render['estado']], 200);
 }

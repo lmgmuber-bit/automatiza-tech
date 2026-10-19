@@ -18,6 +18,32 @@ register_shutdown_function(static function () use (&$ids, &$emails, $wpdb) {
     foreach ($ids as $id) { $wpdb->delete($wpdb->prefix . 'at_retomar', ['id' => $id]); }
     foreach ($emails as $email) { $wpdb->delete($wpdb->prefix . 'at_retomar_bajas', ['email' => $email]); }
 });
+// El reloj ahora también detecta propuestas y arma el resumen semanal (Task 9). Aquí solo se prueba el envío: la detección
+// no ve ninguna propuesta y el resumen ninguna fila (queda vacío y no manda correo). Ruling 3: se cuenta que los dos
+// filtros calzaron de verdad, y las opciones del resumen se dejan como estaban.
+$filtro_det = 0; $filtro_lista = 0;
+add_filter('query', static function ($sql) use (&$filtro_det, &$filtro_lista, $wpdb) {
+    if (str_starts_with($sql, 'SELECT id, client_email') && str_contains($sql, "FROM {$wpdb->prefix}automatiza_propuestas WHERE client_email <> ''")) { $filtro_det++; return str_replace(' ORDER BY id DESC', ' AND 1=0 ORDER BY id DESC', $sql); }
+    if ($sql === "SELECT * FROM {$wpdb->prefix}at_retomar ORDER BY id DESC") { $filtro_lista++; return "SELECT * FROM {$wpdb->prefix}at_retomar WHERE 1=0 ORDER BY id DESC"; }
+    return $sql;
+});
+$resumen_original = [];
+foreach (['at_rt_resumen_semana', 'at_rt_resumen_desde', 'at_rt_resumen_dia', 'at_rt_resumen_hora'] as $o) { $resumen_original[$o] = get_option($o, null); }
+register_shutdown_function(static function () use ($resumen_original) {
+    foreach ($resumen_original as $o => $v) { $v === null ? delete_option($o) : update_option($o, $v); }
+});
+update_option('at_rt_resumen_semana', ''); update_option('at_rt_resumen_dia', '1'); update_option('at_rt_resumen_hora', '09:00');
+/** Enlace firmado de $accion para la aprobación $ap del seguimiento $id, como lo recibe la página. */
+function rt_env_q(int $id, string $accion, array $ap): array {
+    parse_str((string) parse_url(at_rt_aprobacion_url($id, $accion, (string) ($ap['nonce'] ?? ''), (int) ($ap['vence'] ?? 0)), PHP_URL_QUERY), $q);
+    return $q;
+}
+/** Ruling 10: la aprobación quedó por_aprobar, sin día programado y con los enlaces muertos (aprobar responde «usado»). */
+function rt_env_aprobacion_muerta(array $f, array $ap_original): bool {
+    $ap = $f['aprobacion'];
+    return ($ap['estado'] ?? '') === 'por_aprobar' && ($ap['usada'] ?? null) === true && !isset($ap['programado']) && ($ap['nonce'] ?? '') === ($ap_original['nonce'] ?? null)
+        && at_rt_aprobacion_motivo($f, 'aprobar', rt_env_q((int) $f['id'], 'aprobar', $ap_original), (int) $ap_original['vence'] - 60) === 'usado';
+}
 /**
  * Seguimiento activo listo para salir. Por defecto trae la redacción `lista` y la aprobación de Luis tal como la deja
  * Task 7 al aprobar: {estado:'aprobado', n: el recordatorio que toca, huella: la del render, usada, programado: su
@@ -52,7 +78,9 @@ function rt_env_correos(string $email): int {
 }
 update_option('at_rt_wa_automatico', '1');
 $s = rt_env_fixture();
-ok(rt_env_tick('2026-10-19 09:30:00')['enviados'] === 0 && count($mails) === 0, '09:30 no entrega');
+$r0 = rt_env_tick('2026-10-19 09:30:00');
+ok($r0['enviados'] === 0 && count($mails) === 0, '09:30 no entrega');
+ok($filtro_det > 0 && $filtro_lista > 0 && $r0['detectados'] === 0 && $r0['resumen']['motivo'] === 'vacio', 'el reloj pasó por la detección y el resumen, acotados por la prueba (sin correo)');
 ok(rt_env_tick('2026-10-24 10:30:00')['enviados'] === 0 && count($mails) === 0, 'sábado no entrega');
 $r = rt_env_tick('2026-10-19 10:30:00');
 ok($r['enviados'] === 1 && count($r['whatsapp']) === 1 && count($mails) === 1, 'primer correo entrega y devuelve un pedido WA');
@@ -208,6 +236,8 @@ $bj = rt_env_fixture(['telefono' => '']);
 $wpdb->insert($wpdb->prefix . 'at_retomar_bajas', ['email' => $bj['email'], 'telefono' => '', 'origen' => 'prueba', 'creado_at' => current_time('mysql')]);
 $r = at_rt_entregar($bj['id'], false, '2026-10-19 10:30:00'); $f = at_rt_obtener($bj['id']);
 ok($r['motivo'] === 'baja' && rt_env_correos($bj['email']) === 0 && $f['estado'] === 'baja' && $f['proximo_at'] === null, 'aprobado y luego baja: no sale nada y queda en baja');
+ok(rt_env_aprobacion_muerta($f, $bj['aprobacion']), 'Ruling 10: aprobado y luego baja: la aprobación no sobrevive a la detención (por_aprobar, enlaces muertos)');
+ok(count($f['envios']) === 1 && ($f['envios'][0]['tipo'] ?? '') === 'detenido' && ($f['envios'][0]['motivo'] ?? '') === 'baja' && ($f['envios'][0]['at'] ?? '') === '2026-10-19 10:30:00' && $f['enviando'] === null, 'la detención deja un solo evento «detenido» y libera el claim');
 $bj = rt_env_fixture(['telefono' => '']); at_rt_dar_baja($bj['id'], 'prueba');
 rt_env_tick_solo([$bj['id']], '2026-10-19 10:30:00');
 ok(rt_env_correos($bj['email']) === 0 && at_rt_obtener($bj['id'])['estado'] === 'baja', 'aprobado y luego baja desde su página: el reloj no le envía');
@@ -217,6 +247,12 @@ $reunion = (int) $wpdb->insert_id;
 register_shutdown_function(static function () use ($wpdb, $reunion) { $wpdb->delete($wpdb->prefix . 'automatiza_followup_meetings', ['id' => $reunion]); });
 $r = at_rt_entregar($ag['id'], false, '2026-10-19 10:30:00'); $f = at_rt_obtener($ag['id']);
 ok($reunion > 0 && $r['motivo'] === 'agendo' && rt_env_correos($ag['email']) === 0 && $f['estado'] === 'agendo' && $f['proximo_at'] === null, 'aprobado y luego agenda una reunión: no sale nada y queda en agendó');
+ok(rt_env_aprobacion_muerta($f, $ag['aprobacion']), 'Ruling 10: aprobado y luego agenda: la aprobación no sobrevive a la detención');
+// Una aprobación que no estaba aprobada (por aprobar) no cambia al detener.
+$pa = rt_env_fixture(['telefono' => '', 'aprobacion' => ['estado' => 'por_aprobar', 'n' => 1, 'nonce' => str_repeat('d', 16), 'huella' => 'x', 'usada' => false]]);
+$wpdb->insert($wpdb->prefix . 'at_retomar_bajas', ['email' => $pa['email'], 'telefono' => '', 'origen' => 'prueba', 'creado_at' => current_time('mysql')]);
+at_rt_entregar($pa['id'], false, '2026-10-19 10:30:00'); $f = at_rt_obtener($pa['id']);
+ok($f['estado'] === 'baja' && $f['aprobacion'] === $pa['aprobacion'], 'detener sin una aprobación aprobada deja la aprobación como estaba');
 // Lo aprobado debe ser exactamente lo que sale: si cambió después de aprobar, no sale y vuelve a pedir aprobación.
 // [cambio, ¿la presentación quedó vieja?]: si el contenido actual ya no es el del render, el render deja de estar `listo`.
 $vencidas = [
@@ -240,9 +276,11 @@ $nueva = ['estado' => 'por_aprobar', 'n' => 1, 'nonce' => str_repeat('b', 16), '
 $durante = static function ($v, $mail) use ($cm, $nueva) { if ($mail['to'] === $cm['email']) { at_rt_guardar($cm['id'], ['aprobacion' => $nueva]); } return $v; };
 add_filter('pre_wp_mail', $durante, 150, 2); $r = at_rt_entregar($cm['id'], false, '2026-10-19 10:30:00'); remove_filter('pre_wp_mail', $durante, 150); $f = at_rt_obtener($cm['id']);
 ok($r['ok'] && $r['whatsapp'] === null && $f['aprobacion'] === $nueva && count($f['envios']) === 1 && $f['envios'][0]['correo']['estado'] === 'enviado' && $f['envios'][0]['whatsapp'] === null, 'aprobación cambiada durante el correo: no se consume ni pide WhatsApp; el envío queda registrado');
-// Correo fallido: no consume la aprobación (no salió nada).
+// Ruling 10: correo fallido: no sale nada, el seguimiento queda en pausa y lo aprobado no sobrevive (enlaces muertos).
 $cf = rt_env_fixture(['telefono' => '']); $falla_mail = true; $r = at_rt_entregar($cf['id'], false, '2026-10-19 10:30:00'); $falla_mail = false;
-ok(!$r['ok'] && at_rt_obtener($cf['id'])['aprobacion'] === $cf['aprobacion'], 'correo fallido no consume la aprobación');
+$f = at_rt_obtener($cf['id']);
+ok(!$r['ok'] && $r['motivo'] === 'correo_error' && $f['estado'] === 'pausado' && rt_env_aprobacion_muerta($f, $cf['aprobacion']), 'correo fallido: la aprobación vuelve a por_aprobar con los enlaces muertos y el seguimiento queda en pausa');
+ok(count($f['envios']) === 1 && $f['envios'][0]['correo']['estado'] === 'error', 'el correo fallido queda registrado una vez');
 // 2.º recordatorio con WhatsApp autorizado y el interruptor encendido: también lleva WhatsApp.
 $wa2 = rt_env_fixture(['telefono' => '+56900000013', 'envios' => [['tipo' => 'envio', 'n' => 1, 'fecha' => '2026-10-12', 'at' => '2026-10-12 10:30:00', 'correo' => ['estado' => 'enviado'], 'whatsapp' => null]]]);
 $r = rt_env_tick_solo([$wa2['id']], '2026-10-19 10:30:00');

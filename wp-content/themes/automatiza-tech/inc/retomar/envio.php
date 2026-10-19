@@ -23,10 +23,38 @@ function at_rt_siguiente_habil(string $hoy): string {
     return $d->format('Y-m-d');
 }
 
+/**
+ * Una aprobación que ya no vale: vuelve a `por_aprobar` con los enlaces muertos (usada) y sin día programado, para que el
+ * correo semanal la emita de nuevo. La usan el vencimiento por contenido, la detención y el correo fallido (Ruling 10).
+ */
+function at_rt_aprobacion_muerta(array $ap, string $ahora): array {
+    return array_merge(array_diff_key($ap, ['programado' => true]), ['estado' => 'por_aprobar', 'usada' => true, 'vencida_at' => $ahora]);
+}
+
+/**
+ * Detiene el seguimiento por $motivo (baja, agendó, cliente…): estado de cierre, sin próximo envío y el evento
+ * {tipo:'detenido'}. Ruling 10: lo aprobado no sobrevive a una detención; si había un recordatorio `aprobado` esperando,
+ * su aprobación queda muerta (at_rt_aprobacion_muerta). Todo en una transacción bajo FOR UPDATE; el historial, después.
+ */
 function at_rt_detener(array $s, string $motivo, string $ahora): void {
-    at_rt_guardar($s['id'], ['estado' => at_rt_estado_por_motivo($motivo), 'proximo_at' => null]);
-    at_rt_agregar_envio($s['id'], ['tipo' => 'detenido', 'fecha' => substr($ahora, 0, 10), 'at' => $ahora, 'motivo' => $motivo]);
-    if ($motivo === 'agendo') { at_rt_historia($s, 'retomar_agendo', '🔁 Agendó reunión'); }
+    global $wpdb;
+    $id = (int) $s['id'];
+    if ($wpdb->query('START TRANSACTION') === false) { return; }
+    $confirmado = false;
+    try {
+        $fila = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$wpdb->prefix}at_retomar WHERE id=%d FOR UPDATE", $id), ARRAY_A);
+        if (!$fila) { return; }
+        $actual = at_rt_fila($fila);
+        $envios = $actual['envios'];
+        $envios[] = ['tipo' => 'detenido', 'fecha' => substr($ahora, 0, 10), 'at' => $ahora, 'motivo' => $motivo];
+        $campos = ['estado' => at_rt_estado_por_motivo($motivo), 'proximo_at' => null, 'envios' => $envios];
+        if (($actual['aprobacion']['estado'] ?? '') === 'aprobado') { $campos['aprobacion'] = at_rt_aprobacion_muerta($actual['aprobacion'], $ahora); }
+        if (!at_rt_guardar($id, $campos)) { return; }
+        $confirmado = $wpdb->query('COMMIT') !== false;
+    } finally {
+        if (!$confirmado) { $wpdb->query('ROLLBACK'); }
+    }
+    if ($confirmado && $motivo === 'agendo') { at_rt_historia($s, 'retomar_agendo', '🔁 Agendó reunión'); }
 }
 
 /** Datos del correo al prospecto (at_rt_correo_html/texto): enlaces a su página pública por token, en HTTPS. Una sola
@@ -84,7 +112,7 @@ function at_rt_vencer_aprobacion(int $id, array $ap, string $ahora): string {
         if ($s['aprobacion'] !== $ap || ($ap['estado'] ?? '') !== 'aprobado') { return ''; }
         $envios = $s['envios'];
         $envios[] = ['tipo' => 'diferido', 'fecha' => substr($ahora, 0, 10), 'at' => $ahora, 'nota' => 'aprobacion_vencida'];
-        $campos = ['aprobacion' => array_merge(array_diff_key($ap, ['programado' => true]), ['estado' => 'por_aprobar', 'usada' => true, 'vencida_at' => $ahora]), 'envios' => $envios];
+        $campos = ['aprobacion' => at_rt_aprobacion_muerta($ap, $ahora), 'envios' => $envios];
         $resultado = 'aprobacion';
         $render = $s['render'];
         try {
@@ -148,7 +176,8 @@ function at_rt_finalizar_entrega(int $id, int $n, bool $ok, string $ahora, array
         $s['envios'][] = ['tipo' => 'envio', 'n' => $n, 'fecha' => substr($ahora, 0, 10), 'at' => $ahora, 'correo' => ['estado' => $ok ? 'enviado' : 'error'], 'whatsapp' => $wa ? ['estado' => 'pendiente'] : null];
         $campos = ['envios' => $s['envios']];
         // El correo ya salió: la aprobación queda usada aunque una parada (baja, agendó) llegara durante SMTP.
-        if ($ok && $aprobada) { $campos['aprobacion'] = $s['aprobacion'] = ['estado' => 'enviado', 'n' => $n, 'at' => $ahora]; }
+        // Ruling 10: si el correo falló, lo aprobado no sobrevive: el seguimiento queda en pausa y la aprobación muerta.
+        if ($aprobada) { $campos['aprobacion'] = $s['aprobacion'] = $ok ? ['estado' => 'enviado', 'n' => $n, 'at' => $ahora] : at_rt_aprobacion_muerta($s['aprobacion'], $ahora); }
         // La transición sólo pertenece al claim vigente y a una fila aún activa.
         if ($propio) {
             $estado = $motivo !== '' ? at_rt_estado_por_motivo($motivo) : (!$ok ? 'pausado' : ($n >= $s['max_envios'] ? 'agotado' : 'activo'));
@@ -243,15 +272,31 @@ function at_rt_entregar(int $id, bool $prueba, string $ahora): array {
     }
 }
 
+/**
+ * Reloj por hora (n8n lo llama cada hora). En toda pasada, en este orden: detecta propuestas estancadas, vuelve a pedir
+ * las redacciones atascadas (Ruling 7) y manda el correo semanal si le toca (at_rt_resumen decide día y hora). Solo en día
+ * hábil y dentro de la ventana 10:00–13:00 entrega lo que Luis aprobó. Cada paso corre aunque el anterior falle. Sin el
+ * esquema listo no hace nada. Devuelve {enviados, diferidos, detenidos, whatsapp, detectados, redacciones, resumen}.
+ */
 function at_rt_tick(string $ahora): array {
     global $wpdb;
-    $r = ['enviados' => 0, 'diferidos' => 0, 'detenidos' => 0, 'whatsapp' => []];
+    $r = ['enviados' => 0, 'diferidos' => 0, 'detenidos' => 0, 'whatsapp' => [], 'detectados' => 0, 'redacciones' => 0, 'resumen' => ['enviado' => false, 'tarjetas' => 0, 'motivo' => '']];
+    if (!at_rt_esquema_listo()) { $r['resumen']['motivo'] = 'esquema'; return $r; }
     try { $d = new DateTimeImmutable($ahora, new DateTimeZone('America/Santiago')); } catch (Exception $e) { return $r; }
     $d = $d->setTimezone(new DateTimeZone('America/Santiago'));
+    $cuando = $d->format('Y-m-d H:i:s');
+    try {
+        $detectados = at_rt_detectar($cuando);
+        $r['detectados'] = count($detectados['creados']) + count($detectados['espera']);
+    } catch (Throwable $e) { error_log('Retomar: la detección del reloj falló: ' . $e->getMessage()); }
+    try { $r['redacciones'] = count(at_rt_reintentar_redacciones($cuando)); }
+    catch (Throwable $e) { error_log('Retomar: el reintento de redacciones del reloj falló: ' . $e->getMessage()); }
+    try { $r['resumen'] = at_rt_resumen($cuando); }
+    catch (Throwable $e) { error_log('Retomar: el resumen semanal del reloj falló: ' . $e->getMessage()); }
     if (!at_rt_es_habil($d->format('Y-m-d')) || !at_rt_en_ventana($d->format('H:i'))) { return $r; }
     $ids = $wpdb->get_col($wpdb->prepare("SELECT id FROM {$wpdb->prefix}at_retomar WHERE estado='activo' AND proximo_at<=%s ORDER BY id", $d->format('Y-m-d')));
     foreach ($ids as $id) {
-        $e = at_rt_entregar((int) $id, false, $d->format('Y-m-d H:i:s'));
+        $e = at_rt_entregar((int) $id, false, $cuando);
         if ($e['ok']) { $r['enviados']++; }
         elseif ($e['motivo'] === 'diferido') { $r['diferidos']++; }
         elseif (at_rt_estado_por_motivo($e['motivo']) !== '') { $r['detenidos']++; }

@@ -304,4 +304,41 @@ $rk = at_rt_obtener($k)['redaccion'];
 $simular = false;
 ok($rk['intentos'] === 1 && $rk['pedido'] === 'segundo' && $rk['generacion'] !== $gen_k1 && $rk['estado'] === 'pendiente', 'un pedido nuevo reinicia los intentos, cambia la generación y cambia el pedido');
 ok(rt_red_callback($k, rt_red_bien(['generacion' => $gen_k1]))->get_status() === 409, 'la respuesta del pedido anterior ya no vale');
+
+// ---- Ruling 7: cada pedido guarda pedida_at (hora de Chile) para que el reloj sepa si la redacción quedó atascada ----
+$chile = static fn(): int => (new DateTimeImmutable('now', new DateTimeZone('America/Santiago')))->getTimestamp();
+$q = rt_red_seg();
+$simular = true; at_rt_pedir_redaccion($q, '[PRUEBA] Pedido'); $simular = false;
+$pa = (string) (at_rt_obtener($q)['redaccion']['pedida_at'] ?? '');
+ok(preg_match('/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/D', $pa) === 1 && at_rt_ahora($pa) !== null && abs(at_rt_ahora($pa)->getTimestamp() - $chile()) <= 120, 'el pedido guarda pedida_at con la hora de Chile');
+$simular = true; at_rt_pedir_redaccion($q, '[PRUEBA] Pedido', '2026-10-19 09:05:00'); $simular = false;
+ok((at_rt_obtener($q)['redaccion']['pedida_at'] ?? '') === '2026-10-19 09:05:00', 'el reloj pasa su hora y queda como pedida_at');
+at_rt_pedir_redaccion($q, '', '2026-10-19 10:05:00'); // HTTP bloqueado: el pedido falla
+$rq = at_rt_obtener($q)['redaccion'];
+ok($rq['estado'] === 'error' && ($rq['pedida_at'] ?? '') === '2026-10-19 10:05:00', 'un pedido que falla también deja su pedida_at');
+// El reintento por montos también es un pedido: renueva pedida_at.
+at_rt_guardar($q, ['redaccion' => ['estado' => 'pendiente', 'generacion' => str_repeat('f', 16), 'intentos' => 1, 'pedido' => '', 'pedida_at' => '2026-01-01 00:00:00']]);
+$simular = true; rt_red_callback($q, $con_montos); $simular = false;
+$rq = at_rt_obtener($q)['redaccion'];
+ok(($rq['intentos'] ?? 0) === 2 && ($rq['pedida_at'] ?? '') !== '2026-01-01 00:00:00' && at_rt_ahora((string) ($rq['pedida_at'] ?? '')) !== null && abs(at_rt_ahora((string) $rq['pedida_at'])->getTimestamp() - $chile()) <= 120, 'el reintento por montos renueva pedida_at');
+exigir('at_rt_red_atascada');
+// ¿Quedó atascada? Vacía, en error, o pendiente hace más de 6 h; y el reloj no la volvió a pedir en las últimas 24 h.
+$casos = [
+	'vacía' => [[], true],
+	'error' => [['estado' => 'error', 'pedida_at' => '2026-10-19 09:00:00'], true],
+	'error sin pedida_at' => [['estado' => 'error'], true],
+	'error con reintento del reloj hace 2 h' => [['estado' => 'error', 'pedida_at' => '2026-10-19 08:00:00', 'reintento_at' => '2026-10-19 08:00:00'], false],
+	'error con reintento del reloj hace 24 h' => [['estado' => 'error', 'pedida_at' => '2026-10-18 10:00:00', 'reintento_at' => '2026-10-18 10:00:00'], true],
+	'pendiente hace 7 h' => [['estado' => 'pendiente', 'pedida_at' => '2026-10-19 03:00:00'], true],
+	'pendiente hace 6 h justas' => [['estado' => 'pendiente', 'pedida_at' => '2026-10-19 04:00:00'], false],
+	'pendiente hace 5 h' => [['estado' => 'pendiente', 'pedida_at' => '2026-10-19 05:00:00'], false],
+	'pendiente sin pedida_at (anterior a esta versión)' => [['estado' => 'pendiente'], true],
+	'pendiente hace 7 h, reintentada por el reloj hace 7 h' => [['estado' => 'pendiente', 'pedida_at' => '2026-10-19 03:00:00', 'reintento_at' => '2026-10-19 03:00:00'], false],
+	'lista' => [['estado' => 'lista', 'pedida_at' => '2026-10-01 00:00:00'], false],
+	'revisión (necesita a Luis)' => [['estado' => 'revision', 'pedida_at' => '2026-10-01 00:00:00'], false],
+];
+foreach ($casos as $caso => [$red, $esperado]) {
+	ok(at_rt_red_atascada($red, '2026-10-19 10:00:00') === $esperado, 'redacción atascada: ' . $caso . ($esperado ? ' → se vuelve a pedir' : ' → no'));
+}
+ok(at_rt_red_atascada([], 'no es una fecha') === false, 'con una hora ilegible no se pide nada');
 fin();

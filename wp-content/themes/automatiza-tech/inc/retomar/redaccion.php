@@ -45,11 +45,19 @@ function at_rt_red_pedido_sin_montos(string $original): string {
 	return $base === '' ? $aviso : $base . "\n" . $aviso;
 }
 
-/** Redacción que queda guardada al pedirla: pendiente, con generación nueva. Un pedido nuevo reinicia los intentos; el reintento los suma. */
-function at_rt_red_nueva(array $seg, string $pedido, bool $reintento): array {
+/** Hora de Chile de este momento, «Y-m-d H:i:s». */
+function at_rt_ahora_chile(): string {
+	return (new DateTimeImmutable('now', new DateTimeZone('America/Santiago')))->format('Y-m-d H:i:s');
+}
+
+/**
+ * Redacción que queda guardada al pedirla: pendiente, con generación nueva y pedida_at (hora de Chile del pedido; el reloj
+ * la usa para saber si quedó atascada). Un pedido nuevo reinicia los intentos; el reintento los suma.
+ */
+function at_rt_red_nueva(array $seg, string $pedido, bool $reintento, string $pedida_at = ''): array {
 	$actual = is_array($seg['redaccion'] ?? null) ? $seg['redaccion'] : [];
 	$intentos = $reintento ? max(1, (int) ($actual['intentos'] ?? 1)) + 1 : 1;
-	return array_merge($actual, ['estado' => 'pendiente', 'generacion' => bin2hex(random_bytes(8)), 'intentos' => $intentos, 'pedido' => $pedido, 'nota' => '']);
+	return array_merge($actual, ['estado' => 'pendiente', 'generacion' => bin2hex(random_bytes(8)), 'intentos' => $intentos, 'pedido' => $pedido, 'nota' => '', 'pedida_at' => $pedida_at !== '' ? $pedida_at : at_rt_ahora_chile()]);
 }
 
 /**
@@ -72,21 +80,92 @@ function at_rt_red_avisar(int $id, string $generacion): string {
 /**
  * Pide la redacción al flujo de n8n con una generación nueva (hex16) y los intentos en 1. '' si n8n recibió el aviso,
  * 'sin_flujo' si no hay AT_N8N_RETOMAR_REDACTAR (no cambia nada) o el motivo del error (deja redaccion.estado = 'error').
- * El pedido de quien lo hace vive en redaccion.pedido; las notas no se tocan aquí.
+ * El pedido de quien lo hace vive en redaccion.pedido; las notas no se tocan aquí. redaccion.pedida_at queda con $ahora
+ * (la hora de la pasada del reloj o de la detección, «Y-m-d H:i[:s]» de Chile) o, sin ella, con la hora de Chile actual.
  */
-function at_rt_pedir_redaccion(int $id, string $pedido = ''): string {
+function at_rt_pedir_redaccion(int $id, string $pedido = '', string $ahora = ''): string {
 	if (at_rt_red_flujo() === '') { return 'sin_flujo'; }
+	$cuando = at_rt_ahora($ahora);
+	$pedida_at = $cuando !== null ? $cuando->format('Y-m-d H:i:s') : at_rt_ahora_chile();
 	global $wpdb;
 	if ($wpdb->query('START TRANSACTION') === false) { return 'No se pudo reservar la redacción.'; }
 	try {
 		$fila = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$wpdb->prefix}at_retomar WHERE id=%d FOR UPDATE", $id), ARRAY_A);
 		if (!$fila) { return 'El seguimiento no existe.'; }
-		$redaccion = at_rt_red_nueva(at_rt_fila($fila), at_rt_red_pedido($pedido), false);
+		$redaccion = at_rt_red_nueva(at_rt_fila($fila), at_rt_red_pedido($pedido), false, $pedida_at);
 		if (!at_rt_guardar($id, ['redaccion' => $redaccion]) || $wpdb->query('COMMIT') === false) { return 'No se pudo guardar el estado de la redacción.'; }
 	} finally {
 		$wpdb->query('ROLLBACK'); // Sin efecto después de COMMIT; libera el candado ante cualquier retorno/error.
 	}
 	return at_rt_red_avisar($id, $redaccion['generacion']);
+}
+
+/**
+ * ¿Hay que volver a pedir esta redacción? (Ruling 7.) Sí si está vacía, en «error», o «pendiente» desde hace más de 6 horas
+ * (sin pedida_at legible cuenta como vieja: viene de antes de esta versión), y el reloj no la volvió a pedir en las últimas
+ * 24 horas (redaccion.reintento_at). «lista» no hace falta y «revision» necesita a Luis: nunca se reintentan.
+ * $ahora es la hora de la pasada, «Y-m-d H:i[:s]» de Chile; ilegible, no se pide nada.
+ */
+function at_rt_red_atascada(array $red, string $ahora): bool {
+	$fecha = at_rt_ahora($ahora);
+	if ($fecha === null) { return false; }
+	// ¿La marca es de hace más de (o justo, con $incluido) $horas horas? Sin marca legible, sí.
+	$hace = static function ($marca, int $horas, bool $incluido) use ($fecha): bool {
+		$cuando = is_string($marca) ? at_rt_ahora($marca) : null;
+		$limite = $fecha->modify('-' . $horas . ' hours');
+		return $cuando === null || $cuando < $limite || ($incluido && $cuando == $limite);
+	};
+	$estado = is_string($red['estado'] ?? null) ? $red['estado'] : '';
+	if (!in_array($estado, ['', 'error', 'pendiente'], true)) { return false; }
+	if ($estado === 'pendiente' && !$hace($red['pedida_at'] ?? null, 6, false)) { return false; }
+	return $hace($red['reintento_at'] ?? null, 24, true);
+}
+
+/**
+ * Reserva bajo FOR UPDATE el reintento del reloj: si el seguimiento sigue activo, ya toca (proximo_at hoy o antes), su
+ * redacción quedó atascada y no tiene una condición de parada (no se gasta IA en quien ya no puede recibir nada), anota
+ * redaccion.reintento_at = $ahora y devuelve el pedido que traía, para repetirlo tal cual. null si no corresponde: otra
+ * pasada simultánea ve la marca y no lo pide dos veces.
+ */
+function at_rt_red_reservar_reintento(int $id, string $ahora): ?string {
+	global $wpdb;
+	if ($wpdb->query('START TRANSACTION') === false) { return null; }
+	try {
+		$fila = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$wpdb->prefix}at_retomar WHERE id=%d FOR UPDATE", $id), ARRAY_A);
+		if (!$fila) { return null; }
+		$s = at_rt_fila($fila);
+		$proximo = (string) ($s['proximo_at'] ?? '');
+		if ($s['estado'] !== 'activo' || $proximo === '' || $proximo > substr($ahora, 0, 10) || !at_rt_red_atascada($s['redaccion'], $ahora)) { return null; }
+		if (at_rt_motivo_parada(at_rt_contexto_parada($s)) !== '') { return null; }
+		$pedido = is_string($s['redaccion']['pedido'] ?? null) ? $s['redaccion']['pedido'] : '';
+		if (!at_rt_guardar($id, ['redaccion' => array_merge($s['redaccion'], ['reintento_at' => $ahora])]) || $wpdb->query('COMMIT') === false) { return null; }
+		return $pedido;
+	} finally {
+		$wpdb->query('ROLLBACK'); // Sin efecto después de COMMIT; libera el candado ante cualquier retorno o error.
+	}
+}
+
+/**
+ * Pasada del reloj (Ruling 7): vuelve a pedir la redacción de los seguimientos activos que ya tocan y quedaron atascados
+ * (at_rt_red_atascada), una vez cada 24 h por seguimiento y con el mismo pedido que traían. Sin flujo configurado o con una
+ * hora ilegible no hace nada. La reserva va bajo candado y el pedido a n8n (HTTP) fuera de él. Devuelve los ids pedidos.
+ */
+function at_rt_reintentar_redacciones(string $ahora): array {
+	if (at_rt_red_flujo() === '') { return []; }
+	$fecha = at_rt_ahora($ahora);
+	if ($fecha === null) { return []; }
+	$cuando = $fecha->format('Y-m-d H:i:s');
+	global $wpdb;
+	// La misma consulta que el envío del reloj: los seguimientos activos cuyo próximo envío ya llegó.
+	$ids = $wpdb->get_col($wpdb->prepare("SELECT id FROM {$wpdb->prefix}at_retomar WHERE estado='activo' AND proximo_at<=%s ORDER BY id", $fecha->format('Y-m-d')));
+	$pedidos = [];
+	foreach ($ids as $id) {
+		$pedido = at_rt_red_reservar_reintento((int) $id, $cuando);
+		if ($pedido === null) { continue; }
+		at_rt_pedir_redaccion((int) $id, $pedido, $cuando);
+		$pedidos[] = (int) $id;
+	}
+	return $pedidos;
 }
 
 /** Una línea de texto de la propuesta: «Título: texto» si es un objeto, el texto si es una cadena; '' si no es ninguna. */

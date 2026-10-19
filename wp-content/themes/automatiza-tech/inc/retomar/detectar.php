@@ -90,7 +90,8 @@ function at_rt_detectar_propuesta(array $p, string $hoy, string $activado): ?arr
 	]);
 	if ($id <= 0) { return null; }
 	at_rt_historia(['id' => $id, 'crm_cliente_id' => $fichas['id']], 'retomar_detectado', '🔁 Entró a Retomar');
-	if (!$espera) { at_rt_pedir_redaccion($id); }
+	// pedida_at con la hora de la pasada: así el reintento del reloj (Ruling 7) mide el atasco con el mismo reloj.
+	if (!$espera) { at_rt_pedir_redaccion($id, '', $activado); }
 	return ['id' => $id, 'estado' => $estado];
 }
 

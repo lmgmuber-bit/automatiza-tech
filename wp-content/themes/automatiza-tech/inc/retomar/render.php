@@ -215,10 +215,14 @@ function at_rt_rest_vista(WP_REST_Request $r) {
 		if ($fotos_recibidas) { $campos['fotos'] = $fotos; }
 		if (!at_rt_guardar($s['id'], $campos)) { return new WP_Error('retomar_guardar', 'No se pudo guardar el render.', ['status' => 500]); }
 		if ($wpdb->query('COMMIT') === false) { return new WP_Error('retomar_guardar', 'No se pudo confirmar el render.', ['status' => 500]); }
-		// Avisa una sola vez, al pasar a listo, cuando Luis había pedido cambios; un callback repetido no vuelve a avisar.
-		$avisar = $render['estado'] === 'listo' && ($s['render']['estado'] ?? '') !== 'listo' && ($s['aprobacion']['estado'] ?? '') === 'cambios';
+		// Avisa una sola vez, al pasar a listo, cuando Luis había pedido cambios o cuando la aprobación venció por contenido
+		// (por_aprobar con los enlaces muertos: at_rt_aprobacion_muerta en envio.php), para no esperar al correo de la semana
+		// siguiente (Ruling 11). Un callback repetido no vuelve a avisar.
+		$ap = is_array($s['aprobacion'] ?? null) ? $s['aprobacion'] : [];
+		$vencida = ($ap['estado'] ?? '') === 'por_aprobar' && ($ap['usada'] ?? false) === true;
+		$avisar = $render['estado'] === 'listo' && ($s['render']['estado'] ?? '') !== 'listo' && (($ap['estado'] ?? '') === 'cambios' || $vencida);
 	} finally { $wpdb->query('ROLLBACK'); }
-	if ($avisar && function_exists('at_rt_aviso_listo')) {
+	if ($avisar) {
 		// El render ya quedó guardado: un fallo del aviso no debe hacer fracasar el callback.
 		try { at_rt_aviso_listo((int) $s['id']); }
 		catch (Throwable $e) { error_log('Retomar: el aviso de render listo falló: ' . $e->getMessage()); }

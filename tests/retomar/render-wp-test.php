@@ -185,14 +185,17 @@ ok(strpos(wp_json_encode(at_rt_armar_render(array_merge($f2, ['propuesta_id' => 
 remove_filter('home_url', $https_local);
 
 // Callback con fotos: pedido real contra el flujo simulado, luego respuestas del renderer.
-function rt_aviso_registrado(): array { return $GLOBALS['rt_avisos']; }
+// El aviso «recordatorio corregido» es el real (at_rt_aviso_listo): se cuentan los correos que manda con pre_wp_mail.
+exigir('at_rt_aviso_listo');
 $GLOBALS['rt_avisos'] = [];
-$GLOBALS['rt_aviso_simulado'] = false;
-if (!function_exists('at_rt_aviso_listo')) {
-	$GLOBALS['rt_aviso_simulado'] = true;
-	function at_rt_aviso_listo(int $id) { $GLOBALS['rt_avisos'][] = $id; }
-}
-$ids[] = $cb = at_rt_crear(['nombre' => '[PRUEBA] Callback fotos', 'negocio' => '[PRUEBA] Negocio', 'email' => 'render-cb@example.com', 'telefono' => '+56900000002', 'demo_urls' => ['https://example.com/demo'], 'textos' => ['quedamos' => '[PRUEBA] Quedamos', 'proponemos' => '[PRUEBA] Proponemos', 'partir' => '[PRUEBA] Prioridades']]);
+add_filter('pre_wp_mail', static function ($v, $d) {
+	if (str_starts_with((string) ($d['subject'] ?? ''), '🔁 Retomar · Recordatorio corregido: ')) { $GLOBALS['rt_avisos'][] = $d; }
+	return true;
+}, 100, 2);
+/** Asuntos de los avisos enviados. */
+function rt_avisos(): array { return array_column($GLOBALS['rt_avisos'], 'subject'); }
+$aviso_cb = '🔁 Retomar · Recordatorio corregido: [PRUEBA] Callback fotos';
+$ids[] = $cb = at_rt_crear(['nombre' => '[PRUEBA] Callback fotos', 'negocio' => '[PRUEBA] Negocio', 'email' => 'render-cb@example.com', 'telefono' => '+56900000002', 'estado' => 'activo', 'demo_urls' => ['https://example.com/demo'], 'textos' => ['quedamos' => '[PRUEBA] Quedamos', 'proponemos' => '[PRUEBA] Proponemos', 'partir' => '[PRUEBA] Prioridades']]);
 at_rt_guardar($cb, ['redaccion' => ['estado' => 'lista', 'image_briefs' => [['slide' => 'portada', 'prompt' => $prompt_p], ['slide' => 'cierre', 'prompt' => $prompt_c]]], 'aprobacion' => ['estado' => 'cambios', 'n' => 1]]);
 $capturado = null;
 ok(at_rt_pedir_render($cb) === '' && count($capturado['render']['image_briefs']) === 2 && !isset($capturado['render']['images']), 'el pedido a n8n lleva los dos encargos y ninguna foto');
@@ -234,10 +237,11 @@ ok(rt_callback($cb, $ok_base + ['fotos' => ['portada' => rt_url_foto($seg_cb, $g
 $g1 = at_rt_obtener($cb);
 ok($g1['fotos'] === ['portada' => ['url' => rt_url_foto($seg_cb, $gen1), 'hash' => hash('sha256', $prompt_p)], 'cierre' => ['url' => rt_url_foto($seg_cb, $gen1, 'cierre.webp'), 'hash' => hash('sha256', $prompt_c)]], 'cada foto se guarda con url y hash de su encargo vigente');
 ok($g1['render']['estado'] === 'listo' && $g1['render']['view_url'] === $vista1, 'el render queda listo');
-if ($GLOBALS['rt_aviso_simulado']) {
-	ok($GLOBALS['rt_avisos'] === [$cb], 'render listo tras «Pedir cambios»: se avisa una vez con el id del seguimiento');
-	ok(rt_callback($cb, $ok_base + ['fotos' => ['portada' => rt_url_foto($seg_cb, $gen1)]])->get_status() === 200 && $GLOBALS['rt_avisos'] === [$cb], 'repetir el mismo callback no vuelve a avisar');
-}
+ok(rt_avisos() === [$aviso_cb], 'render listo tras «Pedir cambios»: se avisa una vez, con el recordatorio de este seguimiento');
+$ap_cb = at_rt_obtener($cb)['aprobacion'];
+ok(($ap_cb['estado'] ?? '') === 'por_aprobar' && ($ap_cb['usada'] ?? null) === false && ($ap_cb['huella'] ?? '') === $g1['render']['huella'] && str_contains($GLOBALS['rt_avisos'][0]['message'] ?? '', 'retomar-aprobar.php'), 'el aviso emite una aprobación nueva (sale de «cambios») y trae sus botones');
+ok(stripos($GLOBALS['rt_avisos'][0]['message'] ?? '', 'easypanel') === false && stripos($GLOBALS['rt_avisos'][0]['message'] ?? '', at_pt_host_renderer()) === false, 'el aviso no lleva el host del renderer (D8)');
+ok(rt_callback($cb, $ok_base + ['fotos' => ['portada' => rt_url_foto($seg_cb, $gen1)]])->get_status() === 200 && rt_avisos() === [$aviso_cb], 'repetir el mismo callback no vuelve a avisar');
 
 // Segundo pedido sin cambios: las fotos viajan en images, no hay nada que generar y la huella es la misma.
 $huella1 = $render1['huella'];
@@ -260,13 +264,27 @@ $pedido3 = $capturado;
 ok(rt_callback($cb, ['ok' => true, 'view_url' => 'https://' . at_pt_host_renderer() . '/p/' . $pedido3['render']['unique_id'] . '/', 'fotos' => ['cierre' => rt_url_foto($seg_cb, $pedido3['generacion'], 'cierre.png')]])->get_status() === 200, 'callback con la foto del encargo nuevo');
 $g3 = at_rt_obtener($cb)['fotos'];
 ok($g3['cierre']['hash'] === hash('sha256', $prompt_c . ' con luz cálida') && $g3['portada'] === $g2['portada'], 'el hash sigue al encargo vigente y la otra lámina queda igual');
-// Sin «Pedir cambios» no se avisa.
-if ($GLOBALS['rt_aviso_simulado']) {
-	$avisos_antes = $GLOBALS['rt_avisos'];
-	at_rt_guardar($cb, ['aprobacion' => ['estado' => 'por_aprobar', 'n' => 2]]);
-	$capturado = null;
-	ok(at_rt_pedir_render($cb) === '', 'pedido con la aprobación por aprobar');
-	$pedido4 = $capturado;
-	ok(rt_callback($cb, ['ok' => true, 'view_url' => 'https://' . at_pt_host_renderer() . '/p/' . $pedido4['render']['unique_id'] . '/'])->get_status() === 200 && at_rt_obtener($cb)['render']['estado'] === 'listo' && $GLOBALS['rt_avisos'] === $avisos_antes, 'render listo con aprobación por aprobar: no se avisa');
-}
+// Sin «Pedir cambios» ni una aprobación vencida no se avisa.
+$avisos_antes = rt_avisos();
+at_rt_guardar($cb, ['aprobacion' => ['estado' => 'por_aprobar', 'n' => 2]]);
+$capturado = null;
+ok(at_rt_pedir_render($cb) === '', 'pedido con la aprobación por aprobar');
+$pedido4 = $capturado;
+ok(rt_callback($cb, ['ok' => true, 'view_url' => 'https://' . at_pt_host_renderer() . '/p/' . $pedido4['render']['unique_id'] . '/'])->get_status() === 200 && at_rt_obtener($cb)['render']['estado'] === 'listo' && rt_avisos() === $avisos_antes, 'render listo con aprobación por aprobar: no se avisa');
+// Ruling 11: la aprobación venció por contenido (por_aprobar con los enlaces muertos) y la presentación nueva queda lista:
+// se avisa para no perder una semana.
+at_rt_guardar($cb, ['aprobacion' => ['estado' => 'por_aprobar', 'n' => 1, 'nonce' => str_repeat('c', 16), 'huella' => 'vieja', 'usada' => true, 'vencida_at' => '2026-10-19 10:30:00']]);
+$capturado = null;
+ok(at_rt_pedir_render($cb) === '', 'pedido de la presentación nueva tras vencer la aprobación');
+$pedido5 = $capturado;
+ok(rt_callback($cb, ['ok' => true, 'view_url' => 'https://' . at_pt_host_renderer() . '/p/' . $pedido5['render']['unique_id'] . '/'])->get_status() === 200 && rt_avisos() === array_merge($avisos_antes, [$aviso_cb]), 'aprobación vencida y presentación nueva lista: se avisa una vez');
+$ap_cb = at_rt_obtener($cb)['aprobacion'];
+ok(($ap_cb['estado'] ?? '') === 'por_aprobar' && ($ap_cb['usada'] ?? null) === false && ($ap_cb['nonce'] ?? '') !== str_repeat('c', 16), 'el aviso deja una aprobación nueva con enlaces vivos');
+// Un aviso que no corresponde (seguimiento en pausa) no se manda y no hace fracasar el callback.
+$avisos_antes = rt_avisos();
+at_rt_guardar($cb, ['estado' => 'pausado', 'aprobacion' => ['estado' => 'cambios', 'n' => 1, 'usada' => true]]);
+$capturado = null;
+ok(at_rt_pedir_render($cb) === '', 'pedido con el seguimiento en pausa');
+$pedido6 = $capturado;
+ok(rt_callback($cb, ['ok' => true, 'view_url' => 'https://' . at_pt_host_renderer() . '/p/' . $pedido6['render']['unique_id'] . '/'])->get_status() === 200 && at_rt_obtener($cb)['render']['estado'] === 'listo' && rt_avisos() === $avisos_antes && at_rt_obtener($cb)['aprobacion']['estado'] === 'cambios', 'seguimiento en pausa: el render queda listo, no se avisa ni se emite');
 fin();

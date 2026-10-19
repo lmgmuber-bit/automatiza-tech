@@ -18,15 +18,38 @@ register_shutdown_function(static function () use (&$ids, &$emails, $wpdb) {
     foreach ($ids as $id) { $wpdb->delete($wpdb->prefix . 'at_retomar', ['id' => $id]); }
     foreach ($emails as $email) { $wpdb->delete($wpdb->prefix . 'at_retomar_bajas', ['email' => $email]); }
 });
+/**
+ * Seguimiento activo listo para salir. Por defecto trae la redacción `lista` y la aprobación de Luis tal como la deja
+ * Task 7 al aprobar: {estado:'aprobado', n: el recordatorio que toca, huella: la del render, usada, programado: su
+ * proximo_at}. Pasar 'aprobacion' o 'redaccion' en $c deja ese valor tal cual.
+ */
 function rt_env_fixture(array $c = []): array {
     global $ids, $emails, $marca;
     $email = $marca . '-' . count($ids) . '@example.com'; $emails[] = $email;
     $id = at_rt_crear($c + ['nombre' => '[PRUEBA]', 'negocio' => '[PRUEBA]', 'email' => $email, 'telefono' => '+56900000000', 'wa_autorizado' => 1, 'estado' => 'activo', 'proximo_at' => '2026-10-19', 'activado_at' => '2026-10-01 00:00:00']);
     $ids[] = $id; $s = at_rt_obtener($id);
-    at_rt_guardar($id, ['render' => ['estado' => 'listo', 'view_url' => 'https://' . at_pt_host_renderer() . '/p/' . $s['token'] . '-retomar/index.html']]);
+    $campos = ['render' => ['estado' => 'listo', 'view_url' => 'https://' . at_pt_host_renderer() . '/p/' . $s['token'] . '-retomar/index.html']];
+    if (!array_key_exists('redaccion', $c)) { $campos['redaccion'] = ['estado' => 'lista']; }
+    at_rt_guardar($id, $campos); $s = at_rt_obtener($id);
+    // Huella real del contenido; un texto que la presentación rechaza (p. ej. con «easypanel») no tiene huella calculable.
+    try { $huella = at_rt_huella_render($s); } catch (InvalidArgumentException $e) { $huella = hash('sha256', 'rt-env-sin-huella-' . $id); }
+    $campos = ['render' => array_merge($s['render'], ['huella' => $huella])];
+    if (!array_key_exists('aprobacion', $c)) {
+        $campos['aprobacion'] = ['estado' => 'aprobado', 'n' => at_rt_envios_realizados($s['envios']) + 1, 'nonce' => bin2hex(random_bytes(8)), 'huella' => $huella, 'emitido_at' => '2026-10-12 09:00:00', 'vence' => strtotime('2026-10-19 09:00:00'), 'usada' => true, 'resuelto_at' => '2026-10-12 09:05:00', 'programado' => (string) ($s['proximo_at'] ?: '2026-10-19')];
+    }
+    at_rt_guardar($id, $campos);
     return at_rt_obtener($id);
 }
 function rt_env_tick(string $cuando): array { return at_rt_tick($cuando); }
+/** Tick que solo ve los seguimientos $solo (el resto de los fixtures queda fuera del SELECT del reloj). */
+function rt_env_tick_solo(array $solo, string $cuando): array {
+    global $ids; $todos = $ids; $ids = $solo;
+    try { return at_rt_tick($cuando); } finally { $ids = $todos; }
+}
+/** Correos entregados a una dirección. */
+function rt_env_correos(string $email): int {
+    global $mails; return count(array_filter($mails, static fn($m) => $m['to'] === $email));
+}
 update_option('at_rt_wa_automatico', '1');
 $s = rt_env_fixture();
 ok(rt_env_tick('2026-10-19 09:30:00')['enviados'] === 0 && count($mails) === 0, '09:30 no entrega');
@@ -58,9 +81,10 @@ $p = rt_env_fixture(['telefono' => '']); at_rt_guardar($p['id'], ['render' => ['
 $r = rt_env_tick('2026-10-23 10:30:00');
 ok($r['diferidos'] === 1 && at_rt_obtener($p['id'])['proximo_at'] === '2026-10-26', 'render pendiente difiere al siguiente día hábil, no siete días');
 at_rt_guardar($p['id'], ['estado' => 'pausado']);
-$cuarto = rt_env_fixture(['telefono' => '+56900000001']); $ev = [];
+$ev = [];
 for ($i=1;$i<=3;$i++) { $ev[] = ['tipo'=>'envio','n'=>$i,'fecha'=>'2026-09-' . (10+$i),'at'=>'2026-09-11 10:00:00','correo'=>['estado'=>'enviado'],'whatsapp'=>null]; }
-at_rt_guardar($cuarto['id'], ['envios' => $ev]); $r = rt_env_tick('2026-10-19 10:30:00');
+// Los tres envíos previos van en el alta: la aprobación del fixture es la del recordatorio que toca (el 4.º).
+$cuarto = rt_env_fixture(['telefono' => '+56900000001', 'envios' => $ev]); $r = rt_env_tick('2026-10-19 10:30:00');
 ok($r['enviados'] === 1 && $r['whatsapp'][0]['n'] === 4 && at_rt_obtener($cuarto['id'])['estado'] === 'agotado', 'cuarto envío agota y solicita WA');
 $p = rt_env_fixture(['telefono' => '', 'textos' => ['quedamos' => 'Consultar easypanel interno']]);
 $antes=count($mails); $r=at_rt_entregar($p['id'], false, '2026-10-19 10:30:00');
@@ -71,6 +95,7 @@ $p=rt_env_fixture(['telefono'=>'']); $falla_mail=true; $r=at_rt_entregar($p['id'
 ok(!$r['ok'] && at_rt_obtener($p['id'])['estado']==='pausado' && at_rt_obtener($p['id'])['envios'][0]['correo']['estado']==='error', 'fallo correo se registra y pausa sin retry');
 $p=rt_env_fixture(['telefono'=>'']); $antes=count($mails); $r=at_rt_enviar($p['id'],true);
 ok($r['ok'] && $r['whatsapp']===null && at_rt_obtener($p['id'])['envios']===[] && count($mails)===$antes+1, 'prueba no consume contacto ni WA');
+ok(at_rt_obtener($p['id'])['aprobacion'] === $p['aprobacion'], 'prueba no consume la aprobación');
 ok($mails[$antes]['to']===at_cc_correo_avisos() && str_starts_with($mails[$antes]['subject'],'[Prueba] '), 'prueba se dirige al equipo y rotula asunto');
 ok(str_contains($alternativas[0], 'Ver resumen y demo: https://') && !str_contains($alternativas[0], '<html'), 'correo tiene alternativa de texto real');
 $wpdb->insert($wpdb->prefix . 'crm_clientes', ['nombre' => '[PRUEBA]', 'email' => $marca . '-crm@example.com', 'tipo' => 'prospecto']);
@@ -136,6 +161,123 @@ $carrera=static function($sql) use($dedup,&$inyectado) {
 add_filter('query',$carrera,20); $resultado=at_rt_dar_baja($dedup['id'],'prueba'); remove_filter('query',$carrera,20);
 $despues=(int)$wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$wpdb->prefix}crm_historial WHERE cliente_id=%d AND tipo_evento='retomar_baja'",$crm));
 ok($inyectado && $resultado && $despues===$antes+1, 'baja concurrente entre snapshot y BEGIN genera una sola historia');
+
+// ---------- Task 8: solo sale lo que Luis aprobó ----------
+// Sin aprobación (o por aprobar, con cambios pedidos u omitida): nada sale y nada cambia; el claim se libera.
+foreach (['sin emitir' => [], 'por_aprobar' => ['estado' => 'por_aprobar', 'n' => 1, 'nonce' => str_repeat('a', 16), 'huella' => 'x', 'usada' => false], 'cambios' => ['estado' => 'cambios', 'n' => 1, 'usada' => true], 'omitido' => ['estado' => 'omitido', 'n' => 1, 'usada' => true]] as $caso => $ap) {
+    $na = rt_env_fixture(['telefono' => '', 'aprobacion' => $ap]);
+    $r = at_rt_entregar($na['id'], false, '2026-10-19 10:30:00'); $f = at_rt_obtener($na['id']);
+    ok(!$r['ok'] && $r['motivo'] === 'sin_aprobacion' && rt_env_correos($na['email']) === 0 && $f['envios'] === [] && $f['estado'] === 'activo' && $f['proximo_at'] === '2026-10-19' && $f['enviando'] === null && $f['aprobacion'] === $ap, 'activo ' . $caso . ': sin_aprobacion, no sale nada, no cambia nada y libera el claim');
+}
+$na = rt_env_fixture(['telefono' => '', 'aprobacion' => []]);
+$r = rt_env_tick_solo([$na['id']], '2026-10-19 10:30:00');
+ok($r['enviados'] === 0 && $r['whatsapp'] === [] && rt_env_correos($na['email']) === 0 && at_rt_obtener($na['id'])['estado'] === 'activo', 'el reloj no envía un activo sin aprobación');
+// Aprobado para mañana: hoy no sale; mañana sí.
+$pm = rt_env_fixture(['telefono' => '']); $ap = $pm['aprobacion']; $ap['programado'] = '2026-10-20'; at_rt_guardar($pm['id'], ['aprobacion' => $ap]);
+$r = at_rt_entregar($pm['id'], false, '2026-10-19 10:30:00');
+ok($r['motivo'] === 'sin_aprobacion' && rt_env_correos($pm['email']) === 0 && at_rt_obtener($pm['id'])['aprobacion'] === $ap && at_rt_obtener($pm['id'])['enviando'] === null, 'aprobado para mañana: hoy no sale y la aprobación sigue intacta');
+$r = at_rt_entregar($pm['id'], false, '2026-10-20 10:30:00');
+ok($r['ok'] && rt_env_correos($pm['email']) === 1, 'aprobado para mañana: sale el día programado');
+$pm = rt_env_fixture(['telefono' => '']); $ap = $pm['aprobacion']; $ap['programado'] = 'mañana';
+at_rt_guardar($pm['id'], ['aprobacion' => $ap]);
+ok(at_rt_entregar($pm['id'], false, '2026-10-19 10:30:00')['motivo'] === 'sin_aprobacion' && rt_env_correos($pm['email']) === 0, 'aprobado con fecha programada ilegible: no sale');
+// Aprobado: un correo y la aprobación queda consumida en la misma transacción que el envío.
+$ok1 = rt_env_fixture(['telefono' => '']);
+$r = at_rt_entregar($ok1['id'], false, '2026-10-19 10:30:00'); $f = at_rt_obtener($ok1['id']);
+ok($r['ok'] && rt_env_correos($ok1['email']) === 1 && count($f['envios']) === 1 && $f['envios'][0]['n'] === 1, 'aprobado: sale un correo');
+ok($f['aprobacion'] === ['estado' => 'enviado', 'n' => 1, 'at' => '2026-10-19 10:30:00'], 'aprobado: la aprobación queda {estado: enviado, n, at}');
+// Review Focus 2: dos ticks seguidos con el mismo aprobado → un solo correo; la aprobación consumida no sirve otro día.
+$dt = rt_env_fixture(['telefono' => '', 'proximo_at' => '2026-10-21']);
+rt_env_tick_solo([$dt['id']], '2026-10-21 10:30:00'); rt_env_tick_solo([$dt['id']], '2026-10-21 10:30:00');
+ok(rt_env_correos($dt['email']) === 1, 'dos ticks seguidos con el mismo aprobado: un solo correo');
+at_rt_guardar($dt['id'], ['proximo_at' => '2026-10-21']); rt_env_tick_solo([$dt['id']], '2026-10-21 11:30:00');
+ok(rt_env_correos($dt['email']) === 1, 'otro tick el mismo día, aun con proximo_at de vuelta a hoy: sigue un solo correo');
+at_rt_guardar($dt['id'], ['proximo_at' => '2026-10-22']);
+$r = at_rt_entregar($dt['id'], false, '2026-10-22 10:30:00');
+ok($r['motivo'] === 'sin_aprobacion' && rt_env_correos($dt['email']) === 1 && count(at_rt_obtener($dt['id'])['envios']) === 1, 'la aprobación consumida no sirve para el día siguiente');
+// Dos relojes a la vez: el segundo llega mientras el primero manda el correo.
+$doble = rt_env_fixture(['telefono' => '']); $segundo = null;
+$durante = static function ($v, $mail) use ($doble, &$segundo) {
+    if ($mail['to'] === $doble['email'] && $segundo === null) { $segundo = at_rt_entregar($doble['id'], false, '2026-10-19 10:30:30'); }
+    return $v;
+};
+add_filter('pre_wp_mail', $durante, 150, 2); at_rt_entregar($doble['id'], false, '2026-10-19 10:30:00'); remove_filter('pre_wp_mail', $durante, 150);
+ok(($segundo['motivo'] ?? '') === 'ocupado_o_inactivo' && rt_env_correos($doble['email']) === 1 && at_rt_obtener($doble['id'])['aprobacion']['estado'] === 'enviado', 'dos relojes a la vez con el mismo aprobado: un solo correo');
+// Review Focus 3: aprobado y después se da de baja o agenda → nada sale y queda detenido.
+$bj = rt_env_fixture(['telefono' => '']);
+$wpdb->insert($wpdb->prefix . 'at_retomar_bajas', ['email' => $bj['email'], 'telefono' => '', 'origen' => 'prueba', 'creado_at' => current_time('mysql')]);
+$r = at_rt_entregar($bj['id'], false, '2026-10-19 10:30:00'); $f = at_rt_obtener($bj['id']);
+ok($r['motivo'] === 'baja' && rt_env_correos($bj['email']) === 0 && $f['estado'] === 'baja' && $f['proximo_at'] === null, 'aprobado y luego baja: no sale nada y queda en baja');
+$bj = rt_env_fixture(['telefono' => '']); at_rt_dar_baja($bj['id'], 'prueba');
+rt_env_tick_solo([$bj['id']], '2026-10-19 10:30:00');
+ok(rt_env_correos($bj['email']) === 0 && at_rt_obtener($bj['id'])['estado'] === 'baja', 'aprobado y luego baja desde su página: el reloj no le envía');
+$ag = rt_env_fixture(['telefono' => '']);
+$wpdb->insert($wpdb->prefix . 'automatiza_followup_meetings', ['client_name' => '[PRUEBA]', 'client_email' => $ag['email'], 'meeting_date' => '2026-12-01', 'meeting_time' => '10:00:00', 'status' => 'scheduled', 'created_at' => '2026-10-15 12:00:00']);
+$reunion = (int) $wpdb->insert_id;
+register_shutdown_function(static function () use ($wpdb, $reunion) { $wpdb->delete($wpdb->prefix . 'automatiza_followup_meetings', ['id' => $reunion]); });
+$r = at_rt_entregar($ag['id'], false, '2026-10-19 10:30:00'); $f = at_rt_obtener($ag['id']);
+ok($reunion > 0 && $r['motivo'] === 'agendo' && rt_env_correos($ag['email']) === 0 && $f['estado'] === 'agendo' && $f['proximo_at'] === null, 'aprobado y luego agenda una reunión: no sale nada y queda en agendó');
+// Lo aprobado debe ser exactamente lo que sale: si cambió después de aprobar, no sale y vuelve a pedir aprobación.
+$vencidas = [
+    'huella del render distinta' => static function (array $s): void { at_rt_guardar($s['id'], ['render' => array_merge($s['render'], ['huella' => hash('sha256', 'otra presentación')])]); },
+    'textos cambiados sin rehacer la presentación' => static function (array $s): void { at_rt_guardar($s['id'], ['textos' => ['quedamos' => '[PRUEBA] Texto nuevo que nadie aprobó']]); },
+    'recordatorio n distinto' => static function (array $s): void { at_rt_guardar($s['id'], ['aprobacion' => array_merge($s['aprobacion'], ['n' => 2])]); },
+    'redacción pendiente' => static function (array $s): void { at_rt_guardar($s['id'], ['redaccion' => ['estado' => 'pendiente']]); },
+];
+foreach ($vencidas as $caso => $cambiar) {
+    $v = rt_env_fixture(['telefono' => '+56900000011']); $cambiar($v);
+    $r = at_rt_entregar($v['id'], false, '2026-10-19 10:30:00'); $f = at_rt_obtener($v['id']); $ultimo = end($f['envios']) ?: [];
+    ok(!$r['ok'] && $r['motivo'] === 'aprobacion_vencida' && $r['whatsapp'] === null && rt_env_correos($v['email']) === 0 && at_rt_envios_realizados($f['envios']) === 0 && $f['enviando'] === null && $f['estado'] === 'activo', 'aprobado con ' . $caso . ': no sale nada (aprobacion_vencida)');
+    ok(($f['aprobacion']['estado'] ?? '') === 'por_aprobar' && ($f['aprobacion']['usada'] ?? null) === true && !isset($f['aprobacion']['programado']) && ($ultimo['tipo'] ?? '') === 'diferido' && ($ultimo['nota'] ?? '') === 'aprobacion_vencida', 'aprobado con ' . $caso . ': la aprobación vuelve a por_aprobar con los enlaces muertos y queda anotado');
+    $r = at_rt_entregar($v['id'], false, '2026-10-19 11:30:00');
+    ok($r['motivo'] === 'sin_aprobacion' && rt_env_correos($v['email']) === 0 && count(at_rt_obtener($v['id'])['envios']) === count($f['envios']), 'aprobado con ' . $caso . ': el reloj siguiente no envía ni repite la anotación');
+}
+// Si la aprobación cambia mientras sale el correo, no se pisa ni se pide el WhatsApp de lo que ya no está aprobado.
+$cm = rt_env_fixture(['telefono' => '+56900000012']);
+$nueva = ['estado' => 'por_aprobar', 'n' => 1, 'nonce' => str_repeat('b', 16), 'huella' => $cm['aprobacion']['huella'], 'emitido_at' => '2026-10-19 10:30:01', 'vence' => strtotime('2026-10-26 10:30:01'), 'usada' => false];
+$durante = static function ($v, $mail) use ($cm, $nueva) { if ($mail['to'] === $cm['email']) { at_rt_guardar($cm['id'], ['aprobacion' => $nueva]); } return $v; };
+add_filter('pre_wp_mail', $durante, 150, 2); $r = at_rt_entregar($cm['id'], false, '2026-10-19 10:30:00'); remove_filter('pre_wp_mail', $durante, 150); $f = at_rt_obtener($cm['id']);
+ok($r['ok'] && $r['whatsapp'] === null && $f['aprobacion'] === $nueva && count($f['envios']) === 1 && $f['envios'][0]['correo']['estado'] === 'enviado' && $f['envios'][0]['whatsapp'] === null, 'aprobación cambiada durante el correo: no se consume ni pide WhatsApp; el envío queda registrado');
+// Correo fallido: no consume la aprobación (no salió nada).
+$cf = rt_env_fixture(['telefono' => '']); $falla_mail = true; $r = at_rt_entregar($cf['id'], false, '2026-10-19 10:30:00'); $falla_mail = false;
+ok(!$r['ok'] && at_rt_obtener($cf['id'])['aprobacion'] === $cf['aprobacion'], 'correo fallido no consume la aprobación');
+// 2.º recordatorio con WhatsApp autorizado y el interruptor encendido: también lleva WhatsApp.
+$wa2 = rt_env_fixture(['telefono' => '+56900000013', 'envios' => [['tipo' => 'envio', 'n' => 1, 'fecha' => '2026-10-12', 'at' => '2026-10-12 10:30:00', 'correo' => ['estado' => 'enviado'], 'whatsapp' => null]]]);
+$r = rt_env_tick_solo([$wa2['id']], '2026-10-19 10:30:00');
+ok($wa2['aprobacion']['n'] === 2 && $r['enviados'] === 1 && count($r['whatsapp']) === 1 && $r['whatsapp'][0]['n'] === 2 && $r['whatsapp'][0]['id'] === $wa2['id'], '2.º envío aprobado con WhatsApp autorizado: un pedido de WhatsApp');
+ok(at_rt_obtener($wa2['id'])['aprobacion'] === ['estado' => 'enviado', 'n' => 2, 'at' => '2026-10-19 10:30:00'], '2.º envío consume su aprobación con n = 2');
+// «Enviar prueba al equipo» funciona sin aprobación y no crea ninguna.
+$pr = rt_env_fixture(['telefono' => '', 'aprobacion' => []]); $antes = count($mails);
+$r = at_rt_enviar($pr['id'], true); $f = at_rt_obtener($pr['id']);
+ok($r['ok'] && count($mails) === $antes + 1 && $mails[$antes]['to'] === at_cc_correo_avisos() && rt_env_correos($pr['email']) === 0 && $f['aprobacion'] === [] && $f['envios'] === [], 'enviar prueba al equipo funciona sin aprobación y no la crea');
+// Propuesta vinculada: si está `lista` y es v3, el recordatorio aprobado la deja `sent` con una nota; otra, sin cambios.
+$props = [];
+register_shutdown_function(static function () use ($wpdb, &$props) {
+    foreach ($props as $pid) { $wpdb->delete($wpdb->prefix . 'automatiza_propuestas_details', ['propuesta_id' => $pid]); $wpdb->delete($wpdb->prefix . 'automatiza_propuestas', ['id' => $pid]); }
+});
+$rt_env_propuesta = static function (string $status, ?string $flujo) use ($wpdb, $marca, &$props): int {
+    $wpdb->insert($wpdb->prefix . 'automatiza_propuestas', ['client_email' => $marca . '-prop' . count($props) . '@example.com', 'client_name' => '[PRUEBA]', 'company_name' => '[PRUEBA]', 'unique_link_id' => substr(md5($marca . 'prop' . count($props)), 0, 12), 'status' => $status, 'flujo' => $flujo, 'gamma_prompt_text' => '', 'system_prompt_text' => '', 'created_at' => current_time('mysql')]);
+    $pid = (int) $wpdb->insert_id; $props[] = $pid; return $pid;
+};
+// El sitio local va por http y el enlace v3 de la presentación exige https (igual que en render-wp-test.php).
+$https_local = static fn($url) => preg_replace('~^http:~', 'https:', $url);
+add_filter('home_url', $https_local);
+$rt_env_estado_prop = static fn(int $pid): string => (string) $wpdb->get_var($wpdb->prepare("SELECT status FROM {$wpdb->prefix}automatiza_propuestas WHERE id=%d", $pid));
+$rt_env_notas_prop = static fn(int $pid): array => $wpdb->get_results($wpdb->prepare("SELECT detail_type, title FROM {$wpdb->prefix}automatiza_propuestas_details WHERE propuesta_id=%d", $pid), ARRAY_A);
+$pl = $rt_env_propuesta('lista', 'v3'); $sp = rt_env_fixture(['telefono' => '', 'propuesta_id' => $pl]);
+$r = at_rt_entregar($sp['id'], false, '2026-10-19 10:30:00'); $notas = $rt_env_notas_prop($pl);
+ok($r['ok'] && $rt_env_estado_prop($pl) === 'sent', 'propuesta v3 en lista queda sent tras el envío aprobado');
+ok(count($notas) === 1 && $notas[0]['title'] === 'Enviada con el recordatorio de Retomar' && $notas[0]['detail_type'] === 'aviso_operativo', 'propuesta pasada a sent deja una sola nota interna');
+foreach ([['sent', 'v3'], ['evaluando', 'v3'], ['lista', null]] as [$estado, $flujo]) {
+    $po = $rt_env_propuesta($estado, $flujo); $so = rt_env_fixture(['telefono' => '', 'propuesta_id' => $po]);
+    $r = at_rt_entregar($so['id'], false, '2026-10-19 10:30:00');
+    ok($r['ok'] && $rt_env_estado_prop($po) === $estado && $rt_env_notas_prop($po) === [], 'propuesta ' . $estado . ' (' . ($flujo ?? 'sin flujo') . '): el envío no la toca');
+}
+$pp = $rt_env_propuesta('lista', 'v3'); $spp = rt_env_fixture(['telefono' => '', 'propuesta_id' => $pp]);
+ok(at_rt_enviar($spp['id'], true)['ok'] && $rt_env_estado_prop($pp) === 'lista' && $rt_env_notas_prop($pp) === [], 'la prueba al equipo no pasa la propuesta a sent');
+$pn = $rt_env_propuesta('lista', 'v3'); $spn = rt_env_fixture(['telefono' => '', 'propuesta_id' => $pn, 'aprobacion' => []]);
+ok(at_rt_entregar($spn['id'], false, '2026-10-19 10:30:00')['motivo'] === 'sin_aprobacion' && $rt_env_estado_prop($pn) === 'lista', 'sin aprobación la propuesta sigue en lista');
+remove_filter('home_url', $https_local);
 // Interruptor del WhatsApp automático (pedido de Luis, 18-oct): apagado = solo correo, sin pedido de WhatsApp.
 update_option('at_rt_wa_automatico', '0');
 $sa = rt_env_fixture(['proximo_at' => '2026-10-20']);

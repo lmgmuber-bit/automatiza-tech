@@ -36,13 +36,86 @@ function at_rt_datos_correo(array $s): array {
     return ['nombre' => (string) $s['nombre'], 'negocio' => (string) $s['negocio'], 'quedamos' => (string) ($s['textos']['quedamos'] ?? ''), 'url_ver' => $url, 'url_agendar' => $url . '&agendar=1', 'url_baja' => $url . '&baja=1'];
 }
 
+/**
+ * ¿Luis aprobó un recordatorio que ya puede salir? Solo `aprobado` con su día programado (Y-m-d legible) hoy o antes.
+ * Por aprobar, con cambios pedidos, omitido, ya enviado o sin emitir: no. Lo aprobado se coteja con lo que saldría
+ * en at_rt_aprobacion_calza(), justo antes del correo.
+ */
+function at_rt_aprobacion_para(array $s, string $hoy): bool {
+    $ap = is_array($s['aprobacion'] ?? null) ? $s['aprobacion'] : [];
+    $programado = is_string($ap['programado'] ?? null) ? $ap['programado'] : '';
+    return ($ap['estado'] ?? '') === 'aprobado' && at_rt_fecha($programado) !== null && $programado <= $hoy;
+}
+
+/**
+ * ¿Lo aprobado es exactamente lo que saldría como recordatorio $n? Misma huella en la aprobación, en el render `listo`
+ * y en el contenido actual (un texto guardado sin rehacer la presentación también cambia la huella), redacción
+ * `lista` y el mismo número de recordatorio. Si algo no calza, el contenido cambió después de aprobar.
+ */
+function at_rt_aprobacion_calza(array $s, int $n): bool {
+    $ap = is_array($s['aprobacion'] ?? null) ? $s['aprobacion'] : [];
+    $render = is_array($s['render'] ?? null) ? $s['render'] : [];
+    $aprobada = is_string($ap['huella'] ?? null) ? $ap['huella'] : '';
+    $vigente = is_string($render['huella'] ?? null) ? $render['huella'] : '';
+    if ($aprobada === '' || $vigente === '' || ($render['estado'] ?? '') !== 'listo' || ($s['redaccion']['estado'] ?? '') !== 'lista' || (int) ($ap['n'] ?? 0) !== $n || !hash_equals($vigente, $aprobada)) { return false; }
+    try { $actual = at_rt_huella_render($s); }
+    catch (InvalidArgumentException $e) { return false; }
+    return hash_equals($aprobada, $actual);
+}
+
+/**
+ * El contenido cambió después de aprobar: la aprobación vuelve a `por_aprobar` con los enlaces muertos (usada) para que
+ * el correo semanal la emita de nuevo, y queda anotado {tipo:'diferido', nota:'aprobacion_vencida'}. Bajo FOR UPDATE y
+ * solo si sigue siendo la misma aprobación que se revisó ($ap): nunca pisa una decisión tomada entretanto.
+ */
+function at_rt_vencer_aprobacion(int $id, array $ap, string $ahora): bool {
+    global $wpdb;
+    if ($wpdb->query('START TRANSACTION') === false) { return false; }
+    try {
+        $fila = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$wpdb->prefix}at_retomar WHERE id=%d FOR UPDATE", $id), ARRAY_A);
+        if (!$fila) { return false; }
+        $s = at_rt_fila($fila);
+        if ($s['aprobacion'] !== $ap || ($ap['estado'] ?? '') !== 'aprobado') { return false; }
+        $envios = $s['envios'];
+        $envios[] = ['tipo' => 'diferido', 'fecha' => substr($ahora, 0, 10), 'at' => $ahora, 'nota' => 'aprobacion_vencida'];
+        $aprobacion = array_merge(array_diff_key($ap, ['programado' => true]), ['estado' => 'por_aprobar', 'usada' => true, 'vencida_at' => $ahora]);
+        if (!at_rt_guardar($id, ['aprobacion' => $aprobacion, 'envios' => $envios])) { return false; }
+        return $wpdb->query('COMMIT') !== false;
+    } finally {
+        $wpdb->query('ROLLBACK'); // Sin efecto después de COMMIT; libera el candado ante cualquier retorno o error.
+    }
+}
+
+/**
+ * Tras un recordatorio aprobado que salió: si la propuesta vinculada es v3 y seguía `lista` (terminada y nunca enviada),
+ * pasa a `sent`, porque el recordatorio le llevó la presentación con su enlace. Ningún otro estado se toca: el UPDATE
+ * exige `lista` y v3 en la misma sentencia. Deja una nota interna en Seguimiento (at_cc_anotar_simple, si existe).
+ */
+function at_rt_marcar_propuesta_enviada(array $s, string $ahora): void {
+    global $wpdb;
+    $pid = (int) ($s['propuesta_id'] ?? 0);
+    if ($pid <= 0) { return; }
+    $tabla = $wpdb->prefix . 'automatiza_propuestas';
+    $p = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$tabla} WHERE id=%d", $pid));
+    if (!$p || ($p->status ?? '') !== 'lista' || ($p->flujo ?? null) !== 'v3') { return; }
+    if ($wpdb->query($wpdb->prepare("UPDATE {$tabla} SET status='sent' WHERE id=%d AND status='lista' AND flujo='v3'", $pid)) !== 1) { return; }
+    if (function_exists('at_cc_anotar_simple')) {
+        // aviso_operativo es un tipo interno: la nota nunca llega al portal del cliente.
+        at_cc_anotar_simple($p, 'aviso_operativo', 'Enviada con el recordatorio de Retomar', 'El recordatorio aprobado le llevó la presentación con el enlace de la propuesta.', ['retomar_id' => (int) $s['id'], 'at' => $ahora]);
+    }
+}
+
 /** Prueba manda sólo al equipo. El reloj inyecta su fecha; las llamadas manuales usan Santiago. */
 function at_rt_enviar(int $id, bool $prueba): array {
     return at_rt_entregar($id, $prueba, (new DateTimeImmutable('now', new DateTimeZone('America/Santiago')))->format('Y-m-d H:i:s'));
 }
 
-/** Persistir la entrega aceptada bajo bloqueo, respetando paradas ocurridas durante SMTP. */
-function at_rt_finalizar_entrega(int $id, int $n, bool $ok, string $ahora): ?array {
+/**
+ * Persistir la entrega aceptada bajo bloqueo, respetando paradas ocurridas durante SMTP. $aprobacion es la aprobación
+ * revisada antes del correo: si salió y la fila aún tiene esa misma aprobación, se consume en esta misma transacción
+ * ({estado:'enviado', n, at}); si cambió entretanto no se pisa y tampoco se pide el WhatsApp.
+ */
+function at_rt_finalizar_entrega(int $id, int $n, bool $ok, string $ahora, array $aprobacion): ?array {
     global $wpdb;
     if ($wpdb->query('START TRANSACTION') === false) { return null; }
     $confirmado = false;
@@ -52,9 +125,12 @@ function at_rt_finalizar_entrega(int $id, int $n, bool $ok, string $ahora): ?arr
         $s = at_rt_fila($raw);
         $motivo = at_rt_motivo_parada(at_rt_contexto_parada($s));
         $propio = $s['estado'] === 'activo' && $s['enviando'] === $ahora;
-        $wa = $propio && $motivo === '' && $ok && at_rt_wa_automatico() && in_array('whatsapp', at_rt_canales($n, $s['max_envios'], $s['canales'], (bool) $s['wa_autorizado'], at_pt_telefono_wa($s['telefono'])), true);
+        $aprobada = ($aprobacion['estado'] ?? '') === 'aprobado' && $s['aprobacion'] === $aprobacion;
+        $wa = $propio && $aprobada && $motivo === '' && $ok && at_rt_wa_automatico() && in_array('whatsapp', at_rt_canales($n, $s['max_envios'], $s['canales'], (bool) $s['wa_autorizado'], at_pt_telefono_wa($s['telefono'])), true);
         $s['envios'][] = ['tipo' => 'envio', 'n' => $n, 'fecha' => substr($ahora, 0, 10), 'at' => $ahora, 'correo' => ['estado' => $ok ? 'enviado' : 'error'], 'whatsapp' => $wa ? ['estado' => 'pendiente'] : null];
         $campos = ['envios' => $s['envios']];
+        // El correo ya salió: la aprobación queda usada aunque una parada (baja, agendó) llegara durante SMTP.
+        if ($ok && $aprobada) { $campos['aprobacion'] = $s['aprobacion'] = ['estado' => 'enviado', 'n' => $n, 'at' => $ahora]; }
         // La transición sólo pertenece al claim vigente y a una fila aún activa.
         if ($propio) {
             $estado = $motivo !== '' ? at_rt_estado_por_motivo($motivo) : (!$ok ? 'pausado' : ($n >= $s['max_envios'] ? 'agotado' : 'activo'));
@@ -95,6 +171,8 @@ function at_rt_entregar(int $id, bool $prueba, string $ahora): array {
             foreach ($s['envios'] as $e) {
                 if (($e['tipo'] ?? '') === 'envio' && ($e['fecha'] ?? '') === $hoy) { $r['motivo'] = 'ya_intentado'; return $r; }
             }
+            // Solo sale lo que Luis aprobó para hoy o antes. Sin eso no se toca nada: el finally libera el claim.
+            if (!at_rt_aprobacion_para($s, $hoy)) { $r['motivo'] = 'sin_aprobacion'; return $r; }
         }
         if (($s['render']['estado'] ?? '') !== 'listo' || !at_rt_url_render_valida((string) ($s['render']['view_url'] ?? ''), $s['token'])) {
             if (!$prueba) {
@@ -107,6 +185,11 @@ function at_rt_entregar(int $id, bool $prueba, string $ahora): array {
         // Revisar los campos que salen, nunca render.view_url (iframe autorizado).
         if (at_rt_internas($d) || stripos(wp_json_encode($d), 'easypanel') !== false || !at_rt_url_correo($d['url_ver'])) { $r['motivo'] = 'interno'; return $r; }
         $n = at_rt_envios_realizados($s['envios']) + 1;
+        // Lo aprobado debe ser exactamente lo que sale; si cambió después de aprobar, vuelve a pedir aprobación.
+        if (!$prueba && !at_rt_aprobacion_calza($s, $n)) {
+            at_rt_vencer_aprobacion($id, $s['aprobacion'], $ahora);
+            $r['motivo'] = 'aprobacion_vencida'; return $r;
+        }
         $destino = $prueba ? at_cc_correo_avisos() : $s['email'];
         if (!is_email($destino)) { $r['motivo'] = 'correo_invalido'; return $r; }
         $html = at_rt_correo_html($d); $texto = at_rt_correo_texto($d);
@@ -117,13 +200,18 @@ function at_rt_entregar(int $id, bool $prueba, string $ahora): array {
         finally { remove_action('phpmailer_init', $alternativa); }
         $r['ok'] = (bool) $ok; $r['motivo'] = $ok ? 'enviado' : 'correo_error';
         if ($prueba) { return $r; }
-        $entrega = at_rt_finalizar_entrega($id, $n, (bool) $ok, $ahora);
+        $entrega = at_rt_finalizar_entrega($id, $n, (bool) $ok, $ahora, $s['aprobacion']);
         if (!$entrega) {
             $wpdb->query($wpdb->prepare("UPDATE {$wpdb->prefix}at_retomar SET estado='pausado',proximo_at=NULL WHERE id=%d AND estado='activo' AND enviando=%s", $id, $ahora));
             return ['ok' => false, 'motivo' => 'registro_error', 'whatsapp' => null];
         }
         $s = $entrega['seguimiento'];
-        if ($ok) { at_rt_historia($s, 'retomar_correo', '🔁 Recordatorio enviado'); }
+        if ($ok) {
+            at_rt_historia($s, 'retomar_correo', '🔁 Recordatorio enviado');
+            // El envío ya quedó registrado: un fallo al marcar la propuesta no debe cortar el reloj de los demás.
+            try { at_rt_marcar_propuesta_enviada($s, $ahora); }
+            catch (Throwable $e) { error_log('Retomar: no se pudo marcar la propuesta como enviada: ' . $e->getMessage()); }
+        }
         if ($entrega['whatsapp']) { $r['whatsapp'] = ['id' => $id, 'n' => $n, 'telefono' => at_pt_telefono_wa($s['telefono']), 'nombre' => $s['nombre'], 'negocio' => $s['negocio'], 'token' => $s['token']]; }
         return $r;
     } finally {

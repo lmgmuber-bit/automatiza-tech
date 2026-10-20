@@ -121,7 +121,7 @@
   });
 
   var params = new URLSearchParams(window.location.search);
-  if (window.location.hash === '#tab-plan' || params.has('pt') || params.has('pt_msg')) {
+  if (window.location.hash === '#tab-plan' || /^#at-(?:pt|av)(?:-|$)/.test(window.location.hash) || params.has('pt') || params.has('pt_msg')) {
     abrirPestanaPlan();
   }
   if (params.has('pt_msg') && window.history && window.history.replaceState) {
@@ -146,11 +146,25 @@
     });
     actualizar();
   });
-  /* «✏️ Editar» llega con #at-av-nuevo: la pestaña se abre recién ahora, así que el salto se hace a mano. */
-  if (window.location.hash === '#at-av-nuevo' || window.location.hash === '#at-av') {
-    var destino = document.getElementById(window.location.hash.slice(1));
-    if (destino) { destino.scrollIntoView(); }
+  /* Los enlaces del índice y las redirecciones mantienen sus anclas aunque estén dentro de una sección plegada. */
+  function abrirDestino(hash) {
+    if (!/^#at-(?:pt|av)(?:-|$)/.test(hash)) { return; }
+    var destino = document.getElementById(hash.slice(1));
+    if (!destino) { return; }
+    abrirPestanaPlan();
+    var nodo = destino;
+    while (nodo && nodo !== document) {
+      if (nodo.tagName === 'DETAILS') { nodo.open = true; }
+      nodo = nodo.parentElement;
+    }
+    destino.scrollIntoView();
   }
+  document.addEventListener('click', function (e) {
+    var enlace = e.target.closest ? e.target.closest('.at-pt a[href^="#"]') : null;
+    if (enlace) { abrirDestino(enlace.getAttribute('href')); }
+  });
+  window.addEventListener('hashchange', function () { abrirDestino(window.location.hash); });
+  abrirDestino(window.location.hash);
 
   window.atPlanTrabajo = { serializar: serializar, abrirPestanaPlan: abrirPestanaPlan };
 }());

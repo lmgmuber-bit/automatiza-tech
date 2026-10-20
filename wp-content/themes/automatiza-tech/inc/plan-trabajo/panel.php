@@ -326,6 +326,8 @@ function at_pt_render_plan(object $fila, int $crm_id): void {
 	?>
 	<div class="at-pt-plan" data-plan="<?php echo $id; ?>">
 		<p class="at-pt-sub"><strong><?php echo esc_html($proyecto !== '' ? $proyecto : 'Plan sin nombre todavía'); ?></strong> · código <?php echo esc_html((string) $fila->codigo); ?> · contrato #<?php echo (int) $fila->contrato_id; ?></p>
+		<section class="at-pt-ahora" aria-labelledby="at-pt-ahora-titulo-<?php echo $id; ?>">
+		<h4 id="at-pt-ahora-titulo-<?php echo $id; ?>">Qué hacer ahora</h4>
 		<div class="at-pt-resumen">
 			<div class="at-pt-caja"><h4>Estado</h4>
 				<span class="at-pt-estado at-pt-estado--<?php echo esc_attr($estado); ?>"><?php echo esc_html($etiquetas[$estado] ?? $estado); ?></span>
@@ -346,6 +348,29 @@ function at_pt_render_plan(object $fila, int $crm_id): void {
 				<?php else: ?><p>Aún no hay vista previa.</p><?php endif; ?>
 			</div>
 		</div>
+		<p class="at-pt-botones">
+			<a class="button button-primary" href="#at-pt-plan-<?php echo $id; ?>">Envío y agenda del plan</a>
+			<?php if ($estado === 'enviado'): ?>
+				<a class="button" href="#at-av-cierres-<?php echo $id; ?>">Revisar cierres de hito</a>
+				<a class="button" href="#at-av-formulario-<?php echo $id; ?>">Nuevo cierre</a>
+			<?php elseif ($tiene_plan): ?>
+				<a class="button" href="#at-pt-editor-<?php echo $id; ?>">Revisar o editar el plan</a>
+			<?php endif; ?>
+		</p>
+		</section>
+		<nav class="at-pt-indice" aria-label="Secciones del plan de trabajo">
+			<a href="#at-pt-plan-<?php echo $id; ?>">Plan</a>
+			<?php if ($estado === 'enviado'): ?>
+				<a href="#at-av-cierres-<?php echo $id; ?>">Cierres de hito</a>
+				<a href="#at-av-formulario-<?php echo $id; ?>">Nuevo/editar e importar</a>
+				<a href="#at-av-bloques-<?php echo $id; ?>">Bloques del plan</a>
+				<a href="#at-av-listas-<?php echo $id; ?>">Cambios y alcance</a>
+				<a href="#at-av-presentacion-<?php echo $id; ?>">Presentación</a>
+			<?php endif; ?>
+		</nav>
+		<details class="at-pt-seccion" id="at-pt-plan-<?php echo $id; ?>" open>
+			<summary><h4>Plan (envío y agenda)</h4></summary>
+			<div class="at-pt-seccion-contenido">
 		<?php if ($sin_portal): ?><div class="notice notice-warning inline"><p>Este cliente no tiene correo en su ficha: la lámina «Sigue tu proyecto» saldrá sin enlace al portal.</p></div><?php endif; ?>
 		<?php if (empty($fila->propuesta_id)): ?><div class="notice notice-info inline"><p>Este contrato no tiene propuesta: la portada y el cierre llevarán fotos nuevas.</p></div><?php endif; ?>
 
@@ -397,6 +422,7 @@ function at_pt_render_plan(object $fila, int $crm_id): void {
 		<?php endif; ?>
 
 		<?php if ($tiene_plan): ?>
+		<details class="at-pt-editor" id="at-pt-editor-<?php echo $id; ?>"<?php echo $editable ? ' open' : ''; ?>><summary>Revisar o editar el plan completo</summary>
 		<form method="post" action="<?php echo esc_url($accion); ?>" class="at-pt-form-plan">
 			<?php echo $ocultos('at_pt_guardar'); ?>
 			<input type="hidden" name="plan_json" class="at-pt-plan-json" value="">
@@ -436,6 +462,7 @@ function at_pt_render_plan(object $fila, int $crm_id): void {
 		</form>
 		<template id="at-pt-tpl-actividad"><?php at_pt_html_actividad(['origen' => 'luis', 'responsable' => 'at', 'dias_habiles' => 1]); ?></template>
 		<template id="at-pt-tpl-bloque"><?php at_pt_html_bloque(['nombre' => 'Nuevo bloque', 'actividades' => [['origen' => 'luis', 'responsable' => 'at', 'dias_habiles' => 1]]]); ?></template>
+		</details>
 
 		<div class="at-pt-acciones">
 			<?php if ($editable):
@@ -450,6 +477,7 @@ function at_pt_render_plan(object $fila, int $crm_id): void {
 					: 'No hay fotos nuevas que generar. Se generará la versión final del plan. ¿Aprobar?';
 				$ultimo = trim((string) ($fila->comentarios ?? ''));
 			?>
+			<details class="at-pt-pedir-cambios"<?php echo $editable ? ' open' : ''; ?>><summary>Pedir cambios a la IA</summary>
 			<form method="post" action="<?php echo esc_url($accion); ?>" class="at-pt-form-cambios at-pt-requiere-guardado">
 				<?php echo $ocultos('at_pt_cambios'); ?>
 				<label class="at-pt-campo">Qué quieres que cambie la IA
@@ -458,6 +486,7 @@ function at_pt_render_plan(object $fila, int $crm_id): void {
 				<p class="description">La IA aplica tus comentarios y respeta los días que editaste tú. No genera fotos.</p>
 				<p class="at-pt-botones"><button type="submit" class="button">✏️ Pedir cambios</button></p>
 			</form>
+			</details>
 			<form method="post" action="<?php echo esc_url($accion); ?>" class="at-pt-form-aprobar at-pt-requiere-guardado" onsubmit="return confirm(<?php echo esc_attr(wp_json_encode($confirmar, JSON_UNESCAPED_UNICODE)); ?>);">
 				<?php echo $ocultos('at_pt_aprobar'); ?>
 				<p class="at-pt-botones"><button type="submit" class="button button-primary">✅ Aprobar y generar versión final <?php echo esc_html($etiqueta_costo); ?></button></p>
@@ -467,6 +496,8 @@ function at_pt_render_plan(object $fila, int $crm_id): void {
 			<p class="description">Abre «Reuniones de seguimiento» con los datos del cliente; el evento, el correo y el WhatsApp salen solo si dejas sus casillas marcadas.</p>
 		</div>
 		<?php endif; ?>
+			</div>
+		</details>
 		<?php if ($estado === 'enviado' && function_exists('at_av_render_seccion')) { at_av_render_seccion($fila, $crm_id); } ?>
 	</div>
 	<?php

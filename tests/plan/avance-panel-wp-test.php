@@ -100,6 +100,22 @@ ok($leer()['cierres'][0]['correo']['mensaje'] === 'Hola X & Y', '20) la prueba g
 ob_start();
 at_pt_render_plan(at_pt_plan($id), $crm);
 $h = (string) ob_get_clean();
+// AT-CRM-001: el índice sigue el orden de operación; los formularios largos nacen plegados.
+preg_match_all('/<details class="at-pt-seccion" id="([^"]+)"/', $h, $secciones);
+ok(($secciones[1] ?? []) === array_map(fn($seccion) => $seccion . '-' . $id, ['at-pt-plan', 'at-av-cierres', 'at-av-formulario', 'at-av-bloques', 'at-av-listas', 'at-av-presentacion']), 'CRM-001) las seis secciones plegables mantienen el orden acordado e identifican su plan');
+ok(str_contains($h, 'Qué hacer ahora') && strpos($h, 'class="at-pt-ahora"') < strpos($h, 'class="at-pt-indice"') && substr_count($h, '<a href="#at-') === 6, 'CRM-001) resumen antes del índice de seis enlaces a las secciones');
+ok(str_contains($h, 'id="at-av-formulario-' . $id . '"><summary>') && str_contains($h, 'id="at-av-bloques-' . $id . '"><summary>') && str_contains($h, 'id="at-av-listas-' . $id . '"><summary>') && str_contains($h, 'id="at-pt-editor-' . $id . '"><summary>'), 'CRM-001) nuevo cierre, bloques, cambios y editor largo empiezan plegados');
+ok(str_contains($h, 'id="at-av-nuevo"') && str_contains($h, 'id="at-av-' . $cid . '"') && str_contains($h, 'aria-label="Cierres de hito" tabindex="0"><table') && str_contains($h, 'aria-label="Bloques del plan" tabindex="0"><table'), 'CRM-001) anclas conservadas y tablas con contenedor de desplazamiento accesible');
+$plan_indice = ptc_plan(ptc_contrato($c['tech'], $m . '-indice', null));
+$id_indice = (int) $plan_indice->id;
+ptc_sembrar($id_indice);
+ptc_estado($id_indice, 'enviado');
+ob_start();
+at_pt_render_plan(at_pt_plan($id_indice), $crm);
+$h_otro_plan = (string) ob_get_clean();
+preg_match_all('/id="(at-(?:pt-(?:ahora-titulo|plan|editor)|av-(?:cierres|formulario|bloques|listas|presentacion))-\d+)"/', $h . $h_otro_plan, $ids_nuevos);
+ok(count($ids_nuevos[1]) === 16 && count(array_unique($ids_nuevos[1])) === 16, 'CRM-001) dos planes renderizados no duplican los ocho IDs nuevos de cada plan');
+ok(str_contains($h_otro_plan, 'aria-labelledby="at-pt-ahora-titulo-' . $id_indice . '"') && str_contains($h_otro_plan, 'href="#at-av-formulario-' . $id_indice . '"') && !str_contains($h_otro_plan, 'href="#at-av-formulario-' . $id . '"'), 'CRM-001) el resumen y los enlaces del segundo plan apuntan a sus propios elementos');
 ok(preg_match('/<textarea name="mensaje"[^>]*>Hola X &amp; Y<\/textarea>/u', $h) === 1, '20) el recuadro del mensaje del correo viene con el mensaje de la prueba, escapado (Luis lo manda al cliente sin reescribirlo)');
 ok(str_contains($h, 'Ojo: la presentación del cliente todavía no incluye este cierre; espera el «Lista» antes de mandarlo.'), '20) WhatsApp: con la presentación sin terminar avisa con «Ojo…» (sin bloquear el botón)');
 $r = $correr('at_av_correo', ['cierre_id' => $cid, 'destino' => 'cliente']);
@@ -277,6 +293,12 @@ ob_start();
 at_pt_render_plan(at_pt_plan($id), $crm);
 $h = (string) ob_get_clean();
 // El título hostil se guarda a mano (la importación ahora lo rechaza): así se prueba el escape de la propia sección.
+$_GET['av_editar'] = $cid_h;
+ob_start();
+at_pt_render_plan(at_pt_plan($id), $crm);
+$h_edicion = (string) ob_get_clean();
+unset($_GET['av_editar']);
+ok(str_contains($h_edicion, 'id="at-av-formulario-' . $id . '" open>') && str_contains($h_edicion, 'id="at-av-nuevo">✏️ Editar el cierre') && str_contains($h_edicion, 'name="cierre_id" value="' . $cid_h . '"'), 'CRM-001) editar abre el formulario y conserva ancla y cierre_id');
 $av = $leer();
 foreach ($av['cierres'] as $k => $c) {
 	if ($c['id'] === $cid_h) { $av['cierres'][$k]['titulo'] = $hostil; }

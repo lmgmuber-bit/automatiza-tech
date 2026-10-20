@@ -86,6 +86,9 @@
 .at-av-chip { display: inline-block; padding: 2px 10px; border-radius: 999px; background: #f0f0f1; font-weight: 600; }
 .at-av-chip.is-pub { background: #d1fae5; color: #065f46; }
 .at-av-form-boton { display: inline-block; margin: 2px 6px 2px 0; }
+.at-av-envio { margin: 10px 0; padding: 10px 14px; background: #f0f6fc; border-left: 3px solid #2271b1; }
+.at-av-envio textarea { width: 100%; max-width: 640px; }
+.at-av-envio ul { margin: 6px 0 10px 18px; list-style: disc; }
 .at-av-subir { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 6px 0; }
 .at-av textarea.code { font-family: Consolas, monospace; font-size: 12px; }
 .at-av-detalle details { margin: 4px 0 8px; }

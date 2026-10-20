@@ -1,6 +1,6 @@
-# Estado del proyecto: guía de uso, formato `at-cierre-v1` y despliegue (Etapa 2)
+# Estado del proyecto: guía de uso, formato `at-cierre-v1` y despliegue (Etapas 2 y 3)
 
-> **Estado: EN PROD desde el 2026-10-14** (rama `claude/estado-proyecto-e2`, PR #89 sin merge). Renderer subido por Luis (`/health` ok); flujo n8n «3 Render» con 34 nodos, activo e igual al local (respaldo del anterior fuera del repo); WordPress por SSH: 12 archivos con md5 cotejado, migración hecha (`at_plan_schema` = 2) y caché vaciada. Respaldo de WordPress: `~/respaldos/estado-proyecto-e2-antes-20261014.tar.gz`. Todavía no se ha publicado ningún cierre real. La Etapa 1 está EN PROD desde la misma fecha; ver `PLAN-DE-TRABAJO.md`. Diseño completo: `Docs/superpowers/specs/2026-10-13-estado-del-proyecto-design.md`.
+> **Estado.** Etapa 2: EN PROD desde el 2026-10-14 y **mergeada a `main` el 2026-10-15** (rama `claude/estado-proyecto-e2`, PR #89). Renderer subido por Luis (`/health` ok); flujo n8n «3 Render» con 34 nodos, activo e igual al local (respaldo del anterior fuera del repo); WordPress por SSH: 12 archivos con md5 cotejado, migración hecha (`at_plan_schema` = 2) y caché vaciada. Respaldo de WordPress: `~/respaldos/estado-proyecto-e2-antes-20261014.tar.gz`. Todavía no se ha publicado ningún cierre real. **Etapa 3 (avisar al cliente de un cierre: correo, WhatsApp, descarga del video e historial): EN PROD desde el 2026-10-15** (rama `claude/estado-proyecto-e3`, PR #90): 10 archivos de WordPress por SSH en el orden de la sección 6, con `php -l` y md5 cotejado, y caché vaciada; respaldo `~/respaldos/estado-e3-antes-20261015.tar.gz`. Verificado en PROD: el panel del plan piloto dibuja «📣 Avisar al cliente» en los 3 cierres publicados, sin errores. Todavía no se ha enviado ningún correo de cierre. La Etapa 1 está EN PROD desde el 2026-10-14; ver `PLAN-DE-TRABAJO.md`. Diseño completo: `Docs/superpowers/specs/2026-10-13-estado-del-proyecto-design.md`.
 > Los datos de esta guía son inventados (código de plan `AbCdEf123456`, `example.com`): el repositorio es público, no se pegan códigos ni nombres reales de clientes.
 
 ## 1. Qué es
@@ -31,6 +31,24 @@ Otras acciones del panel:
   - *Qué incluye la Fase 1* y *qué incluye el servicio mensual*: una línea por ítem. **Vacío = se usan los entregables del plan (Fase 1) o los mensuales del plan.**
 
 **Ojo al reimportar:** el cierre se identifica por su **título**, comparado sin distinguir mayúsculas ni espacios de más. «Diseño del sitio» y «diseño  del  sitio» son el mismo cierre; «Diseño del sitio web» es **otro cierre distinto** y quedan los dos. Si se cambia el título a propósito, quitar el cierre anterior (en borrador) para que no queden duplicados.
+
+### Avisar al cliente de un cierre (Etapa 3)
+
+Cuando un cierre ya está **publicado**, su fila del panel trae, a la vista (no dentro de «Archivos y edición avanzada»), el bloque **«📣 Avisar al cliente»**. **Nada sale solo:** ni al publicar ni al rehacer la presentación; cada aviso es un clic nuestro.
+
+- **«📧 Enviarme una prueba».** Manda el correo «Terminamos: …» a la dirección principal de «Ajustes del cierre», con «[Prueba]» al inicio del asunto, para ver cómo lo recibiría el cliente. Lleva el PDF de la presentación solo si esa presentación ya está lista; si no, va sin PDF y el panel lo dice. Una prueba no marca el cierre como enviado.
+- **«📨 Enviar al cliente».** Solo funciona con un cierre publicado cuya presentación se **rehizo después de publicarlo** (el panel muestra «Lista»): así el correo y el PDF reflejan lo que el cliente va a ver. Antes de enviar pide confirmación y muestra el correo del cliente al que irá. Una vez enviado, el botón pasa a **«Reenviar»**, con su propia confirmación. Un doble clic no manda dos correos: el envío se reclama de forma atómica y el segundo clic solo ve que ya hay uno en curso.
+- **Mensaje opcional.** Un cuadro de texto encima del botón; si se escribe, va arriba del resumen del cierre (qué se hizo, el antes y el después con sus cifras, lo que sigue y lo que necesitamos del cliente). Si queda vacío, el correo sale solo con el resumen.
+- **PDF adjunto.** Se adjunta si pesa hasta 15 MB; si pesa más, el correo lleva solo el enlace a la presentación y el panel avisa que salió sin PDF.
+- **Bloqueo por enlaces internos.** Si cualquier enlace o texto del correo (el mensaje opcional incluido) apunta al servidor interno, **no se envía nada** y el panel dice dónde está el problema.
+- **«💬 Enviar por mi WhatsApp».** Abre nuestro WhatsApp con el texto ya escrito (también se muestra aparte para copiarlo) y deja anotado en el cierre que se abrió. Lo mandamos nosotros desde el teléfono; el sistema no escribe al cliente por su cuenta.
+- **«⬇️ Descargar el video».** Aparece solo para los videos guardados en `automatizatech.cl`; los que viven en otro sitio se ven por su enlace.
+- **Historial.** Cada publicación, cada correo al cliente y cada WhatsApp quedan en el historial del CRM con 🏁 y «Equipo AutomatizaTech», y esos cierres se ven con nombre propio en la línea de tiempo. **La prueba no se escribe en el historial del CRM**: solo deja su fecha (`prueba_at`) en el propio cierre, que el panel muestra en «Prueba: enviada el…».
+- **El mensaje de la prueba pasa al envío.** Al mandar una prueba con un mensaje, ese mensaje queda guardado en el cierre y el recuadro del correo lo trae ya escrito, para enviarlo al cliente sin reescribirlo. Si el cierre ya salió al cliente, ahí queda el mensaje que de verdad se mandó y una prueba posterior no lo pisa. Una prueba que sale sin PDF (la presentación todavía no está lista) lo avisa con su propio mensaje y el motivo en el detalle.
+- **Aviso en el WhatsApp.** Si la presentación todavía no incluye el cierre, junto al botón aparece «Ojo: … espera el «Lista» antes de mandarlo». No bloquea el botón: el texto de WhatsApp solo lleva el enlace.
+- **La presentación pública se rehace de a una.** Si ya hay un pedido «pendiente» de hace menos de 10 minutos, un pedido nuevo (publicar otro cierre, guardar bloques, «Rehacer…») no llama a n8n: queda en cola y sale solo cuando llega la devolución del que está en curso. Solo la devolución del último pedido deja la presentación «Lista»; así un «Lista» posterior a publicar un cierre siempre trae ese cierre. Pasados 10 minutos sin respuesta el pedido se da por perdido y el siguiente sale normal. La vista previa no usa cola.
+
+Dónde queda lo enviado: en cada cierre, `correo` (`enviado_at`, `prueba_at`, `mensaje`, `enviando`, `a`) y `whatsapp` (`abierto_at`). Reimportar un borrador con el mismo título **conserva** esas marcas, y la presentación que vuelve del renderer nunca las borra.
 
 ## 3. Formato `at-cierre-v1`
 
@@ -165,7 +183,23 @@ Verificación desde afuera tras el despliegue: `ver-estado.php?id=<código>` con
 | 2 | `inc/plan-trabajo/avance-panel.php` | misma ruta | OBLIGATORIO |
 | 3 | `assets/css/plan-trabajo.css` y `assets/js/plan-trabajo.js` | mismas rutas | OBLIGATORIO (sin el CSS, cada fila muestra todos sus campos; sin el JS, «＋ Agregar otra evidencia» no abre filas) |
 
-**Rollback:** reponer el zip anterior del renderer; reimportar el `plan-3-render.json` de `main`; restaurar los archivos de WordPress desde el respaldo y borrar los `avance-*.php`. La columna `avance` puede quedar: nadie la lee sin el código.
+**Etapa 3 — avisar al cliente de un cierre (EN PROD desde el 2026-10-15; sin migración, sin n8n y sin renderer):**
+
+| Orden | Local | Destino | Clase |
+|---|---|---|---|
+| 1 | `inc/plan-trabajo/cierre-puras.php` y `cierre-correo.php` (nuevos) | mismas rutas en `wp-content/themes/automatiza-tech/` | OBLIGATORIO, **primero** (`cargar.php` los exige: sin ellos el tema se cae) |
+| 2 | `inc/plan-trabajo/cargar.php` | misma ruta | OBLIGATORIO, **justo después** del paso 1 |
+| 3 | `inc/plan-trabajo/avance-datos.php`, `avance-puras.php`, `envio.php`, `avance-render.php`, `avance-panel.php` y `assets/css/plan-trabajo.css` | mismas rutas | OBLIGATORIO (respaldar y cotejar md5 contra `main`). Dentro del paso: `avance-datos.php` y `avance-puras.php` antes que `avance-render.php` y `avance-panel.php` (estos llaman funciones de aquellos) |
+| 4 | `wp-content/mu-plugins/at-timeline-origen.php` | misma ruta (`wp-content/mu-plugins/`) | OBLIGATORIO (sin él la línea de tiempo no muestra los 🏁) |
+| — | `tests/`, `Docs/`, `.superpowers/` | — | NO subir |
+
+**Por qué este orden:** el panel nuevo (paso 3) llama funciones que solo existen cuando `cargar.php` ya carga los archivos nuevos (paso 2), y `cargar.php` falla si los archivos del paso 1 todavía no están; subirlos al revés deja una ventana con errores fatales en la ficha del CRM.
+
+Verificación desde afuera tras subir: abrir el panel de un plan con un cierre publicado y comprobar el bloque «📣 Avisar al cliente»; «📧 Enviarme una prueba» y revisar que el correo llegue con «[Prueba]»; recién entonces, con nuestro OK, el envío al cliente.
+
+**Rollback de la Etapa 3:** restaurar los archivos del tema y el mu-plugin desde el respaldo y borrar `cierre-puras.php` y `cierre-correo.php`. Los datos `correo` y `whatsapp` quedan en cada cierre sin efecto: sin el código nadie los lee.
+
+**Rollback (Etapa 2):** reponer el zip anterior del renderer; reimportar el `plan-3-render.json` de `main`; restaurar los archivos de WordPress desde el respaldo y borrar los `avance-*.php`. La columna `avance` puede quedar: nadie la lee sin el código.
 
 ## 7. Qué no se ha probado
 
@@ -175,4 +209,9 @@ Todo lo de esta etapa corrió en local (pruebas automáticas, WordPress local, r
 - Un **video real de 13 MB subido por el navegador** a producción. Los topes de PHP en Hostinger se midieron el 13-oct (acepta subidas de hasta 2 GB, según la especificación), pero nunca se subió un video de verdad por este panel.
 - Que LiteSpeed **respete el `.htaccess`** de `uploads/at-estado/` (`mod_headers`: `noindex`, `no-transform`, caché) y que el **CDN de Hostinger respete `no-transform`** (hoy recodifica y achica imágenes si no se le dice).
 - La **presentación vista en un celular** real.
-- La **Etapa 3** (correo de cierre de hito, texto de WhatsApp, registro en el historial del CRM) y la Etapa 4 (piloto con un cliente) **no están construidas**.
+- La Etapa 4 (piloto con un cliente) **no está construida**.
+- **Etapa 3, todo corrió solo en local con pruebas automáticas** y no se ha probado:
+  - Un **correo real por el SMTP de Hostinger con el PDF adjunto** (tamaño, entrega y cómo lo muestran Gmail y Outlook).
+  - El enlace **wa.me abierto en el celular** de Luis, con el texto ya escrito.
+  - La **descarga del video en iPhone** (Safari).
+  - Una **carrera real de dos clics simultáneos** en «Enviar al cliente»: el reclamo atómico está probado en las pruebas automáticas, no con dos navegadores.

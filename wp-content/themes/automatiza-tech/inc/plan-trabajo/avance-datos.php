@@ -55,16 +55,60 @@ function at_av_guardar(int $plan_id, array $avance): bool {
 	return $wpdb->update(at_pt_tabla(), ['avance' => $json], ['id' => $plan_id]) !== false;
 }
 
-/** Cambia solo el registro de un render ('render' o 'render_previa'), sobre el avance recién leído. */
-function at_av_guardar_render(int $plan_id, string $clave, array $campos): bool {
+/** Guarda el avance solo si la columna sigue valiendo $json_antes (lo leído antes): para reclamar un envío sin que dos
+ *  pedidos casi juntos manden dos correos. false si cambió, si no hay migración o si el JSON es muy grande. */
+function at_av_guardar_si_igual(int $plan_id, string $json_antes, array $avance): bool {
+	if (!at_av_columna_lista()) {
+		return false;
+	}
+	$json = wp_json_encode(at_av_normalizar($avance), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+	if (!is_string($json) || strlen($json) > 1572864) {
+		return false;
+	}
+	global $wpdb;
+	$t = at_pt_tabla();
+	$n = $json_antes === ''
+		? $wpdb->query($wpdb->prepare("UPDATE {$t} SET avance = %s WHERE id = %d AND (avance IS NULL OR avance = '')", $json, $plan_id))
+		: $wpdb->query($wpdb->prepare("UPDATE {$t} SET avance = %s WHERE id = %d AND BINARY avance = %s", $json, $plan_id, $json_antes)); // BINARY: bytes exactos, sin que mayúsculas ni tildes cuenten como iguales
+	return (int) $n === 1;
+}
+
+/**
+ * Cambia solo el registro de un render ('render' o 'render_previa') con la decisión de $decidir, sobre el avance recién
+ * leído: $decidir recibe el registro actual y devuelve los campos a cambiar (se mezclan sobre el registro) o null si no
+ * hay nada que cambiar. Se guarda con at_av_guardar_si_igual: si entretanto cambió otra cosa (un envío reclamado o
+ * anotado, otro render), se relee y se decide de nuevo, hasta 3 veces; así la devolución del renderer nunca borra lo
+ * que otro proceso escribió y lo que se decide siempre es sobre el registro vigente. $decidir puede correr varias
+ * veces: que no tenga efectos fuera de lo que devuelve. false solo si las 3 veces fallan (o el plan o la clave no existen).
+ */
+function at_av_cambiar_render(int $plan_id, string $clave, callable $decidir): bool {
 	if (!in_array($clave, ['render', 'render_previa'], true)) {
 		return false;
 	}
-	$f = at_pt_plan($plan_id);
-	if (!$f) {
-		return false;
+	for ($i = 0; $i < 3; $i++) {
+		$f = at_pt_plan($plan_id);
+		if (!$f) {
+			return false;
+		}
+		$antes = (string) $f->avance; // tal cual salió de la base: es la condición del guardado
+		$a = at_av_leer($f);
+		$campos = $decidir($a[$clave]);
+		if (!is_array($campos)) {
+			return true;
+		}
+		$nuevo = array_merge($a[$clave], array_intersect_key($campos, at_av_registro_vacio()));
+		if ($nuevo === $a[$clave] && at_av_columna_lista()) {
+			return true; // ya está así: guardar lo mismo no cambia la fila y no es un fallo
+		}
+		$a[$clave] = $nuevo;
+		if (at_av_guardar_si_igual($plan_id, $antes, $a)) {
+			return true;
+		}
 	}
-	$a = at_av_leer($f);
-	$a[$clave] = array_merge($a[$clave], array_intersect_key($campos, at_av_registro_vacio()));
-	return at_av_guardar($plan_id, $a);
+	return false;
+}
+
+/** Cambia solo el registro de un render con estos campos (ver at_av_cambiar_render). */
+function at_av_guardar_render(int $plan_id, string $clave, array $campos): bool {
+	return at_av_cambiar_render($plan_id, $clave, fn(array $actual): array => $campos);
 }

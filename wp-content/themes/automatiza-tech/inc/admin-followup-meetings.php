@@ -2063,10 +2063,10 @@ function automatiza_tech_send_followup_whatsapp($meeting_id, $context = 'new') {
     if (!empty($meeting->client_email)) {
         $tabla_clientes = $wpdb->prefix . 'crm_clientes';
         $cliente_row = $wpdb->get_row($wpdb->prepare(
-            "SELECT id, email FROM $tabla_clientes WHERE email = %s LIMIT 1",
+            "SELECT id, email, tipo FROM $tabla_clientes WHERE email = %s LIMIT 1",
             $meeting->client_email
         ));
-        if ($cliente_row) {
+        if ($cliente_row && $cliente_row->tipo === 'cliente') {
             // Es cliente convertido → tipo seguimiento con ficha
             $meeting_type = 'seguimiento';
             $ficha_url = class_exists('AutomatizaTech_CRM_AI') && method_exists('AutomatizaTech_CRM_AI', 'url_ficha_cliente')

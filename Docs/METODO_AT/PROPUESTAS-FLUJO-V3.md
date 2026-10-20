@@ -316,6 +316,13 @@ el 29-sep 08:13 son de `57800e3` (rama `claude/wa-fallos-recordatorios`, PR #54)
   lámina no se desborde.
 - **URLs como enlace:** desde el 28-sep el renderer convierte en enlace cualquier `https://…` de los párrafos y de los
   próximos pasos (`linkify()` después de escapar el HTML). El enlace de un demo va como **primer** próximo paso.
+- **Botón a la demo (19-oct, commit `20236db`):** una lámina extra puede llevar `button: {label, url}` (solo `https`,
+  con etiqueta) y se dibuja como botón turquesa en vez de la URL en el texto; se ve también en el borrador. El estilo va
+  en línea para que las propuestas sin botón salgan idénticas (`template-propuesta-igual.test.js`). El panel no tiene
+  campo para el botón: se pone en el payload (`gamma_prompt_text`) de la propuesta. «Aprobar» lo conserva (no pasa por
+  la IA); **«Pedir cambios» puede borrarlo** porque la IA reescribe la propuesta: revisar después de cada cambio. Ojo:
+  «2 Cambios» a veces devuelve `extra_slides` con otra forma (`slide_title`/`slide_text`) que el renderer ignora; pedirla
+  con el JSON exacto (`eyebrow`, `title`, `bullets` con `title` y `text`).
 - **Cambio del renderer = redespliegue en Easypanel** (ver `renderer/DEPLOY.md`); afecta a todas las propuestas que
   se rendericen después, no a las ya publicadas.
 

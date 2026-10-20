@@ -87,6 +87,19 @@ function renderParagraphBody(text) {
   return `<p class="body-text">${linkify(escapeHtml(text))}</p>`;
 }
 
+// Optional button on an extra section (a demo the client can open), so the
+// link reads as an action instead of a raw URL in the copy. Only https links
+// with a label: anything else is dropped rather than rendered half-broken.
+function renderDemoButton(button) {
+  if (!button || typeof button !== 'object') return '';
+  const label = String(button.label || '').trim();
+  const url = String(button.url || '').trim();
+  if (!label || !/^https:\/\/[^\s"'<>]+$/i.test(url)) return '';
+  // Styled inline on purpose: a deck without a button must stay byte-for-byte
+  // what it was (template-propuesta-igual.test.js).
+  return `<p class="demo-button-wrap" style="margin-top:36px"><a class="demo-button" href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer" style="display:inline-block;font-size:24px;font-weight:700;color:#06222a;background:#00d9c0;text-decoration:none;border-radius:999px;padding:18px 40px;box-shadow:0 10px 30px rgba(0,0,0,.35)">${escapeHtml(label)}</a></p>`;
+}
+
 function renderBulletListBody(items, formatter) {
   const lis = items.map((item) => `<li>${formatter(item)}</li>`).join('');
   return `<ul class="body-list">${lis}</ul>`;
@@ -586,13 +599,13 @@ function renderProposalHtml(data, images = {}) {
       eyebrow: s.eyebrow || 'En detalle',
       title: s.title,
       bodyHtml:
-        Array.isArray(s.bullets) && s.bullets.length
+        (Array.isArray(s.bullets) && s.bullets.length
           ? renderBulletListBody(s.bullets, (b) =>
               b && b.text
                 ? `<strong>${escapeHtml(b.title)}:</strong> ${escapeHtml(b.text)}`
                 : escapeHtml(b && b.title ? b.title : b)
             )
-          : renderParagraphBody(s.text || ''),
+          : renderParagraphBody(s.text || '')) + renderDemoButton(s.button),
       imageKey: `extra_${i + 1}`,
     }));
 

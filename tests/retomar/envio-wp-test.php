@@ -14,6 +14,13 @@ add_filter('query', static function ($sql) use (&$ids, $wpdb) {
     }
     return $sql;
 });
+// Lo mismo para la búsqueda de WhatsApp rezagados del reloj (20-oct).
+add_filter('query', static function ($sql) use (&$ids, $wpdb) {
+    if (str_starts_with($sql, "SELECT id FROM {$wpdb->prefix}at_retomar WHERE estado IN ('activo','agotado') AND envios LIKE")) {
+        $sql = str_replace(' ORDER BY id', ' AND id IN (' . implode(',', $ids ?: [0]) . ') ORDER BY id', $sql);
+    }
+    return $sql;
+});
 register_shutdown_function(static function () use (&$ids, &$emails, $wpdb) {
     foreach ($ids as $id) { $wpdb->delete($wpdb->prefix . 'at_retomar', ['id' => $id]); }
     foreach ($emails as $email) { $wpdb->delete($wpdb->prefix . 'at_retomar_bajas', ['email' => $email]); }
@@ -427,6 +434,35 @@ ok($r['motivo'] === 'aprobacion_vencida' && rt_env_correos($ce['email']) === 0 &
 ok(at_rt_emitir_aprobacion($ce['id'], '2026-10-19 10:35:00') === null, 'con la presentación en error no se vuelve a emitir la aprobación');
 remove_filter('pre_http_request', $render_simulado, PHP_INT_MAX);
 remove_filter('home_url', $https_local);
+// WhatsApp rezagado (20-oct, PROD): la pasada de las 10:05 mandó los correos pero a n8n le llegó una respuesta vacía, y
+// el WhatsApp pedido quedó «pendiente» para siempre. Una pasada posterior, pasados 50 minutos, lo vuelve a pedir UNA vez.
+update_option('at_rt_wa_automatico', '1');
+$rz = rt_env_fixture(['proximo_at' => '2026-10-21']);
+$r1 = rt_env_tick_solo([$rz['id']], '2026-10-21 10:05:00');
+$w1 = at_rt_obtener($rz['id'])['envios'][0]['whatsapp'];
+ok(count($r1['whatsapp']) === 1 && $w1['estado'] === 'pendiente' && ($w1['pedidos'] ?? 0) === 1 && ($w1['pedido_at'] ?? '') === '2026-10-21 10:05:00', 'rezagado: la primera pasada pide el WhatsApp y anota el pedido');
+ok(rt_env_tick_solo([$rz['id']], '2026-10-21 10:40:00')['whatsapp'] === [], 'rezagado: antes de 50 minutos no se vuelve a pedir');
+$r2 = rt_env_tick_solo([$rz['id']], '2026-10-21 11:05:00');
+ok(count($r2['whatsapp']) === 1 && $r2['whatsapp'][0]['id'] === $rz['id'] && $r2['whatsapp'][0]['n'] === 1 && $r2['whatsapp'][0]['token'] === $rz['token'] && $r2['enviados'] === 0 && rt_env_correos($rz['email']) === 1, 'rezagado: la pasada siguiente vuelve a pedir el WhatsApp perdido, sin repetir el correo');
+ok((at_rt_obtener($rz['id'])['envios'][0]['whatsapp']['pedidos'] ?? 0) === 2 && rt_env_tick_solo([$rz['id']], '2026-10-21 12:05:00')['whatsapp'] === [], 'rezagado: nunca más de dos pedidos por recordatorio');
+ok(at_rt_whatsapp_resultado(['id' => $rz['id'], 'n' => 1, 'wamid' => 'fixture-rezagado'])['ok'] && at_rt_obtener($rz['id'])['envios'][0]['whatsapp']['estado'] === 'enviado', 'rezagado: el aviso de n8n lo confirma como siempre');
+$rc = rt_env_fixture(['proximo_at' => '2026-10-21']);
+rt_env_tick_solo([$rc['id']], '2026-10-21 10:05:00');
+at_rt_whatsapp_resultado(['id' => $rc['id'], 'n' => 1, 'wamid' => 'fixture-confirmado']);
+ok(rt_env_tick_solo([$rc['id']], '2026-10-21 11:05:00')['whatsapp'] === [], 'un WhatsApp ya confirmado no se vuelve a pedir');
+$rb = rt_env_fixture(['proximo_at' => '2026-10-21']);
+rt_env_tick_solo([$rb['id']], '2026-10-21 10:05:00');
+at_rt_dar_baja($rb['id'], 'prueba');
+ok(rt_env_tick_solo([$rb['id']], '2026-10-21 11:05:00')['whatsapp'] === [], 'si se dio de baja, el WhatsApp perdido no se vuelve a pedir');
+$rv = rt_env_fixture(['proximo_at' => '2026-10-21']);
+rt_env_tick_solo([$rv['id']], '2026-10-21 10:05:00');
+ok(rt_env_tick_solo([$rv['id']], '2026-10-23 11:05:00')['whatsapp'] === [], 'un WhatsApp perdido de hace más de un día no se pide');
+$ro = rt_env_fixture(['proximo_at' => '2026-10-21']);
+rt_env_tick_solo([$ro['id']], '2026-10-21 10:05:00');
+update_option('at_rt_wa_automatico', '0');
+ok(rt_env_tick_solo([$ro['id']], '2026-10-21 11:05:00')['whatsapp'] === [], 'con el WhatsApp automático apagado no se pide el rezagado');
+update_option('at_rt_wa_automatico', '1');
+ok(rt_env_tick_solo([$ro['id']], '2026-10-21 19:05:00')['whatsapp'] === [], 'fuera de la ventana de envío no se pide el rezagado');
 // Interruptor del WhatsApp automático (pedido de Luis, 18-oct): apagado = solo correo, sin pedido de WhatsApp.
 update_option('at_rt_wa_automatico', '0');
 $sa = rt_env_fixture(['proximo_at' => '2026-10-20']);

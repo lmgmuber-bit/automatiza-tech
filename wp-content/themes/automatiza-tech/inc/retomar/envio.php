@@ -188,7 +188,7 @@ function at_rt_finalizar_entrega(int $id, int $n, bool $ok, string $ahora, array
         $propio = $s['estado'] === 'activo' && $s['enviando'] === $ahora;
         $aprobada = ($aprobacion['estado'] ?? '') === 'aprobado' && $s['aprobacion'] === $aprobacion;
         $wa = $propio && $aprobada && $motivo === '' && $ok && at_rt_wa_automatico() && !empty($aprobacion['destino']['whatsapp']) && in_array('whatsapp', at_rt_canales($n, $s['max_envios'], $s['canales'], (bool) $s['wa_autorizado'], at_pt_telefono_wa($s['telefono'])), true);
-        $s['envios'][] = ['tipo' => 'envio', 'n' => $n, 'fecha' => substr($ahora, 0, 10), 'at' => $ahora, 'correo' => ['estado' => $ok ? 'enviado' : 'error'], 'whatsapp' => $wa ? ['estado' => 'pendiente'] : null];
+        $s['envios'][] = ['tipo' => 'envio', 'n' => $n, 'fecha' => substr($ahora, 0, 10), 'at' => $ahora, 'correo' => ['estado' => $ok ? 'enviado' : 'error'], 'whatsapp' => $wa ? ['estado' => 'pendiente', 'pedidos' => 1, 'pedido_at' => $ahora] : null];
         $campos = ['envios' => $s['envios']];
         // El correo ya salió: la aprobación queda usada aunque una parada (baja, agendó) llegara durante SMTP.
         // Ruling 10: si el correo falló, lo aprobado no sobrevive: el seguimiento queda en pausa y la aprobación muerta.
@@ -335,6 +335,8 @@ function at_rt_tick(string $ahora): array {
             elseif (at_rt_estado_por_motivo($e['motivo']) !== '') { $r['detenidos']++; }
             if ($e['whatsapp']) { $r['whatsapp'][] = $e['whatsapp']; }
         }
+        try { foreach (at_rt_whatsapp_rezagados($cuando) as $w) { $r['whatsapp'][] = $w; } }
+        catch (Throwable $ex) { error_log('Retomar: no se pudieron revisar los WhatsApp rezagados: ' . $ex->getMessage()); }
     }
     $cupo = at_rt_tope_pedidos_reloj();
     try {
@@ -358,6 +360,51 @@ function at_rt_tick(string $ahora): array {
 }
 
 /** CAS del JSON completo: un callback jamás pisa eventos agregados concurrentemente. */
+/**
+ * WhatsApp pedidos a n8n que nunca volvieron con resultado (20-oct-2026, PROD: la pasada de las 10:05 mandó los correos
+ * pero a n8n le llegó una respuesta vacía, así que el pedido se perdió y quedó «pendiente» para siempre). En una pasada
+ * posterior, pasados 50 minutos del pedido anterior, se vuelve a pedir UNA vez (máximo dos pedidos por recordatorio), solo
+ * si el envío es de hoy o de ayer, el WhatsApp automático está encendido y el prospecto no se detuvo (baja, rechazo,
+ * cliente o reunión; «agotado» sí recibe el WhatsApp de su último recordatorio). Costo aceptado: si Meta lo aceptó pero el
+ * aviso de vuelta (whatsapp-resultado) se perdió, al prospecto le puede llegar dos veces, nunca más.
+ * Lo marca bajo CAS sobre los eventos (como at_rt_whatsapp_resultado): un aviso que llega entretanto gana.
+ */
+function at_rt_whatsapp_rezagados(string $cuando): array {
+    global $wpdb;
+    if (!at_rt_wa_automatico()) { return []; }
+    $zona = new DateTimeZone('America/Santiago');
+    $limite = (new DateTimeImmutable($cuando, $zona))->modify('-50 minutes')->format('Y-m-d H:i:s');
+    $desde = (new DateTimeImmutable(substr($cuando, 0, 10), $zona))->modify('-1 day')->format('Y-m-d');
+    $items = [];
+    $ids = $wpdb->get_col("SELECT id FROM {$wpdb->prefix}at_retomar WHERE estado IN ('activo','agotado') AND envios LIKE '%pendiente%' ORDER BY id");
+    foreach ($ids as $id) {
+        $id = (int) $id;
+        $s = at_rt_obtener($id);
+        if (!$s || !in_array(at_rt_motivo_parada(at_rt_contexto_parada($s)), ['', 'agotado'], true)) { continue; }
+        $tel = at_pt_telefono_wa((string) $s['telefono']);
+        if ($tel === '') { continue; }
+        $raw = $wpdb->get_var($wpdb->prepare("SELECT envios FROM {$wpdb->prefix}at_retomar WHERE id=%d", $id));
+        $eventos = json_decode((string) $raw, true);
+        if (!is_array($eventos)) { continue; }
+        $pedir = [];
+        foreach ($eventos as &$e) {
+            if (($e['tipo'] ?? '') !== 'envio' || !is_array($e['whatsapp'] ?? null) || ($e['whatsapp']['estado'] ?? '') !== 'pendiente') { continue; }
+            if ((string) ($e['fecha'] ?? '') < $desde) { continue; }
+            $pedidos = (int) ($e['whatsapp']['pedidos'] ?? 1);
+            $ultimo = (string) ($e['whatsapp']['pedido_at'] ?? ($e['at'] ?? ''));
+            if ($pedidos >= 2 || $ultimo === '' || $ultimo > $limite) { continue; }
+            $e['whatsapp']['pedidos'] = $pedidos + 1;
+            $e['whatsapp']['pedido_at'] = $cuando;
+            $pedir[] = (int) ($e['n'] ?? 0);
+        }
+        unset($e);
+        if (!$pedir) { continue; }
+        $cambio = $wpdb->query($wpdb->prepare("UPDATE {$wpdb->prefix}at_retomar SET envios=%s WHERE id=%d AND BINARY envios=BINARY %s", wp_json_encode($eventos, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), $id, $raw));
+        if ($cambio !== 1) { continue; }
+        foreach ($pedir as $n) { $items[] = ['id' => $id, 'n' => $n, 'telefono' => $tel, 'nombre' => $s['nombre'], 'negocio' => $s['negocio'], 'token' => $s['token']]; }
+    }
+    return $items;
+}
 function at_rt_whatsapp_resultado(array $d): array {
     global $wpdb;
     $id = (int) ($d['id'] ?? 0); $n = (int) ($d['n'] ?? 0);

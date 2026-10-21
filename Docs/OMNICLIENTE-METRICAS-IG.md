@@ -163,8 +163,8 @@ curl -s -H "X-IG-Metrics-Secret: $AT_IG_METRICS_SECRET" "https://automatizatech.
   estado, cuatro indicadores (seguidores, visualizaciones, alcance sumado, interacciones), gráfico por día con selector de métrica y
   vista de tabla, y la lista de publicaciones con la última toma y las fichas 24h/48h/7d/30d. Se quitó lo que no tenía fuente (embudo
   DMs→leads→demos, ROI por pilar, créditos de Higgsfield, costo de Gemini).
-- **Canales:** la API de canales entrega `has_bot_token` en lugar del token y la auditoría guarda `[oculto]` en ese campo. La
-  tarjeta muestra «✓ Configurado» con `has_bot_token`. Al editar, el campo vacío
+- **Canales:** la API de canales entrega `has_bot_token` en lugar del token y la auditoría guarda `[oculto]` en ese campo (lo mismo
+  para la API key de YCloud y los demás secretos: §9). La tarjeta muestra «✓ Configurado» con `has_bot_token`. Al editar, el campo vacío
   conserva el token guardado; para cambiarlo se pega uno nuevo.
 
 ## 5. Pasos manuales de Luis
@@ -242,7 +242,45 @@ en el servidor), desactivar el flujo de n8n y, si se quiere, quitar la constante
 
 ## 8. Pendientes conocidos
 
-- Endurecimiento pendiente de la API de canales y de la auditoría: detalle en la bóveda privada
+- Endurecimiento de la API de canales y de la auditoría: §9. Lo que sigue abierto se detalla en la bóveda privada
   (`10-Projects/2026-10-21-Portal-OmniCliente-Metricas-IG.md`), no en este repo público.
 - Revisión B por el homólogo en Codex (Forja/Vigía) antes del despliegue (tarea C3).
 - El embudo DMs → leads → demos no tiene fuente conectada; se puede armar con los mensajes del canal de Instagram y el CRM.
+
+## 9. Secretos de canales y auditoría (rama `claude/omni-secretos-canales`)
+
+Cómo queda:
+
+- **API de canales:** `mask_channel_secrets()` entrega `has_bot_token` y `has_ycloud_api_key` en lugar de las claves y
+  `credentials_json` vacío. `webhook_secret` llega solo al admin (`get_all_channels`), que arma con él la URL del webhook; la vista de
+  agentes y clientes (`get_channels`) no lo usa y lo recibe vacío. Al editar, `bot_token` o `ycloud_api_key` vacíos conservan lo
+  guardado; para cambiarlos se pega uno nuevo. El servidor lee las claves directo de la base (envío por YCloud, publicador,
+  renovador del token): nada de eso pasa por la API de canales.
+- **Auditoría:** `audit_log()` guarda `[oculto]`, en todas las entidades y a cualquier profundidad, en los campos de
+  `OmnichannelController::AUDIT_SECRET_KEYS` (`api_key`, `password`, `password_hash`, `password_reset_code`, `access_token`,
+  `reset_token`, `bot_token`, `ycloud_api_key`, `webhook_secret`, `credentials_json`). Un campo vacío queda vacío.
+- **Filas anteriores:** `tools/omni-audit-secretos.php` aplica el mismo tachado a lo ya guardado. Solo por línea de comandos y fuera de
+  `public_html`; nunca imprime un valor (solo conteos por entidad y por campo). Sin `--aplicar` solo cuenta; con `--aplicar` exige
+  `--respaldo=<archivo>` nuevo y fuera del sitio, donde guarda antes cada fila original. Las filas con JSON ilegible se cuentan y
+  no se tocan. `--ids=` limita el barrido. Es idempotente.
+
+**Despliegue (requiere autorización de Luis; después del de Métricas IG o junto con él):**
+
+| Orden | Qué | Dónde | Clase |
+|---|---|---|---|
+| 1 | Respaldo de `omnichannel-controller.php`, `omnicliente/index.html` y de la tabla `wp_omnichannel_audit_log` (PHP `SHORTINIT` con `SHOW CREATE TABLE` + un INSERT por fila; `wp db export` falla en esta cuenta) | `~/respaldos/` | OBLIGATORIO |
+| 2 | `omnichannel-controller.php` | `public_html/` | OBLIGATORIO |
+| 3 | `omnicliente/assets/*` nuevos (15 `.js`) y después `omnicliente/index.html` | `public_html/omnicliente/` | OBLIGATORIO |
+| 4 | `tools/omni-audit-secretos.php` | `~/respaldos/omni-audit-<fecha>/` (nunca en `public_html`) | OBLIGATORIO |
+| 5 | `php omni-audit-secretos.php --wp=domains/automatizatech.cl/public_html/wp-load.php` (conteo) y luego con `--aplicar --respaldo=<carpeta del paso 4>/filas.jsonl` | SSH | OBLIGATORIO |
+| 6 | Verificar: un segundo conteo da 0 cambios; `GET channels` como cliente y como agente sin claves; editar un canal sin tocar la clave la conserva | SSH + portal | OBLIGATORIO |
+| 7 | Renovar el token de Instagram (§5.1) y la API key de YCloud de los canales de WhatsApp (YCloud Console → API Keys, pegarla en Canales) | Luis | RECOMENDADO |
+| 8 | Borrar `filas.jsonl` cuando la tabla esté verificada (guarda los valores originales) | SSH | OBLIGATORIO al cierre |
+
+**Reversa:** volver a subir el controlador y el `index.html` del respaldo; las filas tachadas se recuperan desde `filas.jsonl`
+(un `UPDATE` por fila con `old_values_json`/`new_values_json`), mientras no se haya borrado.
+
+**Pruebas:** `AT_WP_LOAD=<wp-load.php local> php tests/omnicliente/secretos-canales-wp-test.php` (39 casos: lo que recibe cada rol,
+edición que conserva, auditoría nueva y anterior, conteo sin valores, respaldo, idempotencia y el script por línea de comandos). Las
+suites de Métricas IG siguen en 70/70 y 28/28. Revisado en el navegador: Canales con «✓ Configurado» para WhatsApp, la URL del
+webhook para admin y el guardado con la clave vacía (la base la conservó y la auditoría no guardó valores).

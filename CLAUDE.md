@@ -58,7 +58,7 @@ Para planificar, cotizar, ejecutar, entregar o retomar trabajo con clientes, lee
 
 Estas reglas aplican a cualquier video, Reel Diario, Reel programado, comercial, Story, post audiovisual o prompt generado desde Codex/Claude/n8n para AutomatizaTech.
 
-1. Logo AT obligatorio y discreto: usar solo el logo real de referencia de AutomatizaTech. Debe ir en la esquina superior izquierda como watermark profesional, muy pequeno, sutil y translucido: maximo 4% del ancho del frame, opacidad aproximada 35-45%, reconocible pero nunca dominante. Nunca ubicarlo al centro, nunca agrandarlo, nunca inventar un logo generico ni variar el diseno. Si la herramienta generativa no respeta el tamano o fidelidad, agregar/corregir el overlay real en post con ffmpeg.
+1. Logo AT obligatorio: usar solo el logo real de referencia de AutomatizaTech, en la esquina superior izquierda. Tamaño y opacidad (decisión de Luis del 2026-10-20, para todos los videos de AutomatizaTech; reemplaza el antiguo «máximo 4 % del ancho, opacidad 35-45 %»): 96 px de ancho en un cuadro de 1080 px (≈9 % del ancho) y 60 % de opacidad, igual que la v6 del Guion 0 aprobada por Luis. Nunca ubicarlo al centro, nunca hacerlo más grande que eso, nunca inventar un logo generico ni variar el diseno. Si la herramienta generativa no respeta el tamano o fidelidad, agregar/corregir el overlay real en post con ffmpeg.
 2. Texto visible en espanol de Chile: todo texto en pantalla, interfaces, chats, emails, notificaciones, botones, calendarios, dashboards y celulares debe pedirse en espanol (Chile), nunca en ingles. Si Veo/Flow deforma texto menor, no regenerar solo por eso si la pieza es publicable; pero el prompt siempre debe pedir espanol.
 3. Antes de generar o publicar, revisar prompts de video para confirmar que incluyan estas reglas. Si un prompt contradice estas reglas, corregirlo primero.
 4. Cierre estándar AT para Reels: agregar una sola vez al final del Reel principal el clip completo `N8N/reel-diario-media-worker/assets/outro-at-10s.mp4` (~10s, 720x1280, con audio y CTA `Agenda tu diagnóstico gratis en automatizatech.cl`). Estructura final: `parte_1 + parte_2 + outro-at-10s.mp4`. No insertar el cierre entre partes ni dentro del bonus/Story. No usar el recorte de 3.2s.
@@ -68,7 +68,7 @@ Estas reglas aplican a cualquier video, Reel Diario, Reel programado, comercial,
 Bloque recomendado para prompts:
 
 ```text
-MANDATORY: The provided reference image is the ONLY logo for AutomatizaTech. You MUST superimpose the EXACT "AT" logo (navy blue circle, white "AT" letters, teal arrow) from the reference image in the top-left corner of the frame. The logo must be clear, sharp, very small, and translucent like a professional TV watermark. Never invent a different logo design or a generic icon.
+MANDATORY: The provided reference image is the ONLY logo for AutomatizaTech. You MUST superimpose the EXACT "AT" logo (navy blue circle, white "AT" letters, teal arrow) from the reference image in the top-left corner of the frame. The logo must be clear and sharp, about 9% of the frame width (96 px on a 1080 px wide frame), at about 60% opacity. Never invent a different logo design or a generic icon.
 
 MANDATORY: All on-screen text, UI elements, app interfaces, phone screens, emails, notifications, and any visible written content in every video or image must be in Spanish (Chile), never in English. This applies to chat bubbles, dashboards, buttons, calendars, and any readable text shown on any screen.
 ```

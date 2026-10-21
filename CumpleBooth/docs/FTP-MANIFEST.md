@@ -21,6 +21,71 @@ grep -o 'assets/[a-zA-Z0-9._-]*' dist/index.html   # lo que index.html pide
 Sube **todos** los de `dist/assets/` junto con `dist/index.html` en la misma
 tanda. Los que sobren del build anterior se pueden borrar después.
 
+## DESPLEGADO 2026-10-16 (tarde): transiciones habladas y ruleta del baile (rama `claude/animador-voces`)
+
+Go de Luis en cada paso. **Transiciones** (`7ca9898`): «Paso esta» y «Siguiente» dicen una frase («¡Uy, esa no nos
+gustó! Vamos a la siguiente pregunta», tres variantes de cada una) antes de leer la tarjeta nueva. **Ruleta del baile**
+(`368fdcc`, `68c4367`): juego 19 «¿Quién baila? La ruleta»; gira entre los invitados de la fiesta (o frases sin lista),
+dice si baila sin pareja o en pareja y con quién, y nombra una de 37 canciones que pone el DJ (la app no trae audio):
+venezolanas, éxitos bailables del mundo y jocosas con destinatario (`para`: solo hombres o solo mujeres, por el género
+de la lista). «Otra persona» gira de nuevo. 55 frases nuevas (474 + 2.178 créditos), verificadas con `scribe_v1`.
+- **Subido:** carpeta de voces completa (380 claves, respaldo `~/respaldos/voces-fiesta-piloto.antes-*`), `lib.php`
+  (cotejado contra `4a862fc`; suma `ruleta-baile` a `cb_animador_juegos`, respaldo `~/respaldos/app-lib.php.antes-*`),
+  `assets/main-sbHBbQfN.js`, `assets/main-BYDY8wH5.css` e `index.html` (respaldo `~/respaldos/app-index.html.antes-*`).
+- **Verificado en PROD** con los 22 invitados reales: la ruleta eligió a un invitado, con pareja y canción, y sonaron en
+  orden la presentación, «está girando», «en pareja» y la canción; «Paso esta» dijo su frase y leyó la tarjeta nueva.
+- **Pendiente:** el título de la canción de Diveana y otras jocosas que conoce Luis; escuchar «El venao», «San Juan to'
+  lo tiene» y «Chino y Nacho» (el transcriptor oyó «El venado», «te lo tiene» y «Chimi Nacho»).
+
+## DESPLEGADO 2026-10-16 (mañana): revisión B de Codex en las voces y textos adultos de Codex (rama `claude/animador-voces`)
+
+Go de Luis. Codex hizo la revisión B del PR #91 en su app (informe `Revision-B-Codex-Voces-PR91.md`, fuera del repo):
+dictamen RECHAZADO por **CX-30** (al pasar con Siguiente tras «¡Tiempo!», la tarjeta nueva revelaba su respuesta),
+**CX-31** (silenciar durante «se acabó el tiempo» dejaba la respuesta sin revelar) y **CX-32** (un audio fallido saltaba
+la presentación). Claude los confirmó y corrigió (`429523f`; el reloj se monta por tarjeta con `key`, el reproductor
+`crearReproductor` resuelve siempre una vez), con pruebas y verificación en navegador local y en PROD. Codex terminó
+además los textos adultos (`92e8a19`, auditado por Claude): aceptación «persona homenajeada», manual sin «niños»,
+invitaciones Hombre/Mujer, avisos de juegos 3D y privacidad; 45 + 29 pruebas nuevas, en rojo contra el código anterior.
+- **Subido** (`desplegar-revision-b.py`, cotejo previo de cada archivo, respaldo `~/respaldos/revision-b-20261016-*`):
+  `lib.acceptance.php`, `lib.manual.php`, `aceptar-plan.php`, `admin/invitations.php`, `admin/event-profile.php`,
+  `admin/index.php`, `assets/main-BG7Zmx-h.js` e `index.html`. Todos iguales al local por sha256; portada, APIs, feria y
+  login en 200; en PROD la tarjeta siguiente a un «¡Tiempo!» queda en 20 s y sin revelar.
+- 🔴 **Para Luis y el abogado:** la aceptación sigue exigiendo el consentimiento de imagen **de menores** (madre, padre o
+  tutor) también en fiestas adultas. Hace falta un instrumento para adultos; Codex no reescribió texto legal, a propósito.
+- Pendiente menor: `lib.admin-usuarios.php` describe el permiso de invitados como «sumar un niño» (catálogo global).
+
+## DESPLEGADO 2026-10-16 (~00:30): voces del animador adulto y «mujeres y hombres» (rama `claude/animador-voces`)
+
+Go de Luis. Lo hizo Claude por SSH (`desplegar-voces.py`, en la carpeta de Aseo de la sesión): cotejo previo (`lib.php` y
+`admin/index.php` de PROD = `main` `1c3e333`), respaldos `~/respaldos/app-*.antes-voces-20261016-*`, carpeta de voces
+subida a un temporal con sha256 por archivo y renombrada de una vez, después `lib.php`, `admin/index.php`, dos assets
+(`main-BcdOx6xG.js`, `main-BJa6JKvi.css`) y `index.html` al final.
+- **Voces** (`4a862fc`): cada juego abre con una presentación hablada (bienvenida, en qué consiste, un saludo por equipo
+  —voz masculina para «Caballeros sospechosos», femenina para «Cómplices peligrosas»— y «presionemos comenzar») con
+  **Omitir**; cada tarjeta se lee al aparecer (la Mímica nunca), con 🔊 Repetir y silencio en la cabecera; al acabarse el
+  reloj suena «¡Se acabó el tiempo!», se revela la respuesta y la otra voz la lee. Los dos «¿Quién es más venezolano?»
+  pasan a tener reloj de 20 s. Guion único en `src/animador/vocesGuion.js`.
+- **Audios:** 325 frases, dos voces diseñadas en ElevenLabs y guardadas en la cuenta («CumpleClick Animadora/Animador
+  venezolano», `eleven_v3`, 15.628 caracteres, nivel −16 LUFS). Dicen el nombre y la edad: viven **solo en el servidor**
+  en `themes/<tema>/voces-fiesta-<slug>/` (`.gitignore`); `lib.php` publica `party.vocesAnimador` si existe el índice.
+  Otra fiesta adulta necesita su propia carpeta (el guion se arma con `guionCompleto(JUEGOS, {nombre, edad})`).
+- **Textos adultos** (`dcb99be`): lista y gestión de invitados en «Mujeres/Hombres», «Elegir otro invitado» y el selector
+  del admin «Mujer/Hombre». Quedan textos infantiles fuera de la fiesta: página de aceptación, manual PDF y opciones de
+  la invitación en el admin.
+- **Verificado desde afuera:** los tres archivos de PROD iguales al local por sha256, `indice.json` (325 claves) y ocho
+  audios iguales, la API de la fiesta publica el índice, el kiosco en PROD reprodujo intro, equipos, «comenzar» y la
+  tarjeta, y Omitir cortó la presentación; luciano-spidey, feria y portada en 200.
+- **Calidad de voz:** 259 de 325 transcritas con `scribe_v1` (similitud media 0,979); las 66 restantes quedaron sin
+  verificar porque **ElevenLabs se quedó sin créditos**. Posibles a regrabar: «¿Me guardas un baile?» (algo atropellada) y
+  «Me fui», que omitió el paréntesis del intérprete; los «X + Y» de Piropos se leen «X más Y».
+- **Regrabación (16-oct, mañana, go de Luis):** con saldo recargado se regrabaron 20 frases (762 créditos; `f3b138d`):
+  los «A + B» de Piropos se leen «A y B», los paréntesis pasan a coma («Me fui, Reymar Perdomo») y «¿Me guardas un baile?».
+  Las 325 quedaron verificadas con `scribe_v1` (similitud media 0,983); Luis escuchó las cuatro dudosas y aprobó. El
+  índice ahora lleva la huella de cada audio (`archivo.mp3?v=<sha8>`), así el CDN no sirve una frase vieja. Carpeta
+  reemplazada entera (respaldo `~/respaldos/voces-fiesta-piloto.antes-*`); las 20 nuevas verificadas desde afuera.
+- **NOT_RUN:** escuchar en la tablet y en el parlante del salón; la Revisión B cruzada (Codex): lanzada desde Claude, su
+  sandbox de Windows no arrancó (`CryptUnprotectData`), así que se pasó el encargo a Luis para correrlo en la app de Codex.
+
 ## DESPLEGADO 2026-10-13 (mañana): despedida propia de la fiesta del piloto
 
 Pedido de Luis: en la despedida del kiosco, la imagen de la cumpleañera con la copa, con movimiento y la voz chilena de

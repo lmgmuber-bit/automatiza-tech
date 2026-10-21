@@ -246,6 +246,7 @@ $invitationsUrl = 'invitations.php?party=' . rawurlencode($publicSlug);
 $themes = cb_load_themes();
 $themeData = $party !== null ? ($themes['themes'][$party['theme_slug']] ?? []) : [];
 $themeName = $themeData['nombre'] ?? ($party['theme_slug'] ?? '');
+$esAdulto = cb_party_event_type($party['event_type'] ?? '') === 'adult_birthday';
 
 // ================== ACCIONES POST ==================
 if ($partyId !== null && $_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -796,10 +797,10 @@ if (!empty($_SESSION['cc_predictions_token'])) {
             <label for="i-gender">Cumpleañero o cumpleañera</label>
             <select id="i-gender" name="birthday_person_gender">
               <option value="">Sin especificar</option>
-              <option value="m">Niño (cumpleañero)</option>
-              <option value="f">Niña (cumpleañera)</option>
+              <option value="m"><?= $esAdulto ? 'Hombre (cumpleañero)' : 'Niño (cumpleañero)' ?></option>
+              <option value="f"><?= $esAdulto ? 'Mujer (cumpleañera)' : 'Niña (cumpleañera)' ?></option>
             </select>
-            <p class="small muted">Elige la narración de cierre de Alice ("toca el botón para conocer al cumpleañero/a"). Sin especificar usa un audio neutro.</p>
+            <p class="small muted"><?= $esAdulto ? 'Identifica el género de la persona homenajeada en la invitación.' : 'Elige la narración de cierre de Alice ("toca el botón para conocer al cumpleañero/a"). Sin especificar usa un audio neutro.' ?></p>
 
             <label for="i-date">Fecha del evento</label>
             <input type="date" id="i-date" name="event_date" value="<?= h($party['event_date'] ?? '') ?>">
@@ -1166,8 +1167,8 @@ if (!empty($_SESSION['cc_predictions_token'])) {
                     <label for="inv-field-3-<?= (int) $inv['id'] ?>">Cumpleañero o cumpleañera</label>
                     <select id="inv-field-3-<?= (int) $inv['id'] ?>" name="birthday_person_gender">
                       <option value="" <?= ($inv['birthday_person_gender'] ?? '') === '' ? 'selected' : '' ?>>Sin especificar</option>
-                      <option value="m" <?= ($inv['birthday_person_gender'] ?? '') === 'm' ? 'selected' : '' ?>>Niño (cumpleañero)</option>
-                      <option value="f" <?= ($inv['birthday_person_gender'] ?? '') === 'f' ? 'selected' : '' ?>>Niña (cumpleañera)</option>
+                      <option value="m" <?= ($inv['birthday_person_gender'] ?? '') === 'm' ? 'selected' : '' ?>><?= $esAdulto ? 'Hombre (cumpleañero)' : 'Niño (cumpleañero)' ?></option>
+                      <option value="f" <?= ($inv['birthday_person_gender'] ?? '') === 'f' ? 'selected' : '' ?>><?= $esAdulto ? 'Mujer (cumpleañera)' : 'Niña (cumpleañera)' ?></option>
                     </select>
 
                     <label for="inv-field-4-<?= (int) $inv['id'] ?>">Fecha del evento</label>

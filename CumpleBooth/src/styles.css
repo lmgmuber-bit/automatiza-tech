@@ -3210,6 +3210,33 @@ body {
 .anim-tabla { list-style: none; margin: 0; padding: 0; width: min(100%, 520px); display: grid; gap: 6px; }
 .anim-tabla li { display: flex; justify-content: space-between; padding: 8px 14px; background: #FFF0D4; border: 3px solid #191218; font: 800 clamp(16px, 4cqw, 22px) 'Baloo 2', system-ui, sans-serif; }
 .anim :is(button, select, input):focus-visible { outline: 4px solid #FFE9A6; outline-offset: 2px; }
+/* Presentación de cada juego con voz (intro, equipos y «presionemos comenzar»). El texto que suena va al centro. */
+.anim-presenta { justify-content: center; gap: 22px; }
+.anim-presenta__emoji { font-size: clamp(56px, 16cqw, 110px); line-height: 1; }
+.anim-presenta__texto { margin: 0; max-width: 26ch; font: 400 clamp(26px, 7.4cqw, 54px)/1.12 'Anton', 'Baloo 2', Impact, sans-serif; color: #FFF0D4; -webkit-text-stroke: 1.5px #191218; text-shadow: 4px 4px 0 #191218; text-wrap: balance; }
+.anim-presenta__puntos { display: flex; gap: 8px; }
+.anim-presenta__puntos i { width: 12px; height: 12px; border: 2px solid #191218; background: #FFF0D4; }
+.anim-presenta__puntos i.is-on { background: #F90B78; }
+.anim-voz { min-width: 44px; }
+/* La ruleta del baile: un visor grande donde pasan los nombres hasta que se detiene. */
+.anim-ruleta { display: flex; flex-direction: column; align-items: center; gap: 14px; width: 100%; }
+.anim-ruleta__visor { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; width: 100%; min-height: 24cqh; padding: 18px; background: #FFF0D4; border: 5px solid #191218; box-shadow: 8px 8px 0 #191218; }
+.anim-ruleta__emoji { font-size: clamp(44px, 12cqw, 84px); line-height: 1; }
+.anim-ruleta__nombre { font: 400 clamp(34px, 10cqw, 76px)/1.05 'Anton', 'Baloo 2', Impact, sans-serif; color: #F90B78; -webkit-text-stroke: 1px #191218; text-wrap: balance; }
+.anim-ruleta__espera { font: 800 clamp(20px, 5.4cqw, 34px) 'Baloo 2', system-ui, sans-serif; color: #191218; }
+.anim-ruleta__modo { margin: 0; font: 800 clamp(18px, 4.8cqw, 30px) 'Baloo 2', system-ui, sans-serif; color: #FFF0D4; text-shadow: 0 2px 4px rgba(0,0,0,.5); }
+.anim-ruleta.is-listo .anim-ruleta__visor { background: #FFE9A6; }
+@media (prefers-reduced-motion: no-preference) {
+  .anim-ruleta__visor.is-gira .anim-ruleta__nombre { animation: anim-ruleta-pasa .12s ease-out; }
+  .anim-ruleta.is-listo .anim-ruleta__visor { animation: anim-ruleta-cae .5s cubic-bezier(.2, 1.6, .4, 1); }
+  @keyframes anim-ruleta-pasa { from { transform: translateY(-30%); opacity: .3; } to { transform: none; opacity: 1; } }
+  @keyframes anim-ruleta-cae { from { transform: scale(.85); } to { transform: none; } }
+}
+.anim-repetir { align-self: center; }
+@media (prefers-reduced-motion: no-preference) {
+  .anim-presenta__texto { animation: anim-entra .35s ease-out; }
+  @keyframes anim-entra { from { transform: scale(.92); opacity: 0; } to { transform: none; opacity: 1; } }
+}
 
 /* Bienvenida adulta en pantallas bajas (tablet acostada: el kiosco conserva su cuadro vertical y
    queda de unos 540 px de alto). Con cuatro botones apilados no cabían bajo el titular y se

@@ -74,8 +74,8 @@ test('guía ℹ️: cada juego trae resumen, pasos, duración, jugadores, puntaj
   assert.deepEqual(nivelesDelJuego(JUEGOS.find((j) => j.id === 'beso-al-blanco')), NIVELES)
 })
 
-test('catálogo: 18 juegos con ids únicos e ids y nombres acordados con Forja', () => {
-  assert.equal(JUEGOS.length, 18)
+test('catálogo: 19 juegos con ids únicos e ids y nombres acordados con Forja', () => {
+  assert.equal(JUEGOS.length, 19)
   assert.equal(new Set(ids(JUEGOS)).size, JUEGOS.length)
   assert.equal(JUEGOS.find((j) => j.id === 'verdad-o-shot')?.nombre, 'Verdad o shot')
   assert.equal(JUEGOS.find((j) => j.id === 'mas-venezolano')?.nombre, '¿Quién es más venezolano?')
@@ -280,7 +280,15 @@ test('venezolano: dos RETO sin respuesta, Kino Táchira y la edición política 
 
 test('tarjetas de música e imagen: pocas, sin audio en la app, respuesta oculta y archivos fuera del repo', async () => {
   const todas = JUEGOS.flatMap((j) => j.cartas.map((c) => ({ ...c, juego: j.id })))
-  const musica = todas.filter((c) => c.tipo === 'musica')
+  // Las canciones de la ruleta del baile son aparte: las nombra la tablet y las pone el DJ (se prueban abajo).
+  const musica = todas.filter((c) => c.tipo === 'musica' && c.juego !== 'ruleta-baile')
+  const canciones = todas.filter((c) => c.juego === 'ruleta-baile')
+  assert.equal(canciones.length, 37)
+  for (const c of canciones) {
+    assert.equal(c.tipo, 'musica')
+    assert.match(c.texto, /^¡DJ, que suene «.+»/)
+    assert.ok(c.pista && !/\.(mp3|m4a|ogg|wav)/i.test(JSON.stringify(c)), 'la ruleta tampoco trae audio de música')
+  }
   const imagenes = todas.filter((c) => c.tipo === 'imagen')
   assert.deepEqual(musica.map((c) => c.respuesta), ['Por estas calles', 'Kassandra'])
   for (const c of musica) {

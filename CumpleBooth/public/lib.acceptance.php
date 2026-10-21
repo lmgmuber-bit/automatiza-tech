@@ -664,7 +664,7 @@ function cb_acceptance_decode_signature(string $dataUrl): ?string
     return $binary;
 }
 
-function cb_validate_acceptance_submission(array $input): array
+function cb_validate_acceptance_submission(array $input, string $eventType = 'child_birthday'): array
 {
     $errors = [];
     foreach (cb_legal_documents() as $meta) {
@@ -687,7 +687,9 @@ function cb_validate_acceptance_submission(array $input): array
     }
     $relationship = cb_acceptance_text($input['signer_relationship'] ?? '', 40);
     if (!in_array($relationship, ['madre', 'padre', 'tutor', 'autorizado'], true)) {
-        $errors['signer_relationship'] = 'Indica tu relación con el niño o niña homenajeado.';
+        $errors['signer_relationship'] = $eventType === 'adult_birthday'
+            ? 'Indica tu relación con la persona homenajeada.'
+            : 'Indica tu relación con el niño o niña homenajeado.';
     }
     $signature = cb_acceptance_decode_signature((string) ($input['signature_dataurl'] ?? ''));
     if ($signature === null) {
@@ -736,7 +738,9 @@ function cb_accept_plan(array $row, array $input, array $ctx): array
     if (cb_acceptance_is_expired($row)) {
         return ['ok' => false, 'errors' => ['status' => 'Este enlace venció. Pide a CumpleClick uno nuevo.']];
     }
-    $validation = cb_validate_acceptance_submission($input);
+    // La modalidad sale de la fiesta de este enlace, nunca de campos enviados por el cliente.
+    $party = cb_load_party_raw((string) ($row['party_public_slug'] ?? ''));
+    $validation = cb_validate_acceptance_submission($input, cb_party_event_type($party['event_type'] ?? ''));
     if (!$validation['ok']) {
         return ['ok' => false, 'errors' => $validation['errors']];
     }

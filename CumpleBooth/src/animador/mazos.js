@@ -303,11 +303,11 @@ export const JUEGOS = [
     id: 'mas-venezolano',
     nombre: '¿Quién es más venezolano?',
     emoji: '🫓', // una arepa: la bandera sale como «VE» en Windows
-    segundos: 0,
+    segundos: 20,
     puntos: 'acierto',
     conCategorias: true,
     cierre: 'Canta conmigo',
-    instrucciones: 'Concurso de cultura venezolana entre dos equipos. Lee la pregunta: el primer equipo que grita la respuesta correcta se lleva el punto. Si nadie sabe, toca «Revelar respuesta». En «Chile o Venezuela», el equipo dice cómo se dice en el otro país.',
+    instrucciones: 'Concurso de cultura venezolana entre dos equipos. Lee la pregunta: el primer equipo que grita la respuesta correcta se lleva el punto. Si nadie sabe en 20 segundos, el reloj revela la respuesta (o toca «Revelar respuesta»). En «Chile o Venezuela», el equipo dice cómo se dice en el otro país.',
     premio: 'El equipo más venezolano',
     nota: 'Las respuestas las ve solo quien conduce: aparecen al tocar «Revelar respuesta». En «Canta conmigo» la tablet solo nombra la canción.',
     cartas: [
@@ -403,9 +403,9 @@ export const JUEGOS = [
     id: 'venezolano-politica',
     nombre: '¿Quién es más venezolano? Edición política',
     emoji: '🗳️',
-    segundos: 0,
+    segundos: 20,
     puntos: 'acierto',
-    instrucciones: 'Preguntas de la vida política venezolana, con humor. Mismo juego: el primer equipo que grita la respuesta correcta se lleva el punto; si nadie sabe, toca «Revelar respuesta». Si alguien se incomoda, se pasa a otro juego.',
+    instrucciones: 'Preguntas de la vida política venezolana, con humor. Mismo juego: el primer equipo que grita la respuesta correcta se lleva el punto; si nadie sabe en 20 segundos, el reloj la revela (o toca «Revelar respuesta»). Si alguien se incomoda, se pasa a otro juego.',
     premio: 'El equipo más venezolano',
     nota: 'Úsalo solo si el ambiente lo permite. Se apaga desde el admin.',
     cartas: [
@@ -457,6 +457,66 @@ JUEGOS.push({
     c('at10', 'sinverguenza', 'Di «mañana madrugo» de una forma que nadie te crea.'),
     c('at11', 'sinverguenza', '¿Cuál sería tu multa por exceso de coquetería?'),
     c('at12', 'sinverguenza', 'Anuncia tu llegada a la pista como si fueras una celebridad buscada.'),
+  ],
+})
+
+// La ruleta del baile (pedido de Luis, 16-oct): gira entre los nombres de la lista de invitados, elige a alguien
+// (solo o en pareja) y una canción venezolana bailable que pone el DJ: la app solo la nombra, no trae audio.
+// Cada tarjeta es una canción; la ruleta (`ruleta: true`) la revela recién cuando se detiene.
+// `para`: 'm' o 'f' en las canciones jocosas que van a un hombre o a una mujer; la ruleta elige entre ellos.
+const cancion = (id, titulo, autor, ritmo, para = '') => ({
+  ...musica(id, 'coqueto', `¡DJ, que suene «${titulo}»${autor ? `, de ${autor}` : ''}!`, '', '', `«${titulo}»${autor ? ` (${autor}, ${ritmo})` : ` (${ritmo})`}`),
+  ...(para ? { para } : {}),
+})
+JUEGOS.push({
+  id: 'ruleta-baile',
+  nombre: '¿Quién baila? La ruleta',
+  emoji: '💃',
+  segundos: 30,
+  puntos: 'rubrica',
+  ruleta: true,
+  instrucciones: 'Toca «¡Girar!»: la ruleta elige entre los invitados a quién le toca bailar, solo o en pareja, y la canción que pone el DJ. Treinta segundos de baile y el público da 0 a 3 puntos. «Otra persona» vuelve a girar.',
+  premio: 'Rey o reina de la pista',
+  cartas: [
+    cancion('rb01', 'Llorarás', "Oscar D'León", 'salsa'),
+    cancion('rb02', 'Mi bajo y yo', "Oscar D'León", 'salsa'),
+    cancion('rb03', 'Persona ideal', "Adolescent's Orquesta", 'salsa'),
+    cancion('rb04', 'Una fan enamorada', 'Servando y Florentino', 'salsa'),
+    cancion('rb05', 'Mi niña bonita', 'Chino y Nacho', 'merengue'),
+    cancion('rb06', 'Andas en mi cabeza', 'Chino y Nacho', 'urbano'),
+    cancion('rb07', 'Epa Isidoro', "Billo's Caracas Boys", 'merengue caraqueño'),
+    cancion('rb08', 'Sentir zuliano', 'Ricardo Aguirre', 'gaita'),
+    cancion('rb09', 'Alma llanera', '', 'joropo'),
+    cancion('rb10', 'Woman del Callao', '', 'calipso de El Callao'),
+    cancion('rb11', "San Juan to' lo tiene", '', 'tambor'),
+    cancion('rb12', 'Pídeme', 'Guaco', 'gaita'),
+    // Éxitos bailables de todo el mundo (pedido de Luis, 16-oct)
+    cancion('rb13', 'El baile del perrito', 'Wilfrido Vargas', 'merengue'),
+    cancion('rb14', 'Pretty Woman', 'Roy Orbison', 'rock and roll'),
+    cancion('rb15', 'Lambada', 'Kaoma', 'lambada'),
+    cancion('rb16', 'La vida es un carnaval', 'Celia Cruz', 'salsa'),
+    cancion('rb17', 'Macarena', 'Los del Río', 'pop'),
+    cancion('rb18', 'La bamba', 'Ritchie Valens', 'rock and roll'),
+    cancion('rb19', 'Suavemente', 'Elvis Crespo', 'merengue'),
+    cancion('rb20', 'La Bilirrubina', 'Juan Luis Guerra', 'merengue'),
+    cancion('rb21', 'Vivir mi vida', 'Marc Anthony', 'salsa'),
+    cancion('rb22', "Livin' la vida loca", 'Ricky Martin', 'pop'),
+    cancion('rb23', 'Waka Waka', 'Shakira', 'pop'),
+    cancion('rb24', 'Y.M.C.A.', 'Village People', 'disco'),
+    cancion('rb25', "Stayin' Alive", 'Bee Gees', 'disco'),
+    cancion('rb26', 'Dancing Queen', 'ABBA', 'disco'),
+    cancion('rb27', 'Mambo No. 5', 'Lou Bega', 'mambo'),
+    cancion('rb28', 'Sopa de caracol', 'Banda Blanca', 'punta'),
+    cancion('rb29', 'El tiburón', 'Proyecto Uno', 'merengue house'),
+    cancion('rb30', 'Aserejé', 'Las Ketchup', 'pop'),
+    cancion('rb31', 'Danza Kuduro', 'Don Omar y Lucenzo', 'urbano'),
+    cancion('rb32', 'Despacito', 'Luis Fonsi y Daddy Yankee', 'reguetón'),
+    // Jocosas con destinatario: le salen solo a un hombre o solo a una mujer de la lista.
+    cancion('rb33', 'Pluma pluma gay', '', 'para un caballero', 'm'),
+    cancion('rb34', 'Macho Man', 'Village People', 'disco', 'm'),
+    cancion('rb35', "I'm Too Sexy", 'Right Said Fred', 'pop', 'm'),
+    cancion('rb36', 'El venao', 'Los Cantores del Trópico', 'gaita', 'm'),
+    cancion('rb37', 'Es mentiroso', 'Olga Tañón', 'merengue', 'f'),
   ],
 })
 
@@ -711,6 +771,19 @@ const GUIAS = {
     jugadores: 'Voluntarios.',
     puntaje: '0 a 3 puntos por gracia.',
     preparar: 'Nada. No se pregunta por parejas, mensajes ni experiencias de nadie.',
+  },
+  'ruleta-baile': {
+    resumen: 'Una ruleta elige entre los invitados a quién le toca bailar una canción venezolana, solo o en pareja.',
+    pasos: [
+      'Toca «¡Girar!»: pasan los nombres de los invitados hasta que la ruleta se detiene.',
+      'La pantalla dice si baila solo o en pareja (y con quién) y qué canción pone el DJ.',
+      'Pídele al DJ la canción y toca «Iniciar» en el reloj: 30 segundos de baile.',
+      'El público da 0 a 3 puntos al equipo de quien bailó. Si no quiere, «Otra persona» vuelve a girar.',
+    ],
+    duracion: '10 a 15 minutos.',
+    jugadores: 'Los invitados cargados en la lista de la fiesta.',
+    puntaje: '0 a 3 puntos por baile, por aplauso.',
+    preparar: 'La lista de invitados cargada en el admin y las canciones a mano del DJ. Sin lista, la ruleta gira con frases («la más elegante», «el de lentes»).',
   },
 }
 for (const j of JUEGOS) j.guia = GUIAS[j.id] || null

@@ -907,6 +907,7 @@ function cb_animador_juegos(): array
         'venezolano-politica' => '¿Quién es más venezolano? Edición política',
         'expediente'     => 'Expediente «Se busca»',
         'atrevidas'      => 'Preguntas sin vergüenza',
+        'ruleta-baile'   => '¿Quién baila? La ruleta',
     ];
 }
 
@@ -1530,6 +1531,14 @@ function cb_resolve_party(string $slugRaw): array
         $videos = (array) ($themePayload['videos'] ?? []);
         $videos['despedida'] = 'themes/' . $themeSlug . '/despedida-fiesta-' . $slug . '.mp4?v=' . cb_sello_archivo($propia);
         $themePayload['videos'] = $videos;
+    }
+
+    // Voces del animador de una fiesta adulta (src/animador/vocesGuion.js): índice + un mp3 por frase en
+    // `themes/<tema>/voces-fiesta-<slug>/`, solo en el servidor porque dicen el nombre y la edad (.gitignore).
+    // Sin la carpeta, el kiosco juega igual pero mudo.
+    $indiceVoces = cb_themes_dir() . '/' . $themeSlug . '/voces-fiesta-' . $slug . '/indice.json';
+    if ($eventType === 'adult_birthday' && cb_valid_public_slug($slug) && is_file($indiceVoces)) {
+        $partyPayload['vocesAnimador'] = 'themes/' . $themeSlug . '/voces-fiesta-' . $slug . '/indice.json?v=' . cb_sello_archivo($indiceVoces);
     }
 
     return ['ok' => true, 'party' => $partyPayload, 'theme' => $themePayload];

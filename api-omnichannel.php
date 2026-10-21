@@ -540,15 +540,16 @@ try {
     // AutomatizaTech: con este secret no se leen canales de clientes.
     // Formato de respuesta: Docs/MASTER/06_PORTAL_OMNICLIENTE_FRONTEND.md, «Métricas IG».
     if (isset($segments[0]) && $segments[0] === 'ig-metrics') {
+        // El límite va antes del secret: así también cuentan los intentos con un secret malo.
+        if (!at_rate_limit_check('omni_ig_metrics', 240, 3600)) {
+            at_rate_limit_reject(3600, 'omni_ig_metrics');
+        }
         $igm_provided = $_SERVER['HTTP_X_IG_METRICS_SECRET'] ?? '';
         if (!defined('AT_IG_METRICS_SECRET') || AT_IG_METRICS_SECRET === '') {
             send_json(['error' => 'Métricas IG sin configurar: falta AT_IG_METRICS_SECRET en wp-config.php'], 503);
         }
         if (!hash_equals((string) AT_IG_METRICS_SECRET, (string) $igm_provided)) {
             send_json(['error' => 'Secret inválido'], 403);
-        }
-        if (!at_rate_limit_check('omni_ig_metrics', 240, 3600)) {
-            at_rate_limit_reject(3600, 'omni_ig_metrics');
         }
         $igm_channel_id = OmniIgInsightsController::default_channel_id();
         if (!$igm_channel_id) {
@@ -573,8 +574,9 @@ try {
         }
 
         // POST ig-metrics/sync — toma ahora (n8n la llama cada hora). 502 si falló, para que n8n avise.
+        // Sin force: un agente no puede obligar a releer todo (la cuota de Meta es la del publicador).
         if (($segments[1] ?? '') === 'sync' && $method === 'POST') {
-            $igm_result = $iginsights->sync($igm_channel_id, !empty($body['force']));
+            $igm_result = $iginsights->sync($igm_channel_id, false);
             send_json($igm_result, empty($igm_result['ok']) ? 502 : 200);
         }
 

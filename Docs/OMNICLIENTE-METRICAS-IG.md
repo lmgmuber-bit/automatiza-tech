@@ -34,8 +34,9 @@ Agentes ─ GET ig-metrics (secret) ──────┴─ lee las tablas, no 
   la foto de seguidores de cada día. Los seguidores nuevos por día (`follower_count`) Meta solo los da a cuentas con 100 o más.
 - **Costo en llamadas:** unas 5 por hora en régimen (11 en la primera toma de la prueba). El tope de Meta es 4.800 × impresiones
   de 24 h por cuenta (doc de Meta, [overview](https://developers.facebook.com/docs/instagram-platform/instagram-api-with-instagram-login/overview)).
-- **Freno:** dos tomas seguidas con menos de 2 minutos de diferencia se saltan (también con `force`), y hay un candado para que no
-  corran dos a la vez.
+- **Freno:** dos tomas seguidas con menos de 2 minutos de diferencia se saltan (también con `force`), y un candado atómico
+  (`add_option`) impide que corran dos a la vez. El botón del portal fuerza la toma, pero aun así no relee lo tomado hace menos de
+  30 minutos; los agentes no pueden forzar (el token y su cuota son los mismos del publicador).
 
 ### Métricas que se piden (verificadas en la doc de Meta el 21-oct-2026)
 
@@ -81,10 +82,10 @@ en el repo).
 | `GET ig-metrics&days=30&posts_limit=30` | Resumen completo: cuenta, estado, totales del periodo, días y publicaciones con sus tomas (`days` 1–90, `posts_limit` 1–100) |
 | `GET ig-metrics/posts&limit=30` | `{ok, insights_status, posts[]}` |
 | `GET ig-metrics/posts/{media_id}` | `{ok, insights_status, post}`; 404 si la publicación no está registrada |
-| `POST ig-metrics/sync` (cuerpo `{}` o `{"force":true}`) | Pide una toma ahora; responde el resumen de la toma. 502 si falló (token vencido, etc.) |
+| `POST ig-metrics/sync` (cuerpo `{}`) | Pide una toma ahora (solo lo pendiente; `force` se ignora en esta ruta); responde el resumen de la toma. 502 si falló (token vencido, etc.) |
 
 Códigos: `403` secreto ausente o malo · `503` falta `AT_IG_METRICS_SECRET` en el servidor · `429` más de 240 llamadas por hora
-desde la misma IP · `404` subruta o publicación inexistente. El secreto de métricas no abre `reel-diario/*` ni `admin/*`, y los otros
+desde la misma IP (cuentan también los intentos con un secreto malo) · `404` subruta o publicación inexistente. El secreto de métricas no abre `reel-diario/*` ni `admin/*`, y los otros
 secretos no abren `ig-metrics/*` (probado).
 
 **Por qué un secreto propio:** `X-Reel-Diario-Secret` publica y borra en Instagram; un agente que solo mira no debe poder
@@ -202,14 +203,16 @@ que no lo imprime; si no, Luis lo pega. Sin la constante, `ig-metrics/*` respond
 ## 6. Pruebas
 
 ```bash
-AT_WP_LOAD=<wp-load.php local> php tests/ig-insights/ig-insights-wp-test.php   # 67 casos: tomas, estados, tachado del token
+AT_WP_LOAD=<wp-load.php local> php tests/ig-insights/ig-insights-wp-test.php   # 70 casos: tomas, estados, candado, tachado del token
 AT_WP_LOAD=<wp-load.php local> php tests/ig-insights/rutas-http-wp-test.php    # 28 casos por HTTP real con php -S
 ```
 
 Las dos usan el WordPress local y una Graph API simulada: ninguna llamada sale a Meta. Cubren: tomas por edad (24 h, 48 h, 7 y
 30 días), token sin permiso (aviso y sin cifras inventadas), token vencido, canal sin token, métrica rechazada, publicación
-borrada, freno de 2 minutos, token solo en la cabecera, 403/503/404 de las rutas y que los secretos no se crucen. La vista se
-revisó en el navegador (claro y oscuro, sin y con permiso) contra la API de la rama.
+borrada, freno de 2 minutos, candado de tomas simultáneas, token solo en la cabecera, 403/503/404 de las rutas y que los secretos
+no se crucen. La vista se revisó en el navegador (claro y oscuro, sin y con permiso) contra la API de la rama. Revisión de seguridad
+A por Vigía (Claude) el 21-oct: sin inyección SQL, XSS ni fugas del token en lo nuevo; sus hallazgos de esta rama quedaron
+corregidos (límite antes del secreto, sin `force` para agentes, candado atómico, pruebas solo por línea de comandos).
 
 ## 7. Despliegue a PROD (requiere autorización de Luis)
 
@@ -239,7 +242,11 @@ en el servidor), desactivar el flujo de n8n y, si se quiere, quitar la constante
 
 ## 8. Pendientes conocidos
 
-- `ycloud_api_key` (WhatsApp) sigue viajando al navegador igual que lo hacía `bot_token`, y la auditoría vieja conserva tokens de
-  Instagram anteriores en claro (los registros nuevos ya no). Tarea aparte.
+- `ycloud_api_key` (WhatsApp) y `webhook_secret` siguen viajando al navegador (también a agentes y supervisores) igual que lo hacía
+  `bot_token`, y la auditoría vieja conserva tokens de Instagram anteriores en claro (los registros nuevos ya no); esas filas las
+  ven supervisores y clientes. Como el token actual estuvo a la vista, conviene que el token nuevo de §5.1 lo reemplace cuanto
+  antes. Redactar la auditoría antigua y tachar los demás secretos es tarea aparte.
+- `at_rate_limit_client_ip()` confía en `CF-Connecting-IP` / `X-Forwarded-For`, que el cliente puede falsificar (ya existía; afecta a
+  todos los límites de la API).
 - Revisión B por el homólogo en Codex (Forja/Vigía) antes del despliegue (tarea C3).
 - El embudo DMs → leads → demos no tiene fuente conectada; se puede armar con los mensajes del canal de Instagram y el CRM.

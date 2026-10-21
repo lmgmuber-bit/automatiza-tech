@@ -2,6 +2,7 @@
 // Pruebas locales de Métricas IG (tomas, estados de permiso y token, tachado del token de los canales).
 // La Graph API de Instagram está simulada: ninguna llamada sale a Meta. Nunca contra producción.
 // Correr: AT_WP_LOAD=<wp-load.php local> php tests/ig-insights/ig-insights-wp-test.php
+if (PHP_SAPI !== 'cli') { exit; }
 require __DIR__ . '/../retomar/wp-bootstrap.php';
 require_once __DIR__ . '/../../omnichannel-controller.php';
 require_once __DIR__ . '/../../omnichannel-ig-insights-controller.php';
@@ -29,7 +30,7 @@ register_shutdown_function(static function () use ($wpdb, $P, $CID) {
 	$wpdb->delete($P . 'channels', ['id' => $CID]);
 	delete_option('omni_ig_insights_state_' . $CID);
 	delete_option('omni_ig_insights_profile_' . $CID);
-	delete_transient('omni_ig_insights_lock_' . $CID);
+	delete_option('omni_ig_insights_lock_' . $CID);
 });
 
 // --- Simulación de graph.instagram.com
@@ -131,6 +132,13 @@ $metric = static function ($media_id, $cp) use ($wpdb, $P, $CID) {
 		$CID, $media_id, $cp
 	));
 };
+// Envejece las tomas «latest» para que un force vuelva a leer (force no relee lo de menos de 30 min).
+$age_latest = static function () use ($wpdb, $P, $CID) {
+	$wpdb->query($wpdb->prepare(
+		"UPDATE {$P}ig_post_metrics m JOIN {$P}ig_posts p ON p.id = m.post_id SET m.taken_at = DATE_SUB(m.taken_at, INTERVAL 2 HOUR) WHERE p.channel_id = %d AND m.checkpoint = 'latest'",
+		$CID
+	));
+};
 $post = static function ($media_id) use ($wpdb, $P, $CID) {
 	return $wpdb->get_row($wpdb->prepare("SELECT * FROM {$P}ig_posts WHERE channel_id = %d AND media_id = %s", $CID, $media_id));
 };
@@ -147,6 +155,7 @@ ok($igc->due_checkpoints($mk(170), [], false, $now) === ['7d', 'latest'], 'a los
 ok($igc->due_checkpoints($mk(721), [], false, $now) === ['30d', 'latest'], 'a los 30 días toca 30d');
 ok($igc->due_checkpoints($mk(100), ['latest' => gmdate('Y-m-d H:i:s', $now - 2 * $H)], false, $now) === [], 'última de hace 2 h: nada pendiente');
 ok($igc->due_checkpoints($mk(100), ['latest' => gmdate('Y-m-d H:i:s', $now - 2 * $H)], true, $now) === ['latest'], 'con force se refresca la última');
+ok($igc->due_checkpoints($mk(100), ['latest' => gmdate('Y-m-d H:i:s', $now - 600)], true, $now) === [], 'con force no se relee una toma de hace 10 min');
 ok($igc->due_checkpoints($mk(3, 'STORY'), ['latest' => gmdate('Y-m-d H:i:s', $now - 1800)], false, $now) === ['latest'], 'historia: se refresca en cada pasada');
 ok($igc->post_kind((object) ['media_product_type' => '', 'media_type' => 'VIDEO']) === 'REELS', 'VIDEO sin tipo → Reel');
 ok($igc->post_kind((object) ['media_product_type' => '', 'media_type' => 'CAROUSEL_ALBUM']) === 'FEED', 'carrusel → feed');
@@ -228,6 +237,7 @@ ok(count($ins) === 0, 'pasada sin pendientes: solo la historia vuelve a /insight
 // --- 5) Métrica rechazada: baja de nivel sin perder la toma
 $GLOBALS['ig']['reject_metric'] = ['m-reel-25h'];
 $reset_throttle();
+$age_latest();
 $r = $igc->sync($CID, true);
 $lat = $metric('m-reel-25h', 'latest');
 ok($lat && (int) $lat->views === 1000 && $lat->avg_watch_time_ms === null, 'métrica rechazada: se reintenta sin ella y se guarda el resto');
@@ -242,9 +252,20 @@ $igc->sync($CID, true);
 ok($post('m-img-49h')->status === 'deleted', 'publicación que desapareció de /me/media → deleted');
 $GLOBALS['ig']['gone'] = ['m-vid-200h'];
 $reset_throttle();
+$age_latest();
 $igc->sync($CID, true);
 ok($post('m-vid-200h')->status === 'deleted', 'Meta dice que el objeto no existe → deleted');
 $GLOBALS['ig']['gone'] = [];
+
+// --- 6b) Candado: una toma en curso frena a la otra; un candado viejo no traba para siempre
+$reset_throttle();
+add_option('omni_ig_insights_lock_' . $CID, time(), '', 'no');
+$r = $igc->sync($CID);
+ok(!empty($r['skipped']) && strpos($r['reason'], 'en curso') !== false, 'con otra toma en curso, se salta');
+update_option('omni_ig_insights_lock_' . $CID, time() - 600, false);
+$r = $igc->sync($CID);
+ok(empty($r['skipped']), 'un candado de hace 10 min se considera muerto y la toma sigue');
+ok(get_option('omni_ig_insights_lock_' . $CID, 'no') === 'no', 'al terminar la toma suelta el candado');
 
 // --- 7) Token vencido
 $GLOBALS['ig']['mode'] = 'token_expired';

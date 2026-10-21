@@ -3,6 +3,7 @@
 // Levanta `php -S` sobre una copia temporal de api-omnichannel.php que carga el WordPress local
 // (wp-load-shim.php), con un secret y un canal de prueba y la Graph API simulada. Nunca contra producción.
 // Correr: AT_WP_LOAD=<wp-load.php local> php tests/ig-insights/rutas-http-wp-test.php
+if (PHP_SAPI !== 'cli') { exit; }
 require __DIR__ . '/../retomar/wp-bootstrap.php';
 global $wpdb;
 
@@ -47,7 +48,7 @@ register_shutdown_function(static function () use ($server, $DIR, $wpdb, $P, $CI
 	$wpdb->delete($P . 'channels', ['id' => $CID]);
 	delete_option('omni_ig_insights_state_' . $CID);
 	delete_option('omni_ig_insights_profile_' . $CID);
-	delete_transient('omni_ig_insights_lock_' . $CID);
+	delete_option('omni_ig_insights_lock_' . $CID);
 	// El limitador de tasa usa transients por IP: no dejar el contador de la prueba.
 	delete_transient('at_rl_' . md5('omni_ig_metrics|127.0.0.1|'));
 });

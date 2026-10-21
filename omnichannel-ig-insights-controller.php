@@ -44,8 +44,12 @@ class OmniIgInsightsController {
     /** Cada cuánto se vuelven a pedir los días de la cuenta (Meta tarda hasta 48 h en asentar). */
     const ACCOUNT_EVERY_HOURS = 6;
     const ACCOUNT_DAYS_BACK = 3;
-    /** Entre dos sincronizaciones seguidas (salvo force). */
+    /** Entre dos sincronizaciones seguidas (también con force). */
     const MIN_SYNC_SECONDS = 120;
+    /** Con force (botón del portal) se relee una publicación solo si su última toma tiene más de 30 min. */
+    const FORCE_MIN_SECONDS = 1800;
+    /** Un candado más viejo que esto es de una toma que murió a medias. */
+    const LOCK_SECONDS = 120;
 
     const MEDIA_FIELDS = [
         'id,caption,media_type,media_product_type,timestamp,permalink,like_count,comments_count',
@@ -231,18 +235,24 @@ class OmniIgInsightsController {
         if (!empty($state['last_sync_at']) && $now - strtotime($state['last_sync_at'] . ' UTC') < self::MIN_SYNC_SECONDS) {
             return ['ok' => true, 'skipped' => true, 'reason' => 'Hubo una toma hace menos de ' . self::MIN_SYNC_SECONDS . ' s', 'last_summary' => $state['last_summary'] ?? null];
         }
+        // Candado atómico: add_option falla si la fila ya existe (el cron y un clic a la vez).
         $lock = 'omni_ig_insights_lock_' . $channel_id;
-        if (get_transient($lock)) {
-            return ['ok' => true, 'skipped' => true, 'reason' => 'Hay otra toma en curso'];
+        if (!add_option($lock, $now, '', 'no')) {
+            if ($now - (int) get_option($lock, 0) < self::LOCK_SECONDS) {
+                return ['ok' => true, 'skipped' => true, 'reason' => 'Hay otra toma en curso'];
+            }
+            delete_option($lock);
+            if (!add_option($lock, $now, '', 'no')) {
+                return ['ok' => true, 'skipped' => true, 'reason' => 'Hay otra toma en curso'];
+            }
         }
-        set_transient($lock, 1, 120);
         $this->api_calls = 0;
 
         $summary = ['ok' => false, 'status' => 'error', 'posts_seen' => 0, 'snapshots' => 0, 'account_days' => 0, 'api_calls' => 0, 'errors' => []];
         try {
             $summary = $this->run_sync($channel_id, $force, $summary);
         } finally {
-            delete_transient($lock);
+            delete_option($lock);
         }
         $summary['api_calls'] = $this->api_calls;
 
@@ -478,7 +488,7 @@ class OmniIgInsightsController {
      * Qué tomas faltan para una publicación. Pública para las pruebas.
      * Regla: una toma fija se toma al cumplir su edad y solo hasta 1,5 veces esa edad
      * (si la publicación se descubrió tarde, esa toma queda sin registrar en vez de mal rotulada).
-     * La "latest" se refresca cada 6 h (las historias, en cada pasada) o con force.
+     * La "latest" se refresca cada 6 h (las historias, en cada pasada) o, con force, si tiene más de 30 min.
      *
      * @return string[] checkpoints a guardar con la misma lectura
      */
@@ -495,7 +505,10 @@ class OmniIgInsightsController {
         }
         $latest_at = isset($taken['latest']) ? strtotime($taken['latest'] . ' UTC') : 0;
         $every = $post->media_product_type === 'STORY' ? 0 : self::LATEST_EVERY_HOURS * HOUR_IN_SECONDS;
-        if ($force || $due || !$latest_at || $now - $latest_at >= $every) {
+        if ($force) {
+            $every = min($every, self::FORCE_MIN_SECONDS);
+        }
+        if ($due || !$latest_at || $now - $latest_at >= $every) {
             $due[] = 'latest';
         }
         return array_values(array_unique($due));
@@ -580,7 +593,8 @@ class OmniIgInsightsController {
                 "SELECT insights_at FROM {$this->prefix}ig_account_daily WHERE channel_id = %d AND day = %s",
                 $channel_id, $ymd
             ));
-            if (!$force && $prev && time() - strtotime($prev . ' UTC') < self::ACCOUNT_EVERY_HOURS * HOUR_IN_SECONDS) {
+            $every = $force ? self::FORCE_MIN_SECONDS : self::ACCOUNT_EVERY_HOURS * HOUR_IN_SECONDS;
+            if ($prev && time() - strtotime($prev . ' UTC') < $every) {
                 continue;
             }
             $since = $day->getTimestamp();

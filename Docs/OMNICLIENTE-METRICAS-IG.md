@@ -163,8 +163,8 @@ curl -s -H "X-IG-Metrics-Secret: $AT_IG_METRICS_SECRET" "https://automatizatech.
   estado, cuatro indicadores (seguidores, visualizaciones, alcance sumado, interacciones), gráfico por día con selector de métrica y
   vista de tabla, y la lista de publicaciones con la última toma y las fichas 24h/48h/7d/30d. Se quitó lo que no tenía fuente (embudo
   DMs→leads→demos, ROI por pilar, créditos de Higgsfield, costo de Gemini).
-- **Canales:** el token de Instagram ya no viaja al navegador (antes `SELECT *` lo mandaba completo a admin, agentes y clientes) ni
-  queda en la auditoría (se guarda `[oculto]`). La tarjeta muestra «✓ Configurado» con `has_bot_token`. Al editar, el campo vacío
+- **Canales:** la API de canales entrega `has_bot_token` en lugar del token y la auditoría guarda `[oculto]` en ese campo. La
+  tarjeta muestra «✓ Configurado» con `has_bot_token`. Al editar, el campo vacío
   conserva el token guardado; para cambiarlo se pega uno nuevo.
 
 ## 5. Pasos manuales de Luis
@@ -242,11 +242,7 @@ en el servidor), desactivar el flujo de n8n y, si se quiere, quitar la constante
 
 ## 8. Pendientes conocidos
 
-- `ycloud_api_key` (WhatsApp) y `webhook_secret` siguen viajando al navegador (también a agentes y supervisores) igual que lo hacía
-  `bot_token`, y la auditoría vieja conserva tokens de Instagram anteriores en claro (los registros nuevos ya no); esas filas las
-  ven supervisores y clientes. Como el token actual estuvo a la vista, conviene que el token nuevo de §5.1 lo reemplace cuanto
-  antes. Redactar la auditoría antigua y tachar los demás secretos es tarea aparte.
-- `at_rate_limit_client_ip()` confía en `CF-Connecting-IP` / `X-Forwarded-For`, que el cliente puede falsificar (ya existía; afecta a
-  todos los límites de la API).
+- Endurecimiento pendiente de la API de canales y de la auditoría: detalle en la bóveda privada
+  (`10-Projects/2026-10-21-Portal-OmniCliente-Metricas-IG.md`), no en este repo público.
 - Revisión B por el homólogo en Codex (Forja/Vigía) antes del despliegue (tarea C3).
 - El embudo DMs → leads → demos no tiene fuente conectada; se puede armar con los mensajes del canal de Instagram y el CRM.

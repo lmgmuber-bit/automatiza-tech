@@ -26,7 +26,7 @@ El portal corre un **rediseño visual completo** (estilo audaz): cada sección t
 `omnichannel-ig-insights-controller.php`, que el cron de n8n dispara cada hora) y, si falta el permiso de Meta o no hay
 tomas, lo dice en pantalla. Los agentes (Claqueta) leen lo mismo en `ig-metrics/*` con la cabecera `X-IG-Metrics-Secret`.
 Ruta, formato JSON, estados, pasos manuales de Luis y lista para PROD: **`Docs/OMNICLIENTE-METRICAS-IG.md`**.
-`ChannelsView.jsx` muestra el estado del token con `has_bot_token`: el token ya no viaja al navegador.
+`ChannelsView.jsx` muestra el estado del token con `has_bot_token`.
 
 ---
 

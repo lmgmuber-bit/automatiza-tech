@@ -52,6 +52,12 @@ function at_rt_estado_por_motivo(string $motivo): string {
 }
 function at_rt_token(int $id, string $salt): string { return substr(hash_hmac('sha256', 'rt|' . $id, $salt), 0, 32); }
 function at_rt_token_valido(string $t, int $id, string $salt): bool { return hash_equals(at_rt_token($id, $salt), $t); }
+/** Nombre de pila para saludar (pedido de Luis, 20-oct): la primera palabra del nombre guardado, sin saltos de línea.
+ *  «Miguel Chávez» → «Miguel». La ficha y la agenda siguen usando el nombre completo. */
+function at_rt_nombre_pila(string $nombre): string {
+	$partes = preg_split('/\s+/u', trim($nombre), -1, PREG_SPLIT_NO_EMPTY);
+	return $partes ? (string) $partes[0] : '';
+}
 function at_rt_asunto(int $n, string $nombre): string {
 	$nombre = trim(str_replace(["\r", "\n"], '', $nombre));
 	return match ($n) {

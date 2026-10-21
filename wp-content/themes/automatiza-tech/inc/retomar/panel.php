@@ -310,7 +310,7 @@ function at_rt_boton_ficha(array $cliente): void {
  *  (la presentación, «Agendar» y «No me interesa»), como el botón de la plantilla; la baja va aparte. */
 function at_rt_panel_texto_manual(array $s): string {
     $base = home_url('/retomar.php?t=' . rawurlencode((string) $s['token']));
-    return at_rt_texto_manual((string) $s['nombre'], (string) $s['negocio'], $base, $base . '&baja=1');
+    return at_rt_texto_manual(at_rt_nombre_pila((string) $s['nombre']), (string) $s['negocio'], $base, $base . '&baja=1');
 }
 function at_rt_panel_form_inicio(string $accion,int $id): void {
     echo '<form method="post" action="'.esc_url(admin_url('admin-post.php')).'">';

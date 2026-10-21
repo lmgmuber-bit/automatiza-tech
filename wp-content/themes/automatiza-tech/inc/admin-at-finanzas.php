@@ -14,6 +14,8 @@
 
 if (!defined('ABSPATH')) exit;
 
+require_once __DIR__ . '/finanzas/cargar.php';
+
 function at_finanzas_admin_menu() {
     add_menu_page(
         'Finanzas AT',

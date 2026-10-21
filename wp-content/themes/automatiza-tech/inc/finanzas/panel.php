@@ -44,6 +44,11 @@ function at_fin_fmt_exacto($n, string $moneda): string {
 	return ($n < 0 ? '-' : '') . ($moneda === 'USD' ? 'US$' : '$') . $entero . ($decimales !== '' ? ',' . $decimales : '');
 }
 
+/** Pesos por dólar con 2 decimales: $950,00. */
+function at_fin_fmt_tc($tc): string {
+	return '$' . number_format((float) $tc, 2, ',', '.');
+}
+
 /** Porcentaje con una decimal y coma, sin «,0» sobrante: 12,5 / 40. */
 function at_fin_fmt_pct($p): string {
 	return preg_replace('/,0$/', '', number_format((float) $p, 1, ',', '.'));
@@ -106,7 +111,8 @@ function at_fin_panel_estilos(): void {
 		.at-fin-panel .at-fin-columnas{display:flex;flex-wrap:wrap;gap:20px;align-items:flex-start}
 		.at-fin-panel .at-fin-columnas>div{flex:1;min-width:min(100%,280px)}
 		.at-fin-panel .at-fin-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;max-width:100%}
-		.at-fin-panel .at-fin-scroll table{min-width:560px}
+		.at-fin-panel .at-fin-scroll table{width:100%}
+		.at-fin-panel .at-fin-scroll table.at-fin-tabla-ancha{min-width:760px}
 		.at-fin-panel .at-fin-der{text-align:right;white-space:nowrap}
 		.at-fin-panel .at-fin-nosuma{color:#646970}
 		.at-fin-panel .at-fin-pendiente{display:inline-block;background:#fcf9e8;border:1px solid #dba617;border-radius:999px;padding:0 8px;font-size:11px;color:#674e00}
@@ -185,12 +191,18 @@ function at_fin_panel_registrar(array $post): array {
 	$fila = at_fin_movimiento($res['id']);
 	if ($fila && $moneda === 'USD') {
 		if ($fila['tc_estado'] === 'pendiente') {
-			$mensaje .= ' El dólar de ese día aún no está disponible: se completará al abrir «Pagos por mes».';
+			$mensaje .= ' Se guardó sin el valor en pesos; se completará solo cuando la fuente del dólar responda.';
 		} else {
-			$mensaje .= ' Al dólar de ' . at_fin_fmt_clp($fila['tipo_cambio']) . ' son ' . at_fin_fmt_clp($fila['monto_clp']) . '.';
+			$mensaje .= ' Al dólar de ' . at_fin_fmt_tc($fila['tipo_cambio']) . ' son ' . at_fin_fmt_clp($fila['monto_clp']) . '.';
 		}
 	}
 	return ['ok' => true, 'mensaje' => $mensaje];
+}
+
+/** Id del último movimiento de una cuenta (0 si no tiene): el formulario de cuadre lo manda como `base` para detectar que la cuenta cambió. */
+function at_fin_panel_base_cuenta(int $cuenta_id): int {
+	global $wpdb;
+	return (int) $wpdb->get_var($wpdb->prepare('SELECT COALESCE(MAX(id), 0) FROM ' . at_fin_tabla_movimientos() . ' WHERE cuenta_id = %d', $cuenta_id));
 }
 
 function at_fin_panel_cuadrar(array $post): array {
@@ -199,6 +211,12 @@ function at_fin_panel_cuadrar(array $post): array {
 	if ($cuenta === null) { return ['ok' => false, 'mensaje' => 'La cuenta indicada no existe.']; }
 	$real = at_fin_monto($post['saldo_real'] ?? null);
 	if ($real === null) { return ['ok' => false, 'mensaje' => 'El saldo real debe ser un número (por ejemplo 30 o 30,50).']; }
+	// Si la cuenta tuvo movimientos desde que se abrió la página, el saldo que vio la persona ya no vale: no se cuadra a ciegas.
+	$base_actual = at_fin_panel_base_cuenta($cuenta['id']);
+	$base = array_key_exists('base', $post) ? (is_scalar($post['base']) ? (int) $post['base'] : -1) : $base_actual;
+	if ($base !== $base_actual) {
+		return ['ok' => false, 'nivel' => 'warning', 'mensaje' => 'La cuenta cambió desde que abriste la página. Revisa el saldo y vuelve a cuadrar.'];
+	}
 	$estimado = at_fin_saldo(at_fin_movimientos_cuenta($cuenta['id'], 1000000))['saldo'];
 	$diferencia = round($real - $estimado, 4);
 	$moneda = $cuenta['moneda'];
@@ -206,15 +224,20 @@ function at_fin_panel_cuadrar(array $post): array {
 	if (abs($diferencia) < 0.00005) {
 		return ['ok' => true, 'mensaje' => 'La cuenta «' . $nombre . '» ya coincide: el saldo estimado es ' . at_fin_fmt_exacto($estimado, $moneda) . '. No se registró ningún ajuste.'];
 	}
+	$real_texto = rtrim(rtrim(number_format($real, 4, '.', ''), '0'), '.');
 	$res = at_fin_registrar([
 		'tipo' => 'ajuste', 'fecha' => at_fin_hoy(), 'cuenta' => $cuenta['slug'], 'proveedor' => $cuenta['proveedor'],
 		'descripcion' => 'Cuadre de saldo (panel)', 'monto' => $diferencia, 'moneda' => $moneda,
-		// Cada cuadre es un ajuste propio: sin referencia explícita, dos del mismo día con la misma diferencia se tomarían por uno solo.
-		'referencia' => 'cuadre-' . $cuenta['slug'] . '-' . gmdate('YmdHis') . '-' . bin2hex(random_bytes(3)),
-		'notas' => 'saldo real del panel: ' . rtrim(rtrim(number_format($real, 4, '.', ''), '0'), '.'),
+		// Determinista (cuenta + último movimiento visto + saldo real): dos envíos iguales a la vez chocan en el UNIQUE y el segundo devuelve el mismo ajuste.
+		// Un cuadre posterior parte de otro último movimiento (el ajuste mismo), así que no se confunde con este.
+		'referencia' => 'cuadre-' . $cuenta['slug'] . '-' . $base . '-' . $real_texto,
+		'notas' => 'saldo real del panel: ' . $real_texto,
 		'registrado_por' => 'panel',
 	], 'panel');
 	if (is_wp_error($res)) { return ['ok' => false, 'mensaje' => 'No se pudo cuadrar: ' . $res->get_error_message()]; }
+	if ($res['estado'] === 'existente') {
+		return ['ok' => true, 'mensaje' => 'Ese cuadre de «' . $nombre . '» ya estaba registrado: no se duplicó.'];
+	}
 	return ['ok' => true, 'mensaje' => 'Cuenta «' . $nombre . '» cuadrada: el saldo estimado era ' . at_fin_fmt_exacto($estimado, $moneda) . ' y el real es ' . at_fin_fmt_exacto($real, $moneda) . '; ajuste de ' . at_fin_fmt_exacto($diferencia, $moneda) . '.'];
 }
 
@@ -244,7 +267,7 @@ function at_fin_panel_pagina(string $tab): void {
 	at_fin_panel_tabs($tab);
 	at_fin_panel_estilos();
 	if ($resultado !== null) {
-		echo '<div class="notice ' . ($resultado['ok'] ? 'notice-success' : 'notice-error') . '"><p>' . esc_html($resultado['mensaje']) . '</p></div>';
+		echo '<div class="notice ' . ($resultado['ok'] ? 'notice-success' : (($resultado['nivel'] ?? '') === 'warning' ? 'notice-warning' : 'notice-error')) . '"><p>' . esc_html($resultado['mensaje']) . '</p></div>';
 	}
 	if ($tab === 'cuentas') {
 		at_fin_panel_cuentas();
@@ -267,6 +290,11 @@ function at_fin_panel_pagos(string $mes): void {
 	$primero = new DateTimeImmutable($mes . '-01');
 	$anterior = $primero->modify('-1 month')->format('Y-m');
 	$siguiente = $primero->modify('+1 month')->format('Y-m');
+	// Solo los pagos y recargas en dólares esperan un valor en pesos que falta en el total (un consumo pendiente no lo cambia).
+	$esperan = 0;
+	foreach ($movs as $m) {
+		if ($m['tc_estado'] === 'pendiente' && in_array($m['tipo'], ['pago', 'recarga'], true)) { $esperan++; }
+	}
 	arsort($resumen['por_categoria']);
 	arsort($resumen['por_proveedor']);
 	$cuentas = at_fin_cuentas();
@@ -288,8 +316,8 @@ function at_fin_panel_pagos(string $mes): void {
 		<div class="at-fin-tarjeta"><div class="at-fin-etiqueta">Movimientos del mes</div><div class="at-fin-cifra"><?php echo esc_html((string) count($movs)); ?></div></div>
 	</div>
 	<p class="at-fin-nota">Suman los pagos y las recargas; el consumo de una cuenta y los ajustes se muestran pero no suman (el consumo ya se contó al recargar).</p>
-	<?php if ($resumen['pendientes'] > 0): ?>
-	<div class="notice notice-warning inline"><p><?php echo esc_html($resumen['pendientes'] . ($resumen['pendientes'] === 1 ? ' movimiento todavía está sin tipo de cambio' : ' movimientos todavía están sin tipo de cambio') . ' (marcados «pendiente»): no suman al total hasta que se consiga el dólar de su día. Se reintenta cada vez que abres esta pestaña.'); ?></p></div>
+	<?php if ($esperan > 0): ?>
+	<div class="notice notice-warning inline"><p><?php echo esc_html($esperan . ($esperan === 1 ? ' pago o recarga en dólares espera su valor en pesos' : ' pagos o recargas en dólares esperan su valor en pesos') . ' (marcados «pendiente»): todavía no suman al total. Se reintenta cada vez que abres esta pestaña.'); ?></p></div>
 	<?php endif; ?>
 
 	<?php if ($movs === []): ?>
@@ -329,7 +357,7 @@ function at_fin_panel_pagos(string $mes): void {
 
 	<?php if ($movs !== []): ?>
 	<h2>Movimientos de <?php echo esc_html(at_fin_mes_es($mes)); ?></h2>
-	<div class="at-fin-scroll"><table class="widefat striped">
+	<div class="at-fin-scroll"><table class="widefat striped at-fin-tabla-ancha">
 		<thead><tr><th>Fecha</th><th>Tipo</th><th>Proveedor</th><th>Categoría</th><th>Descripción</th><th>Cuenta</th><th class="at-fin-der">Monto</th><th class="at-fin-der">Dólar</th><th class="at-fin-der">En pesos</th></tr></thead>
 		<tbody>
 		<?php foreach ($movs as $m): $suma = in_array($m['tipo'], ['pago', 'recarga'], true); ?>
@@ -341,7 +369,7 @@ function at_fin_panel_pagos(string $mes): void {
 				<td><?php echo esc_html((string) $m['descripcion']); ?></td>
 				<td><?php echo esc_html((string) ($m['cuenta'] ?? '')); ?></td>
 				<td class="at-fin-der"><?php echo esc_html(at_fin_fmt_monto($m['monto'], (string) $m['moneda'])); ?></td>
-				<td class="at-fin-der"><?php echo $m['moneda'] === 'USD' && $m['tipo_cambio'] !== null ? esc_html(at_fin_fmt_clp($m['tipo_cambio'])) . ($m['tc_estado'] === 'manual' ? ' <small>(manual)</small>' : '') : '—'; ?></td>
+				<td class="at-fin-der"><?php echo $m['moneda'] === 'USD' && $m['tipo_cambio'] !== null ? esc_html(at_fin_fmt_tc($m['tipo_cambio'])) . ($m['tc_estado'] === 'manual' ? ' <small>(manual)</small>' : '') : '—'; ?></td>
 				<td class="at-fin-der"><?php echo $m['tc_estado'] === 'pendiente' ? '<span class="at-fin-pendiente">pendiente</span>' : esc_html(at_fin_fmt_clp($m['monto_clp'])); ?></td>
 			</tr>
 		<?php endforeach; ?>
@@ -424,6 +452,7 @@ function at_fin_panel_cuentas(): void {
 				<?php echo at_fin_panel_nonce(); // phpcs:ignore WordPress.Security.EscapeOutput ?>
 				<input type="hidden" name="accion" value="cuadrar">
 				<input type="hidden" name="cuenta" value="<?php echo esc_attr($c['slug']); ?>">
+				<input type="hidden" name="base" value="<?php echo esc_attr((string) at_fin_panel_base_cuenta((int) $c['id'])); ?>">
 				<div><label class="at-fin-etiqueta" for="at-fin-real-<?php echo esc_attr($c['slug']); ?>">Saldo real (<?php echo esc_html($moneda); ?>)</label><br>
 					<input type="text" id="at-fin-real-<?php echo esc_attr($c['slug']); ?>" name="saldo_real" inputmode="decimal" required placeholder="30,00"></div>
 				<button class="button" type="submit">Cuadrar</button>

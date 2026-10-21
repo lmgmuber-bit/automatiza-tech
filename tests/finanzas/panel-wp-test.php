@@ -49,6 +49,8 @@ wp_set_current_user($admin);
 
 function salida(callable $f): string { ob_start(); $f(); return (string) ob_get_clean(); }
 function cantidad(string $donde, array $args = []): int { global $wpdb, $tm; return (int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$tm} WHERE {$donde}", ...$args)); }
+/** Id del último movimiento de una cuenta (lo que el formulario de cuadre manda como `base`). */
+function base_cuenta(string $slug): int { global $wpdb, $tm, $tc; return (int) $wpdb->get_var($wpdb->prepare("SELECT COALESCE(MAX(m.id), 0) FROM {$tm} m JOIN {$tc} c ON c.id = m.cuenta_id WHERE c.slug = %s", $slug)); }
 /** Fragmento de la tarjeta de una cuenta en la pestaña Cuentas. */
 function tarjeta(string $html, string $slug): string {
 	$i = strpos($html, 'data-cuenta="' . $slug . '"');
@@ -94,8 +96,11 @@ ok(strpos($t_hf, 'at-fin-negativo') === false, 'Cuentas: un saldo positivo no ll
 ok(strpos($t_hf, '12,5') !== false && strpos($t_hf, 'at-fin-medidor') !== false, 'Cuentas: medidor con el % usado desde la última recarga (5 de 40 = 12,5 %)');
 ok($t_neg !== '' && strpos($t_neg, 'at-fin-negativo') !== false && strpos($t_neg, '-US$3,00') !== false, 'Cuentas: saldo negativo (2 − 5) con la clase at-fin-negativo');
 ok(strpos($html, '<b>x</b>') === false && strpos($html, '&lt;b&gt;x&lt;/b&gt;') !== false, 'Cuentas: el nombre se escapa');
+ok(preg_match('/name="base" value="' . base_cuenta($slug_hf) . '"/', $t_hf) === 1 && base_cuenta($slug_hf) > 0, 'Cuentas: el formulario de cuadre manda `base` = id del último movimiento de la cuenta');
+ok(preg_match('/name="base" value="0"/', $t_neg) === 0, 'Cuentas: la base de cada cuenta es la suya');
 ok(strpos($t_hf, 'name="accion" value="cuadrar"') !== false && strpos($t_hf, 'name="saldo_real"') !== false && strpos($t_hf, 'name="_wpnonce"') !== false, 'Cuentas: formulario de cuadre con acción, saldo real y nonce');
 ok(strpos($html, 'at-fin-scroll') !== false, 'Cuentas: las tablas van dentro de un contenedor con scroll horizontal');
+ok(strpos($html, 'at-fin-tabla-ancha') === false, 'Cuentas: los últimos movimientos de cada tarjeta son tablas chicas (sin la clase ancha)');
 
 // --- Cuadrar
 $cuadre = at_fin_panel_accion(['accion' => 'cuadrar', 'cuenta' => $slug_hf, 'saldo_real' => '30']);
@@ -113,6 +118,33 @@ at_fin_registrar(['tipo' => 'consumo', 'fecha' => $hoy, 'cuenta' => $slug_hf, 'p
 $cuadre2 = at_fin_panel_accion(['accion' => 'cuadrar', 'cuenta' => $slug_hf, 'saldo_real' => '20']);
 ok($cuadre2['ok'] === true && (int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$tm} m JOIN {$tc} c ON c.id = m.cuenta_id WHERE c.slug = %s AND m.tipo = 'ajuste'", $slug_hf)) === 2, 'dos cuadres del mismo día con la misma diferencia (−5) registran dos ajustes');
 ok(abs(at_fin_saldo(at_fin_movimientos_cuenta(at_fin_cuenta($slug_hf)['id']))['saldo'] - 20.0) < 0.0001, 'y el saldo queda en 20');
+// Idempotencia: la referencia es determinista (cuenta + último movimiento + saldo real) y `base` evita cuadrar sobre una cuenta que cambió.
+$base_a = base_cuenta($slug_hf);
+$post_a = ['accion' => 'cuadrar', 'cuenta' => $slug_hf, 'saldo_real' => '12', 'base' => (string) $base_a];
+$ajustes_antes = (int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$tm} m JOIN {$tc} c ON c.id = m.cuenta_id WHERE c.slug = %s AND m.tipo = 'ajuste'", $slug_hf));
+$primero = at_fin_panel_accion($post_a);
+$segundo = at_fin_panel_accion($post_a);
+$ajustes_ahora = (int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$tm} m JOIN {$tc} c ON c.id = m.cuenta_id WHERE c.slug = %s AND m.tipo = 'ajuste'", $slug_hf));
+ok($primero['ok'] === true && $ajustes_ahora === $ajustes_antes + 1, 'cuadrar con base: el primer POST registra el ajuste');
+ok($ajustes_ahora === $ajustes_antes + 1 && ($segundo['nivel'] ?? '') === 'warning', 'dos POST idénticos seguidos dejan un solo ajuste (el segundo ve que la cuenta cambió)');
+ok(wp_json_encode($post_a) !== '' && (int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$tm} WHERE referencia = %s", 'cuadre-' . $slug_hf . '-' . $base_a . '-12')) === 1, 'la referencia del ajuste es cuadre-<slug>-<base>-<saldo real>');
+// Carrera: dos POST con la misma base que pasan la revisión a la vez chocan en el UNIQUE y el segundo devuelve el mismo movimiento.
+$base_b = base_cuenta($slug_hf);
+$fila_a = at_fin_registrar(['tipo' => 'ajuste', 'fecha' => $hoy, 'cuenta' => $slug_hf, 'proveedor' => 'Higgsfield', 'descripcion' => 'Cuadre de saldo (panel)', 'monto' => 3, 'moneda' => 'USD', 'referencia' => 'cuadre-' . $slug_hf . '-' . $base_b . '-15', 'registrado_por' => 'panel'], 'panel');
+$fila_b = at_fin_registrar(['tipo' => 'ajuste', 'fecha' => $hoy, 'cuenta' => $slug_hf, 'proveedor' => 'Higgsfield', 'descripcion' => 'Cuadre de saldo (panel)', 'monto' => 3, 'moneda' => 'USD', 'referencia' => 'cuadre-' . $slug_hf . '-' . $base_b . '-15', 'registrado_por' => 'panel'], 'panel');
+ok(is_array($fila_a) && is_array($fila_b) && $fila_b['estado'] === 'existente' && $fila_b['id'] === $fila_a['id'], 'misma referencia en una carrera: el segundo devuelve el mismo movimiento (existente), sin duplicar');
+// `base` viejo después de un movimiento nuevo: no registra y avisa.
+$viejo = base_cuenta($slug_hf);
+at_fin_registrar(['tipo' => 'consumo', 'fecha' => $hoy, 'cuenta' => $slug_hf, 'proveedor' => 'Higgsfield', 'descripcion' => '[PRUEBA] consumo después de abrir', 'monto' => 1, 'moneda' => 'USD'], 'api');
+$n = cantidad('1=1');
+$rancio = at_fin_panel_accion(['accion' => 'cuadrar', 'cuenta' => $slug_hf, 'saldo_real' => '99', 'base' => (string) $viejo]);
+ok($rancio['ok'] === false && ($rancio['nivel'] ?? '') === 'warning' && $rancio['mensaje'] === 'La cuenta cambió desde que abriste la página. Revisa el saldo y vuelve a cuadrar.' && cantidad('1=1') === $n, '`base` viejo tras un movimiento nuevo: no registra nada y muestra el aviso');
+$rancio0 = at_fin_panel_accion(['accion' => 'cuadrar', 'cuenta' => $slug_hf, 'saldo_real' => '99', 'base' => '0']);
+ok($rancio0['ok'] === false && cantidad('1=1') === $n, '`base` 0 con una cuenta que ya tiene movimientos también se rechaza');
+$est = at_fin_saldo(at_fin_movimientos_cuenta(at_fin_cuenta($slug_hf)['id']))['saldo'];
+$cero_dif = at_fin_panel_accion(['accion' => 'cuadrar', 'cuenta' => $slug_hf, 'saldo_real' => (string) $est, 'base' => (string) base_cuenta($slug_hf)]);
+ok($cero_dif['ok'] === true && cantidad('1=1') === $n && ($cero_dif['nivel'] ?? 'x') === 'x', 'con base vigente y diferencia 0 sigue sin registrar nada');
+at_fin_panel_accion(['accion' => 'cuadrar', 'cuenta' => $slug_hf, 'saldo_real' => '20']);   // deja la cuenta en 20, como la esperan las pruebas siguientes
 $sube = at_fin_panel_accion(['accion' => 'cuadrar', 'cuenta' => $slug_hf, 'saldo_real' => '25,5']);
 ok($sube['ok'] === true && abs(at_fin_saldo(at_fin_movimientos_cuenta(at_fin_cuenta($slug_hf)['id']))['saldo'] - 25.5) < 0.0001 && strpos($sube['mensaje'], 'US$5,50') !== false, 'cuadrar hacia arriba (25,5): ajuste positivo de US$5,50');
 $cero = at_fin_panel_accion(['accion' => 'cuadrar', 'cuenta' => $slug_hf, 'saldo_real' => '0']);
@@ -129,6 +161,7 @@ ok($desconocida['ok'] === false && at_fin_panel_accion([])['ok'] === false, 'una
 // --- Registrar desde el panel
 $reg = at_fin_panel_accion(['accion' => 'registrar', 'tipo' => 'pago', 'proveedor' => 'PRUEBA-Prov', 'categoria' => 'IA', 'descripcion' => '[PRUEBA] pago panel ' . $marca, 'monto' => '1,26', 'moneda' => 'USD']);
 ok($reg['ok'] === true && strpos($reg['mensaje'], 'US$1,26') !== false, 'registrar "1,26" USD: ok y muestra «US$1,26» tal como se interpretó');
+ok(strpos($reg['mensaje'], 'Al dólar de $950,00') !== false, 'el mensaje muestra el dólar aplicado con 2 decimales ($950,00)');
 $fila = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$tm} WHERE descripcion = %s", '[PRUEBA] pago panel ' . $marca), ARRAY_A);
 ok($fila && $fila['origen'] === 'panel' && $fila['registrado_por'] === 'panel' && $fila['fecha'] === $hoy && (float) $fila['monto'] === 1.26 && (float) $fila['tipo_cambio'] === 950.0, 'queda con origen panel, fecha de hoy y el dólar del día');
 $otra = at_fin_panel_accion(['accion' => 'registrar', 'tipo' => 'pago', 'proveedor' => 'PRUEBA-Prov', 'categoria' => 'IA', 'descripcion' => '[PRUEBA] pago panel ' . $marca, 'monto' => '1.26', 'moneda' => 'USD']);
@@ -137,6 +170,11 @@ $punto = at_fin_panel_accion(['accion' => 'registrar', 'tipo' => 'pago', 'provee
 ok($punto['ok'] === true && strpos($punto['mensaje'], '$1,50') !== false && strpos($punto['mensaje'], '$1.500') === false, 'registrar "1.500" en pesos: el mensaje muestra $1,50, o sea que el punto fue decimal');
 $grande = at_fin_panel_accion(['accion' => 'registrar', 'tipo' => 'pago', 'proveedor' => 'PRUEBA-Prov', 'descripcion' => '[PRUEBA] grande', 'monto' => '15990', 'moneda' => 'CLP']);
 ok($grande['ok'] === true && strpos($grande['mensaje'], '$15.990') !== false, 'registrar 15990 en pesos: el mensaje dice $15.990');
+$GLOBALS['mi_modo'] = 'error';
+delete_option('at_fin_tc_cache');
+$sin_tc = at_fin_panel_accion(['accion' => 'registrar', 'tipo' => 'pago', 'proveedor' => 'PRUEBA-Prov', 'descripcion' => '[PRUEBA] sin dólar ' . $marca, 'monto' => '2', 'moneda' => 'USD']);
+$GLOBALS['mi_modo'] = 'ok';
+ok($sin_tc['ok'] === true && strpos($sin_tc['mensaje'], 'Se guardó sin el valor en pesos; se completará solo cuando la fuente del dólar responda.') !== false && strpos($sin_tc['mensaje'], 'al abrir') === false, 'registrar con la fuente del dólar caída: dice que se completará solo, sin mandar a abrir la pestaña');
 $mala = at_fin_panel_accion(['accion' => 'registrar', 'tipo' => 'pago', 'proveedor' => 'PRUEBA-Prov', 'descripcion' => '[PRUEBA] mala', 'monto' => 'abc', 'moneda' => 'USD']);
 ok($mala['ok'] === false && stripos($mala['mensaje'], 'monto') !== false, 'monto inválido → ok false con el motivo');
 $moneda = at_fin_panel_accion(['accion' => 'registrar', 'tipo' => 'recarga', 'cuenta' => $slug_hf, 'proveedor' => 'Higgsfield', 'descripcion' => '[PRUEBA] moneda', 'monto' => '10000', 'moneda' => 'CLP']);
@@ -160,18 +198,30 @@ ok(strpos($mensual, 'junio 2020') !== false, 'Pagos: nombra el mes en español')
 ok(strpos($mensual, 'Hosting') !== false && strpos($mensual, '$20.000') !== false && strpos($mensual, '$100.000') !== false, 'Pagos: desglose por categoría con nombre legible y por proveedor');
 ok(strpos($mensual, '<script>alert(1)</script>') === false && strpos($mensual, '&lt;script&gt;') !== false && strpos($mensual, '<i>z</i>') === false, 'Pagos: todo el texto del usuario se escapa');
 ok(strpos($mensual, 'pendiente') !== false, 'Pagos: marca el movimiento con dólar pendiente');
-ok(preg_match('/sin tipo de cambio/u', $mensual) === 1, 'Pagos: avisa cuántos movimientos no suman por no tener tipo de cambio');
+ok(strpos($mensual, '1 pago o recarga en dólares espera su valor en pesos') !== false && strpos($mensual, 'sin tipo de cambio') === false, 'Pagos: avisa cuántos pagos o recargas en dólares esperan el valor en pesos');
+ok(strpos($mensual, '$1.000,00') !== false, 'Pagos: el dólar de cada movimiento se muestra con 2 decimales ($1.000,00)');
 ok(strpos($mensual, '[PRUEBA] consumo junio') !== false, 'Pagos: lista también el consumo (aunque no sume)');
 ok(strpos($mensual, 'at-fin-scroll') !== false, 'Pagos: las tablas van dentro de un contenedor con scroll horizontal');
 ok(strpos($mensual, 'name="accion" value="registrar"') !== false && strpos($mensual, 'name="_wpnonce"') !== false && strpos($mensual, 'name="monto"') !== false, 'Pagos: formulario de registro con acción y nonce');
 ok(strpos($mensual, '2020-05') !== false || strpos($mensual, 'mayo 2020') !== false, 'Pagos: trae la comparación con los meses anteriores');
+ok(substr_count($mensual, 'at-fin-tabla-ancha') === 1 && preg_match('/<table class="widefat striped at-fin-tabla-ancha">\s*<thead>/', $mensual) === 1, 'Pagos: solo la tabla de movimientos lleva la clase ancha; por categoría, por proveedor y comparación no');
+ok(strpos(salida('at_fin_panel_estilos'), '.at-fin-scroll table{min-width') === false && strpos(salida('at_fin_panel_estilos'), 'table.at-fin-tabla-ancha{min-width') !== false, 'CSS: el ancho mínimo ya no es de todas las tablas, solo de la clase ancha');
+// Pendientes del mes: cuentan solo pagos y recargas; un consumo pendiente no da a entender que el total esté incompleto.
+at_fin_registrar(['tipo' => 'pago', 'fecha' => '2020-08-10', 'proveedor' => 'PRUEBA-Pend', 'descripcion' => '[PRUEBA] pago pendiente agosto', 'monto' => 2, 'moneda' => 'USD'], 'api');
+at_fin_registrar(['tipo' => 'recarga', 'fecha' => '2020-08-11', 'cuenta' => $slug_hf, 'proveedor' => 'PRUEBA-Pend', 'descripcion' => '[PRUEBA] recarga pendiente agosto', 'monto' => 2, 'moneda' => 'USD'], 'api');
+at_fin_registrar(['tipo' => 'consumo', 'fecha' => '2020-09-10', 'cuenta' => $slug_hf, 'proveedor' => 'PRUEBA-Pend', 'descripcion' => '[PRUEBA] consumo pendiente septiembre', 'monto' => 1, 'moneda' => 'USD'], 'api');
+at_fin_registrar(['tipo' => 'consumo', 'fecha' => '2020-08-12', 'cuenta' => $slug_hf, 'proveedor' => 'PRUEBA-Pend', 'descripcion' => '[PRUEBA] consumo pendiente agosto', 'monto' => 1, 'moneda' => 'USD'], 'api');
+$agosto = salida(static fn() => at_fin_panel_pagos('2020-08'));
+ok(strpos($agosto, '2 pagos o recargas en dólares esperan su valor en pesos') !== false, 'Pagos: con dos pagos/recargas pendientes (y un consumo pendiente) dice 2, sin contar el consumo');
+$septiembre = salida(static fn() => at_fin_panel_pagos('2020-09'));
+ok(strpos($septiembre, 'esperan su valor') === false && strpos($septiembre, 'espera su valor') === false && strpos($septiembre, 'notice-warning') === false, 'Pagos: un mes solo con un consumo pendiente no muestra el aviso de pendientes');
 $julio = salida(static fn() => at_fin_panel_pagos('2020-07'));
 ok(strpos($julio, 'sin datos') !== false, 'Pagos: un mes vacío dice «sin datos»');
 ok(strpos($julio, '$120.000') !== false, 'Pagos: la comparación de julio muestra el total de junio');
 ok(strpos($mensual, 'sin datos') === false, 'Pagos: un mes con movimientos no dice «sin datos»');
 $GLOBALS['mi_modo'] = 'ok';
 $mes_mal = salida(static fn() => at_fin_panel_pagos('basura'));
-ok(strpos($mes_mal, substr($hoy, 0, 7)) !== false || strpos($mes_mal, 'name="mes"') !== false, 'Pagos: un mes inválido cae al mes actual sin romperse');
+ok(strpos($mes_mal, 'Gasto de ' . at_fin_mes_es(substr($hoy, 0, 7))) !== false && strpos($mes_mal, 'name="mes" value="' . substr($hoy, 0, 7) . '"') !== false, 'Pagos: un mes inválido muestra el mes actual (título y selector)');
 // Abrir la pestaña completa los dólares pendientes.
 delete_option('at_fin_tc_cache');
 $GLOBALS['mi_modo'] = 'error';

@@ -109,17 +109,31 @@ function at_fin_cuenta_guardar(array $d) {
 	];
 	$tabla = at_fin_tabla_cuentas();
 	if ($existente) {
+		if ($moneda !== $existente['moneda'] && at_fin_cuenta_tiene_movimientos($existente['id'])) {
+			$msg = 'No se puede cambiar la moneda de una cuenta que ya tiene movimientos (' . $existente['moneda'] . ').';
+			return new WP_Error('moneda_cuenta', $msg, ['status' => 422, 'errores' => [$msg]]);
+		}
 		if ($wpdb->update($tabla, $campos, ['id' => $existente['id']]) === false) {
 			return new WP_Error('error_bd', 'No se pudo actualizar la cuenta.', ['status' => 500]);
 		}
 		return $existente['id'];
 	}
 	$campos += ['slug' => $slug, 'created_at' => $campos['updated_at']];
-	if ($wpdb->insert($tabla, $campos) === false) {
+	// Un conflicto UNIQUE (otra petición creó el slug) se resuelve abajo: que «Duplicate entry» no llegue a ninguna respuesta.
+	$suprimido = $wpdb->suppress_errors(true);
+	$insertado = $wpdb->insert($tabla, $campos);
+	$wpdb->suppress_errors($suprimido);
+	if ($insertado === false) {
 		$de_otro = at_fin_cuenta($slug);
 		return $de_otro ? $de_otro['id'] : new WP_Error('error_bd', 'No se pudo crear la cuenta.', ['status' => 500]);
 	}
 	return (int) $wpdb->insert_id;
+}
+
+/** ¿La cuenta ya tiene algún movimiento? */
+function at_fin_cuenta_tiene_movimientos(int $cuenta_id): bool {
+	global $wpdb;
+	return (int) $wpdb->get_var($wpdb->prepare('SELECT COUNT(*) FROM ' . at_fin_tabla_movimientos() . ' WHERE cuenta_id = %d', $cuenta_id)) > 0;
 }
 
 /** Todas las cuentas, cada una con su saldo estimado (clave `saldo`, ver at_fin_saldo). */
@@ -167,6 +181,11 @@ function at_fin_registrar(array $entrada, string $origen) {
 		if ($cuenta === null) {
 			return new WP_Error('cuenta_inexistente', 'La cuenta indicada no existe.', ['status' => 422]);
 		}
+		// Recarga, consumo y ajuste cambian el saldo de la cuenta, que se lleva en su propia moneda: no se mezclan.
+		if (in_array($datos['tipo'], ['recarga', 'consumo', 'ajuste'], true) && $datos['moneda'] !== $cuenta['moneda']) {
+			$msg = 'La moneda del movimiento (' . $datos['moneda'] . ') no coincide con la de la cuenta (' . $cuenta['moneda'] . '); regístrelo en ' . $cuenta['moneda'] . '.';
+			return new WP_Error('moneda_cuenta', $msg, ['status' => 422, 'errores' => [$msg]]);
+		}
 		$cuenta_id = $cuenta['id'];
 	}
 
@@ -210,7 +229,11 @@ function at_fin_registrar(array $entrada, string $origen) {
 		'notas' => $datos['notas'],
 		'created_at' => at_fin_ahora(),
 	];
-	if ($wpdb->insert(at_fin_tabla_movimientos(), $fila) === false) {
+	// Un conflicto UNIQUE de referencia (carrera entre dos peticiones) se resuelve abajo: que «Duplicate entry» no llegue a ninguna respuesta.
+	$suprimido = $wpdb->suppress_errors(true);
+	$insertado = $wpdb->insert(at_fin_tabla_movimientos(), $fila);
+	$wpdb->suppress_errors($suprimido);
+	if ($insertado === false) {
 		// Otra petición pudo registrar la misma referencia entre la consulta y el insert.
 		$ya = at_fin_movimiento_por_referencia($referencia);
 		return $ya !== null ? at_fin_respuesta_repetida($ya, $datos) : new WP_Error('error_bd', 'No se pudo guardar el movimiento.', ['status' => 500]);

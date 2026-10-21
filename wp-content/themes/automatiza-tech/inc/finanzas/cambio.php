@@ -47,6 +47,10 @@ function at_fin_tipo_cambio(string $fecha): ?float {
 	}
 	if ($valor === null) { return null; }
 
+	// Hoy aún sin publicar (mindicador publica durante el día): se usa el último valor, pero no se guarda bajo la fecha de hoy
+	// para que mañana, o en cuanto se publique, el movimiento no quede fijado a un dólar de otro día.
+	if ($fecha === at_fin_hoy() && !isset($serie[$fecha])) { return $valor; }
+
 	$cache[$fecha] = $valor;
 	ksort($cache);
 	if (count($cache) > 120) { $cache = array_slice($cache, -120, null, true); }

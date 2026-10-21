@@ -39,6 +39,78 @@ function at_finanzas_get_controller() {
     return $fin;
 }
 
+/**
+ * «✅ Sí, lo pagué» / «❌ No / cancelado»: procesa la acción de la URL y devuelve los avisos ([nivel, texto]),
+ * o null si la petición no trae una renovación válida (sin acción, sin permiso o con nonce vencido).
+ */
+function at_finanzas_procesar_renovacion(): ?array {
+    $accion = $_GET['action'] ?? '';
+    $id = absint($_GET['id'] ?? 0);
+    if (!in_array($accion, ['renew_paid', 'renew_skip'], true) || !$id
+        || !current_user_can('manage_options')
+        || !wp_verify_nonce($_GET['_wpnonce'] ?? '', 'at_fin_renew_' . $id)) {
+        return null;
+    }
+    $fin = at_finanzas_get_controller();
+    // El gasto se lee antes de renovar: de esa fila sale el pago real que se registra en «Pagos por mes».
+    $gasto_renovado = null;
+    if ($accion === 'renew_paid') {
+        foreach ($fin->get_expenses() as $g) {
+            if ((int) $g->id === $id) { $gasto_renovado = $g; break; }
+        }
+    }
+    $res = $fin->renew_expense($id, $accion === 'renew_paid');
+    if (!empty($res['error'])) {
+        return [['nivel' => 'error', 'texto' => $res['error']]];
+    }
+    if (empty($res['renewed'])) {
+        return [['nivel' => 'success', 'texto' => 'Gasto marcado como no renovado (inactivo). Ya no cuenta en el resumen.']];
+    }
+    $avisos = [['nivel' => 'success', 'texto' => 'Renovación registrada: nuevo período desde el ' . $res['new_start'] . '. El período anterior quedó como historial (inactivo).']];
+    if ($gasto_renovado !== null) {
+        // Que el pago no se pueda registrar no deshace la renovación: se avisa y se sigue.
+        try {
+            $pago = at_fin_registrar_renovacion($gasto_renovado);
+        } catch (Throwable $e) {
+            $pago = new WP_Error('error', 'Error inesperado al guardar el movimiento.');
+        }
+        if (is_wp_error($pago)) {
+            $avisos[] = ['nivel' => 'warning', 'texto' => 'La renovación quedó guardada, pero no se pudo registrar el pago en «Pagos por mes»: ' . $pago->get_error_message() . ' Regístralo a mano en esa pestaña.'];
+        } else {
+            $creado = $pago['estado'] === 'creado';
+            $avisos[] = ['nivel' => 'success', 'texto' => ($creado ? 'Pago de ' : 'El pago de ') . at_fin_fmt_monto($gasto_renovado->amount, (string) $gasto_renovado->currency) . ' a ' . $gasto_renovado->provider . ($creado ? ' registrado' : ' ya estaba registrado') . ' en «Pagos por mes».'];
+        }
+    }
+    return $avisos;
+}
+
+/** Los avisos viajan en un transient por usuario hasta el próximo dibujo de la página. */
+function at_finanzas_guardar_avisos(array $avisos): void {
+    set_transient('at_fin_avisos_' . get_current_user_id(), $avisos, 5 * MINUTE_IN_SECONDS);
+}
+
+function at_finanzas_avisos_pendientes(): array {
+    $clave = 'at_fin_avisos_' . get_current_user_id();
+    $avisos = get_transient($clave);
+    delete_transient($clave);
+    return is_array($avisos) ? $avisos : [];
+}
+
+/** Misma página sin la acción ni el nonce: lo que queda en la barra de direcciones tras renovar (un F5 ya no repite nada). */
+function at_finanzas_url_sin_accion(): string {
+    return remove_query_arg(['action', 'id', '_wpnonce'], admin_url('admin.php?' . http_build_query(array_intersect_key($_GET, ['page' => 1, 'tab' => 1]))));
+}
+
+// Antes de dibujar la página: procesa la renovación y redirige (Post/Redirect/Get), para que recargar no renueve dos veces.
+function at_finanzas_renovacion_temprana() {
+    $avisos = at_finanzas_procesar_renovacion();
+    if ($avisos === null) return;
+    at_finanzas_guardar_avisos($avisos);
+    wp_safe_redirect(at_finanzas_url_sin_accion());
+    exit;
+}
+add_action('load-toplevel_page_at-finanzas', 'at_finanzas_renovacion_temprana');
+
 function at_finanzas_admin_page() {
     if (!current_user_can('manage_options')) wp_die('Sin permisos');
 
@@ -84,36 +156,9 @@ function at_finanzas_admin_page() {
         $fin->delete_expense(absint($_GET['id']));
         echo '<div class="notice notice-success"><p>Gasto eliminado.</p></div>';
     }
-    if (in_array($_GET['action'] ?? '', ['renew_paid', 'renew_skip'], true) && !empty($_GET['id'])
-        && wp_verify_nonce($_GET['_wpnonce'] ?? '', 'at_fin_renew_' . absint($_GET['id']))) {
-        // El gasto se lee antes de renovar: de esa fila sale el pago real que se registra en «Pagos por mes».
-        $gasto_renovado = null;
-        if ($_GET['action'] === 'renew_paid') {
-            foreach ($fin->get_expenses() as $g) {
-                if ((int) $g->id === absint($_GET['id'])) { $gasto_renovado = $g; break; }
-            }
-        }
-        $res = $fin->renew_expense(absint($_GET['id']), ($_GET['action'] === 'renew_paid'));
-        if (!empty($res['error'])) {
-            echo '<div class="notice notice-error"><p>' . esc_html($res['error']) . '</p></div>';
-        } elseif (!empty($res['renewed'])) {
-            echo '<div class="notice notice-success"><p>Renovación registrada: nuevo período desde el ' . esc_html($res['new_start']) . '. El período anterior quedó como historial (inactivo).</p></div>';
-            if ($gasto_renovado !== null) {
-                // Que el pago no se pueda registrar no deshace la renovación: se avisa y se sigue.
-                try {
-                    $pago = at_fin_registrar_renovacion($gasto_renovado);
-                } catch (Throwable $e) {
-                    $pago = new WP_Error('error', 'Error inesperado al guardar el movimiento.');
-                }
-                if (is_wp_error($pago)) {
-                    echo '<div class="notice notice-warning"><p>La renovación quedó guardada, pero no se pudo registrar el pago en «Pagos por mes»: ' . esc_html($pago->get_error_message()) . ' Regístralo a mano en esa pestaña.</p></div>';
-                } else {
-                    echo '<div class="notice notice-success"><p>' . ($pago['estado'] === 'creado' ? 'Pago de ' : 'El pago de ') . esc_html(at_fin_fmt_monto($gasto_renovado->amount, (string) $gasto_renovado->currency)) . ' a ' . esc_html($gasto_renovado->provider) . ($pago['estado'] === 'creado' ? ' registrado' : ' ya estaba registrado') . ' en «Pagos por mes».</p></div>';
-                }
-            }
-        } else {
-            echo '<div class="notice notice-success"><p>Gasto marcado como no renovado (inactivo). Ya no cuenta en el resumen.</p></div>';
-        }
+    // Las renovaciones se procesan antes de dibujar (at_finanzas_renovacion_temprana) y vuelven aquí sin la acción en la URL.
+    foreach (at_finanzas_avisos_pendientes() as $aviso) {
+        echo '<div class="notice notice-' . esc_attr($aviso['nivel']) . '"><p>' . esc_html($aviso['texto']) . '</p></div>';
     }
 
     $expenses = $fin->get_expenses();

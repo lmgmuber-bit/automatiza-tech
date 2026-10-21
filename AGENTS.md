@@ -45,6 +45,7 @@ Las credenciales viven **fuera del repo**, en `C:\Users\luis_\OneDrive\Documento
 - Continuidad cruzada: `Docs/ORCHESTRATION/TASK_TAKEOVER.md`; cualquier agente puede retomar una tarea bloqueada tras reasignar ownership.
 - Los chats externos no se comunican por si solos: usar tickets/ledger compartido o a Luis como puente.
 - El tablero consume las fuentes canonicas; no crea una segunda verdad permanente.
+- Gastos y créditos (Luis, 2026-10-21): cada vez que un agente gaste créditos o dinero de AT (una generación en Higgsfield, una recarga, una suscripción, Google Cloud, etc.), le avisa a **Balance**, el agente de finanzas (`at-balance-claude` / `at-balance-codex`). El aviso lleva qué fue, cuánto, en qué cuenta, para qué proyecto y la referencia (id de la generación, factura o pedido). Si Balance no está disponible, el agente lo registra él mismo con `C:/Users/luis_/Documents/Codex/Shared-Tools/finanzas/registrar.py`. Nunca se escriben montos reales en el repositorio, que es público. Guía: `Docs/METODO_AT/FINANZAS-BALANCE.md`.
 <!-- AT-ORCHESTRATION:END -->
 
 <!-- AT-METHOD:START -->

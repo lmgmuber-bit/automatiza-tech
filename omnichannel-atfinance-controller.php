@@ -159,6 +159,10 @@ class OmniATFinanceController {
         if (!$e) {
             return ['error' => 'Gasto no encontrado'];
         }
+        // Una fila ya renovada o cerrada queda inactiva: repetir el clic (o recargar la página) no crea otro período.
+        if ((int) $e->active !== 1) {
+            return ['error' => 'Esta suscripción ya fue renovada o cerrada.'];
+        }
         $today = current_time('Y-m-d');
         $now   = current_time('mysql');
 

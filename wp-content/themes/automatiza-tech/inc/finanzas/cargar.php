@@ -7,6 +7,7 @@ require_once __DIR__ . '/puras.php';
 require_once __DIR__ . '/datos.php';
 require_once __DIR__ . '/cambio.php';
 require_once __DIR__ . '/api.php';
+require_once __DIR__ . '/panel.php';
 
 // Barato: compara la opción y no hace nada si el esquema ya está al día.
 add_action('admin_init', 'at_fin_migrar');

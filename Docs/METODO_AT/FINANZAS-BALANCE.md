@@ -1,6 +1,6 @@
 # Finanzas AT: pagos reales, medidor de créditos y agente Balance
 
-Fecha: 21-oct-2026 · rama `claude/finanzas-balance` (worktree `C:/wamp64/www/automatiza-tech/.worktrees/retomar-eje`). **Estado: construido y probado en local; sin desplegar y sin autorización de PROD.** Diseño y decisiones de Luis: `Docs/superpowers/specs/2026-10-21-finanzas-balance-design.md`.
+Fecha: 21-oct-2026 · rama `claude/finanzas-balance` (worktree `C:/wamp64/www/automatiza-tech/.worktrees/retomar-eje`). **Estado: EN PROD desde el 21-oct-2026 (OK de Luis; PR #98, código `2d18cf1`).** Subido por SSH con el cargador de PROD cotejado contra `main`; respaldo del cargador en `~/respaldos/finanzas-balance-antes-20261021.tar.gz`. Verificado: las dos tablas creadas (`at_fin_schema = 1`), las tres pestañas se dibujan sin errores y la API responde 401 sin clave. Rollback: restaurar `inc/admin-at-finanzas.php` desde ese respaldo. Diseño y decisiones de Luis: `Docs/superpowers/specs/2026-10-21-finanzas-balance-design.md`.
 
 Esta guía es pública como el resto del repo: **no lleva montos reales ni nombres de clientes**. Todos los números de los ejemplos son inventados.
 

@@ -14,6 +14,11 @@
 
 if (!defined('ABSPATH')) exit;
 
+// Este archivo se carga en cada petición: si una subida parcial dejó sin el cargador, el sitio sigue en pie (solo sin el módulo nuevo).
+if (is_readable(__DIR__ . '/finanzas/cargar.php')) {
+    require_once __DIR__ . '/finanzas/cargar.php';
+}
+
 function at_finanzas_admin_menu() {
     add_menu_page(
         'Finanzas AT',
@@ -36,13 +41,17 @@ function at_finanzas_get_controller() {
 
 function at_finanzas_admin_page() {
     if (!current_user_can('manage_options')) wp_die('Sin permisos');
+
+    // Pestañas «Pagos por mes» y «Cuentas» (inc/finanzas/panel.php); «Suscripciones» es el catálogo de abajo.
+    $tab = at_fin_panel_tab_actual($_GET['tab'] ?? null);
+    if ($tab !== 'suscripciones') {
+        at_fin_panel_pagina($tab);
+        return;
+    }
+
     $fin = at_finanzas_get_controller();
 
-    $cat_labels = [
-        'hosting' => 'Hosting', 'infraestructura' => 'Infraestructura', 'dominios' => 'Dominios',
-        'apis_ia' => 'APIs / IA', 'mensajeria' => 'Mensajería (Meta/YCloud)', 'marketing' => 'Marketing',
-        'herramientas' => 'Herramientas', 'otros' => 'Otros',
-    ];
+    $cat_labels = at_fin_categorias_catalogo();
     $period_labels = ['monthly' => 'Mensual', 'annual' => 'Anual', 'one_time' => 'Único'];
 
     // ---- acciones ----
@@ -77,11 +86,31 @@ function at_finanzas_admin_page() {
     }
     if (in_array($_GET['action'] ?? '', ['renew_paid', 'renew_skip'], true) && !empty($_GET['id'])
         && wp_verify_nonce($_GET['_wpnonce'] ?? '', 'at_fin_renew_' . absint($_GET['id']))) {
+        // El gasto se lee antes de renovar: de esa fila sale el pago real que se registra en «Pagos por mes».
+        $gasto_renovado = null;
+        if ($_GET['action'] === 'renew_paid') {
+            foreach ($fin->get_expenses() as $g) {
+                if ((int) $g->id === absint($_GET['id'])) { $gasto_renovado = $g; break; }
+            }
+        }
         $res = $fin->renew_expense(absint($_GET['id']), ($_GET['action'] === 'renew_paid'));
         if (!empty($res['error'])) {
             echo '<div class="notice notice-error"><p>' . esc_html($res['error']) . '</p></div>';
         } elseif (!empty($res['renewed'])) {
             echo '<div class="notice notice-success"><p>Renovación registrada: nuevo período desde el ' . esc_html($res['new_start']) . '. El período anterior quedó como historial (inactivo).</p></div>';
+            if ($gasto_renovado !== null) {
+                // Que el pago no se pueda registrar no deshace la renovación: se avisa y se sigue.
+                try {
+                    $pago = at_fin_registrar_renovacion($gasto_renovado);
+                } catch (Throwable $e) {
+                    $pago = new WP_Error('error', 'Error inesperado al guardar el movimiento.');
+                }
+                if (is_wp_error($pago)) {
+                    echo '<div class="notice notice-warning"><p>La renovación quedó guardada, pero no se pudo registrar el pago en «Pagos por mes»: ' . esc_html($pago->get_error_message()) . ' Regístralo a mano en esa pestaña.</p></div>';
+                } else {
+                    echo '<div class="notice notice-success"><p>' . ($pago['estado'] === 'creado' ? 'Pago de ' : 'El pago de ') . esc_html(at_fin_fmt_monto($gasto_renovado->amount, (string) $gasto_renovado->currency)) . ' a ' . esc_html($gasto_renovado->provider) . ($pago['estado'] === 'creado' ? ' registrado' : ' ya estaba registrado') . ' en «Pagos por mes».</p></div>';
+                }
+            }
         } else {
             echo '<div class="notice notice-success"><p>Gasto marcado como no renovado (inactivo). Ya no cuenta en el resumen.</p></div>';
         }
@@ -108,6 +137,7 @@ function at_finanzas_admin_page() {
     ?>
     <div class="wrap">
         <h1 class="wp-heading-inline">💰 Finanzas AT</h1>
+        <?php at_fin_panel_tabs('suscripciones'); ?>
         <p style="color:#646970;margin-top:2px">Gastos de infraestructura de todos los proyectos AutomatizaTech · resumen mensual/anual normalizado</p>
 
         <?php if (!empty($due_renewals)): ?>

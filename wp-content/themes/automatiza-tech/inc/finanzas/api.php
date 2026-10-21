@@ -52,13 +52,10 @@ function at_fin_api_resumen(WP_REST_Request $r): WP_REST_Response {
 		return new WP_REST_Response(['code' => 'mes_invalido', 'message' => $msg, 'errores' => [$msg]], 422);
 	}
 	$resumen = at_fin_resumen_mes(at_fin_movimientos_mes($mes));
-	$comparacion = [];
-	$primero = new DateTimeImmutable($mes . '-01');
-	for ($atras = 6; $atras >= 1; $atras--) {
-		$m = $primero->modify('-' . $atras . ' months')->format('Y-m');
-		$comparacion[] = ['mes' => $m, 'total_clp' => at_fin_resumen_mes(at_fin_movimientos_mes($m))['total_clp']];
-	}
-	return new WP_REST_Response(['mes' => $mes] + $resumen + ['comparacion' => $comparacion], 200);
+	// Objetos JSON también cuando están vacíos (un arreglo vacío saldría como [] y rompería a quien espera claves).
+	$resumen['por_categoria'] = (object) $resumen['por_categoria'];
+	$resumen['por_proveedor'] = (object) $resumen['por_proveedor'];
+	return new WP_REST_Response(['mes' => $mes] + $resumen + ['comparacion' => at_fin_comparacion($mes)], 200);
 }
 
 /** GET /finanzas/cuentas: todas las cuentas con su saldo. */

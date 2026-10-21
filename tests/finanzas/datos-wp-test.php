@@ -198,6 +198,25 @@ ok($completados >= 1, 'con la API de vuelta se completan pendientes');
 $fp = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$tm} WHERE id = %d", $pen['id']), ARRAY_A);
 ok($fp['tc_estado'] === 'ok' && (int) $fp['monto_clp'] === 3800 && (float) $fp['tipo_cambio'] === 950.0, 'el pendiente queda con tipo de cambio y monto_clp (4 × 950)');
 
+// --- activa: el texto «false» significa inactiva
+$slug_act = $marca . '-hf';
+foreach ([['false', 0], ['FALSE', 0], ['0', 0], [false, 0], [0, 0], ['no', 0], ['off', 0], ['true', 1], ['1', 1], [true, 1], ['yes', 1], ['on', 1]] as [$valor, $esperado_activa]) {
+	at_fin_cuenta_guardar(['slug' => $slug_act, 'activa' => $esperado_activa === 0]);   // deja la cuenta en el estado contrario
+	at_fin_cuenta_guardar(['slug' => $slug_act, 'activa' => $valor]);
+	ok((int) at_fin_cuenta($slug_act)['activa'] === $esperado_activa, 'activa = ' . var_export($valor, true) . ' → ' . $esperado_activa);
+}
+at_fin_cuenta_guardar(['slug' => $slug_act, 'activa' => false]);
+at_fin_cuenta_guardar(['slug' => $slug_act, 'activa' => 'quizás']);
+ok((int) at_fin_cuenta($slug_act)['activa'] === 0, 'un valor irreconocible no cambia el estado de la cuenta');
+at_fin_cuenta_guardar(['slug' => $slug_act, 'nombre' => '[PRUEBA] sin tocar activa']);
+ok((int) at_fin_cuenta($slug_act)['activa'] === 0, 'sin la clave activa, la cuenta conserva su estado');
+at_fin_cuenta_guardar(['slug' => $slug_act, 'activa' => true]);
+
+// --- Comparación de meses
+$comp = at_fin_comparacion('2020-02');
+ok(count($comp) === 6 && $comp[0] === ['mes' => '2019-08', 'total_clp' => 0] && $comp[5]['mes'] === '2020-01', 'at_fin_comparacion: 6 meses anteriores, del más antiguo al más reciente, cruzando el año');
+ok(count(at_fin_comparacion('2026-10', 3)) === 3, 'at_fin_comparacion acepta otra cantidad de meses');
+
 // --- Hooks
 ok(has_action('admin_init', 'at_fin_migrar') !== false && has_action('rest_api_init', 'at_fin_migrar') !== false, 'migración enganchada en admin_init y rest_api_init');
 ok($GLOBALS['mi_otras'] === 0, 'ninguna otra petición HTTP salió en las pruebas');

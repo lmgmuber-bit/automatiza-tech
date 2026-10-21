@@ -198,8 +198,8 @@ $res = api('GET', '/finanzas/resumen', ['mes' => substr($ayer, 0, 7)]);
 $dr = $res->get_data();
 ok($res->get_status() === 200 && ($dr['mes'] ?? '') === substr($ayer, 0, 7), 'resumen con mes explícito → 200');
 $esperado = at_fin_resumen_mes(at_fin_movimientos_mes(substr($ayer, 0, 7)));
-ok(($dr['total_clp'] ?? null) === $esperado['total_clp'] && ($dr['por_categoria'] ?? null) === $esperado['por_categoria'] && ($dr['por_proveedor'] ?? null) === $esperado['por_proveedor'] && ($dr['pendientes'] ?? null) === $esperado['pendientes'], 'el resumen coincide con at_fin_resumen_mes');
-ok(($dr['por_categoria']['IA'] ?? 0) >= (int) round(12.5 * 950), 'incluye el pago de IA de la prueba');
+ok(($dr['total_clp'] ?? null) === $esperado['total_clp'] && (array) ($dr['por_categoria'] ?? null) === $esperado['por_categoria'] && (array) ($dr['por_proveedor'] ?? null) === $esperado['por_proveedor'] && ($dr['pendientes'] ?? null) === $esperado['pendientes'], 'el resumen coincide con at_fin_resumen_mes');
+ok((((array) $dr['por_categoria'])['IA'] ?? 0) >= (int) round(12.5 * 950), 'incluye el pago de IA de la prueba');
 // Mes de prueba aislado: 2020-03, con un pago, una recarga, un consumo y un ajuste.
 $f_prueba = '2020-03-10';
 $tabla_cuentas_id = (int) $wpdb->get_var($wpdb->prepare("SELECT id FROM {$tc} WHERE slug = %s", $marca . '-hf'));
@@ -213,7 +213,7 @@ foreach ([
 	if (is_wp_error($e)) { echo "FALLA preparar {$tipo}: " . $e->get_error_message() . "\n"; $GLOBALS['fallas']++; }
 }
 $r2020 = api('GET', '/finanzas/resumen', ['mes' => '2020-03'])->get_data();
-ok(($r2020['total_clp'] ?? null) === 150000 && ($r2020['por_categoria'] ?? null) === ['IA' => 150000], 'resumen suma solo pagos y recargas (100 + 50 USD × 1000), no consumo ni ajuste');
+ok(($r2020['total_clp'] ?? null) === 150000 && (array) ($r2020['por_categoria'] ?? null) === ['IA' => 150000], 'resumen suma solo pagos y recargas (100 + 50 USD × 1000), no consumo ni ajuste');
 $comp = $r2020['comparacion'] ?? [];
 ok(count($comp) === 6 && $comp[0]['mes'] === '2019-09' && $comp[5]['mes'] === '2020-02', 'comparacion: los 6 meses anteriores, del más antiguo al más reciente');
 ok(array_reduce($comp, static fn($c, $m) => $c && array_keys($m) === ['mes', 'total_clp'] && $m['total_clp'] === 0, true), 'meses sin movimientos vienen en cero, con solo mes y total_clp');
@@ -228,6 +228,25 @@ foreach (['2026-13', '2026-00', '26-05', 'abc', '2026-5', '2026-05-01'] as $malo
 	ok($rm_->get_status() === 422 && ($rm_->get_data()['errores'] ?? []) !== [], "mes inválido «{$malo}» → 422");
 }
 ok((api('GET', '/finanzas/resumen', ['mes' => ''])->get_data()['mes'] ?? '') === $mes_actual, 'mes vacío (como lo manda n8n sin valor) → mes actual');
+
+// --- Mes vacío: totales en cero y por_* como objetos JSON vacíos (nunca [])
+$vacio = api('GET', '/finanzas/resumen', ['mes' => '2020-01']);
+$dv = $vacio->get_data();
+ok($vacio->get_status() === 200 && ($dv['total_clp'] ?? null) === 0 && ($dv['pendientes'] ?? null) === 0 && (array) ($dv['por_categoria'] ?? 1) === [] && (array) ($dv['por_proveedor'] ?? 1) === [], 'mes vacío: total_clp 0, pendientes 0, por_categoria y por_proveedor vacíos');
+$json_vacio = wp_json_encode($dv);
+ok(strpos($json_vacio, '"por_categoria":{}') !== false && strpos($json_vacio, '"por_proveedor":{}') !== false, 'mes vacío: por_categoria y por_proveedor serializan como {} y no como []');
+$json_lleno = wp_json_encode(api('GET', '/finanzas/resumen', ['mes' => '2020-03'])->get_data());
+ok(strpos($json_lleno, '"por_categoria":{"IA":150000}') !== false, 'mes con datos: por_categoria sigue siendo un objeto con sus claves');
+
+// --- Monto con coma o con punto: el segundo registro es el mismo movimiento
+$coma = array_merge($base, ['descripcion' => '[PRUEBA] monto coma ' . $marca, 'monto' => '1,26']);
+$rcoma = api('POST', '/finanzas/movimiento', $coma);
+$dcoma = $rcoma->get_data();
+ok($rcoma->get_status() === 201 && ($dcoma['estado'] ?? '') === 'creado', 'monto "1,26" → 201 creado');
+$rpunto = api('POST', '/finanzas/movimiento', array_merge($coma, ['monto' => '1.26']));
+$dpunto = $rpunto->get_data();
+ok($rpunto->get_status() === 200 && ($dpunto['estado'] ?? '') === 'existente' && ($dpunto['id'] ?? 0) === ($dcoma['id'] ?? -1), 'monto "1.26" → 200 existente, mismo id que "1,26"');
+ok((float) $wpdb->get_var($wpdb->prepare("SELECT monto FROM {$tm} WHERE id = %d", $dcoma['id'])) === 1.26, 'el monto guardado es 1,26');
 
 // --- Pendientes: el registro siguiente los completa y no altera su respuesta
 delete_option('at_fin_tc_cache');

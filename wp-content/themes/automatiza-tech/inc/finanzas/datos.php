@@ -82,6 +82,13 @@ function at_fin_cuenta(string $slug): ?array {
 	return at_fin_cuenta_fila($fila ?: null);
 }
 
+/** 1 o 0 desde un valor booleano o texto («false», «0», «no», «off» = inactiva); si no se reconoce o no viene, conserva `$actual`. */
+function at_fin_activa($valor, $actual): int {
+	if ($valor === null) { return (int) $actual; }
+	$bool = filter_var($valor, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+	return $bool === null ? (int) $actual : (int) $bool;
+}
+
 /** Crea la cuenta o, si el slug ya existe, actualiza los campos que vengan. Devuelve el id. */
 function at_fin_cuenta_guardar(array $d) {
 	global $wpdb;
@@ -103,7 +110,7 @@ function at_fin_cuenta_guardar(array $d) {
 		'nombre' => $nombre,
 		'proveedor' => array_key_exists('proveedor', $d) ? at_fin_texto($d['proveedor'], 120) : ($existente['proveedor'] ?? ''),
 		'moneda' => $moneda,
-		'activa' => array_key_exists('activa', $d) ? (int) (bool) $d['activa'] : ($existente['activa'] ?? 1),
+		'activa' => at_fin_activa($d['activa'] ?? null, $existente['activa'] ?? 1),
 		'notas' => array_key_exists('notas', $d) ? (is_scalar($d['notas']) ? trim((string) $d['notas']) : '') : ($existente['notas'] ?? ''),
 		'updated_at' => at_fin_ahora(),
 	];
@@ -259,6 +266,27 @@ function at_fin_movimientos_mes(string $mes): array {
 		'SELECT m.*, c.slug AS cuenta FROM ' . at_fin_tabla_movimientos() . ' m LEFT JOIN ' . at_fin_tabla_cuentas() . ' c ON c.id = m.cuenta_id WHERE m.fecha >= %s AND m.fecha < %s ORDER BY m.fecha DESC, m.id DESC',
 		$desde, $hasta
 	), ARRAY_A) ?: [];
+}
+
+/** Un movimiento por id, con el slug de su cuenta en `cuenta`; null si no existe. */
+function at_fin_movimiento(int $id): ?array {
+	global $wpdb;
+	$fila = $wpdb->get_row($wpdb->prepare(
+		'SELECT m.*, c.slug AS cuenta FROM ' . at_fin_tabla_movimientos() . ' m LEFT JOIN ' . at_fin_tabla_cuentas() . ' c ON c.id = m.cuenta_id WHERE m.id = %d',
+		$id
+	), ARRAY_A);
+	return $fila ?: null;
+}
+
+/** Gasto total (CLP) de los `$cantidad` meses anteriores a `$mes` ('Y-m'), del más antiguo al más reciente: [['mes' => 'Y-m', 'total_clp' => int], ...]. */
+function at_fin_comparacion(string $mes, int $cantidad = 6): array {
+	$primero = new DateTimeImmutable($mes . '-01');
+	$comparacion = [];
+	for ($atras = max(1, $cantidad); $atras >= 1; $atras--) {
+		$m = $primero->modify('-' . $atras . ' months')->format('Y-m');
+		$comparacion[] = ['mes' => $m, 'total_clp' => at_fin_resumen_mes(at_fin_movimientos_mes($m))['total_clp']];
+	}
+	return $comparacion;
 }
 
 /** Últimos movimientos de una cuenta, los más recientes primero. */

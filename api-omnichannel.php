@@ -17,6 +17,7 @@ ob_end_clean();
 
 require_once __DIR__ . '/omnichannel-controller.php';
 require_once __DIR__ . '/omnichannel-atfinance-controller.php';
+require_once __DIR__ . '/omnichannel-ig-insights-controller.php';
 require_once __DIR__ . '/at-rate-limit.php';
 require_once __DIR__ . '/at-mime-check.php';
 
@@ -33,6 +34,8 @@ at_cors_apply([
 $controller = new OmnichannelController();
 $atfinance = new OmniATFinanceController();
 $atfinance->maybe_create_tables(); // no-op salvo primera vez / upgrade (option-gated)
+$iginsights = new OmniIgInsightsController($controller);
+$iginsights->maybe_create_tables(); // ídem: tablas de Métricas IG
 
 // Parse request
 $method = $_SERVER['REQUEST_METHOD'];
@@ -527,6 +530,55 @@ try {
         }
 
         send_json(['error' => 'Ruta reel-diario no encontrada'], 404);
+    }
+
+    // ---- MÉTRICAS IG: lectura para agentes (Claqueta) y toma periódica (cron de n8n) ----
+    // Secret propio (AT_IG_METRICS_SECRET, header X-IG-Metrics-Secret) que solo sirve para
+    // LEER métricas y pedir una toma. A propósito no usa REEL_DIARIO_SECRET (ese publica y
+    // borra en Instagram: un agente que solo mira no debe poder publicar) ni
+    // OMNICHANNEL_CRON_SECRET (viaja en la URL y queda en los logs). Siempre el canal IG de
+    // AutomatizaTech: con este secret no se leen canales de clientes.
+    // Formato de respuesta: Docs/MASTER/06_PORTAL_OMNICLIENTE_FRONTEND.md, «Métricas IG».
+    if (isset($segments[0]) && $segments[0] === 'ig-metrics') {
+        $igm_provided = $_SERVER['HTTP_X_IG_METRICS_SECRET'] ?? '';
+        if (!defined('AT_IG_METRICS_SECRET') || AT_IG_METRICS_SECRET === '') {
+            send_json(['error' => 'Métricas IG sin configurar: falta AT_IG_METRICS_SECRET en wp-config.php'], 503);
+        }
+        if (!hash_equals((string) AT_IG_METRICS_SECRET, (string) $igm_provided)) {
+            send_json(['error' => 'Secret inválido'], 403);
+        }
+        if (!at_rate_limit_check('omni_ig_metrics', 240, 3600)) {
+            at_rate_limit_reject(3600, 'omni_ig_metrics');
+        }
+        $igm_channel_id = OmniIgInsightsController::default_channel_id();
+        if (!$igm_channel_id) {
+            send_json(['error' => 'Falta REEL_DIARIO_CHANNEL_ID (o AT_IG_METRICS_CHANNEL_ID) en wp-config.php'], 500);
+        }
+
+        // GET ig-metrics?days=30&posts_limit=30 — cuenta, días y publicaciones con sus tomas.
+        if (!isset($segments[1]) && $method === 'GET') {
+            send_json($iginsights->get_overview($igm_channel_id, $_GET['days'] ?? 30, $_GET['posts_limit'] ?? 30));
+        }
+
+        // GET ig-metrics/posts?limit=30 · GET ig-metrics/posts/{media_id}
+        if (($segments[1] ?? '') === 'posts' && $method === 'GET') {
+            if (!empty($segments[2])) {
+                $igm_post = $iginsights->get_post($igm_channel_id, $segments[2]);
+                if (!$igm_post) {
+                    send_json(['error' => 'Publicación no registrada (puede no haberse tomado aún: POST ig-metrics/sync)'], 404);
+                }
+                send_json(['ok' => true, 'insights_status' => $iginsights->get_status($igm_channel_id), 'post' => $igm_post]);
+            }
+            send_json(['ok' => true, 'insights_status' => $iginsights->get_status($igm_channel_id), 'posts' => $iginsights->get_posts($igm_channel_id, $_GET['limit'] ?? 30)]);
+        }
+
+        // POST ig-metrics/sync — toma ahora (n8n la llama cada hora). 502 si falló, para que n8n avise.
+        if (($segments[1] ?? '') === 'sync' && $method === 'POST') {
+            $igm_result = $iginsights->sync($igm_channel_id, !empty($body['force']));
+            send_json($igm_result, empty($igm_result['ok']) ? 502 : 200);
+        }
+
+        send_json(['error' => 'Ruta ig-metrics no encontrada'], 404);
     }
 
     // ---- N8N CALLBACK (respuesta del bot) ----
@@ -1161,6 +1213,25 @@ try {
                         $has_filter ? absint($_GET['client_id']) : -1,
                         absint($_GET['days'] ?? 30)
                     ));
+                }
+                break;
+
+            // Admin: Métricas IG (vista Marketing IG). Mismo formato que ig-metrics para agentes.
+            case 'ig-insights':
+                $igi_channel_id = absint($_GET['channel_id'] ?? 0) ?: OmniIgInsightsController::default_channel_id();
+                if (!$igi_channel_id) {
+                    send_json(['error' => 'Falta REEL_DIARIO_CHANNEL_ID en wp-config.php'], 500);
+                }
+                if (($segments[2] ?? '') === 'sync' && $method === 'POST') {
+                    // 200 aunque la toma falle: el portal muestra el estado que quedó guardado.
+                    send_json($iginsights->sync($igi_channel_id, true));
+                }
+                if (($segments[2] ?? '') === 'posts' && !empty($segments[3]) && $method === 'GET') {
+                    $igi_post = $iginsights->get_post($igi_channel_id, $segments[3]);
+                    send_json($igi_post ? ['ok' => true, 'post' => $igi_post] : ['error' => 'Publicación no registrada'], $igi_post ? 200 : 404);
+                }
+                if (!isset($segments[2]) && $method === 'GET') {
+                    send_json($iginsights->get_overview($igi_channel_id, $_GET['days'] ?? 30, $_GET['posts_limit'] ?? 50));
                 }
                 break;
 

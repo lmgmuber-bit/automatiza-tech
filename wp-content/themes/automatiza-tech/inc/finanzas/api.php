@@ -30,7 +30,7 @@ function at_fin_api_movimiento(WP_REST_Request $r): WP_REST_Response {
 	if (is_wp_error($res)) { return at_fin_api_error($res); }
 	if ($res['estado'] === 'creado') {
 		// Completa los dólares que no se pudieron obtener antes (el spec lo hace «en el próximo registro»).
-		// Si el recién guardado quedó pendiente la fuente sigue caída: no se insiste (cada intento cuesta hasta 10 s).
+		// Si el recién guardado quedó pendiente la fuente sigue caída: no se insiste (cada intento cuesta hasta 5 s).
 		// Nada de esto puede cambiar ni romper la respuesta de este registro.
 		try {
 			global $wpdb;

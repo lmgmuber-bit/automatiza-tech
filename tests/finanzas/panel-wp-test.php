@@ -8,8 +8,10 @@ global $wpdb;
 $GLOBALS['mi_modo'] = 'ok';      // ok | error
 $GLOBALS['mi_valor'] = 950.0;
 $GLOBALS['mi_otras'] = 0;
+$GLOBALS['mi_consultas'] = 0;   // cuántas veces se pidió algo a mindicador
 add_filter('pre_http_request', static function ($pre, $args, $url) {
 	if (strpos($url, 'https://mindicador.cl/api/dolar/') !== 0) { $GLOBALS['mi_otras']++; return $pre; }
+	$GLOBALS['mi_consultas']++;
 	if ($GLOBALS['mi_modo'] === 'error') { return new WP_Error('prueba_local', 'mindicador simulado caído'); }
 	$serie = [];
 	if (preg_match('#/(\d{2})-(\d{2})-(\d{4})$#', $url, $m)) {
@@ -33,6 +35,7 @@ register_shutdown_function(static function () use ($wpdb, $slug_hf, $slug_neg, $
 	}
 	$wpdb->query("DELETE FROM {$tm} WHERE descripcion LIKE '[PRUEBA]%' OR proveedor LIKE 'PRUEBA-%'");
 	$wpdb->query("DELETE FROM {$te} WHERE provider LIKE 'PRUEBA-%'");
+	delete_transient('at_fin_tc_caida');
 	if ($cache_original === null) { delete_option('at_fin_tc_cache'); } else { update_option('at_fin_tc_cache', $cache_original, false); }
 	if ($users) {
 		require_once ABSPATH . 'wp-admin/includes/user.php';
@@ -40,6 +43,7 @@ register_shutdown_function(static function () use ($wpdb, $slug_hf, $slug_neg, $
 	}
 });
 delete_option('at_fin_tc_cache');
+delete_transient('at_fin_tc_caida');
 at_fin_migrar();
 
 $admin = wp_insert_user(['user_login' => $marca, 'user_pass' => wp_generate_password(), 'user_email' => $marca . '@example.com', 'role' => 'administrator']);
@@ -167,13 +171,23 @@ ok($fila && $fila['origen'] === 'panel' && $fila['registrado_por'] === 'panel' &
 $otra = at_fin_panel_accion(['accion' => 'registrar', 'tipo' => 'pago', 'proveedor' => 'PRUEBA-Prov', 'categoria' => 'IA', 'descripcion' => '[PRUEBA] pago panel ' . $marca, 'monto' => '1.26', 'moneda' => 'USD']);
 ok($otra['ok'] === true && stripos($otra['mensaje'], 'ya estaba') !== false && cantidad('descripcion = %s', ['[PRUEBA] pago panel ' . $marca]) === 1, 'repetir el mismo pago no lo duplica y lo avisa');
 $punto = at_fin_panel_accion(['accion' => 'registrar', 'tipo' => 'pago', 'proveedor' => 'PRUEBA-Prov', 'descripcion' => '[PRUEBA] punto', 'monto' => '1.500', 'moneda' => 'CLP']);
-ok($punto['ok'] === true && strpos($punto['mensaje'], '$1,50') !== false && strpos($punto['mensaje'], '$1.500') === false, 'registrar "1.500" en pesos: el mensaje muestra $1,50, o sea que el punto fue decimal');
+ok($punto['ok'] === false && strpos($punto['mensaje'], 'El monto parece llevar punto de miles: escríbelo sin puntos (15990) o con coma decimal.') !== false && cantidad('descripcion = %s', ['[PRUEBA] punto']) === 0, 'registrar "1.500" en pesos: error visible por el punto de miles y no se guarda');
+$decimales = at_fin_panel_accion(['accion' => 'registrar', 'tipo' => 'pago', 'proveedor' => 'PRUEBA-Prov', 'descripcion' => '[PRUEBA] decimales', 'monto' => '12,5', 'moneda' => 'CLP']);
+ok($decimales['ok'] === false && strpos($decimales['mensaje'], 'En pesos no hay decimales.') !== false && cantidad('descripcion = %s', ['[PRUEBA] decimales']) === 0, 'registrar "12,5" en pesos: error «En pesos no hay decimales.»');
 $grande = at_fin_panel_accion(['accion' => 'registrar', 'tipo' => 'pago', 'proveedor' => 'PRUEBA-Prov', 'descripcion' => '[PRUEBA] grande', 'monto' => '15990', 'moneda' => 'CLP']);
 ok($grande['ok'] === true && strpos($grande['mensaje'], '$15.990') !== false, 'registrar 15990 en pesos: el mensaje dice $15.990');
 $GLOBALS['mi_modo'] = 'error';
 delete_option('at_fin_tc_cache');
 $sin_tc = at_fin_panel_accion(['accion' => 'registrar', 'tipo' => 'pago', 'proveedor' => 'PRUEBA-Prov', 'descripcion' => '[PRUEBA] sin dólar ' . $marca, 'monto' => '2', 'moneda' => 'USD']);
 $GLOBALS['mi_modo'] = 'ok';
+ok(at_fin_registro_pendiente() === true, 'registrar un pendiente deja anotado que en esta petición hubo uno');
+// En esa misma petición abrir «Pagos por mes» no insiste con la fuente aunque ya se hubiera recuperado (la pausa venció).
+delete_transient('at_fin_tc_caida');
+$antes_consultas = $GLOBALS['mi_consultas'];
+salida(static fn() => at_fin_panel_pagos(substr($hoy, 0, 7)));
+$estado_sin_tc = $wpdb->get_var($wpdb->prepare("SELECT tc_estado FROM {$tm} WHERE descripcion = %s", '[PRUEBA] sin dólar ' . $marca));
+ok($GLOBALS['mi_consultas'] === $antes_consultas && $estado_sin_tc === 'pendiente', 'misma petición con un pendiente recién registrado: la pestaña no llama a la fuente y el pendiente sigue pendiente');
+at_fin_registro_pendiente(false);   // la petición siguiente: ya no hay marca
 ok($sin_tc['ok'] === true && strpos($sin_tc['mensaje'], 'Se guardó sin el valor en pesos; se completará solo cuando la fuente del dólar responda.') !== false && strpos($sin_tc['mensaje'], 'al abrir') === false, 'registrar con la fuente del dólar caída: dice que se completará solo, sin mandar a abrir la pestaña');
 $mala = at_fin_panel_accion(['accion' => 'registrar', 'tipo' => 'pago', 'proveedor' => 'PRUEBA-Prov', 'descripcion' => '[PRUEBA] mala', 'monto' => 'abc', 'moneda' => 'USD']);
 ok($mala['ok'] === false && stripos($mala['mensaje'], 'monto') !== false, 'monto inválido → ok false con el motivo');
@@ -220,6 +234,7 @@ ok(strpos($julio, 'sin datos') !== false, 'Pagos: un mes vacío dice «sin datos
 ok(strpos($julio, '$120.000') !== false, 'Pagos: la comparación de julio muestra el total de junio');
 ok(strpos($mensual, 'sin datos') === false, 'Pagos: un mes con movimientos no dice «sin datos»');
 $GLOBALS['mi_modo'] = 'ok';
+delete_transient('at_fin_tc_caida');
 $mes_mal = salida(static fn() => at_fin_panel_pagos('basura'));
 ok(strpos($mes_mal, 'Gasto de ' . at_fin_mes_es(substr($hoy, 0, 7))) !== false && strpos($mes_mal, 'name="mes" value="' . substr($hoy, 0, 7) . '"') !== false, 'Pagos: un mes inválido muestra el mes actual (título y selector)');
 // Abrir la pestaña completa los dólares pendientes.
@@ -227,6 +242,8 @@ delete_option('at_fin_tc_cache');
 $GLOBALS['mi_modo'] = 'error';
 $pen = at_fin_registrar(['tipo' => 'pago', 'fecha' => $ayer, 'proveedor' => 'PRUEBA-Pend2', 'descripcion' => '[PRUEBA] pendiente ayer ' . $marca, 'monto' => 4, 'moneda' => 'USD'], 'api');
 $GLOBALS['mi_modo'] = 'ok';
+delete_transient('at_fin_tc_caida');
+at_fin_registro_pendiente(false);   // petición nueva: la fuente ya respondería
 ok(is_array($pen) && $wpdb->get_var($wpdb->prepare("SELECT tc_estado FROM {$tm} WHERE id = %d", $pen['id'])) === 'pendiente', 'preparación: pago pendiente por fuente caída');
 salida(static fn() => at_fin_panel_pagos(substr($ayer, 0, 7)));
 $fp = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$tm} WHERE id = %d", $pen['id']), ARRAY_A);
@@ -234,6 +251,7 @@ ok($fp['tc_estado'] === 'ok' && (int) $fp['monto_clp'] === 3800, 'abrir «Pagos 
 $GLOBALS['mi_modo'] = 'error';
 ok(salida(static fn() => at_fin_panel_pagos('2020-06')) !== '', 'con la fuente caída la pestaña igual se muestra');
 $GLOBALS['mi_modo'] = 'ok';
+delete_transient('at_fin_tc_caida');
 
 // --- Procesar el formulario (nonce y permisos)
 $_SERVER['REQUEST_METHOD'] = 'POST';

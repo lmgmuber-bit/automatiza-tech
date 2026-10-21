@@ -22,6 +22,9 @@ function at_fin_fecha_valida(string $ymd): bool {
 	return $fecha !== false && $fecha->format('Y-m-d') === $ymd;
 }
 
+/** Primera fecha aceptada ('Y-m-d'): antes no se pide dólar ni se registran movimientos. */
+function at_fin_fecha_minima(): string { return '2020-01-01'; }
+
 /** Normaliza y valida un movimiento. `$hoy` es 'Y-m-d' (hora de Chile). */
 function at_fin_validar(array $d, string $hoy): array {
 	$errores = [];
@@ -31,17 +34,24 @@ function at_fin_validar(array $d, string $hoy): array {
 	$fecha = at_fin_texto($d['fecha'] ?? '', 10);
 	if (!at_fin_fecha_valida($fecha)) { $errores[] = 'Fecha no válida (use AAAA-MM-DD).'; }
 	elseif ($fecha > $hoy) { $errores[] = 'La fecha no puede ser futura.'; }
+	// Sin dólar publicado antes de 2020 el movimiento quedaría pendiente para siempre.
+	elseif ($fecha < at_fin_fecha_minima()) { $errores[] = 'Fecha demasiado antigua.'; }
 
 	$cuenta = strtolower(at_fin_texto($d['cuenta'] ?? '', 60));
 	if ($cuenta !== '' && preg_match('/^[a-z0-9][a-z0-9_-]*$/D', $cuenta) !== 1) { $errores[] = 'Cuenta no válida.'; }
 	if ($cuenta === '' && in_array($tipo, ['recarga', 'consumo', 'ajuste'], true)) { $errores[] = 'La cuenta es obligatoria en recargas, consumos y ajustes.'; }
 
-	$monto = at_fin_monto($d['monto'] ?? null);
-	if ($monto === null || $monto == 0.0) { $errores[] = 'El monto debe ser un número distinto de cero.'; }
-	elseif ($monto < 0 && $tipo !== 'ajuste') { $errores[] = 'El monto debe ser positivo (solo un ajuste puede ser negativo).'; }
-
 	$moneda = strtoupper(at_fin_texto($d['moneda'] ?? '', 3));
 	if (!in_array($moneda, ['CLP', 'USD'], true)) { $errores[] = 'La moneda debe ser CLP o USD.'; }
+
+	$monto_bruto = $d['monto'] ?? null;
+	$monto = at_fin_monto($monto_bruto);
+	if (is_string($monto_bruto) && preg_match('/^-?\d{1,3}(\.\d{3})+$/D', preg_replace('/\s+/u', '', $monto_bruto) ?? '') === 1) {
+		// «15.990» se leería como 15,99: ambiguo en cualquier moneda («12.500» también lo es en dólares).
+		$errores[] = 'El monto parece llevar punto de miles: escríbelo sin puntos (15990) o con coma decimal.';
+	} elseif ($monto === null || $monto == 0.0) { $errores[] = 'El monto debe ser un número distinto de cero.'; }
+	elseif ($monto < 0 && $tipo !== 'ajuste') { $errores[] = 'El monto debe ser positivo (solo un ajuste puede ser negativo).'; }
+	elseif ($moneda === 'CLP' && abs($monto - round($monto)) > 0.00005) { $errores[] = 'En pesos no hay decimales.'; }
 
 	$tc_bruto = $d['tipo_cambio'] ?? null;
 	$tipo_cambio = null;
@@ -118,12 +128,19 @@ function at_fin_resumen_mes(array $movs): array {
 function at_fin_saldo(array $movs): array {
 	$recargado = $consumido = $ajustes = 0.0;
 	$ultima = null;
+	$ultima_id = 0;
 	foreach ($movs as $m) {
 		$monto = (float) (at_fin_monto($m['monto'] ?? null) ?? 0.0);
 		$tipo = $m['tipo'] ?? '';
 		if ($tipo === 'recarga') {
 			$recargado += $monto;
-			if ($ultima === null || (string) ($m['fecha'] ?? '') >= $ultima['fecha']) { $ultima = ['fecha' => (string) ($m['fecha'] ?? ''), 'monto' => $monto]; }
+			// La última es la de mayor (fecha, id): con dos recargas el mismo día gana la registrada después, venga como venga el orden.
+			$fecha_m = (string) ($m['fecha'] ?? '');
+			$id_m = (int) ($m['id'] ?? 0);
+			if ($ultima === null || $fecha_m > $ultima['fecha'] || ($fecha_m === $ultima['fecha'] && $id_m >= $ultima_id)) {
+				$ultima = ['fecha' => $fecha_m, 'monto' => $monto];
+				$ultima_id = $id_m;
+			}
 		} elseif ($tipo === 'consumo') {
 			$consumido += $monto;
 		} elseif ($tipo === 'ajuste') {

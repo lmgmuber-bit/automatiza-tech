@@ -36,9 +36,11 @@ Reglas comunes: monedas `CLP` o `USD`; el monto es positivo (solo el `ajuste` pu
 
 - **Fuente:** dólar observado de `https://mindicador.cl/api/dolar/DD-MM-AAAA`. CLP vale 1.
 - **Días sin valor** (fin de semana o feriado): se usa el último valor anterior, **hasta 7 días atrás**. Un pago de un sábado no queda pendiente ni falla.
-- **Caché:** cada valor se guarda por fecha en la opción `at_fin_tc_cache` (hasta 120 fechas). Hoy, si el dólar aún no se publicó, se usa el último valor pero **no se guarda** bajo la fecha de hoy, para que el movimiento no quede fijado a un dólar de otro día.
+- **Caché:** cada valor se guarda por fecha en la opción `at_fin_tc_cache` (hasta 120 fechas). Lo que ya está en la caché se usa siempre, aunque la fuente esté en pausa.
+- **El dólar de hoy sin publicar:** si hoy todavía no hay valor publicado, el movimiento queda con el **último valor anterior** y `tc_estado = ok`; **no se refresca después**, aunque mindicador publique el de hoy más tarde. Lo único que se evita es guardar ese valor en la caché bajo la fecha de hoy (así los registros siguientes sí consultan de nuevo). Si hace falta el valor exacto, registrar el pago con `tipo_cambio` manual.
 - **Si la fuente falla:** el movimiento se guarda igual con `tc_estado = pendiente` y sin `monto_clp`; la pestaña «Pagos por mes» lo marca «pendiente» y avisa cuántos pagos o recargas todavía no suman al total.
-- **Cómo se completan los pendientes:** al abrir «Pagos por mes» y, después de crear un movimiento por la API, se reintentan unos pocos (con la fuente caída no se insiste: cada intento puede tardar hasta 10 s).
+- **Tiempos y pausa:** cada consulta espera como máximo **5 s** y la caminata de días hacia atrás se corta a los **15 s** en total. Tras una falla de red o un HTTP distinto de 200 se guarda el transient `at_fin_tc_caida` por **10 minutos**: mientras exista no se llama a mindicador (devuelve «sin valor» al instante). Una respuesta 200 con la serie vacía (fin de semana o feriado) no cuenta como caída.
+- **Cómo se completan los pendientes:** al abrir «Pagos por mes» y, después de crear un movimiento por la API, se reintentan unos pocos. Si en esa misma petición se registró un movimiento que quedó pendiente no se insiste; y con la pausa activa el reintento sale al instante sin tocar la red.
 - **Manual:** quien registra puede mandar el tipo de cambio (`tipo_cambio`, por ejemplo el que cobró el banco); queda con `tc_estado = manual`.
 - **Por eso cada pago se registra con su fecha real:** el dólar es el de ese día.
 
@@ -87,8 +89,10 @@ Cada movimiento tiene una `referencia` única:
 
 - **Con referencia** (lo correcto cuando existe un número): se usa el id de la generación, el número de factura o boleta, o el id del pedido. Misma referencia y mismos datos: 200 y no se duplica. Misma referencia con datos distintos: 409.
 - **Sin referencia:** el servidor la deriva de los datos (tipo, fecha, cuenta, proveedor, monto, moneda y descripción). Eso solo protege el **mismo registro repetido con exactamente esos datos**; si dos agentes lo anotan con otra descripción, monto o fecha, quedan dos registros.
+- **Qué cuenta como «la misma» referencia:** el cotejo no distingue mayúsculas ni acentos (colación `_ci` de la base): `Factura-12` y `factura-12` son la misma, igual que `Renovación` y `renovacion`.
 - **Regla entre agentes:** quien gasta usa como referencia el id, la factura o el pedido que le avisa a Balance, y **Balance reutiliza exactamente esa misma referencia**. Así, aunque los dos lo registren, queda uno solo.
 - Dos consumos legítimos idénticos el mismo día se tomarían por repetidos: se distinguen con la descripción o con una referencia propia.
+- **Renovaciones del catálogo:** el pago de una renovación se registra con la fecha en que se **confirma** (referencia `renov-<id>-<AAAA-MM>`). Si se confirma tarde, queda en el mes de la confirmación y no en el del vencimiento.
 
 ## Script y encargo de Balance (fuera del repo)
 
@@ -131,15 +135,19 @@ Archivos, todos bajo `wp-content/themes/automatiza-tech/`:
 
 Pasos:
 
+0. **Antes de subir nada** (solo lectura en PROD):
+   - Comparar el md5 de `inc/admin-at-finanzas.php` en PROD con el de la versión del commit `3a9f00e` (`git show 3a9f00e:wp-content/themes/automatiza-tech/inc/admin-at-finanzas.php | md5sum`). **Si difiere, detenerse**: alguien cambió el catálogo en PROD y subir el archivo local lo pisaría.
+   - Buscar `function at_fin_` en el tema de PROD (`grep -rn "function at_fin_" wp-content/themes/automatiza-tech/`) para descartar choques de nombres con código que no sea de este módulo.
 1. Respaldo de `inc/admin-at-finanzas.php` actual (y de la carpeta `inc/finanzas/` si ya existiera).
 2. Subir los seis archivos de `inc/finanzas/`.
 3. `php -l` sobre los siete archivos en el servidor.
-4. Subir `inc/admin-at-finanzas.php`.
+4. Subir `inc/admin-at-finanzas.php`. Ese archivo carga el módulo con `is_readable()`: una subida parcial deja el sitio en pie, solo sin el módulo.
 5. Comparar md5 local contra PROD de los siete archivos.
 6. Verificar las **tres pestañas con sesión iniciada** y la **API desde afuera** (sin clave debe responder 401).
-7. Después, con Balance: crear las cuentas iniciales y cargar los pagos anteriores que Luis confirme.
+7. **Después de la primera carga**, verificar por SSH que existen las dos tablas: `SHOW TABLES LIKE '%at_fin_%'` debe devolver **dos** (`at_fin_cuentas` y `at_fin_movimientos`). Si devuelve menos, la opción `at_fin_schema` no queda marcada y se reintenta sola en la petición siguiente.
+8. Después, con Balance: crear las cuentas iniciales y cargar los pagos anteriores que Luis confirme.
 
-Las tablas se crean solas la primera vez que se abre el panel o llega una petición REST (`dbDelta`, versión guardada en la opción `at_fin_schema` = `1`). No hay migración manual.
+Las tablas se crean solas la primera vez que se abre el panel o llega una petición REST (`dbDelta`). La opción `at_fin_schema` = `1` se guarda **solo si las dos tablas existen** después de `dbDelta`. No hay migración manual.
 
 No subir: los archivos de `tests/finanzas/`, ni archivos temporales o de respaldo.
 
@@ -151,14 +159,14 @@ Restaurar `inc/admin-at-finanzas.php` desde el respaldo. Eso **desconecta el mó
 
 Todas las suites en verde con PHP 8.3.28:
 
-- `tests/finanzas/`: puras 101, API 76, datos 71 y panel 103 (351 controles).
+- `tests/finanzas/`: puras 121, API 82, datos 91 y panel 106 (400 controles). Incluyen la pausa ante la caída de mindicador, el tope de tiempo, los montos con punto de miles y el desempate de recargas; la red se simula, nunca se llama a mindicador.
 - Regresión `tests/retomar/`: puras 251 y once suites con WordPress (1.252 controles en total), sin fallas.
 
 Esto prueba el código en local; **no acredita PROD** ni la lectura real de mindicador desde el servidor.
 
 ## Pendientes y límites conocidos
 
-- **«15.990» en la API:** la API todavía lo acepta y lo lee como 15,99. El script ya lo rechaza antes de enviar; la API no, así que quien llame directo debe escribir `15990` o `15,99`.
+- **Montos con punto de miles:** «15.990» (y «1.234.567», y también «12.500» en dólares, porque es ambiguo) se rechazan con 422 y el aviso «El monto parece llevar punto de miles»; hay que escribir `15990` o con coma decimal. En pesos tampoco se aceptan decimales («En pesos no hay decimales.»). Las fechas anteriores al 2020-01-01 se rechazan («Fecha demasiado antigua.»).
 - **Categorías:** una categoría escrita con mayúsculas distintas («Hosting» y «hosting») sale en dos filas del desglose.
 - **Conteo de pendientes del resumen:** incluye consumos y ajustes en dólares sin tipo de cambio, aunque estos no cambian el total del mes. El aviso de la pestaña «Pagos por mes» sí cuenta solo pagos y recargas.
 - **Segunda etapa:** registro automático del consumo de fotos que generan solos el renderer de propuestas y el de Retomar. Hoy esos consumos los anota Balance o quien los gasta.

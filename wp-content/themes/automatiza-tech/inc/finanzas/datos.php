@@ -62,7 +62,21 @@ function at_fin_migrar(): void {
 		KEY fecha (fecha),
 		KEY cuenta_id (cuenta_id)
 	) ENGINE=InnoDB {$cotejo};");
-	update_option('at_fin_schema', '1');
+	// Solo se marca como hecha si las dos tablas existen de verdad; si dbDelta falló, la siguiente petición reintenta.
+	if ($wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $wpdb->esc_like($cuentas))) !== null
+		&& $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $wpdb->esc_like($movs))) !== null) {
+		update_option('at_fin_schema', '1');
+	}
+}
+
+/**
+ * ¿En esta misma petición se registró un movimiento que quedó con el dólar pendiente? Con `$marcar` true lo anota.
+ * El panel y la API lo usan para no insistir con una fuente que acaba de fallar.
+ */
+function at_fin_registro_pendiente(?bool $marcar = null): bool {
+	static $hubo = false;
+	if ($marcar !== null) { $hubo = $marcar; }
+	return $hubo;
 }
 
 /* ---------- Cuentas ---------- */
@@ -147,7 +161,8 @@ function at_fin_cuenta_tiene_movimientos(int $cuenta_id): bool {
 function at_fin_cuentas(): array {
 	global $wpdb;
 	$cuentas = $wpdb->get_results('SELECT * FROM ' . at_fin_tabla_cuentas() . ' ORDER BY nombre ASC, id ASC', ARRAY_A) ?: [];
-	$movs = $wpdb->get_results('SELECT cuenta_id, tipo, fecha, monto FROM ' . at_fin_tabla_movimientos() . ' WHERE cuenta_id IS NOT NULL', ARRAY_A) ?: [];
+	// Orden fecha, id: así «la última recarga» es siempre la registrada después, también con dos recargas el mismo día.
+	$movs = $wpdb->get_results('SELECT id, cuenta_id, tipo, fecha, monto FROM ' . at_fin_tabla_movimientos() . ' WHERE cuenta_id IS NOT NULL ORDER BY fecha ASC, id ASC', ARRAY_A) ?: [];
 	$por_cuenta = [];
 	foreach ($movs as $m) { $por_cuenta[(int) $m['cuenta_id']][] = $m; }
 	foreach ($cuentas as &$c) {
@@ -245,6 +260,7 @@ function at_fin_registrar(array $entrada, string $origen) {
 		$ya = at_fin_movimiento_por_referencia($referencia);
 		return $ya !== null ? at_fin_respuesta_repetida($ya, $datos) : new WP_Error('error_bd', 'No se pudo guardar el movimiento.', ['status' => 500]);
 	}
+	if ($tc_estado === 'pendiente') { at_fin_registro_pendiente(true); }
 	return ['id' => (int) $wpdb->insert_id, 'estado' => 'creado'];
 }
 
@@ -311,7 +327,7 @@ function at_fin_completar_pendientes(int $max = 20): int {
 	foreach ($pendientes as $p) {
 		$tc = at_fin_tipo_cambio($p['fecha']);
 		if ($tc === null) {
-			// Con la fuente caída cada intento cuesta hasta 10 s por día consultado: no insistir.
+			// Con la fuente caída cada intento cuesta hasta 5 s por día consultado (y se pausa 10 min): no insistir.
 			if (++$fallos >= 3) { break; }
 			continue;
 		}

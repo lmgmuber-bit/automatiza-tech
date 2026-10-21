@@ -5,7 +5,8 @@ exigir('at_fin_migrar', 'at_fin_cuenta_guardar', 'at_fin_cuenta', 'at_fin_cuenta
 global $wpdb;
 
 // --- Simulación de mindicador (el bootstrap bloquea todo HTTP; este filtro corre después, con la misma prioridad máxima).
-$GLOBALS['mi_modo'] = 'ok';      // ok | error | vacio
+$GLOBALS['mi_modo'] = 'ok';      // ok | error | vacio | http500
+$GLOBALS['mi_timeout'] = null;   // tiempo de espera con que se pidió la última consulta
 $GLOBALS['mi_valor'] = 950.0;
 $GLOBALS['mi_urls'] = [];
 $GLOBALS['mi_otras'] = 0;
@@ -15,13 +16,17 @@ add_filter('pre_http_request', static function ($pre, $args, $url) {
 		return $pre;
 	}
 	$GLOBALS['mi_urls'][] = $url;
+	$GLOBALS['mi_timeout'] = $args['timeout'] ?? null;
+	if (isset($GLOBALS['mi_reloj'])) { $GLOBALS['mi_reloj'] += 6.0; }   // reloj simulado: cada consulta «tarda» 6 s
 	if ($GLOBALS['mi_modo'] === 'error') { return new WP_Error('prueba_local', 'mindicador simulado caído'); }
+	if ($GLOBALS['mi_modo'] === 'http500') { return ['headers' => [], 'body' => '', 'response' => ['code' => 500, 'message' => 'Error'], 'cookies' => [], 'filename' => null]; }
 	$serie = [];
 	if ($GLOBALS['mi_modo'] === 'ok' && preg_match('#/(\d{2})-(\d{2})-(\d{4})$#', $url, $m)) {
 		$serie[] = ['fecha' => $m[3] . '-' . $m[2] . '-' . $m[1] . 'T03:00:00.000Z', 'valor' => $GLOBALS['mi_valor']];
 	}
 	return ['headers' => [], 'body' => wp_json_encode(['version' => '1.7.0', 'codigo' => 'dolar', 'serie' => $serie]), 'response' => ['code' => 200, 'message' => 'OK'], 'cookies' => [], 'filename' => null];
 }, PHP_INT_MAX, 3);
+add_filter('at_fin_tc_reloj', static fn($ahora) => $GLOBALS['mi_reloj'] ?? $ahora);
 
 $cache_original = get_option('at_fin_tc_cache', null);
 $esquema_original = get_option('at_fin_schema', null);
@@ -35,9 +40,11 @@ register_shutdown_function(static function () use ($wpdb, &$cuentas_slug, $cache
 		if ($id) { $wpdb->delete($tm, ['cuenta_id' => $id]); $wpdb->delete($tc, ['id' => $id]); }
 	}
 	$wpdb->query("DELETE FROM {$tm} WHERE descripcion LIKE '[PRUEBA]%'");
+	delete_transient('at_fin_tc_caida');
 	if ($cache_original === null) { delete_option('at_fin_tc_cache'); } else { update_option('at_fin_tc_cache', $cache_original, false); }
 });
 delete_option('at_fin_tc_cache');
+delete_transient('at_fin_tc_caida');
 
 // --- Esquema
 delete_option('at_fin_schema');
@@ -57,6 +64,20 @@ ok(count($unica_ref) === 1, 'referencia es UNIQUE');
 ok(in_array('fecha', array_column($indices, 'Column_name'), true) && in_array('cuenta_id', array_column($indices, 'Column_name'), true), 'índices por fecha y cuenta_id');
 $unica_slug = array_filter($wpdb->get_results("SHOW INDEX FROM {$tc}", ARRAY_A), static fn($i) => $i['Column_name'] === 'slug' && (int) $i['Non_unique'] === 0);
 ok(count($unica_slug) === 1, 'slug es UNIQUE');
+// Si las tablas no se pueden crear, el esquema no se marca como hecho y se reintenta (un prefijo de 70 letras hace fallar el CREATE TABLE).
+$prefijo_real = $wpdb->prefix;
+$wpdb->prefix = str_repeat('x', 70) . '_';
+delete_option('at_fin_schema');
+$suprimido_migrar = $wpdb->suppress_errors(true);
+at_fin_migrar();
+$wpdb->suppress_errors($suprimido_migrar);
+$marcado_sin_tablas = get_option('at_fin_schema');
+$tablas_fantasma = $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $wpdb->esc_like($wpdb->prefix . 'at_fin_') . '%'));
+$wpdb->prefix = $prefijo_real;
+ok($tablas_fantasma === null, 'preparación: con el prefijo imposible no se creó ninguna tabla');
+ok($marcado_sin_tablas === false, 'si las tablas no existen, at_fin_schema NO se marca (se reintenta en la próxima petición)');
+at_fin_migrar();
+ok(get_option('at_fin_schema') === '1', 'con las tablas creadas sí se marca at_fin_schema');
 $antes = $wpdb->get_results("SHOW COLUMNS FROM {$tm}", ARRAY_A);
 at_fin_migrar();
 ok($wpdb->get_results("SHOW COLUMNS FROM {$tm}", ARRAY_A) === $antes, 'segunda migración no cambia el esquema');
@@ -114,6 +135,7 @@ ok(count($GLOBALS['mi_urls']) === 8, 'consulta como máximo 8 días (hoy + 7 ant
 $GLOBALS['mi_modo'] = 'error';
 ok(at_fin_tipo_cambio('2026-03-01') === null, 'error de la fuente → null');
 ok(!isset((get_option('at_fin_tc_cache') ?: [])['2026-03-01']), 'un fallo no se guarda en la caché');
+delete_transient('at_fin_tc_caida');   // la falla simulada dejó la fuente en pausa
 
 // Caché limitada a 120 entradas.
 $grande = [];
@@ -126,6 +148,48 @@ $cache = get_option('at_fin_tc_cache');
 ok(count($cache) <= 120 && isset($cache['2026-04-01']), 'la caché no pasa de 120 entradas y guarda el valor nuevo');
 delete_option('at_fin_tc_cache');
 $GLOBALS['mi_valor'] = 950.0;
+$GLOBALS['mi_modo'] = 'ok';
+
+// --- Pausa ante una caída de la fuente (transient at_fin_tc_caida) y tope de tiempo
+delete_option('at_fin_tc_cache');
+delete_transient('at_fin_tc_caida');
+$GLOBALS['mi_modo'] = 'ok';
+$GLOBALS['mi_urls'] = [];
+at_fin_tipo_cambio('2026-03-02');
+ok($GLOBALS['mi_timeout'] === 5, 'cada consulta a mindicador espera como máximo 5 s');
+delete_option('at_fin_tc_cache');
+$GLOBALS['mi_modo'] = 'vacio';
+ok(at_fin_tipo_cambio('2026-03-03') === null && get_transient('at_fin_tc_caida') === false, 'un 200 con serie vacía (fin de semana) no cuenta como caída');
+$GLOBALS['mi_modo'] = 'error';
+$GLOBALS['mi_urls'] = [];
+ok(at_fin_tipo_cambio('2026-03-05') === null && count($GLOBALS['mi_urls']) === 1, 'falla de red: devuelve null tras una sola consulta');
+ok(get_transient('at_fin_tc_caida') !== false, 'la falla deja el transient at_fin_tc_caida');
+if (!wp_using_ext_object_cache()) {
+	$resta = (int) get_option('_transient_timeout_at_fin_tc_caida') - time();
+	ok($resta > 590 && $resta <= 600, 'el transient dura 10 minutos');
+}
+$GLOBALS['mi_modo'] = 'ok';
+$GLOBALS['mi_urls'] = [];
+ok(at_fin_tipo_cambio('2026-03-06') === null && $GLOBALS['mi_urls'] === [], 'con el transient activo no se toca la red y devuelve null');
+update_option('at_fin_tc_cache', ['2026-03-04' => 940.0], false);
+ok(at_fin_tipo_cambio('2026-03-04') === 940.0 && $GLOBALS['mi_urls'] === [], 'con el transient activo la caché por fecha sigue respondiendo');
+delete_transient('at_fin_tc_caida');
+ok(at_fin_tipo_cambio('2026-03-06') === 950.0 && count($GLOBALS['mi_urls']) === 1, 'sin el transient vuelve a consultar');
+delete_option('at_fin_tc_cache');
+$GLOBALS['mi_modo'] = 'http500';
+$GLOBALS['mi_urls'] = [];
+ok(at_fin_tipo_cambio('2026-03-09') === null && get_transient('at_fin_tc_caida') !== false, 'un HTTP distinto de 200 también deja el transient');
+delete_transient('at_fin_tc_caida');
+// Tope total de la caminata: con un reloj simulado donde cada consulta tarda 6 s, corta tras 3 consultas (18 s > 15 s) y no sigue hasta 8.
+$GLOBALS['mi_modo'] = 'vacio';
+$GLOBALS['mi_urls'] = [];
+$GLOBALS['mi_reloj'] = 1000.0;
+ok(at_fin_tipo_cambio('2026-03-12') === null, 'si la caminata pasa del tope total devuelve null');
+ok(count($GLOBALS['mi_urls']) === 3, 'el tope corta la caminata (3 consultas de 6 s, no 8)');
+ok(get_transient('at_fin_tc_caida') !== false, 'y deja la pausa para no repetirlo en la siguiente petición');
+unset($GLOBALS['mi_reloj']);
+delete_transient('at_fin_tc_caida');
+delete_option('at_fin_tc_cache');
 $GLOBALS['mi_modo'] = 'ok';
 
 // --- Registro: pago USD con tipo de cambio de la fuente
@@ -192,6 +256,8 @@ $fp = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$tm} WHERE id = %d", $pen['i
 ok(is_array($pen) && $pen['estado'] === 'creado' && $fp['tc_estado'] === 'pendiente' && $fp['monto_clp'] === null && $fp['tipo_cambio'] === null, 'API caída: se guarda pendiente, sin monto_clp');
 ok(at_fin_completar_pendientes() === 0, 'con la API caída no se completa nada');
 ok($wpdb->get_var($wpdb->prepare("SELECT tc_estado FROM {$tm} WHERE id = %d", $pen['id'])) === 'pendiente', 'sigue pendiente');
+ok(at_fin_registro_pendiente() === true, 'quedó anotado que en esta petición se registró un pendiente');
+delete_transient('at_fin_tc_caida');   // pasan los 10 minutos de pausa
 $GLOBALS['mi_modo'] = 'ok';
 $completados = at_fin_completar_pendientes();
 ok($completados >= 1, 'con la API de vuelta se completan pendientes');
@@ -216,6 +282,20 @@ at_fin_cuenta_guardar(['slug' => $slug_act, 'activa' => true]);
 $comp = at_fin_comparacion('2020-02');
 ok(count($comp) === 6 && $comp[0] === ['mes' => '2019-08', 'total_clp' => 0] && $comp[5]['mes'] === '2020-01', 'at_fin_comparacion: 6 meses anteriores, del más antiguo al más reciente, cruzando el año');
 ok(count(at_fin_comparacion('2026-10', 3)) === 3, 'at_fin_comparacion acepta otra cantidad de meses');
+
+// --- Dos recargas el mismo día: «la última recarga» es la registrada después (desempate por id), sin depender del orden de la consulta
+$slug_dos = $marca . '-dos';
+$cuentas_slug[] = $slug_dos;
+at_fin_cuenta_guardar(['slug' => $slug_dos, 'nombre' => '[PRUEBA] dos recargas', 'proveedor' => 'Higgsfield', 'moneda' => 'USD']);
+$r_a = at_fin_registrar(['tipo' => 'recarga', 'fecha' => $ayer, 'cuenta' => $slug_dos, 'proveedor' => 'Higgsfield', 'descripcion' => '[PRUEBA] recarga A', 'monto' => 40, 'moneda' => 'USD'], 'api');
+$r_b = at_fin_registrar(['tipo' => 'recarga', 'fecha' => $ayer, 'cuenta' => $slug_dos, 'proveedor' => 'Higgsfield', 'descripcion' => '[PRUEBA] recarga B', 'monto' => 25, 'moneda' => 'USD'], 'api');
+at_fin_registrar(['tipo' => 'consumo', 'fecha' => $hoy, 'cuenta' => $slug_dos, 'proveedor' => 'Higgsfield', 'descripcion' => '[PRUEBA] consumo dos', 'monto' => 5, 'moneda' => 'USD'], 'api');
+ok(is_array($r_a) && is_array($r_b) && $r_b['id'] > $r_a['id'], 'preparación: dos recargas el mismo día, la B con mayor id');
+$cuenta_dos = array_values(array_filter(at_fin_cuentas(), static fn($x) => $x['slug'] === $slug_dos))[0] ?? null;
+ok($cuenta_dos && $cuenta_dos['saldo']['ultima_recarga'] === ['fecha' => $ayer, 'monto' => 25.0], 'at_fin_cuentas: la última recarga es la de mayor id (B, 25)');
+ok($cuenta_dos && $cuenta_dos['saldo']['pct_usado'] === 20.0, 'at_fin_cuentas: el porcentaje usado se calcula sobre esa recarga (5 de 25)');
+$saldo_desc = at_fin_saldo(at_fin_movimientos_cuenta($cuenta_dos['id']));
+ok($saldo_desc['ultima_recarga'] === ['fecha' => $ayer, 'monto' => 25.0], 'y también cuando los movimientos llegan del más nuevo al más antiguo');
 
 // --- Hooks
 ok(has_action('admin_init', 'at_fin_migrar') !== false && has_action('rest_api_init', 'at_fin_migrar') !== false, 'migración enganchada en admin_init y rest_api_init');

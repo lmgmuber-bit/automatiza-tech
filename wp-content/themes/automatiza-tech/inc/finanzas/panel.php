@@ -281,7 +281,10 @@ function at_fin_panel_pagina(string $tab): void {
 function at_fin_panel_pagos(string $mes): void {
 	if (preg_match('/^\d{4}-(0[1-9]|1[0-2])$/D', $mes) !== 1) { $mes = substr(at_fin_hoy(), 0, 7); }
 	// Al abrir la pestaña se completan los dólares que no se pudieron obtener antes (un fallo no debe romper la página).
-	try { at_fin_completar_pendientes(5); } catch (Throwable $e) { /* se ignora a propósito */ }
+	// Si en esta misma petición se registró algo que quedó pendiente, la fuente acaba de fallar: no se insiste (igual que la API).
+	if (!at_fin_registro_pendiente()) {
+		try { at_fin_completar_pendientes(5); } catch (Throwable $e) { /* se ignora a propósito */ }
+	}
 
 	$movs = at_fin_movimientos_mes($mes);
 	$resumen = at_fin_resumen_mes($movs);

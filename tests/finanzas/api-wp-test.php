@@ -36,9 +36,11 @@ register_shutdown_function(static function () use ($wpdb, &$slugs, $cache_origin
 		if ($id) { $wpdb->delete($tm, ['cuenta_id' => $id]); $wpdb->delete($tc, ['id' => $id]); }
 	}
 	$wpdb->query("DELETE FROM {$tm} WHERE descripcion LIKE '[PRUEBA]%'");
+	delete_transient('at_fin_tc_caida');
 	if ($cache_original === null) { delete_option('at_fin_tc_cache'); } else { update_option('at_fin_tc_cache', $cache_original, false); }
 });
 delete_option('at_fin_tc_cache');
+delete_transient('at_fin_tc_caida');
 at_fin_migrar();
 
 /** Llama a la API como lo haría n8n (JSON + cabecera de secreto). $cabecera: null = valor correcto, false = sin cabecera. */
@@ -254,6 +256,7 @@ $GLOBALS['mi_modo'] = 'error';
 $pen = at_fin_registrar(array_merge($base, ['descripcion' => '[PRUEBA] pendiente ' . $marca, 'fecha' => $ayer, 'monto' => 4]), 'api');
 ok(is_array($pen) && $wpdb->get_var($wpdb->prepare("SELECT tc_estado FROM {$tm} WHERE id = %d", $pen['id'])) === 'pendiente', 'preparación: movimiento pendiente por fuente caída');
 $GLOBALS['mi_modo'] = 'ok';
+delete_transient('at_fin_tc_caida');   // pasaron los 10 minutos de pausa
 $sig = api('POST', '/finanzas/movimiento', array_merge($base, ['descripcion' => '[PRUEBA] siguiente ' . $marca, 'monto' => 2]));
 ok($sig->get_status() === 201 && ($sig->get_data()['estado'] ?? '') === 'creado' && array_keys($sig->get_data()) === ['id', 'estado'], 'el registro siguiente responde 201 {id, estado} sin más campos');
 $fp = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$tm} WHERE id = %d", $pen['id']), ARRAY_A);
@@ -265,6 +268,22 @@ $pen2 = at_fin_registrar(array_merge($base, ['descripcion' => '[PRUEBA] pendient
 $sig2 = api('POST', '/finanzas/movimiento', array_merge($base, ['descripcion' => '[PRUEBA] siguiente 2 ' . $marca, 'monto' => 1.5]));
 ok($sig2->get_status() === 201 && ($sig2->get_data()['estado'] ?? '') === 'creado', 'con la fuente caída el registro igual responde 201 creado');
 $GLOBALS['mi_modo'] = 'ok';
+delete_transient('at_fin_tc_caida');
+
+// --- Montos con punto de miles y pesos con decimales: 422 por la API, sin guardar nada
+$miles = 'El monto parece llevar punto de miles: escríbelo sin puntos (15990) o con coma decimal.';
+$antes_miles = (int) $wpdb->get_var("SELECT COUNT(*) FROM {$tm}");
+$rm1 = api('POST', '/finanzas/movimiento', ['tipo' => 'pago', 'fecha' => $ayer, 'proveedor' => 'Hostinger', 'descripcion' => '[PRUEBA] miles ' . $marca, 'monto' => '15.990', 'moneda' => 'CLP']);
+ok($rm1->get_status() === 422 && ($rm1->get_data()['code'] ?? '') === 'validacion' && in_array($miles, $rm1->get_data()['errores'] ?? [], true), '«15.990» CLP por la API → 422 con el aviso del punto de miles');
+$rm2 = api('POST', '/finanzas/movimiento', ['tipo' => 'pago', 'fecha' => $ayer, 'proveedor' => 'Higgsfield', 'descripcion' => '[PRUEBA] miles usd ' . $marca, 'monto' => '12.500', 'moneda' => 'USD']);
+ok($rm2->get_status() === 422 && in_array($miles, $rm2->get_data()['errores'] ?? [], true), '«12.500» USD por la API → 422 (ambiguo en cualquier moneda)');
+$rm3 = api('POST', '/finanzas/movimiento', ['tipo' => 'pago', 'fecha' => $ayer, 'proveedor' => 'Hostinger', 'descripcion' => '[PRUEBA] decimales clp ' . $marca, 'monto' => '12,5', 'moneda' => 'CLP']);
+ok($rm3->get_status() === 422 && in_array('En pesos no hay decimales.', $rm3->get_data()['errores'] ?? [], true), '«12,5» CLP por la API → 422 «En pesos no hay decimales.»');
+ok((int) $wpdb->get_var("SELECT COUNT(*) FROM {$tm}") === $antes_miles, 'esos tres rechazos no guardaron nada');
+$rm4 = api('POST', '/finanzas/movimiento', ['tipo' => 'pago', 'fecha' => $ayer, 'proveedor' => 'Hostinger', 'descripcion' => '[PRUEBA] sin punto ' . $marca, 'monto' => '15990', 'moneda' => 'CLP']);
+ok($rm4->get_status() === 201, '«15990» CLP por la API → 201');
+$rfa = api('POST', '/finanzas/movimiento', ['tipo' => 'pago', 'fecha' => '2019-12-31', 'proveedor' => 'Hostinger', 'descripcion' => '[PRUEBA] antigua ' . $marca, 'monto' => '5000', 'moneda' => 'CLP']);
+ok($rfa->get_status() === 422 && in_array('Fecha demasiado antigua.', $rfa->get_data()['errores'] ?? [], true), 'una fecha anterior a 2020 por la API → 422 «Fecha demasiado antigua.»');
 
 // --- Rutas registradas con el namespace esperado
 $rutas = rest_get_server()->get_routes('automatiza-tech/v1');

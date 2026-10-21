@@ -14,7 +14,10 @@
 
 if (!defined('ABSPATH')) exit;
 
-require_once __DIR__ . '/finanzas/cargar.php';
+// Este archivo se carga en cada petición: si una subida parcial dejó sin el cargador, el sitio sigue en pie (solo sin el módulo nuevo).
+if (is_readable(__DIR__ . '/finanzas/cargar.php')) {
+    require_once __DIR__ . '/finanzas/cargar.php';
+}
 
 function at_finanzas_admin_menu() {
     add_menu_page(

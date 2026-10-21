@@ -67,6 +67,32 @@ ok(!at_fin_validar(array_merge($base, ['tipo_cambio' => 'abc']), $hoy)['ok'] && 
 ok(at_fin_validar(array_merge($base, ['tipo_cambio' => '']), $hoy)['datos']['tipo_cambio'] === null, 'tipo de cambio vacío es null');
 ok(!at_fin_validar(array_merge($base, ['tipo' => 'recarga', 'cuenta' => 'Mi cuenta!']), $hoy)['ok'], 'cuenta con caracteres no válidos');
 
+// montos con punto de miles y pesos sin decimales
+$hay_error = static function (array $campos, string $texto) use ($base, $hoy): bool {
+	$r = at_fin_validar(array_merge($base, $campos), $hoy);
+	return !$r['ok'] && in_array($texto, $r['errores'], true);
+};
+$miles = 'El monto parece llevar punto de miles: escríbelo sin puntos (15990) o con coma decimal.';
+ok($hay_error(['monto' => '15.990', 'moneda' => 'CLP'], $miles), '«15.990» CLP se rechaza por punto de miles');
+ok($hay_error(['monto' => '1.234.567', 'moneda' => 'CLP'], $miles), '«1.234.567» CLP se rechaza por punto de miles');
+ok($hay_error(['monto' => '12.500', 'moneda' => 'USD'], $miles), '«12.500» USD también es ambiguo y se rechaza');
+ok($hay_error(['monto' => '12,5', 'moneda' => 'CLP'], 'En pesos no hay decimales.'), '«12,5» CLP: en pesos no hay decimales');
+ok(at_fin_validar(array_merge($base, ['monto' => '12.50', 'moneda' => 'USD']), $hoy)['ok'], '«12.50» USD pasa');
+ok(at_fin_validar(array_merge($base, ['monto' => '1,26', 'moneda' => 'USD']), $hoy)['ok'], '«1,26» USD pasa');
+ok(at_fin_validar(array_merge($base, ['tipo' => 'ajuste', 'cuenta' => 'higgsfield', 'monto' => '-0,80', 'moneda' => 'USD']), $hoy)['ok'], '«-0,80» USD en un ajuste pasa');
+ok(at_fin_validar(array_merge($base, ['monto' => '15990', 'moneda' => 'CLP']), $hoy)['ok'], '«15990» CLP pasa');
+ok(at_fin_validar(array_merge($base, ['monto' => 15990, 'moneda' => 'CLP']), $hoy)['ok'], 'el número 15990 CLP pasa');
+ok(at_fin_validar(array_merge($base, ['monto' => 15990.0, 'moneda' => 'CLP']), $hoy)['ok'], 'el número 15990.0 CLP pasa');
+ok(at_fin_validar(array_merge($base, ['monto' => '15990,00', 'moneda' => 'CLP']), $hoy)['ok'], '«15990,00» CLP pasa (decimales en cero)');
+ok(!at_fin_validar(array_merge($base, ['monto' => 15990.5, 'moneda' => 'CLP']), $hoy)['ok'], 'el número 15990.5 CLP se rechaza');
+ok(at_fin_validar(array_merge($base, ['monto' => '1.234', 'moneda' => 'USD']), $hoy)['ok'] === false, '«1.234» USD es ambiguo y se rechaza');
+ok(at_fin_validar(array_merge($base, ['monto' => 1.234, 'moneda' => 'USD']), $hoy)['ok'], 'el número 1.234 USD pasa (no es texto)');
+
+// fecha mínima
+ok($hay_error(['fecha' => '2019-12-31'], 'Fecha demasiado antigua.'), 'fecha anterior al 2020-01-01 se rechaza');
+ok(at_fin_validar(array_merge($base, ['fecha' => '2020-01-01']), $hoy)['ok'], 'el 2020-01-01 pasa');
+ok(!in_array('Fecha demasiado antigua.', at_fin_validar(array_merge($base, ['fecha' => 'basura']), $hoy)['errores'], true), 'una fecha inválida no dice «antigua»');
+
 // referencia
 $d1 = at_fin_validar($base, $hoy)['datos'];
 $d2 = at_fin_validar($base, $hoy)['datos'];
@@ -135,6 +161,16 @@ ok($sal['usado_desde_recarga'] === 20.0 && $sal['pct_usado'] === 50.0, 'solo cue
 ok($sal['saldo'] === 90.0 && $sal['recargado'] === 140.0 && $sal['consumido'] === 50.0, 'saldo con dos recargas');
 $sal = at_fin_saldo([['tipo' => 'recarga', 'fecha' => '2026-10-01', 'monto' => 10.1], ['tipo' => 'consumo', 'fecha' => '2026-10-02', 'monto' => 3.3]]);
 ok($sal['saldo'] === 6.8, 'saldo sin ruido de coma flotante');
+
+// desempate por id: dos recargas el mismo día, la última es la de mayor id, venga como venga el orden
+$dos = [
+	['id' => 7, 'tipo' => 'recarga', 'fecha' => '2026-10-01', 'monto' => 40],
+	['id' => 9, 'tipo' => 'recarga', 'fecha' => '2026-10-01', 'monto' => 25],
+	['id' => 8, 'tipo' => 'consumo', 'fecha' => '2026-10-02', 'monto' => 5],
+];
+ok(at_fin_saldo($dos)['ultima_recarga'] === ['fecha' => '2026-10-01', 'monto' => 25.0], 'dos recargas el mismo día: gana la de mayor id');
+ok(at_fin_saldo(array_reverse($dos))['ultima_recarga'] === ['fecha' => '2026-10-01', 'monto' => 25.0], 'y el resultado no depende del orden de entrada');
+ok(at_fin_saldo(array_reverse($dos))['pct_usado'] === 20.0, 'el porcentaje usa esa recarga (5 de 25)');
 
 // mismos datos
 ok(at_fin_mismos_datos($d1, $d2), 'mismos datos iguales');

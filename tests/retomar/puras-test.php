@@ -166,5 +166,9 @@ ok(str_contains(at_rt_resumen_html([], $salieron, 'https://example.com/panel'), 
 ok(str_contains(at_rt_resumen_html([at_rt_tarjeta_html($tarjeta)], [], 'https://example.com/panel'), '✅ Aprobar y enviar'), 'resumen: acepta tarjetas ya dibujadas');
 $rm = at_rt_resumen_html([array_replace($tarjeta, ['url_presentacion' => 'https://demo.easypanel.host/x'])], [], 'javascript:alert(1)');
 ok(!str_contains($rm, 'easypanel') && !str_contains($rm, 'javascript:') && !str_contains($rm, 'href="javascript'), 'resumen: enlaces hostiles no se dibujan');
+// Nombre de pila en el saludo, el asunto y el WhatsApp (pedido de Luis, 20-oct): «Hola Miguel», no «Hola Miguel Chávez».
+foreach (['Miguel Chávez' => 'Miguel', 'Emmanuel Umbría' => 'Emmanuel', '  Ana   María Pérez ' => 'Ana', 'Orly' => 'Orly', '' => '', '   ' => '', "Luis\nInyectado" => 'Luis'] as $entrada => $esperado) {
+    ok(function_exists('at_rt_nombre_pila') && at_rt_nombre_pila($entrada) === $esperado, 'nombre de pila: ' . json_encode($entrada, JSON_UNESCAPED_UNICODE));
+}
 echo "$total pruebas, $fallas fallas\n";
 exit($fallas ? 1 : 0);

@@ -463,6 +463,14 @@ update_option('at_rt_wa_automatico', '0');
 ok(rt_env_tick_solo([$ro['id']], '2026-10-21 11:05:00')['whatsapp'] === [], 'con el WhatsApp automático apagado no se pide el rezagado');
 update_option('at_rt_wa_automatico', '1');
 ok(rt_env_tick_solo([$ro['id']], '2026-10-21 19:05:00')['whatsapp'] === [], 'fuera de la ventana de envío no se pide el rezagado');
+// Nombre de pila (pedido de Luis, 20-oct): el asunto, el saludo y el WhatsApp dicen «Miguel», no «Miguel Chávez».
+$np = rt_env_fixture(['nombre' => 'Miguel Chávez', 'telefono' => '+56911112222', 'proximo_at' => '2026-10-22']);
+$antes_np = count($mails);
+$rnp = rt_env_tick_solo([$np['id']], '2026-10-22 10:05:00');
+$mnp = $mails[$antes_np] ?? [];
+ok(($mnp['subject'] ?? '') === '¿Retomamos tu proyecto, Miguel?' && str_contains((string) ($mnp['message'] ?? ''), 'Hola Miguel,') && !str_contains((string) ($mnp['message'] ?? ''), 'Chávez'), 'nombre de pila: asunto y saludo del correo');
+ok(($rnp['whatsapp'][0]['nombre'] ?? '') === 'Miguel', 'nombre de pila: el WhatsApp saluda con el nombre de pila');
+ok(at_rt_obtener($np['id'])['nombre'] === 'Miguel Chávez', 'nombre de pila: el seguimiento conserva el nombre completo');
 // Interruptor del WhatsApp automático (pedido de Luis, 18-oct): apagado = solo correo, sin pedido de WhatsApp.
 update_option('at_rt_wa_automatico', '0');
 $sa = rt_env_fixture(['proximo_at' => '2026-10-20']);

@@ -61,7 +61,7 @@ function at_rt_detener(array $s, string $motivo, string $ahora): void {
  *  fuente para el envío y para «Ver el correo tal como le llega» de la aprobación, así la vista previa no se desfasa. */
 function at_rt_datos_correo(array $s): array {
     $url = set_url_scheme(home_url('/retomar.php?t=' . $s['token']), 'https');
-    return ['nombre' => (string) $s['nombre'], 'negocio' => (string) $s['negocio'], 'quedamos' => (string) ($s['textos']['quedamos'] ?? ''), 'url_ver' => $url, 'url_agendar' => $url . '&agendar=1', 'url_baja' => $url . '&baja=1'];
+    return ['nombre' => at_rt_nombre_pila((string) $s['nombre']), 'negocio' => (string) $s['negocio'], 'quedamos' => (string) ($s['textos']['quedamos'] ?? ''), 'url_ver' => $url, 'url_agendar' => $url . '&agendar=1', 'url_baja' => $url . '&baja=1'];
 }
 
 /**
@@ -273,7 +273,7 @@ function at_rt_entregar(int $id, bool $prueba, string $ahora): array {
         $html = at_rt_correo_html($d); $texto = at_rt_correo_texto($d);
         $alternativa = static function ($mail) use ($texto): void { $mail->AltBody = $texto; };
         add_action('phpmailer_init', $alternativa);
-        try { $ok = wp_mail($destino, ($prueba ? '[Prueba] ' : '') . at_rt_asunto($n, $s['nombre']), $html, array_merge(['Content-Type: text/html; charset=UTF-8'], at_rt_cabeceras_baja($d['url_baja']))); }
+        try { $ok = wp_mail($destino, ($prueba ? '[Prueba] ' : '') . at_rt_asunto($n, at_rt_nombre_pila((string) $s['nombre'])), $html, array_merge(['Content-Type: text/html; charset=UTF-8'], at_rt_cabeceras_baja($d['url_baja']))); }
         catch (Throwable $e) { $ok = false; }
         finally { remove_action('phpmailer_init', $alternativa); }
         $r['ok'] = (bool) $ok; $r['motivo'] = $ok ? 'enviado' : 'correo_error';
@@ -290,7 +290,7 @@ function at_rt_entregar(int $id, bool $prueba, string $ahora): array {
             try { at_rt_marcar_propuesta_enviada($s, $ahora); }
             catch (Throwable $e) { error_log('Retomar: no se pudo marcar la propuesta como enviada: ' . $e->getMessage()); }
         }
-        if ($entrega['whatsapp']) { $r['whatsapp'] = ['id' => $id, 'n' => $n, 'telefono' => at_pt_telefono_wa($s['telefono']), 'nombre' => $s['nombre'], 'negocio' => $s['negocio'], 'token' => $s['token']]; }
+        if ($entrega['whatsapp']) { $r['whatsapp'] = ['id' => $id, 'n' => $n, 'telefono' => at_pt_telefono_wa($s['telefono']), 'nombre' => at_rt_nombre_pila((string) $s['nombre']), 'negocio' => $s['negocio'], 'token' => $s['token']]; }
         return $r;
     } finally {
         if ($claim) { $wpdb->query($wpdb->prepare("UPDATE {$wpdb->prefix}at_retomar SET enviando=NULL WHERE id=%d AND enviando=%s", $id, $ahora)); }
@@ -401,7 +401,7 @@ function at_rt_whatsapp_rezagados(string $cuando): array {
         if (!$pedir) { continue; }
         $cambio = $wpdb->query($wpdb->prepare("UPDATE {$wpdb->prefix}at_retomar SET envios=%s WHERE id=%d AND BINARY envios=BINARY %s", wp_json_encode($eventos, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), $id, $raw));
         if ($cambio !== 1) { continue; }
-        foreach ($pedir as $n) { $items[] = ['id' => $id, 'n' => $n, 'telefono' => $tel, 'nombre' => $s['nombre'], 'negocio' => $s['negocio'], 'token' => $s['token']]; }
+        foreach ($pedir as $n) { $items[] = ['id' => $id, 'n' => $n, 'telefono' => $tel, 'nombre' => at_rt_nombre_pila((string) $s['nombre']), 'negocio' => $s['negocio'], 'token' => $s['token']]; }
     }
     return $items;
 }

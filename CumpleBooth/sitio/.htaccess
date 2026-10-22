@@ -33,6 +33,9 @@ ErrorDocument 403 /404.html
   Header always set Referrer-Policy "strict-origin-when-cross-origin"
   # El sitio no usa cámara ni micrófono; el kiosco sí, y lo declara en el suyo.
   Header always set Permissions-Policy "camera=(), microphone=(), geolocation=()"
+  # No anunciar la versión de PHP (aviso PHP2Shell, 22-oct-2026): los escáneres la leen de esta cabecera.
+  Header always unset X-Powered-By
+  Header unset X-Powered-By
 
   # index.html se revalida siempre: sin esto, cambiar el precio o el copy no se
   # ve hasta que al visitante se le vence la caché heurística.

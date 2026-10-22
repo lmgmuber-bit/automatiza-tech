@@ -202,7 +202,8 @@ ok(!$metric('m-reel-25h', '48h'), 'reel de 25 h: sin toma 48h todavía');
 $m48 = $metric('m-img-49h', '48h');
 ok($m48 && (int) $m48->follows === 2 && (int) $m48->profile_visits === 9 && $m48->avg_watch_time_ms === null, 'imagen de 49 h: toma 48h con follows y visitas al perfil');
 ok((bool) $metric('m-vid-200h', '7d'), 'video sin tipo de 200 h: toma 7d');
-ok(!$metric('m-reel-40d', 'latest'), 'publicación de 40 días: no se gasta una llamada');
+$m40 = $metric('m-reel-40d', 'latest');
+ok($m40 && (int) $m40->views === 1000 && !$metric('m-reel-40d', '30d'), 'publicación de 40 días sin tomas: una sola lectura de relleno, sin rotular 30d');
 ok((bool) $metric('m-story-2h', 'latest'), 'historia vigente: toma latest');
 ok((int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$P}ig_account_daily WHERE channel_id = %d AND insights_at IS NOT NULL", $CID)) === 3, 'cuenta: 3 días completos guardados');
 $ayer = (new DateTimeImmutable('yesterday', new DateTimeZone('America/Santiago')))->format('Y-m-d');
@@ -233,6 +234,8 @@ $reset_throttle();
 $igc->sync($CID);
 $ins = array_filter($GLOBALS['ig']['calls'], static function ($u) { return strpos($u, '/insights') !== false && strpos($u, 'm-story') === false; });
 ok(count($ins) === 0, 'pasada sin pendientes: solo la historia vuelve a /insights');
+$r40 = array_filter($GLOBALS['ig']['calls'], static function ($u) { return strpos($u, 'm-reel-40d') !== false; });
+ok(count($r40) === 0, 'la publicación antigua ya rellenada no se vuelve a leer');
 
 // --- 5) Métrica rechazada: baja de nivel sin perder la toma
 $GLOBALS['ig']['reject_metric'] = ['m-reel-25h'];

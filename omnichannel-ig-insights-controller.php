@@ -41,6 +41,8 @@ class OmniIgInsightsController {
     /** Cada cuánto se refresca la toma "latest" de una publicación de hasta 35 días. */
     const LATEST_EVERY_HOURS = 6;
     const LATEST_MAX_AGE_HOURS = 840;
+    /** Publicaciones antiguas sin ninguna toma que se leen por pasada (una vez cada una). */
+    const BACKFILL_PER_RUN = 10;
     /** Cada cuánto se vuelven a pedir los días de la cuenta (Meta tarda hasta 48 h en asentar). */
     const ACCOUNT_EVERY_HOURS = 6;
     const ACCOUNT_DAYS_BACK = 3;
@@ -452,19 +454,36 @@ class OmniIgInsightsController {
 
     /** Publicaciones que necesitan una toma ahora. */
     private function posts_due($channel_id, $force) {
+        $cutoff = gmdate('Y-m-d H:i:s', time() - self::LATEST_MAX_AGE_HOURS * HOUR_IN_SECONDS);
         $rows = $this->wpdb->get_results($this->wpdb->prepare(
             "SELECT * FROM {$this->prefix}ig_posts
              WHERE channel_id = %d AND status = 'published' AND posted_at IS NOT NULL AND posted_at >= %s
              ORDER BY posted_at DESC",
-            $channel_id, gmdate('Y-m-d H:i:s', time() - self::LATEST_MAX_AGE_HOURS * HOUR_IN_SECONDS)
+            $channel_id, $cutoff
         ));
-        if (!$rows) return [];
-        $ids = array_map(function ($r) { return (int) $r->id; }, $rows);
-        $taken = $this->taken_checkpoints($ids);
         $due = [];
-        foreach ($rows as $r) {
-            $r->due = $this->due_checkpoints($r, $taken[(int) $r->id] ?? [], $force);
-            if ($r->due) $due[] = $r;
+        if ($rows) {
+            $ids = array_map(function ($r) { return (int) $r->id; }, $rows);
+            $taken = $this->taken_checkpoints($ids);
+            foreach ($rows as $r) {
+                $r->due = $this->due_checkpoints($r, $taken[(int) $r->id] ?? [], $force);
+                if ($r->due) $due[] = $r;
+            }
+        }
+        // Publicaciones de más de 35 días sin ninguna toma: una sola lectura cada una, unas
+        // pocas por pasada, para que todas tengan cifras sin gastar la cuota de golpe.
+        $old = $this->wpdb->get_results($this->wpdb->prepare(
+            "SELECT p.* FROM {$this->prefix}ig_posts p
+             LEFT JOIN {$this->prefix}ig_post_metrics m ON m.post_id = p.id
+             WHERE p.channel_id = %d AND p.status = 'published' AND p.media_product_type <> 'STORY'
+               AND p.posted_at IS NOT NULL AND p.posted_at < %s
+               AND p.insights_state IN ('pending', 'no_permission', 'token_invalid') AND m.id IS NULL
+             ORDER BY p.posted_at DESC LIMIT %d",
+            $channel_id, $cutoff, self::BACKFILL_PER_RUN
+        ));
+        foreach ((array) $old as $r) {
+            $r->due = ['latest'];
+            $due[] = $r;
         }
         return $due;
     }

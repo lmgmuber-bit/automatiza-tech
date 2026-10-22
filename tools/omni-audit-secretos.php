@@ -15,6 +15,7 @@
  *       borrarlo cuando la tabla esté verificada.
  *   --ids=12,15  limita el barrido a esas filas de la auditoría (pruebas o corrección puntual).
  *   --controlador=<ruta>  omnichannel-controller.php a usar (por defecto, el del sitio de --wp).
+ *   --host=automatizatech.cl  HTTP_HOST con que se carga WordPress (en PROD wp-config.php elige la base por el host).
  *
  * Guía: Docs/OMNICLIENTE-METRICAS-IG.md, sección «Secretos de canales y auditoría».
  */
@@ -24,7 +25,7 @@ if (PHP_SAPI !== 'cli') {
     exit('Solo por línea de comandos');
 }
 
-$opts = getopt('', ['wp:', 'aplicar', 'respaldo:', 'ids:', 'controlador:']);
+$opts = getopt('', ['wp:', 'aplicar', 'respaldo:', 'ids:', 'controlador:', 'host:']);
 $only_ids = isset($opts['ids']) ? array_map('intval', explode(',', (string) $opts['ids'])) : null;
 $wp_load = $opts['wp'] ?? '';
 if ($wp_load === '' || !is_file($wp_load)) {
@@ -34,7 +35,7 @@ if ($wp_load === '' || !is_file($wp_load)) {
 $apply = array_key_exists('aplicar', $opts);
 $backup_path = $opts['respaldo'] ?? '';
 
-$_SERVER['HTTP_HOST'] = $_SERVER['HTTP_HOST'] ?? 'localhost';
+$_SERVER['HTTP_HOST'] = $opts['host'] ?? 'localhost';
 $_SERVER['REQUEST_URI'] = $_SERVER['REQUEST_URI'] ?? '/';
 define('WP_USE_THEMES', false);
 require $wp_load;

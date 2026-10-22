@@ -272,7 +272,7 @@ Cómo queda:
 | 2 | `omnichannel-controller.php` | `public_html/` | OBLIGATORIO |
 | 3 | `omnicliente/assets/*` nuevos (15 `.js`) y después `omnicliente/index.html` | `public_html/omnicliente/` | OBLIGATORIO |
 | 4 | `tools/omni-audit-secretos.php` | `~/respaldos/omni-audit-<fecha>/` (nunca en `public_html`) | OBLIGATORIO |
-| 5 | `php omni-audit-secretos.php --wp=domains/automatizatech.cl/public_html/wp-load.php` (conteo) y luego con `--aplicar --respaldo=<carpeta del paso 4>/filas.jsonl` | SSH | OBLIGATORIO |
+| 5 | `php omni-audit-secretos.php --wp=<home>/domains/automatizatech.cl/public_html/wp-load.php --host=automatizatech.cl` (conteo; sin `--host` wp-config.php elige la base local y falla) y luego con `--aplicar --respaldo=<carpeta del paso 4>/filas.jsonl` | SSH | OBLIGATORIO |
 | 6 | Verificar: un segundo conteo da 0 cambios; `GET channels` como cliente y como agente sin claves; editar un canal sin tocar la clave la conserva | SSH + portal | OBLIGATORIO |
 | 7 | Renovar el token de Instagram (§5.1) y la API key de YCloud de los canales de WhatsApp (YCloud Console → API Keys, pegarla en Canales) | Luis | RECOMENDADO |
 | 8 | Borrar `filas.jsonl` cuando la tabla esté verificada (guarda los valores originales) | SSH | OBLIGATORIO al cierre |

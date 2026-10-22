@@ -160,9 +160,9 @@ Por eso la configuración propia de AT (destinatarios de la derivación, ejecuti
 
 Las que dicen *Eje* puede corregirlas Luis.
 
-- **Estado «esperando a una persona»** *(Eje)*: no se agrega un valor nuevo al ENUM. La derivación deja `status = 'open'`, `intervention_mode = 'human'` y `assigned_agent_id = NULL`.
-  - El constructor debe verificar que el inbox del Portal muestre esas conversaciones y que cualquier ejecutivo pueda tomarlas.
-  - También debe verificar que «liberar» una conversación sin ejecutivo no falle, por ejemplo al descontar `active_chats`. Si falla, se corrige en el backend con un guardia, sin tocar el frontend.
+- **Estado de la conversación derivada:** lo reemplaza la respuesta de Luis: queda asignada a él como ejecutivo, con `status = 'assigned'`.
+  - Si en el futuro no hay un ejecutivo por defecto configurado, queda en `status = 'open'` sin asignar. No se agrega ningún valor nuevo al ENUM.
+  - El constructor debe verificar que el inbox muestre ese caso y que «liberar» una conversación sin ejecutivo no falle, por ejemplo al descontar `active_chats`. Si falla, se corrige en el backend con un guardia.
 - **Descartar callbacks en conversaciones humanas** *(Eje)*: solo en el canal Instagram. WhatsApp sigue igual que hoy.
 - **Correos de derivación** *(Eje)*: se guardan en una opción de WordPress (`omni_ig_derivacion_correos`), sin migración.
   - Se envían con una función nueva; `notify_agent_assignment` necesita un ejecutivo, así que no se reutiliza.

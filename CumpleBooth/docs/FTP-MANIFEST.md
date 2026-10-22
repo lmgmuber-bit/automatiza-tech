@@ -21,6 +21,35 @@ grep -o 'assets/[a-zA-Z0-9._-]*' dist/index.html   # lo que index.html pide
 Sube **todos** los de `dist/assets/` junto con `dist/index.html` en la misma
 tanda. Los que sobren del build anterior se pueden borrar después.
 
+## DESPLEGADO 2026-10-21 (noche): la ruleta espera su voz y «Descargar todas las fotos (ZIP)» en el admin (rama `claude/ruleta-voz-descarga-fotos`)
+
+Pedidos de Luis del 21-oct. **Ruleta:** la frase «¡La ruleta está girando… ¿a quién le tocará bailar?» dura 4,2 s y
+el giro 3,7 s, así que la voz del resultado la cortaba (medido grabando el kiosco). Ahora el resultado espera a que
+terminen las dos cosas (`esperarGiro` en `src/animador/voz.js`): si la ruleta ya frenó, sigue pasando nombres despacio;
+sin voz revela al terminar el giro; tope de 6 s. «Otra persona» dice solo «¿No quiere? ¡Tranquilos, giramos otra
+vez!» (sumarle la frase del giro duraba 7,7 s). **ZIP:** botón en Álbum → Fotos del kiosco que baja `cabina/` (lo que
+sigue en la galería) e `invitados/` (aprobadas y pendientes; sin lo oculto ni los videos) en un ZIP escrito mientras
+se descarga (`lib.zip.php`, sin ZipArchive ni temporales en el servidor, con Content-Length exacto). Cada carpeta pide
+su módulo: un operador con solo «Fotos del kiosco» recibe solo `cabina/`; el portero exige que la fiesta sea suya.
+- **Pruebas:** frontend 332 (329 pasan, 3 omitidas), con 5 nuevas de la ruleta; `descargar-fotos-http.php` 22
+  (el ZIP abre con ZipArchive CHECKCONS, cada foto idéntica por sha256, permisos y 404); `album`, `album-moderar-varios-http`,
+  `usuarios-http`, `cumple-adulto-http`, `adulto-textos-http`, `galeria-http` y `lint` en verde. Un ZIP con las 27 fotos
+  reales de la cabina del piloto abrió con Python `zipfile` (CRC sin errores) y con .NET `ZipFile` (el de Windows).
+- **Verificado en local:** grabando la ruleta en Chrome, «está girando» suena entera (4,27 s, termina sola) y recién
+  después «te toca bailar…»; «Otra persona» dice su frase y revela.
+- **Subido con go de Luis** (script `subir-ruleta-descarga.py`, fuera del repo): se cotejó antes que `_acceso.php`, `_style.css.php`
+  y `album.php` de PROD fueran iguales a `main` (sin CR) y que los dos archivos nuevos no existieran; respaldos en
+  `~/respaldos/app-*.antes-*`; cada archivo con sha256 y `php -l`, `mv` atómico, el `index.html` al final.
+- **Verificado en PROD:** los 7 archivos iguales al local; `index.html` desde afuera igual al local; `descargar-fotos.php`
+  sin sesión responde 302 al login; en el servidor, el ZIP de la fiesta del piloto se arma con 25 fotos de cabina (8,3 MB).
+  Nadie ha bajado el ZIP desde el admin con sesión todavía.
+- **Orden en que se subió:** `public/lib.zip.php` → `app/lib.zip.php`; `public/admin/descargar-fotos.php` →
+  `app/admin/descargar-fotos.php`; `public/admin/_acceso.php`, `public/admin/_style.css.php` y `public/admin/album.php`
+  → `app/admin/` (cotejar antes contra `main`); los `dist/assets/` que pida el `index.html` nuevo (`main-*.js` cambia)
+  y `dist/index.html` → `app/index.html` al final. Sin migración.
+- **No probado:** la descarga en PROD con una fiesta grande (cientos de fotos) ni que el borde de Hostinger deje pasar
+  una respuesta larga sin cortarla; la ruleta en la tablet física.
+
 ## DESPLEGADO 2026-10-16 (tarde): transiciones habladas y ruleta del baile (rama `claude/animador-voces`)
 
 Go de Luis en cada paso. **Transiciones** (`7ca9898`): «Paso esta» y «Siguiente» dicen una frase («¡Uy, esa no nos

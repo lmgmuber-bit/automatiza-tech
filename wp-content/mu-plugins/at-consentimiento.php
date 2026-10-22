@@ -55,6 +55,8 @@ function at_consent_dibujar() {
 .at-consent__btn--si{background:#14b8a6;border-color:#14b8a6;color:#04121f}
 .at-consent__btn:focus-visible{outline:3px solid #fde68a;outline-offset:2px}
 @media (max-width:480px){.at-consent{left:12px;right:12px;bottom:12px}.at-consent__btn{flex:1}}
+/* En pantallas anchas va abajo a la izquierda y más angosto: no tapa el botón del chat («Háblale a Tech») de la derecha. */
+@media (min-width:900px){.at-consent{left:24px;right:auto;bottom:24px;width:520px;justify-content:flex-start}.at-consent__btn{min-width:110px}}
 </style>
 <script>
 (function () {

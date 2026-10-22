@@ -1,7 +1,8 @@
 # Métricas de Instagram en el Portal OmniCliente
 
-> Estado (21-oct-2026): **LOCAL, en la rama `claude/omni-metricas-ig-b7cf03`**, con pruebas en verde. Nada de esto está en PROD
-> hasta que Luis autorice el despliegue (lista exacta en §7). Dueño del área: Eje (plataforma AT).
+> Estado: **EN PROD desde el 21-oct-2026 (21:20–21:30, hora de Chile)**, con autorización de Luis, desde la rama
+> `claude/omni-secretos-canales` (incluye `claude/omni-metricas-ig-b7cf03`, PR lmgmuber-bit/automatiza-tech#100). Evidencia en §10.
+> Dueño del área: Eje (plataforma AT).
 
 La vista **Marketing IG** del portal dejó de ser una maqueta: muestra las métricas reales de @automatizatech.cl, las guarda en la
 base y las entrega a los agentes (Claqueta, la sesión de redes) por una ruta protegida. Si falta el permiso de Meta o todavía no
@@ -214,7 +215,7 @@ no se crucen. La vista se revisó en el navegador (claro y oscuro, sin y con per
 A por Vigía (Claude) el 21-oct: sin inyección SQL, XSS ni fugas del token en lo nuevo; sus hallazgos de esta rama quedaron
 corregidos (límite antes del secreto, sin `force` para agentes, candado atómico, pruebas solo por línea de comandos).
 
-## 7. Despliegue a PROD (requiere autorización de Luis)
+## 7. Despliegue a PROD (hecho el 21-oct; la tabla queda como procedimiento y para la reversa)
 
 Base: `main` = PROD para estos archivos (cotejado el 21-oct por SSH, solo lectura: `api-omnichannel.php` y
 `omnichannel-controller.php` iguales salvo el fin de línea; el build `omnicliente/` también).
@@ -264,7 +265,7 @@ Cómo queda:
   `--respaldo=<archivo>` nuevo y fuera del sitio, donde guarda antes cada fila original. Las filas con JSON ilegible se cuentan y
   no se tocan. `--ids=` limita el barrido. Es idempotente.
 
-**Despliegue (requiere autorización de Luis; después del de Métricas IG o junto con él):**
+**Despliegue (hecho el 21-oct junto con el de Métricas IG; evidencia en §10):**
 
 | Orden | Qué | Dónde | Clase |
 |---|---|---|---|
@@ -284,3 +285,30 @@ Cómo queda:
 edición que conserva, auditoría nueva y anterior, conteo sin valores, respaldo, idempotencia y el script por línea de comandos). Las
 suites de Métricas IG siguen en 70/70 y 28/28. Revisado en el navegador: Canales con «✓ Configurado» para WhatsApp, la URL del
 webhook para admin y el guardado con la clave vacía (la base la conservó y la auditoría no guardó valores).
+
+## 10. Despliegue del 21-oct-2026 (evidencia)
+
+Autorizado por Luis. Base cotejada antes de subir: `api-omnichannel.php`, `omnichannel-controller.php` y `omnicliente/index.html` de
+PROD eran iguales a `main` (md5 sin cambios desde el cotejo de la tarde).
+
+- **Respaldos en el servidor:** `~/respaldos/omni-metricas-ig-antes-20261021/` (los tres archivos, `wp-config.php` con permisos 600,
+  `omnichannel-ig-insights-controller.php.v1` y `audit_log.sql`, 117 de 117 filas); `~/respaldos/omni-audit-20261021/filas.jsonl`
+  (las 31 filas originales de la auditoría, 600).
+- **Subido** (cada archivo con nombre temporal, renombrado y cotejado por md5): los tres PHP, 19 bundles nuevos de `omnicliente/assets/`,
+  `manifest.json` e `index.html` al final. A las 21:30 se subió de nuevo `omnichannel-ig-insights-controller.php` con el relleno de
+  publicaciones antiguas.
+- **Secreto:** `AT_IG_METRICS_SECRET` en `wp-config.php` (línea 172, antes de `wp-settings.php`; `php -l` antes de reemplazar; PHP la
+  ve definida, 48 caracteres), en el archivo de claves con la etiqueta `AT IG METRICS SECRET` y en la credencial de n8n
+  `AT IG Metrics Secret`. Nunca se mostró el valor.
+- **n8n:** flujo «OmniCliente · Métricas IG (toma cada hora)» (`0XI7qHPgg0TEPclm`) creado y activo, minuto 7 de cada hora.
+- **Verificado desde afuera:** `health` 200; `ig-metrics` sin cabecera 403 y con la credencial 200; `admin/ig-insights` sin sesión 403;
+  `reel-diario/token-check` sin secreto 403. **Primera toma real: `status: ok`** (el token ya tenía el permiso de insights), 50
+  publicaciones, 3 días de la cuenta, 8 llamadas a Meta.
+- **Publicador:** `check_instagram_token` del canal 2 en el servidor: `ok`, usuario `automatizatech.cl`.
+- **Canales:** con los datos reales, `get_all_channels` (admin, 2 canales) y `get_channels` (clientes y agentes, 2 canales) no
+  devuelven ninguna clave; el admin conserva la URL del webhook.
+- **Auditoría:** el conteo en seco marcó 31 filas (20 de canales, 9 de agentes, 2 de clientes); se aplicó con respaldo y un segundo
+  conteo dio 0.
+
+**No verificado:** la vista Marketing IG con una sesión de admin en PROD (se probó en local contra la misma API; en PROD se comprobó
+que el portal sirve el bundle nuevo y que la API responde).

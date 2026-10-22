@@ -27,14 +27,24 @@ Agentes ─ GET ig-metrics (secret) ──────┴─ lee las tablas, no 
   `REEL_DIARIO_CHANNEL_ID`) a través de `OmnichannelController::ig_graph_get()`, que solo hace GET. Los métodos del
   publicador (`reel-diario/*`, `ig_api_request`, `check_instagram_token`) no cambiaron.
 - **Tomas por publicación:** a las **24 h, 48 h, 7 días y 30 días** de publicada (fijas, no se pisan) y una **«última»** que se
-  refresca cada 6 h mientras la publicación tenga hasta 35 días. Una toma fija se registra solo hasta 1,5 veces su edad (la de
-  24 h, hasta las 36 h): si se descubrió tarde, queda vacía en vez de mal rotulada. Las historias se leen en cada pasada mientras
-  duran (24 h).
+  refresca **cada hora hasta las 72 h** (cuando más se mueve) y después cada 6 h, mientras la publicación tenga hasta 35 días
+  (decisión de Luis, 21-oct). Los intervalos tienen 5 minutos de margen porque el cron corre siempre al minuto 7. Una toma fija se
+  registra solo hasta 1,5 veces su edad (la de 24 h, hasta las 36 h): si se descubrió tarde, queda vacía en vez de mal rotulada. Las
+  historias se leen en cada pasada mientras duran (24 h). Las publicaciones de más de 35 días sin ninguna toma reciben una sola
+  lectura (10 por pasada).
 - **Cuenta por día:** alcance, visualizaciones, cuentas que interactuaron, interacciones, likes, comentarios, compartidos,
   guardados, respuestas y toques de enlaces del perfil, de ayer y dos días antes (Meta tarda hasta 48 h en asentar las cifras), más
   la foto de seguidores de cada día. Los seguidores nuevos por día (`follower_count`) Meta solo los da a cuentas con 100 o más.
-- **Costo en llamadas:** unas 5 por hora en régimen (11 en la primera toma de la prueba). El tope de Meta es 4.800 × impresiones
-  de 24 h por cuenta (doc de Meta, [overview](https://developers.facebook.com/docs/instagram-platform/instagram-api-with-instagram-login/overview)).
+- **Costo en llamadas:** con 2 reels al día hay hasta ~6 publicaciones de menos de 72 h, así que una pasada hace unas 10
+  llamadas (perfil, lista, historias, ~6 publicaciones y, cada 6 h, 3 días de cuenta): ~230 al día. La primera toma real en PROD
+  hizo 8. El tope de Meta es 4.800 × impresiones de la cuenta en 24 h (doc de Meta,
+  [overview](https://developers.facebook.com/docs/instagram-platform/instagram-api-with-instagram-login/overview)): con un reel de
+  ~500 visualizaciones son millones; en un día casi sin vistas (2 al día, como el 18–20 de octubre) serían ~9.600, unas 40 veces
+  más de lo que se usa. No verificado: qué hace Meta con cero impresiones (la doc no lo dice); para eso está el freno de abajo.
+- **Freno por límite de Meta:** si Meta responde que se pasó el límite (códigos 4, 17, 32, 613 u 80002, o un mensaje de «request
+  limit» / «too many calls»), la toma se corta en el acto (lo ya leído queda guardado), el estado pasa a `rate_limited` y no se
+  hace ninguna llamada durante una hora, ni con el botón ni desde la ruta de agentes. Así el token y la cuota del publicador
+  quedan a salvo. El flujo de n8n avisa por correo el cambio de estado.
 - **Freno:** dos tomas seguidas con menos de 2 minutos de diferencia se saltan (también con `force`), y un candado atómico
   (`add_option`) impide que corran dos a la vez. El botón del portal fuerza la toma, pero aun así no relee lo tomado hace menos de
   30 minutos; los agentes no pueden forzar (el token y su cuota son los mismos del publicador).
@@ -147,6 +157,7 @@ Las cifras del ejemplo son ilustrativas. Fechas en ISO 8601 UTC (`Z`); los días
 | `token_invalid` | Token vencido o inválido (código 190): **el publicador también falla** | Renovar el token (§5) |
 | `no_token` | El canal no tiene token | Pegar el token en Canales → Instagram |
 | `error` | Otro fallo; detalle en `last_errors` | Revisar el mensaje |
+| `rate_limited` | Meta pidió bajar el ritmo: pausa de una hora sin llamadas | Nada; se reanuda sola. Si se repite, revisar el volumen de llamadas |
 
 `posts[].insights_state`: `ok`, `pending`, `no_permission`, `token_invalid`, `not_enough_viewers` (Meta no da cifras de historias con
 menos de 5 espectadores), `deleted` o `error`. `posts[].status`: `published`, `deleted` (ya no está en Instagram) o `expired`

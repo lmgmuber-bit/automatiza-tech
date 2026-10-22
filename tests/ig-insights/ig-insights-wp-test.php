@@ -31,6 +31,7 @@ register_shutdown_function(static function () use ($wpdb, $P, $CID) {
 	delete_option('omni_ig_insights_state_' . $CID);
 	delete_option('omni_ig_insights_profile_' . $CID);
 	delete_option('omni_ig_insights_lock_' . $CID);
+	delete_option('omni_ig_insights_cooldown_' . $CID);
 });
 
 // --- Simulación de graph.instagram.com
@@ -86,6 +87,7 @@ add_filter('pre_http_request', static function ($pre, $args, $url) use ($VALS, $
 		}, $g['media']), 'paging' => ['cursors' => ['before' => 'x', 'after' => 'y']]]);
 	}
 	if ($path === 'me/stories') { return ig_resp(200, ['data' => $g['stories']]); }
+	if ($g['mode'] === 'rate_limit' && strpos($path, 'insights') !== false) { return ig_err(4, '(#4) Application request limit reached'); }
 	if ($path === 'me/insights') {
 		if ($g['mode'] === 'no_perm') { return ig_err(10, '(#10) Application does not have permission for this action'); }
 		$metrics = explode(',', $q['metric'] ?? '');
@@ -157,6 +159,9 @@ ok($igc->due_checkpoints($mk(100), ['latest' => gmdate('Y-m-d H:i:s', $now - 2 *
 ok($igc->due_checkpoints($mk(100), ['latest' => gmdate('Y-m-d H:i:s', $now - 2 * $H)], true, $now) === ['latest'], 'con force se refresca la última');
 ok($igc->due_checkpoints($mk(100), ['latest' => gmdate('Y-m-d H:i:s', $now - 600)], true, $now) === [], 'con force no se relee una toma de hace 10 min');
 ok($igc->due_checkpoints($mk(3, 'STORY'), ['latest' => gmdate('Y-m-d H:i:s', $now - 1800)], false, $now) === ['latest'], 'historia: se refresca en cada pasada');
+ok($igc->due_checkpoints($mk(10), ['latest' => gmdate('Y-m-d H:i:s', $now - 58 * 60)], false, $now) === ['latest'], 'menos de 72 h: se relee cada hora (con 5 min de margen para el cron)');
+ok($igc->due_checkpoints($mk(10), ['latest' => gmdate('Y-m-d H:i:s', $now - 30 * 60)], false, $now) === [], 'menos de 72 h: no se relee antes de la hora');
+ok($igc->due_checkpoints($mk(100), ['latest' => gmdate('Y-m-d H:i:s', $now - 30 * 60)], false, $now) === [] && $igc->due_checkpoints($mk(100), ['latest' => gmdate('Y-m-d H:i:s', $now - (6 * 3600 - 180))], false, $now) === ['latest'], 'más de 72 h: cada 6 h, también con margen');
 ok($igc->post_kind((object) ['media_product_type' => '', 'media_type' => 'VIDEO']) === 'REELS', 'VIDEO sin tipo → Reel');
 ok($igc->post_kind((object) ['media_product_type' => '', 'media_type' => 'CAROUSEL_ALBUM']) === 'FEED', 'carrusel → feed');
 $parsed = OmniIgInsightsController::parse_insights(['data' => [
@@ -168,6 +173,9 @@ ok($parsed === ['reach' => 12, 'views' => 34], 'parse_insights lee values[0] y t
 ok(OmniIgInsightsController::classify_error(['error' => 'x', 'fb_error' => ['code' => 190]])['status'] === 'token_invalid', '190 → token_invalid');
 ok(OmniIgInsightsController::classify_error(['error' => '(#10) Application does not have permission for this action', 'fb_error' => ['code' => 10]])['status'] === 'no_permission', '10 → no_permission');
 ok(OmniIgInsightsController::classify_error(['error' => '(#10) Not enough viewers for the media to show insights', 'fb_error' => ['code' => 10]])['status'] === 'error', '10 por pocos espectadores no es falta de permiso');
+ok(OmniIgInsightsController::classify_error(['error' => '(#4) Application request limit reached', 'fb_error' => ['code' => 4]])['status'] === 'rate_limited'
+	&& OmniIgInsightsController::classify_error(['error' => '(#17) User request limit reached', 'fb_error' => ['code' => 17]])['status'] === 'rate_limited'
+	&& OmniIgInsightsController::classify_error(['error' => 'There have been too many calls to this Instagram account', 'fb_error' => ['code' => 80002]])['status'] === 'rate_limited', '4, 17 y 80002 → rate_limited');
 ok(strpos(OmniIgInsightsController::classify_error(['error' => 'algo ' . str_repeat('A', 60), 'fb_error' => ['code' => 1]])['message'], str_repeat('A', 60)) === false, 'una cadena larga tipo token se tacha del mensaje');
 
 // --- Estado inicial
@@ -269,6 +277,25 @@ update_option('omni_ig_insights_lock_' . $CID, time() - 600, false);
 $r = $igc->sync($CID);
 ok(empty($r['skipped']), 'un candado de hace 10 min se considera muerto y la toma sigue');
 ok(get_option('omni_ig_insights_lock_' . $CID, 'no') === 'no', 'al terminar la toma suelta el candado');
+
+// --- 6c) Límite de Meta: se corta en el acto y se pausa una hora sin llamar
+$GLOBALS['ig']['mode'] = 'rate_limit';
+$GLOBALS['ig']['calls'] = [];
+$reset_throttle();
+$age_latest();
+$r = $igc->sync($CID);
+$ins = array_filter($GLOBALS['ig']['calls'], static function ($u) { return strpos($u, 'insights') !== false; });
+ok(($r['status'] ?? '') === 'rate_limited' && !empty($r['ok']), 'límite de Meta: estado rate_limited (no cuenta como falla)');
+ok(count($ins) === 1, 'límite de Meta: se corta tras la primera respuesta, sin seguir llamando (' . count($ins) . ' a /insights)');
+$cool = (int) get_option('omni_ig_insights_cooldown_' . $CID, 0);
+ok($cool > time() + 3500 && $cool <= time() + 3600, 'límite de Meta: pausa de una hora guardada');
+$GLOBALS['ig']['calls'] = [];
+$reset_throttle();
+$r = $igc->sync($CID, true);
+ok(!empty($r['skipped']) && ($r['status'] ?? '') === 'rate_limited' && count($GLOBALS['ig']['calls']) === 0, 'durante la pausa ninguna toma llama a Meta, ni con force');
+ok($igc->get_status($CID)['status'] === 'rate_limited', 'el estado guardado avisa la pausa');
+delete_option('omni_ig_insights_cooldown_' . $CID);
+$GLOBALS['ig']['mode'] = 'ok';
 
 // --- 7) Token vencido
 $GLOBALS['ig']['mode'] = 'token_expired';

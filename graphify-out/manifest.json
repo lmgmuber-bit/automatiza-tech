@@ -1,6 +1,6 @@
 {
   ".claude/launch.json": {
-    "mtime": 1792596162.1084518,
+    "mtime": 1792604609.0059125,
     "ast_hash": "1f80fcf6ebe5c0ea56c0c1c5414c1e6d",
     "semantic_hash": ""
   },
@@ -675,8 +675,8 @@
     "semantic_hash": "d0f46b9024d90bc80aee38f73b623393"
   },
   "client-portal-omnichannel/src/components/ChannelsView.jsx": {
-    "mtime": 1792595578.1960428,
-    "ast_hash": "82cb3cc554a254342d588fe069b93ec2",
+    "mtime": 1792628756.2049387,
+    "ast_hash": "87ad058b5eeee19600af1b1e47324b25",
     "semantic_hash": ""
   },
   "client-portal-omnichannel/src/components/ClientsView.jsx": {
@@ -920,8 +920,8 @@
     "semantic_hash": "facfad74f10941f44c495d53757cf12e"
   },
   "omnichannel-controller.php": {
-    "mtime": 1792594663.2529154,
-    "ast_hash": "d3628a1f9c28e76c69dda8558195df7b",
+    "mtime": 1792628756.3290415,
+    "ast_hash": "12113dab6b9351dbfa3a1cef416e086c",
     "semantic_hash": ""
   },
   "omnichannel-cron-expiry.php": {
@@ -930,12 +930,12 @@
     "semantic_hash": "e610633e963320b42b1f666259ddf4c7"
   },
   "omnicliente/assets/react-vendor-BWAn5Moh.js": {
-    "mtime": 1792596045.4145908,
+    "mtime": 1792604492.9126587,
     "ast_hash": "dbeb1a371aafb1a48c295e06ce6a85bc",
     "semantic_hash": ""
   },
   "omnicliente/manifest.json": {
-    "mtime": 1792596045.4287357,
+    "mtime": 1792604492.9227407,
     "ast_hash": "4969a5fb7259ad94e2be9ffd57296517",
     "semantic_hash": "4969a5fb7259ad94e2be9ffd57296517"
   },
@@ -4615,8 +4615,8 @@
     "semantic_hash": ""
   },
   "CLAUDE.md": {
-    "mtime": 1792596525.6358633,
-    "ast_hash": "d0175ba2221344de287a6c6e28e0f638",
+    "mtime": 1792604789.054276,
+    "ast_hash": "78c2020fb5257163bc69785ffcfdbd9a",
     "semantic_hash": ""
   },
   "CONTEXTO_COMPLETO.md": {
@@ -5555,8 +5555,8 @@
     "semantic_hash": ""
   },
   "Docs/MASTER/06_PORTAL_OMNICLIENTE_FRONTEND.md": {
-    "mtime": 1792596525.810568,
-    "ast_hash": "c6eb72cf8f4b628ecc3b5b79edd7d692",
+    "mtime": 1792604789.057736,
+    "ast_hash": "66c524cb2447d10300689d3b1fb9fd7e",
     "semantic_hash": ""
   },
   "Docs/MASTER/07_N8N_WORKFLOWS.md": {
@@ -5935,8 +5935,8 @@
     "semantic_hash": ""
   },
   "omnicliente/index.html": {
-    "mtime": 1792596045.394301,
-    "ast_hash": "ba9edc68cc69adea7a6511efe9ff85d0",
+    "mtime": 1792628756.3455913,
+    "ast_hash": "c32de6d4c4e4f20e0e2c7fd0c673f62c",
     "semantic_hash": ""
   },
   "promo-assets/PROMPTS-IMAGEN-GEMINI.md": {
@@ -7835,12 +7835,12 @@
     "semantic_hash": ""
   },
   "omnicliente/logo-automatiza-tech.png": {
-    "mtime": 1792596045.427739,
+    "mtime": 1792604492.9227407,
     "ast_hash": "5c61081ac6c7695d7f9982b57c6a876d",
     "semantic_hash": ""
   },
   "omnicliente/tech-avatar.png": {
-    "mtime": 1792596045.425165,
+    "mtime": 1792604492.9227407,
     "ast_hash": "0fb38781f57ccc9747199cbbc0022805",
     "semantic_hash": ""
   },
@@ -13010,98 +13010,23 @@
     "semantic_hash": ""
   },
   "omnichannel-ig-insights-controller.php": {
-    "mtime": 1792597005.1427457,
-    "ast_hash": "968db152007a934265ee42b56d2d5980",
-    "semantic_hash": ""
-  },
-  "omnicliente/assets/AgentsView-Dqp3cr5R.js": {
-    "mtime": 1792596045.4035013,
-    "ast_hash": "2eb33d6bbe2a05e894f23aaba467e789",
-    "semantic_hash": ""
-  },
-  "omnicliente/assets/AiPromptView-BKal4pol.js": {
-    "mtime": 1792596045.3987813,
-    "ast_hash": "442ea815ba74a0d830cad34de587c5bc",
-    "semantic_hash": ""
-  },
-  "omnicliente/assets/AuditView-BoHBHfZd.js": {
-    "mtime": 1792596045.4045296,
-    "ast_hash": "dc17b1dd92c50570e3d016f2da5f3b5e",
-    "semantic_hash": ""
-  },
-  "omnicliente/assets/BotConfigUnifiedView-DBfQmMaV.js": {
-    "mtime": 1792596045.4165938,
-    "ast_hash": "877bec6d10f07d41ac7cf309e1acd8b8",
-    "semantic_hash": ""
-  },
-  "omnicliente/assets/BotsView-Crq1_ZZW.js": {
-    "mtime": 1792596045.4175892,
-    "ast_hash": "9028e04c8349d29f21833cb09933e4a7",
-    "semantic_hash": ""
-  },
-  "omnicliente/assets/ChannelTypesView-CP6QSoWU.js": {
-    "mtime": 1792596045.4055243,
-    "ast_hash": "34c8af7709a5bd8b3b62300140ed4167",
-    "semantic_hash": ""
-  },
-  "omnicliente/assets/ChannelsView-BgU2nqh_.js": {
-    "mtime": 1792596045.3977878,
-    "ast_hash": "4635fe4b320c9958aee1081327dd864f",
-    "semantic_hash": ""
-  },
-  "omnicliente/assets/ClientsView-CY8dVjPK.js": {
-    "mtime": 1792596045.4065335,
-    "ast_hash": "167f00595f70757e4cadcd6e1a983168",
+    "mtime": 1792628783.674224,
+    "ast_hash": "3b0b3a0c7e33217925cb0eb5953da99c",
     "semantic_hash": ""
   },
   "omnicliente/assets/ConfirmDeleteModal-_3T3xSYv.js": {
-    "mtime": 1792596045.411594,
+    "mtime": 1792604492.9207318,
     "ast_hash": "3bb2ecb9f823a0a7be21b8173fd59bed",
     "semantic_hash": ""
   },
-  "omnicliente/assets/DashboardView-DooTxfzJ.js": {
-    "mtime": 1792596045.4085267,
-    "ast_hash": "83a43a6ec7376bee2765038166bbfabb",
-    "semantic_hash": ""
-  },
-  "omnicliente/assets/InboxView-BC1klYPR.js": {
-    "mtime": 1792596045.4191074,
-    "ast_hash": "6a9360475ecbf3f07b9c43886e7626cf",
-    "semantic_hash": ""
-  },
-  "omnicliente/assets/MarketingIgView-D_dKPZW6.js": {
-    "mtime": 1792596045.396783,
-    "ast_hash": "bc570fe714bcafa9b835073a120e0a57",
-    "semantic_hash": ""
-  },
-  "omnicliente/assets/ProfileView-DmJC1Eop.js": {
-    "mtime": 1792596045.4075286,
-    "ast_hash": "ea9c020329547515d0f3b4c4e3af70f0",
-    "semantic_hash": ""
-  },
-  "omnicliente/assets/PromptsView-goVstSdL.js": {
-    "mtime": 1792596045.410558,
-    "ast_hash": "eff272f349941feb3d99aceb193f14bf",
-    "semantic_hash": ""
-  },
   "omnicliente/assets/ResultModal-CqNpb07G.js": {
-    "mtime": 1792596045.4207187,
+    "mtime": 1792604492.9126587,
     "ast_hash": "1d3b9ea0b1289447c0de8cf04324730d",
     "semantic_hash": ""
   },
-  "omnicliente/assets/SupportView-C-Le6Jnf.js": {
-    "mtime": 1792596045.4155996,
-    "ast_hash": "07f1af735e03ec8d60efc6b61d9d4ea3",
-    "semantic_hash": ""
-  },
   "omnicliente/assets/icons-FUum9V-O.js": {
-    "mtime": 1792596045.4211512,
+    "mtime": 1792604492.9145584,
     "ast_hash": "2a6e45e1d3442aef47bf60414b3bac2c",
-    "semantic_hash": ""
-  },
-  "omnicliente/assets/index-D6JzxkFE.js": {
-    "mtime": 1792596045.4007814,
-    "ast_hash": "d5520a498f63a8a3d12e656f2e8403ff",
     "semantic_hash": ""
   },
   "renderer/test/server-retomar.test.js": {
@@ -13135,8 +13060,8 @@
     "semantic_hash": ""
   },
   "tests/ig-insights/ig-insights-wp-test.php": {
-    "mtime": 1792597008.1808324,
-    "ast_hash": "e3f6e4652a5311c1c98a49e1d7ef3d96",
+    "mtime": 1792628808.0641859,
+    "ast_hash": "eea51391199fff554ed0d09e128841be",
     "semantic_hash": ""
   },
   "tests/ig-insights/rutas-http-wp-test.php": {
@@ -13230,8 +13155,8 @@
     "semantic_hash": ""
   },
   "Docs/OMNICLIENTE-METRICAS-IG.md": {
-    "mtime": 1792597083.368603,
-    "ast_hash": "714e1467caef3b4359010a24206f0441",
+    "mtime": 1792628756.9805872,
+    "ast_hash": "2b302bfbedd0905b5e7db1ab26992047",
     "semantic_hash": ""
   },
   "Docs/superpowers/plans/2026-10-18-retomar-aprobacion-semanal.md": {
@@ -13252,6 +13177,91 @@
   "Docs/superpowers/specs/2026-10-21-finanzas-balance-design.md": {
     "mtime": 1792593443.4702728,
     "ast_hash": "b035048cd0741e4d50723de16069d3fb",
+    "semantic_hash": ""
+  },
+  "omnicliente/assets/AgentsView-Cgk03-D1.js": {
+    "mtime": 1792628756.330981,
+    "ast_hash": "375124de11dd734cecafb0cd896cd503",
+    "semantic_hash": ""
+  },
+  "omnicliente/assets/AiPromptView-CDaMOm0d.js": {
+    "mtime": 1792628756.331582,
+    "ast_hash": "3070dd085f20a5fe8d18152bda700c0a",
+    "semantic_hash": ""
+  },
+  "omnicliente/assets/AuditView-CmrThETz.js": {
+    "mtime": 1792628756.331582,
+    "ast_hash": "005a2fa3a4708877f3967f1f5cb9aea7",
+    "semantic_hash": ""
+  },
+  "omnicliente/assets/BotConfigUnifiedView-Cey7JYf2.js": {
+    "mtime": 1792628756.3335984,
+    "ast_hash": "73c31dd21cfbf8937c00032af482e1cc",
+    "semantic_hash": ""
+  },
+  "omnicliente/assets/BotsView-CZITqJ2i.js": {
+    "mtime": 1792628756.3343866,
+    "ast_hash": "19a27fbaf15acf441946a7ec69d22792",
+    "semantic_hash": ""
+  },
+  "omnicliente/assets/ChannelTypesView-oHttT4sf.js": {
+    "mtime": 1792628756.3343866,
+    "ast_hash": "d530913af9d6ff090d22d373fdb63c89",
+    "semantic_hash": ""
+  },
+  "omnicliente/assets/ChannelsView-dCgmBjXM.js": {
+    "mtime": 1792628756.3356285,
+    "ast_hash": "485a9a1fb3f6471e21bf7aaa0eb5b1c7",
+    "semantic_hash": ""
+  },
+  "omnicliente/assets/ClientsView-5ryrC-Rr.js": {
+    "mtime": 1792628756.3356285,
+    "ast_hash": "216683ec2d47286ad4461ae55b3386ad",
+    "semantic_hash": ""
+  },
+  "omnicliente/assets/DashboardView-BwgK6q03.js": {
+    "mtime": 1792628756.3356285,
+    "ast_hash": "e503c0c6d1417a6b6e86112be3f6172d",
+    "semantic_hash": ""
+  },
+  "omnicliente/assets/InboxView-Cr3wKOle.js": {
+    "mtime": 1792628756.3356285,
+    "ast_hash": "81bf683f7327cfcd6d06f66a9f657d62",
+    "semantic_hash": ""
+  },
+  "omnicliente/assets/MarketingIgView-DfrQgCJC.js": {
+    "mtime": 1792628756.3356285,
+    "ast_hash": "64cc2134b6a12acdfeea9af7ca04c9e6",
+    "semantic_hash": ""
+  },
+  "omnicliente/assets/ProfileView-WBE0Vbp2.js": {
+    "mtime": 1792628756.3404574,
+    "ast_hash": "f4181f208570bab9de697db1911f72a1",
+    "semantic_hash": ""
+  },
+  "omnicliente/assets/PromptsView-0DQKcO6a.js": {
+    "mtime": 1792628756.3425915,
+    "ast_hash": "0082121a17cafc9ec7a71be7af2c65f4",
+    "semantic_hash": ""
+  },
+  "omnicliente/assets/SupportView-bJCPjgC4.js": {
+    "mtime": 1792628756.3435907,
+    "ast_hash": "567bec2c1ce74584ce14f3f5a8e4dfd1",
+    "semantic_hash": ""
+  },
+  "omnicliente/assets/index-V2DUMac_.js": {
+    "mtime": 1792628756.3445902,
+    "ast_hash": "66b120622f9b6635a0abde7c30bc2c6d",
+    "semantic_hash": ""
+  },
+  "tests/omnicliente/secretos-canales-wp-test.php": {
+    "mtime": 1792628756.3476374,
+    "ast_hash": "fff511069097b0ffad5fee8bb020f5eb",
+    "semantic_hash": ""
+  },
+  "tools/omni-audit-secretos.php": {
+    "mtime": 1792628756.4962728,
+    "ast_hash": "e392023f1997c7ef8b620f8b4b819a2b",
     "semantic_hash": ""
   }
 }

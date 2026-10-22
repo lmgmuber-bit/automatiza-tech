@@ -675,7 +675,7 @@
     "semantic_hash": "d0f46b9024d90bc80aee38f73b623393"
   },
   "client-portal-omnichannel/src/components/ChannelsView.jsx": {
-    "mtime": 1792604789.279307,
+    "mtime": 1792628756.2049387,
     "ast_hash": "87ad058b5eeee19600af1b1e47324b25",
     "semantic_hash": ""
   },
@@ -920,7 +920,7 @@
     "semantic_hash": "facfad74f10941f44c495d53757cf12e"
   },
   "omnichannel-controller.php": {
-    "mtime": 1792604789.279307,
+    "mtime": 1792628756.3290415,
     "ast_hash": "12113dab6b9351dbfa3a1cef416e086c",
     "semantic_hash": ""
   },
@@ -5935,7 +5935,7 @@
     "semantic_hash": ""
   },
   "omnicliente/index.html": {
-    "mtime": 1792604789.3009932,
+    "mtime": 1792628756.3455913,
     "ast_hash": "c32de6d4c4e4f20e0e2c7fd0c673f62c",
     "semantic_hash": ""
   },
@@ -13010,8 +13010,8 @@
     "semantic_hash": ""
   },
   "omnichannel-ig-insights-controller.php": {
-    "mtime": 1792597005.1427457,
-    "ast_hash": "968db152007a934265ee42b56d2d5980",
+    "mtime": 1792628783.674224,
+    "ast_hash": "3b0b3a0c7e33217925cb0eb5953da99c",
     "semantic_hash": ""
   },
   "omnicliente/assets/ConfirmDeleteModal-_3T3xSYv.js": {
@@ -13060,8 +13060,8 @@
     "semantic_hash": ""
   },
   "tests/ig-insights/ig-insights-wp-test.php": {
-    "mtime": 1792597008.1808324,
-    "ast_hash": "e3f6e4652a5311c1c98a49e1d7ef3d96",
+    "mtime": 1792628808.0641859,
+    "ast_hash": "eea51391199fff554ed0d09e128841be",
     "semantic_hash": ""
   },
   "tests/ig-insights/rutas-http-wp-test.php": {
@@ -13155,8 +13155,8 @@
     "semantic_hash": ""
   },
   "Docs/OMNICLIENTE-METRICAS-IG.md": {
-    "mtime": 1792604828.756976,
-    "ast_hash": "bcdc145e602506cf0b2ff62cbd9a7773",
+    "mtime": 1792628756.9805872,
+    "ast_hash": "2b302bfbedd0905b5e7db1ab26992047",
     "semantic_hash": ""
   },
   "Docs/superpowers/plans/2026-10-18-retomar-aprobacion-semanal.md": {
@@ -13180,88 +13180,88 @@
     "semantic_hash": ""
   },
   "omnicliente/assets/AgentsView-Cgk03-D1.js": {
-    "mtime": 1792604789.2871647,
+    "mtime": 1792628756.330981,
     "ast_hash": "375124de11dd734cecafb0cd896cd503",
     "semantic_hash": ""
   },
   "omnicliente/assets/AiPromptView-CDaMOm0d.js": {
-    "mtime": 1792604789.2875648,
+    "mtime": 1792628756.331582,
     "ast_hash": "3070dd085f20a5fe8d18152bda700c0a",
     "semantic_hash": ""
   },
   "omnicliente/assets/AuditView-CmrThETz.js": {
-    "mtime": 1792604789.2875648,
+    "mtime": 1792628756.331582,
     "ast_hash": "005a2fa3a4708877f3967f1f5cb9aea7",
     "semantic_hash": ""
   },
   "omnicliente/assets/BotConfigUnifiedView-Cey7JYf2.js": {
-    "mtime": 1792604789.2875648,
+    "mtime": 1792628756.3335984,
     "ast_hash": "73c31dd21cfbf8937c00032af482e1cc",
     "semantic_hash": ""
   },
   "omnicliente/assets/BotsView-CZITqJ2i.js": {
-    "mtime": 1792604789.2875648,
+    "mtime": 1792628756.3343866,
     "ast_hash": "19a27fbaf15acf441946a7ec69d22792",
     "semantic_hash": ""
   },
   "omnicliente/assets/ChannelTypesView-oHttT4sf.js": {
-    "mtime": 1792604789.2875648,
+    "mtime": 1792628756.3343866,
     "ast_hash": "d530913af9d6ff090d22d373fdb63c89",
     "semantic_hash": ""
   },
   "omnicliente/assets/ChannelsView-dCgmBjXM.js": {
-    "mtime": 1792604789.2875648,
+    "mtime": 1792628756.3356285,
     "ast_hash": "485a9a1fb3f6471e21bf7aaa0eb5b1c7",
     "semantic_hash": ""
   },
   "omnicliente/assets/ClientsView-5ryrC-Rr.js": {
-    "mtime": 1792604789.2875648,
+    "mtime": 1792628756.3356285,
     "ast_hash": "216683ec2d47286ad4461ae55b3386ad",
     "semantic_hash": ""
   },
   "omnicliente/assets/DashboardView-BwgK6q03.js": {
-    "mtime": 1792604789.2875648,
+    "mtime": 1792628756.3356285,
     "ast_hash": "e503c0c6d1417a6b6e86112be3f6172d",
     "semantic_hash": ""
   },
   "omnicliente/assets/InboxView-Cr3wKOle.js": {
-    "mtime": 1792604789.2875648,
+    "mtime": 1792628756.3356285,
     "ast_hash": "81bf683f7327cfcd6d06f66a9f657d62",
     "semantic_hash": ""
   },
   "omnicliente/assets/MarketingIgView-DfrQgCJC.js": {
-    "mtime": 1792604789.29541,
+    "mtime": 1792628756.3356285,
     "ast_hash": "64cc2134b6a12acdfeea9af7ca04c9e6",
     "semantic_hash": ""
   },
   "omnicliente/assets/ProfileView-WBE0Vbp2.js": {
-    "mtime": 1792604789.29541,
+    "mtime": 1792628756.3404574,
     "ast_hash": "f4181f208570bab9de697db1911f72a1",
     "semantic_hash": ""
   },
   "omnicliente/assets/PromptsView-0DQKcO6a.js": {
-    "mtime": 1792604789.2972808,
+    "mtime": 1792628756.3425915,
     "ast_hash": "0082121a17cafc9ec7a71be7af2c65f4",
     "semantic_hash": ""
   },
   "omnicliente/assets/SupportView-bJCPjgC4.js": {
-    "mtime": 1792604789.2972808,
+    "mtime": 1792628756.3435907,
     "ast_hash": "567bec2c1ce74584ce14f3f5a8e4dfd1",
     "semantic_hash": ""
   },
   "omnicliente/assets/index-V2DUMac_.js": {
-    "mtime": 1792604789.2972808,
+    "mtime": 1792628756.3445902,
     "ast_hash": "66b120622f9b6635a0abde7c30bc2c6d",
     "semantic_hash": ""
   },
   "tests/omnicliente/secretos-canales-wp-test.php": {
-    "mtime": 1792604789.301849,
+    "mtime": 1792628756.3476374,
     "ast_hash": "fff511069097b0ffad5fee8bb020f5eb",
     "semantic_hash": ""
   },
   "tools/omni-audit-secretos.php": {
-    "mtime": 1792604789.303887,
-    "ast_hash": "39bd713af70af015658ac1285967023d",
+    "mtime": 1792628756.4962728,
+    "ast_hash": "e392023f1997c7ef8b620f8b4b819a2b",
     "semantic_hash": ""
   }
 }

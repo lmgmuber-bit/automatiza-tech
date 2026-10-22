@@ -164,7 +164,7 @@ Las que dicen *Eje* puede corregirlas Luis.
   - Si en el futuro no hay un ejecutivo por defecto configurado, queda en `status = 'open'` sin asignar. No se agrega ningún valor nuevo al ENUM.
   - El constructor debe verificar que el inbox muestre ese caso y que «liberar» una conversación sin ejecutivo no falle, por ejemplo al descontar `active_chats`. Si falla, se corrige en el backend con un guardia.
 - **Descartar callbacks en conversaciones humanas** *(Eje)*: solo en el canal Instagram. WhatsApp sigue igual que hoy.
-- **Correos de derivación** *(Eje)*: se guardan en una opción de WordPress (`omni_ig_derivacion_correos`), sin migración.
+- **Correos de derivación y ejecutivo por defecto** *(Eje, ajustado al escribir el plan)*: se guardan **por canal** en `bot_configs.custom_functions_json`, bajo la clave `derivacion` (`{"agente_id": N, "correos": [...]}`). Ese campo ya existe y no se usa, así que no hace falta migración y otro cliente puede tener su propia configuración.
   - Se envían con una función nueva; `notify_agent_assignment` necesita un ejecutivo, así que no se reutiliza.
   - El enlace del correo apunta a la conversación en el Portal si su ruta lo permite; si no, al inbox.
 - **Si n8n está caído** *(Eje)*: en la versión 1 se acepta que ese mensaje quede sin respuesta automática. Queda visible en el Portal y ARGOS ya vigila los errores de n8n. No hay reintento.

@@ -109,6 +109,8 @@
                             <a href="/terminos/">Términos de Servicio</a>
                             <span class="separator">|</span>
                             <a href="/cookies/">Política de Cookies</a>
+                            <span class="separator">|</span>
+                            <a href="#" data-at-cookies>Configurar cookies</a>
                         </div>
                     </div>
                 </div>
@@ -123,19 +125,7 @@
     <i class="fas fa-chevron-up"></i>
 </button>
 
-<!-- Cookie Notice (consentimiento Ley 21.719: aceptar o rechazar no esenciales) -->
-<div id="cookie-notice" class="cookie-notice" style="display: none;">
-    <div class="container">
-        <div class="cookie-content">
-            <p>Usamos cookies esenciales para que el sitio funcione y, solo con tu permiso, analítica y píxeles publicitarios. Puedes cambiar tu elección cuando quieras en la <a href="/cookies/" style="text-decoration:underline">Política de Cookies</a>.</p>
-            <div class="cookie-buttons">
-                <button id="accept-cookies" class="btn btn-primary btn-sm">Aceptar</button>
-                <button id="reject-cookies" class="btn btn-outline btn-sm">Rechazar</button>
-                <a href="/cookies/" class="btn btn-outline btn-sm">Más información</a>
-            </div>
-        </div>
-    </div>
-</div>
+<!-- El aviso de cookies lo dibuja el mu-plugin at-consentimiento.php en todas las páginas (también la portada). -->
 
 <!-- Schema.org Local Business structured data -->
 <?php if (is_front_page()): ?>
@@ -706,6 +696,9 @@
                     throw new Error(responseText || 'Error al agendar la cita.');
                 }
 
+                // Cita confirmada: avisa a Meta (solo si la persona aceptó cookies; ver mu-plugin at-consentimiento).
+                if (window.atLead) { window.atLead('Agenda de demo'); }
+
                 return sendCorporateDemoNotification()
                     .catch(function(notificationError){
                         console.warn('No se pudo enviar notificación corporativa:', notificationError);
@@ -739,6 +732,7 @@
         .then(function(r){ return r.json(); })
         .then(function(res){
             if(res.success){
+                if (window.atLead) { window.atLead('Agenda del sitio'); }
                 showMsg(true, '✅ ' + (res.data || '¡Solicitud enviada! Te contactaremos en menos de 24 horas.'));
                 form.reset();
                 resetAgendaTimeSelect('-- Selecciona fecha primero --', true);
@@ -829,34 +823,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 behavior: 'smooth'
             });
         });
-    }
-
-    // Cookie notice — consentimiento con aceptar/rechazar (Ley 21.719).
-    // GA4/Meta Pixel deben chequear at_cookie_consent === 'accepted' antes de cargar.
-    const cookieNotice = document.getElementById('cookie-notice');
-    const acceptCookies = document.getElementById('accept-cookies');
-    const rejectCookies = document.getElementById('reject-cookies');
-    const legacyAccepted = localStorage.getItem('cookies-accepted') === 'true';
-    if (legacyAccepted && !localStorage.getItem('at_cookie_consent')) {
-        localStorage.setItem('at_cookie_consent', 'accepted');
-    }
-
-    if (cookieNotice && !localStorage.getItem('at_cookie_consent')) {
-        cookieNotice.style.display = 'block';
-    }
-
-    function setCookieConsent(value) {
-        localStorage.setItem('at_cookie_consent', value);
-        localStorage.setItem('cookies-accepted', value === 'accepted' ? 'true' : 'false');
-        if (cookieNotice) cookieNotice.style.display = 'none';
-        document.dispatchEvent(new CustomEvent('at:cookie-consent', { detail: { consent: value } }));
-    }
-
-    if (acceptCookies) {
-        acceptCookies.addEventListener('click', function() { setCookieConsent('accepted'); });
-    }
-    if (rejectCookies) {
-        rejectCookies.addEventListener('click', function() { setCookieConsent('rejected'); });
     }
 
     // Intersection Observer for animations

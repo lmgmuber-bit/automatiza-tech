@@ -434,9 +434,67 @@ try {
             send_json(['url' => $rd_upload['url'], 'file' => basename($rd_upload['file'])], 201);
         }
 
+        // POST reel-diario/upload-image — multipart, campo "image" (JPEG: es lo único que Instagram
+        // acepta por API). Misma carpeta que los videos, así reel-diario/delete también la limpia.
+        if (($segments[1] ?? '') === 'upload-image' && $method === 'POST') {
+            if (empty($_FILES['image']) || $_FILES['image']['error'] !== UPLOAD_ERR_OK) {
+                send_json(['error' => 'Falta el archivo "image" o hubo un error de subida'], 400);
+            }
+            $rd_mime = at_verify_upload_mime($_FILES['image']['tmp_name'], ['image/jpeg']);
+            if (!$rd_mime) {
+                send_json(['error' => 'La imagen debe ser JPEG'], 400);
+            }
+            if ($_FILES['image']['size'] > 8 * 1024 * 1024) { // límite de Instagram para imágenes
+                send_json(['error' => 'Imagen demasiado grande (máximo 8 MB)'], 400);
+            }
+            require_once ABSPATH . 'wp-admin/includes/file.php';
+            $rd_subdir_filter = function ($dirs) {
+                $dirs['subdir'] = '/reel-diario';
+                $dirs['path']   = $dirs['basedir'] . $dirs['subdir'];
+                $dirs['url']    = $dirs['baseurl'] . $dirs['subdir'];
+                return $dirs;
+            };
+            add_filter('upload_dir', $rd_subdir_filter);
+            $rd_file = [
+                'name'     => 'reel-diario-img-' . gmdate('Ymd-His') . '-' . wp_generate_password(6, false) . '.jpg',
+                'type'     => $rd_mime,
+                'tmp_name' => $_FILES['image']['tmp_name'],
+                'error'    => $_FILES['image']['error'],
+                'size'     => $_FILES['image']['size'],
+            ];
+            $rd_upload = wp_handle_upload($rd_file, ['test_form' => false]);
+            remove_filter('upload_dir', $rd_subdir_filter);
+            if (isset($rd_upload['error'])) {
+                send_json(['error' => $rd_upload['error']], 500);
+            }
+            send_json(['url' => $rd_upload['url'], 'file' => basename($rd_upload['file'])], 201);
+        }
+
         // POST reel-diario/media-create — body {video_url, caption?, media_type?, channel_id?}.
         // Crea el contenedor de Instagram y devuelve creation_id sin hacer polling bloqueante.
+        // Imágenes (23-oct): {image_url, media_type: IMAGE|STORIES|CAROUSEL_ITEM, caption?}.
+        // Carrusel: {media_type: CAROUSEL, children: [creation_id, ...] o "id,id", caption?}.
         if (($segments[1] ?? '') === 'media-create' && $method === 'POST') {
+            $rd_tipo = strtoupper((string) ($body['media_type'] ?? 'REELS'));
+            if ($rd_tipo === 'CAROUSEL' || !empty($body['image_url'])) {
+                $rd_caption = sanitize_textarea_field($body['caption'] ?? '');
+                $rd_channel_id = absint($body['channel_id'] ?? (defined('REEL_DIARIO_CHANNEL_ID') ? REEL_DIARIO_CHANNEL_ID : 0));
+                if (!$rd_channel_id) {
+                    send_json(['error' => 'Falta channel_id (o define REEL_DIARIO_CHANNEL_ID en wp-config-secrets.php)'], 400);
+                }
+                if ($rd_tipo === 'CAROUSEL') {
+                    $rd_children = $body['children'] ?? [];
+                    if (is_string($rd_children)) {
+                        $rd_children = explode(',', $rd_children);
+                    }
+                    $result = $controller->create_instagram_carousel_container($rd_channel_id, (array) $rd_children, $rd_caption);
+                } else {
+                    $rd_image_url = esc_url_raw($body['image_url']);
+                    $rd_kind = in_array($rd_tipo, ['STORIES', 'CAROUSEL_ITEM'], true) ? $rd_tipo : 'IMAGE';
+                    $result = $controller->create_instagram_image_container($rd_channel_id, $rd_image_url, $rd_caption, $rd_kind);
+                }
+                send_json($result, isset($result['error']) ? 502 : 201);
+            }
             $rd_video_url = esc_url_raw($body['video_url'] ?? '');
             if ($rd_video_url === '') {
                 send_json(['error' => 'Falta video_url'], 400);

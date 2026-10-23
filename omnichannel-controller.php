@@ -3294,6 +3294,80 @@ class OmnichannelController {
     }
 
     /**
+     * Crea el contenedor de una imagen: post del feed (IMAGE), historia (STORIES) o pieza de un
+     * carrusel (CAROUSEL_ITEM). Instagram solo acepta JPEG por la API de publicacion.
+     */
+    public function create_instagram_image_container($channel_id, $image_url, $caption = '', $kind = 'IMAGE') {
+        $channel = $this->get_instagram_channel_for_api($channel_id);
+        if (!$channel) return ['error' => 'Canal no encontrado'];
+        if (trim((string) $image_url) === '') return ['error' => 'Falta image_url'];
+
+        $kind = in_array($kind, ['IMAGE', 'STORIES', 'CAROUSEL_ITEM'], true) ? $kind : 'IMAGE';
+        $container_body = ['image_url' => $image_url];
+        if ($kind === 'STORIES') {
+            $container_body['media_type'] = 'STORIES';
+        } elseif ($kind === 'CAROUSEL_ITEM') {
+            $container_body['is_carousel_item'] = true; // las piezas no llevan caption: va en el carrusel
+        } elseif ($caption !== '') {
+            $container_body['caption'] = $caption;
+        }
+
+        $create = $this->ig_api_request('POST', $channel, 'me/media', $container_body);
+        if (empty($create['success']) || empty($create['data']['id'])) {
+            return [
+                'error'    => $create['error'] ?? 'No se pudo crear el contenedor de la imagen',
+                'fb_error' => $create['fb_error'] ?? null,
+            ];
+        }
+
+        return [
+            'success'     => true,
+            'creation_id' => (string) $create['data']['id'],
+            'media_type'  => $kind,
+            'status_code' => 'CREATED',
+        ];
+    }
+
+    /**
+     * Crea el contenedor de un carrusel con 2 a 10 contenedores CAROUSEL_ITEM ya creados,
+     * en el orden en que deben verse. Se publica despues con publish_instagram_media_container.
+     */
+    public function create_instagram_carousel_container($channel_id, array $children, $caption = '') {
+        $channel = $this->get_instagram_channel_for_api($channel_id);
+        if (!$channel) return ['error' => 'Canal no encontrado'];
+
+        $ids = [];
+        foreach ($children as $child) {
+            $id = preg_replace('/[^0-9]/', '', (string) $child);
+            if ($id !== '') $ids[] = $id;
+        }
+        if (count($ids) < 2 || count($ids) > 10) {
+            return ['error' => 'Un carrusel necesita entre 2 y 10 imagenes; llegaron ' . count($ids)];
+        }
+
+        $container_body = ['media_type' => 'CAROUSEL', 'children' => implode(',', $ids)];
+        if ($caption !== '') {
+            $container_body['caption'] = $caption;
+        }
+
+        $create = $this->ig_api_request('POST', $channel, 'me/media', $container_body);
+        if (empty($create['success']) || empty($create['data']['id'])) {
+            return [
+                'error'    => $create['error'] ?? 'No se pudo crear el contenedor del carrusel',
+                'fb_error' => $create['fb_error'] ?? null,
+            ];
+        }
+
+        return [
+            'success'     => true,
+            'creation_id' => (string) $create['data']['id'],
+            'media_type'  => 'CAROUSEL',
+            'children'    => count($ids),
+            'status_code' => 'CREATED',
+        ];
+    }
+
+    /**
      * Pre-flight del token de Instagram de un canal. Hace la llamada mas barata
      * posible (GET me) y distingue "token vencido" (OAuthException 190) de
      * cualquier otro fallo, para que quien llame sepa si hay que renovar.

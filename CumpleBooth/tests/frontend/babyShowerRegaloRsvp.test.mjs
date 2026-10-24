@@ -95,3 +95,10 @@ test('baby-osito tiene kicker, playlist y chispas propias con movimiento reducid
   const reducido = css.slice(css.indexOf('/* ---------- 5. Sin movimiento'))
   assert.match(reducido.slice(0, 900), /baby-osito/)
 })
+
+test('baby-osito no suena con la voz de Alice: vozPropia apaga los audios compartidos', () => {
+  const temas = JSON.parse(leer('public/data/themes.json'))
+  assert.equal((temas.themes || temas)['baby-osito'].vozPropia, true, 'baby-osito debe declarar vozPropia')
+  // Con vozPropia, el cierre y la despedida del recorrido salen solo de narracion-video/ de la temática.
+  assert.match(php, /\['vozPropia'\][\s\S]{0,900}\$narrationIntroUrl = '';[\s\S]{0,200}\$narrationOutroUrl = \$vozDeLaTematica\('narracion-final\.mp3'\);[\s\S]{0,200}\$narrationPlaylistEndUrl = \$vozDeLaTematica\(/)
+})

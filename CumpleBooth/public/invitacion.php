@@ -149,7 +149,22 @@ if ($esAdulto) {
     $narrationPlaylistEndUrl = '';
 }
 
-$themeData = is_array($themesData['themes'][$themeSlug] ?? null) ? $themesData['themes'][$themeSlug] : [];
+// Temática con voz propia (`vozPropia` en themes.json): la familia no quiere la voz de Alice, así
+// que los audios compartidos no suenan. Se usan los de `narracion-video/` de la temática si
+// existen; mientras no estén, la invitación va con música y sin voz (baby shower 24-oct-2026).
+if (!empty($themesData['themes'][$themeSlug]['vozPropia']) && preg_match('/^[a-z0-9-]+$/', $themeSlug)) {
+    $vozDeLaTematica = static function (string $archivo) use ($themeSlug): string {
+        $ruta = __DIR__ . '/themes/' . $themeSlug . '/narracion-video/' . $archivo;
+        return is_file($ruta)
+            ? 'themes/' . rawurlencode($themeSlug) . '/narracion-video/' . rawurlencode($archivo) . '?v=' . rawurlencode((string) filemtime($ruta))
+            : '';
+    };
+    $narrationIntroUrl = '';
+    $narrationOutroUrl = $vozDeLaTematica('narracion-final.mp3');
+    $narrationPlaylistEndUrl = $vozDeLaTematica('narracion-playlist-final-' . $sufijoSexoBebe . '.mp3');
+}
+
+$themeData =is_array($themesData['themes'][$themeSlug] ?? null) ? $themesData['themes'][$themeSlug] : [];
 $colors = is_array($themeData['colors'] ?? null) ? $themeData['colors'] : [];
 $accent = (string) ($colors['accent'] ?? '#7C3AED');
 $yellow = (string) ($colors['yellow'] ?? '#FBBF24');

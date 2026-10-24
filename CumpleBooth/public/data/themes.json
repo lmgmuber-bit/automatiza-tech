@@ -2045,6 +2045,7 @@
     },
     "baby-osito": {
       "nombre": "Osito de Bienvenida",
+      "vozPropia": true,
       "franquicia": null,
       "publico": "mixto",
       "modalidad": "baby_shower",

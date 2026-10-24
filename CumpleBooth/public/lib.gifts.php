@@ -330,3 +330,6 @@ function cb_gift_set_mode(int $invitationId, string $modo): array
     }
     return ['ok' => true, 'modo' => $modo];
 }
+
+// Reglas del modo `rsvp` (baby shower con regalo validado al confirmar, migración 028).
+require_once __DIR__ . '/lib.regalos-confirmacion.php';

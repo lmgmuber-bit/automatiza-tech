@@ -235,6 +235,11 @@ export const getClients = (params = {}) => {
 // filtrar, client_id 0 = solo AT (plataforma/demos internos), client_id>0 = un cliente.
 export const getUsageStats = ({ client_id, days = 30 } = {}) =>
   request(`usage-stats?days=${days}${client_id !== null && client_id !== undefined ? `&client_id=${client_id}` : ''}`);
+
+// Métricas IG (admin): cuenta, días y publicaciones con sus tomas; sync pide una toma ahora.
+export const getIgInsights = ({ days = 30, posts_limit = 50 } = {}) =>
+  request(`ig-insights?days=${days}&posts_limit=${posts_limit}`);
+export const syncIgInsights = () => request('ig-insights/sync', 'POST', {});
 export const getClient = (id) => request(`clients/${id}`);
 export const createClient = (data) => request('clients', 'POST', data);
 export const updateClient = (id, data) => request(`clients/${id}`, 'PUT', data);

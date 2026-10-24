@@ -1236,6 +1236,85 @@
     });
   })();
 
+  // ---------- Guía hasta confirmar ----------
+  // Luis (24-oct-2026): quien no baja hasta el final nunca ve el botón de confirmar. Si el
+  // invitado se queda quieto 10 s sin haber llegado, la página lo lleva hasta «Confirma tu
+  // asistencia»; al llegar ahí (solo o llevado) una voz le explica el botón y los regalos, una
+  // vez, y el botón late. No interrumpe una voz ni un video que esté sonando, y nada de esto
+  // pasa si este navegador ya confirmó. Solo existe donde hay voz de guía (modo con regalo).
+  (function () {
+    const vozGuia = document.querySelector('[data-inv-narration-guia]');
+    const seccion = document.getElementById('inv-asistencia');
+    const botonConfirmar = document.querySelector('[data-rsvp-open]');
+    const dialogo = document.querySelector('[data-rsvp-dialog]');
+    if (!(vozGuia instanceof HTMLAudioElement) || !seccion || !botonConfirmar) return;
+    const GUIA_QUIETO_MS = 10000;
+    const token = seccion.getAttribute('data-inv-token') || '';
+    const yaConfirmo = () => {
+      try { return window.localStorage.getItem('cc_rsvp_ok_' + token.slice(0, 12)) === '1'; } catch { return false; }
+    };
+    let llego = false;
+    let hablo = false;
+    let ultimoGesto = Date.now();
+
+    // iOS solo deja sonar un audio destrabado dentro de un toque: el primero sirve (el del sobre).
+    let destrabada = false;
+    const destrabar = () => {
+      if (destrabada) return;
+      destrabada = true;
+      vozGuia.muted = true;
+      const listo = () => { vozGuia.muted = false; if (!hablo) { vozGuia.pause(); vozGuia.currentTime = 0; } };
+      const intento = vozGuia.play();
+      if (intento && typeof intento.then === 'function') intento.then(listo).catch(() => { vozGuia.muted = false; });
+      else listo();
+    };
+    window.addEventListener('pointerup', destrabar, { once: true, passive: true });
+    window.addEventListener('touchend', destrabar, { once: true, passive: true });
+
+    ['wheel', 'touchstart', 'pointerdown', 'keydown'].forEach((g) => {
+      window.addEventListener(g, () => { ultimoGesto = Date.now(); }, { passive: true });
+    });
+    const sobreCerrado = () => {
+      const sobre = document.querySelector('[data-inv-entry-gate]');
+      return (sobre && !sobre.hidden) || document.body.classList.contains('inv-scroll-locked');
+    };
+    const algoSonando = () => vocesSonando.size > 0
+      || Array.from(document.querySelectorAll('video')).some((v) => !v.loop && !v.paused && !v.ended);
+    const dialogoAbierto = () => !!(dialogo && (dialogo.open || dialogo.hasAttribute('open')));
+
+    const hablar = () => {
+      if (hablo || yaConfirmo() || dialogoAbierto()) return;
+      // Si otra voz o un video están sonando, se espera a que terminen (hasta 20 s).
+      let esperas = 0;
+      const intentar = () => {
+        if (hablo || yaConfirmo() || dialogoAbierto()) return;
+        if (algoSonando() && esperas < 40) { esperas += 1; setTimeout(intentar, 500); return; }
+        hablo = true;
+        vozGuia.muted = false;
+        botonConfirmar.classList.add('inv-rsvp-open--guia');
+        duckWhile(vozGuia);
+      };
+      intentar();
+    };
+    botonConfirmar.addEventListener('click', () => botonConfirmar.classList.remove('inv-rsvp-open--guia'));
+
+    new IntersectionObserver((entradas) => {
+      entradas.forEach((e) => {
+        if (e.isIntersecting && e.intersectionRatio >= 0.5) { llego = true; hablar(); }
+      });
+    }, { threshold: [0.5] }).observe(seccion);
+
+    const vigilar = setInterval(() => {
+      if (llego || hablo || yaConfirmo()) { clearInterval(vigilar); return; }
+      // Una voz o un video sonando cuentan como actividad: los 10 s corren desde que terminan.
+      if (sobreCerrado() || algoSonando() || dialogoAbierto()) { ultimoGesto = Date.now(); return; }
+      if (Date.now() - ultimoGesto < GUIA_QUIETO_MS) return;
+      clearInterval(vigilar);
+      const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      seccion.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' });
+    }, 1000);
+  })();
+
   // ---------- Descubrir lo que sigue después de la lámina ----------
   // La lámina parece el final y muchos invitados no bajaban más: nunca veían
   // el calendario, el mapa ni "Conoce al cumpleañero" (pedido de Luis con la

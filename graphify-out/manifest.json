@@ -920,8 +920,8 @@
     "semantic_hash": "facfad74f10941f44c495d53757cf12e"
   },
   "omnichannel-controller.php": {
-    "mtime": 1792838990.4031143,
-    "ast_hash": "b6ccfe29985d5e077d724ad612b0aa3c",
+    "mtime": 1792841514.0065763,
+    "ast_hash": "f8cc8a5bc07c8589d887086f1394bf78",
     "semantic_hash": ""
   },
   "omnichannel-cron-expiry.php": {
@@ -1735,8 +1735,8 @@
     "semantic_hash": ""
   },
   "webhook-omnichannel.php": {
-    "mtime": 1792838711.6379213,
-    "ast_hash": "8073dedc322cc9b28c783bd80f0a2f91",
+    "mtime": 1792841496.4422626,
+    "ast_hash": "62ab3562f029f4417045cf6639446bf6",
     "semantic_hash": ""
   },
   "wp-content/mu-plugins/api-appointments-config.php": {
@@ -13260,8 +13260,8 @@
     "semantic_hash": ""
   },
   "omnichannel-ig-comments-controller.php": {
-    "mtime": 1792838990.3703196,
-    "ast_hash": "fb11a9b660a4f33052bd21eca8c1fdb0",
+    "mtime": 1792841524.9399931,
+    "ast_hash": "540c7608d7d56829365439473f8cb55c",
     "semantic_hash": ""
   },
   "tests/ig-comments/config-script-wp-test.php": {
@@ -13270,18 +13270,18 @@
     "semantic_hash": ""
   },
   "tests/ig-comments/ig-comments-wp-test.php": {
-    "mtime": 1792838796.506837,
-    "ast_hash": "7d033c00d6215389ff770df0068b8aee",
+    "mtime": 1792841583.1337056,
+    "ast_hash": "c03e825bb0febcaa1057a45b57e456ae",
     "semantic_hash": ""
   },
   "tests/ig-comments/rutas-http-wp-test.php": {
-    "mtime": 1792838847.4830906,
-    "ast_hash": "f7b4cee4da87ded14851b97998e7040b",
+    "mtime": 1792841557.44651,
+    "ast_hash": "b3f4a35fe09877354e644eee1da3f393",
     "semantic_hash": ""
   },
   "tests/ig-comments/wp-load-shim.php": {
-    "mtime": 1792838847.4525921,
-    "ast_hash": "f249ac47465cbaf9a71de66a2f991a33",
+    "mtime": 1792841557.3713427,
+    "ast_hash": "c64ec6916fe8aeea08bc0814bc3ffc15",
     "semantic_hash": ""
   },
   "tools/ig-palabras-clave-config.php": {
@@ -13290,13 +13290,23 @@
     "semantic_hash": ""
   },
   "Docs/OMNICLIENTE-IG-COMENTARIOS.md": {
-    "mtime": 1792838874.2327428,
-    "ast_hash": "fef20b8c5f27232f5ab104b45f50462a",
+    "mtime": 1792841725.5369027,
+    "ast_hash": "cc8b4c7a27af4915ad1c1c2970bf3657",
     "semantic_hash": ""
   },
   "Docs/superpowers/specs/2026-10-24-ig-comentarios-palabra-clave-design.md": {
     "mtime": 1792838874.2337387,
     "ast_hash": "bd834ecf4451a9fe71a07757ff080ea8",
+    "semantic_hash": ""
+  },
+  "tests/ig-comments/ecos-auditoria-wp-test.php": {
+    "mtime": 1792841677.4531822,
+    "ast_hash": "21fb9bbb6a4987f178e2a5fa4e5b18b8",
+    "semantic_hash": ""
+  },
+  "tools/ig-ecos-auditoria.php": {
+    "mtime": 1792841653.6109045,
+    "ast_hash": "6331f7bcb5c4e25e57352b5b5709c7fb",
     "semantic_hash": ""
   }
 }

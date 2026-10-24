@@ -3260,6 +3260,50 @@ class OmnichannelController {
     }
 
     /**
+     * Respuesta pública bajo un comentario (POST /<COMMENT_ID>/replies).
+     * Returns ['success'=>true,'id'=>..] or ['error'=>..].
+     */
+    public function reply_instagram_comment($channel_id, $comment_id, $content) {
+        $channel = $this->get_instagram_channel_for_api($channel_id);
+        if (!$channel) return ['error' => 'Canal no encontrado'];
+        $comment_id = preg_replace('/[^0-9A-Za-z_\-]/', '', (string) $comment_id);
+        if ($comment_id === '') return ['error' => 'Falta el id del comentario'];
+        if ($content === '' || $content === null) return ['error' => 'Contenido vacío'];
+
+        $res = $this->ig_api_request('POST', $channel, $comment_id . '/replies', ['message' => $content]);
+        if (!empty($res['success']) && !empty($res['data']['id'])) {
+            return ['success' => true, 'id' => (string) $res['data']['id']];
+        }
+        return ['error' => $res['error'] ?? 'Error desconocido al responder el comentario'];
+    }
+
+    /**
+     * Respuesta privada ligada a un comentario: recipient.comment_id, nunca un IGSID, así Meta
+     * la entrega solo a quien escribió ese comentario. Una por comentario, dentro de 7 días.
+     * Returns ['success'=>true,'message_id'=>..,'recipient_id'=>..] or ['error'=>..].
+     */
+    public function send_instagram_private_reply($channel_id, $comment_id, $content) {
+        $channel = $this->get_instagram_channel_for_api($channel_id);
+        if (!$channel) return ['error' => 'Canal no encontrado'];
+        $comment_id = preg_replace('/[^0-9A-Za-z_\-]/', '', (string) $comment_id);
+        if ($comment_id === '') return ['error' => 'Falta el id del comentario'];
+        if ($content === '' || $content === null) return ['error' => 'Contenido vacío'];
+
+        $res = $this->ig_api_request('POST', $channel, 'me/messages', [
+            'recipient' => ['comment_id' => $comment_id],
+            'message'   => ['text' => $content],
+        ]);
+        if (!empty($res['success'])) {
+            return [
+                'success'      => true,
+                'message_id'   => $res['data']['message_id']   ?? '',
+                'recipient_id' => $res['data']['recipient_id'] ?? '',
+            ];
+        }
+        return ['error' => $res['error'] ?? 'Error desconocido al enviar la respuesta privada'];
+    }
+
+    /**
      * Crea un contenedor de media de Instagram sin esperar el procesamiento.
      * Usado por n8n para evitar requests HTTP bloqueantes de varios minutos.
      */

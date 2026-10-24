@@ -21,7 +21,7 @@ $CID = (int) $wpdb->insert_id;
 // Carpeta temporal con la API y sus dependencias; wp-load.php es el puente de prueba.
 $DIR = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'ig-rutas-' . bin2hex(random_bytes(4));
 mkdir($DIR);
-foreach (['api-omnichannel.php', 'omnichannel-controller.php', 'omnichannel-atfinance-controller.php', 'omnichannel-ig-insights-controller.php'] as $f) {
+foreach (['api-omnichannel.php', 'omnichannel-controller.php', 'omnichannel-atfinance-controller.php', 'omnichannel-ig-insights-controller.php', 'omnichannel-ig-comments-controller.php'] as $f) {
 	copy($ROOT . '/' . $f, $DIR . '/' . $f);
 }
 // Los helpers at-*.php apuntan a los del sitio local: el tema ya los carga desde ahí y

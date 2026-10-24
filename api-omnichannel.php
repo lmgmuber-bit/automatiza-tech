@@ -18,6 +18,7 @@ ob_end_clean();
 require_once __DIR__ . '/omnichannel-controller.php';
 require_once __DIR__ . '/omnichannel-atfinance-controller.php';
 require_once __DIR__ . '/omnichannel-ig-insights-controller.php';
+require_once __DIR__ . '/omnichannel-ig-comments-controller.php';
 require_once __DIR__ . '/at-rate-limit.php';
 require_once __DIR__ . '/at-mime-check.php';
 
@@ -36,6 +37,8 @@ $atfinance = new OmniATFinanceController();
 $atfinance->maybe_create_tables(); // no-op salvo primera vez / upgrade (option-gated)
 $iginsights = new OmniIgInsightsController($controller);
 $iginsights->maybe_create_tables(); // ídem: tablas de Métricas IG
+$igcomments = new OmniIgCommentsController($controller);
+$igcomments->maybe_create_tables(); // ídem: registro de respuestas a comentarios
 
 // Parse request
 $method = $_SERVER['REQUEST_METHOD'];
@@ -639,6 +642,35 @@ try {
         }
 
         send_json(['error' => 'Ruta ig-metrics no encontrada'], 404);
+    }
+
+    // ---- COMENTARIOS IG CON PALABRA CLAVE: plan B por consulta periódica (cron de n8n) ----
+    // El camino normal es el webhook de Meta (campo comments, en webhook-omnichannel.php). Si Meta
+    // no lo entrega (exige Advanced Access), n8n llama a esta ruta cada pocos minutos. Secret propio
+    // (AT_IG_COMMENTS_SECRET, header X-IG-Comments-Secret): responde en Instagram, así que no se
+    // comparte con Métricas IG (solo lee). Siempre el canal IG de AutomatizaTech.
+    if (isset($segments[0]) && $segments[0] === 'ig-comments') {
+        if (!at_rate_limit_check('omni_ig_comments', 120, 3600)) {
+            at_rate_limit_reject(3600, 'omni_ig_comments');
+        }
+        $igc_provided = $_SERVER['HTTP_X_IG_COMMENTS_SECRET'] ?? '';
+        if (!defined('AT_IG_COMMENTS_SECRET') || AT_IG_COMMENTS_SECRET === '') {
+            send_json(['error' => 'Comentarios IG sin configurar: falta AT_IG_COMMENTS_SECRET en wp-config.php'], 503);
+        }
+        if (!hash_equals((string) AT_IG_COMMENTS_SECRET, (string) $igc_provided)) {
+            send_json(['error' => 'Secret inválido'], 403);
+        }
+        $igc_channel_id = OmniIgInsightsController::default_channel_id();
+        if (!$igc_channel_id) {
+            send_json(['error' => 'Falta REEL_DIARIO_CHANNEL_ID (o AT_IG_METRICS_CHANNEL_ID) en wp-config.php'], 500);
+        }
+        // POST ig-comments/poll — lee los comentarios nuevos y responde los que traen palabra clave.
+        // 502 si no pudo leer de Meta, para que n8n avise.
+        if (($segments[1] ?? '') === 'poll' && $method === 'POST') {
+            $igc_result = $igcomments->poll($igc_channel_id);
+            send_json($igc_result, empty($igc_result['ok']) ? 502 : 200);
+        }
+        send_json(['error' => 'Ruta ig-comments no encontrada'], 404);
     }
 
     // ---- N8N CALLBACK (respuesta del bot) ----
@@ -1292,6 +1324,17 @@ try {
                 }
                 if (!isset($segments[2]) && $method === 'GET') {
                     send_json($iginsights->get_overview($igi_channel_id, $_GET['days'] ?? 30, $_GET['posts_limit'] ?? 50));
+                }
+                break;
+
+            // Admin: registro de respuestas automáticas a comentarios con palabra clave.
+            case 'ig-comments':
+                $igc_admin_channel = absint($_GET['channel_id'] ?? 0) ?: OmniIgInsightsController::default_channel_id();
+                if (!$igc_admin_channel) {
+                    send_json(['error' => 'Falta REEL_DIARIO_CHANNEL_ID en wp-config.php'], 500);
+                }
+                if (!isset($segments[2]) && $method === 'GET') {
+                    send_json(['ok' => true, 'replies' => $igcomments->get_log($igc_admin_channel, $_GET['limit'] ?? 50)]);
                 }
                 break;
 

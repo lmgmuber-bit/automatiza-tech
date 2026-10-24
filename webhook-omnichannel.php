@@ -19,6 +19,7 @@ require_once __DIR__ . '/wp-load.php';
 ob_end_clean();
 
 require_once __DIR__ . '/omnichannel-controller.php';
+require_once __DIR__ . '/omnichannel-ig-comments-controller.php';
 
 header('Content-Type: application/json; charset=utf-8');
 
@@ -102,6 +103,34 @@ $payload = json_decode($raw_body, true);
 if (empty($payload)) {
     http_response_code(400);
     echo wp_json_encode(['error' => 'Payload vacío']);
+    exit;
+}
+
+// Instagram: comentarios en los posts (campo comments) → respuestas automáticas con palabra clave.
+// Los mensajes directos siguen por normalize_instagram() como siempre.
+if ($channel->channel_type === 'instagram' && OmniIgCommentsController::payload_has_comments($payload)) {
+    $wpdb->update(
+        $wpdb->prefix . 'omnichannel_channels',
+        ['last_synced_at' => current_time('mysql')],
+        ['id' => $channel_id]
+    );
+    // Meta pide responder rápido: si el servidor lo permite, se contesta 200 y se sigue trabajando.
+    // Los reintentos de Meta no duplican nada (el comment_id es único en el registro).
+    ignore_user_abort(true);
+    $igc_early = function_exists('litespeed_finish_request') || function_exists('fastcgi_finish_request');
+    if ($igc_early) {
+        http_response_code(200);
+        echo wp_json_encode(['status' => 'accepted']);
+        function_exists('litespeed_finish_request') ? litespeed_finish_request() : fastcgi_finish_request();
+    }
+    $igc = new OmniIgCommentsController($controller);
+    $igc_result = $igc->handle_webhook($channel_id, $payload);
+    if (!$igc_early) {
+        http_response_code(200);
+        echo wp_json_encode(['status' => 'ok', 'results' => array_map(static function ($r) {
+            return ['comment_id' => $r['comment_id'] ?? '', 'status' => $r['status'] ?? ''];
+        }, $igc_result['results'] ?? [])]);
+    }
     exit;
 }
 

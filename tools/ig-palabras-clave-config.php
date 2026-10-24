@@ -42,17 +42,17 @@ require_once $ctrl_dir . '/omnichannel-controller.php';
 require_once $ctrl_dir . '/omnichannel-ig-comments-controller.php';
 
 $PALABRAS = [
-    ['palabra' => 'MÉTODO', 'publica' => '¡Te lo enviamos por mensaje! 📩',
+    ['palabra' => 'MÉTODO', 'publica' => '¡Hola! 👋 Te lo enviamos por mensaje, revisa tu bandeja 📩',
      'privada' => 'Hola, gracias por escribirnos. Así trabajamos en AutomatizaTech: diagnóstico, priorización, propuesta por fases, desarrollo con avances, entrega probada y soporte. ¿Qué proceso de tu negocio te gustaría ordenar? Si quieres, agenda tu diagnóstico gratis en automatizatech.cl'],
-    ['palabra' => 'SPA', 'publica' => '¡Te escribimos por mensaje! 📩',
+    ['palabra' => 'SPA', 'publica' => '¡Hola! 👋 Te lo enviamos por mensaje, revisa tu bandeja 📩',
      'privada' => 'Hola. Para spas y centros de estética armamos agenda, recordatorios y respuesta por WhatsApp. ¿Hoy cómo agendan tus clientas? Agenda tu diagnóstico gratis en automatizatech.cl'],
-    ['palabra' => 'CLÍNICA', 'publica' => '¡Te escribimos por mensaje! 📩',
+    ['palabra' => 'CLÍNICA', 'publica' => '¡Hola! 👋 Te lo enviamos por mensaje, revisa tu bandeja 📩',
      'privada' => 'Hola. En consultas automatizamos la cita y los recordatorios, nunca el criterio clínico. ¿Cuántas citas manejan a la semana? Agenda tu diagnóstico gratis en automatizatech.cl'],
-    ['palabra' => 'TIENDA', 'publica' => '¡Te escribimos por mensaje! 📩',
+    ['palabra' => 'TIENDA', 'publica' => '¡Hola! 👋 Te lo enviamos por mensaje, revisa tu bandeja 📩',
      'privada' => 'Hola. Para tiendas que venden por Instagram armamos catálogo, pedidos y estado de despacho en un solo lugar. ¿Por dónde te llegan hoy los pedidos? Agenda tu diagnóstico gratis en automatizatech.cl'],
-    ['palabra' => 'LEADS', 'publica' => '¡Te escribimos por mensaje! 📩',
+    ['palabra' => 'LEADS', 'publica' => '¡Hola! 👋 Te lo enviamos por mensaje, revisa tu bandeja 📩',
      'privada' => 'Hola. Hacemos que cada contacto nuevo tenga dueño y seguimiento automático. ¿Quién responde hoy los mensajes en tu equipo? Agenda tu diagnóstico gratis en automatizatech.cl'],
-    ['palabra' => 'SISTEMA', 'publica' => '¡Te mostramos uno por mensaje! 📩',
+    ['palabra' => 'SISTEMA', 'publica' => '¡Hola! 👋 Te lo enviamos por mensaje, revisa tu bandeja 📩',
      'privada' => 'Hola. Te mostramos cómo se ve un sistema comercial por dentro: registro, asignación y seguimiento de cada cliente. ¿Qué rubro tienes? Agenda tu diagnóstico gratis en automatizatech.cl'],
 ];
 

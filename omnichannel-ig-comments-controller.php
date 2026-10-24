@@ -254,7 +254,7 @@ class OmniIgCommentsController {
                         'time'     => $ts,
                     ], 'poll');
                     if (in_array($res['status'], ['replied', 'partial'], true)) $summary['replied']++;
-                    if ($res['status'] === 'failed') unset($next_seen[$mid]); // reintento en la próxima consulta
+                    if (in_array($res['status'], ['failed', 'error', 'unverified'], true)) unset($next_seen[$mid]); // reintento en la próxima consulta
                     if (!in_array($res['status'], ['no_keyword', 'duplicate', 'own_account', 'too_old'], true)) {
                         $summary['results'][] = $res;
                     }
@@ -373,7 +373,7 @@ class OmniIgCommentsController {
                 $upd['public_status'] = 'sent';
                 $upd['public_reply_id'] = sanitize_text_field((string) $pub['id']);
             } else {
-                $upd['public_status'] = ((int) ($pub['code'] ?? 0)) >= 400 ? 'failed' : 'unknown';
+                $upd['public_status'] = (!empty($pub['local']) || ((int) ($pub['code'] ?? 0)) >= 400) ? 'failed' : 'unknown';
                 $errors[] = 'pública: ' . ($pub['error'] ?? 'error desconocido');
             }
         }

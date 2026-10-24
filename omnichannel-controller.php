@@ -3264,11 +3264,13 @@ class OmnichannelController {
      * Returns ['success'=>true,'id'=>..] or ['error'=>..].
      */
     public function reply_instagram_comment($channel_id, $comment_id, $content) {
+        // local: el error es de este lado y nada llegó a Meta (seguro que no se publicó).
         $channel = $this->get_instagram_channel_for_api($channel_id);
-        if (!$channel) return ['error' => 'Canal no encontrado'];
+        if (!$channel) return ['error' => 'Canal no encontrado', 'local' => true];
+        if (empty($channel->bot_token)) return ['error' => 'Canal sin token de Instagram configurado', 'local' => true];
         $comment_id = preg_replace('/[^0-9A-Za-z_\-]/', '', (string) $comment_id);
-        if ($comment_id === '') return ['error' => 'Falta el id del comentario'];
-        if ($content === '' || $content === null) return ['error' => 'Contenido vacío'];
+        if ($comment_id === '') return ['error' => 'Falta el id del comentario', 'local' => true];
+        if ($content === '' || $content === null) return ['error' => 'Contenido vacío', 'local' => true];
 
         $res = $this->ig_api_request('POST', $channel, $comment_id . '/replies', ['message' => $content]);
         if (!empty($res['success']) && !empty($res['data']['id'])) {

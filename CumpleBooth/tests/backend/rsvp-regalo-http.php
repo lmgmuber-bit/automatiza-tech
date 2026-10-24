@@ -235,7 +235,6 @@ $r = confirmar_form($base, $token, ['family_name' => 'Lucia Prueba', 'gift' => '
 h_check($r['estado'] === 200, 'el coche oculto quedó libre para otro invitado');
 
 // ── Cuatro intentos seguidos por el mismo regalo: solo uno gana. (php -S atiende de a uno: el bloqueo FOR UPDATE de MySQL no se puede ejercitar aquí.) ──
-$pdo->prepare("DELETE FROM cc_gift_items WHERE title IN ('cuna')")->execute();
 $procesos = [];
 foreach (['Mati', 'Nico', 'Omar', 'Pablo'] as $n) {
     $lim = '----c' . bin2hex(random_bytes(6));
@@ -255,5 +254,49 @@ foreach ($procesos as $p) {
 }
 h_check($ok === 1, 'cuatro intentos seguidos por el mismo extractor: exactamente uno queda con él (' . $ok . ')');
 h_check((int) $pdo->query("SELECT COUNT(*) FROM cc_gift_items WHERE invitation_id=$invId AND title='extractor de leche' AND moderation_status='approved'")->fetchColumn() === 1, 'un solo regalo extractor aprobado en la base');
+
+// ── Pantallas de los papás (Task 3) ──
+$tokenPapas = cb_invitation_issue_role_token($invId, 'parents', null, 'test');
+$r = pedir($base, 'GET', '/regalos-papas.php?t=' . $tokenPapas);
+$html = $r['html'];
+h_check($r['estado'] === 200 && str_contains($html, 'Los invitados te dicen qué llevan al confirmar.'), 'regalos-papas en rsvp: texto de confirmación');
+h_check(!str_contains($html, 'Cómo funcionan los regalos') && !str_contains($html, 'name="accion" value="agregar"') && !str_contains($html, 'value="modo"'), 'regalos-papas en rsvp: sin interruptor de modo ni formulario de agregar');
+h_check(str_contains($html, 'Lo lleva Carla Prueba'), 'regalos-papas muestra quién trae cada regalo');
+h_check(str_contains($html, 'Ocultar (libera el regalo)'), 'regalos-papas deja ocultar un regalo tomado');
+$r = pedir($base, 'POST', '/regalos-papas.php', ['t' => $tokenPapas, 'accion' => 'agregar', 'titulo' => 'intruso']);
+h_check((int) $pdo->query("SELECT COUNT(*) FROM cc_gift_items WHERE title='intruso'")->fetchColumn() === 0, 'agregar por POST directo en modo rsvp no hace nada');
+
+$r = pedir($base, 'GET', '/asistencia-papas.php?p=' . $slug . '&f=' . cb_rsvp_firma_papas($slug));
+$html = $r['html'];
+h_check($r['estado'] === 200 && preg_match('/Team Mamá \d+ · Team Papá \d+/u', $html) === 1, 'asistencia-papas: marcador de equipos');
+h_check(str_contains($html, 'Ana Prueba') && str_contains($html, 'lleva Coche') && str_contains($html, 'Team Mamá') && str_contains($html, 'lleva Pañales talla RN'), 'asistencia-papas: nombre, equipo y regalo en cada fila');
+h_check(str_contains($html, '📷'), 'asistencia-papas: marca la foto de bebé sin mostrarla');
+h_check(!str_contains($html, '<img'), 'asistencia-papas no muestra la foto');
+
+// ── Borrar desde el admin ──
+$cookies = [];
+$r = pedir($base, 'GET', '/admin/maestro.php');
+$cookies += $r['cookies'];
+preg_match('/name="csrf" value="([a-f0-9]+)"/', $r['html'], $m);
+$r = pedir($base, 'POST', '/admin/maestro.php', ['csrf' => $m[1] ?? '', 'password' => 'clave-maestra-1234'], [], false, $cookies);
+$cookies = $r['cookies'] + $cookies;
+h_check($r['estado'] === 302, 'la clave maestra entra al admin (' . $r['estado'] . ')');
+$r = pedir($base, 'GET', '/admin/index.php?action=editar&slug=' . $slug, null, [], false, $cookies);
+h_check($r['estado'] === 200 && str_contains($r['html'], 'Team Mamá') && str_contains($r['html'], 'rsvp_borrar'), 'el admin lista confirmados con equipo, regalo y botón Borrar');
+preg_match('/id="cc-envios"[^>]*>\s*<input type="hidden" name="csrf" value="([a-f0-9]+)"/', $r['html'], $m);
+$csrf = $m[1] ?? '';
+h_check($csrf !== '', 'hay token CSRF en el formulario del panel');
+$inesFila = $pdo->query("SELECT id, gift_item_id, baby_photo_key FROM cc_rsvps WHERE family_name='Ines Prueba'")->fetch(PDO::FETCH_ASSOC);
+$rutaFoto = cb_rsvp_foto_path((string) $inesFila['baby_photo_key']);
+h_check($rutaFoto !== null && is_file($rutaFoto), 'la foto de Ines existe antes de borrar');
+$r = pedir($base, 'POST', '/admin/index.php?rsvp_borrar=' . $inesFila['id'], ['csrf' => 'malo', 'slug' => $slug, 'action' => 'rsvp_borrar'], [], false, $cookies);
+h_check((int) $pdo->query("SELECT COUNT(*) FROM cc_rsvps WHERE id=" . (int) $inesFila['id'])->fetchColumn() === 1, 'sin CSRF válido no se borra');
+$r = pedir($base, 'POST', '/admin/index.php?rsvp_borrar=' . $inesFila['id'], ['csrf' => $csrf, 'slug' => $slug, 'action' => 'rsvp_borrar'], [], false, $cookies);
+h_check($r['estado'] === 302, 'borrar redirige (' . $r['estado'] . ')');
+h_check((int) $pdo->query("SELECT COUNT(*) FROM cc_rsvps WHERE id=" . (int) $inesFila['id'])->fetchColumn() === 0, 'la confirmación se borró');
+h_check((int) $pdo->query("SELECT COUNT(*) FROM cc_gift_items WHERE id=" . (int) $inesFila['gift_item_id'])->fetchColumn() === 0, 'su regalo también');
+clearstatcache(); h_check(!is_file($rutaFoto), 'y su foto');
+h_check(cb_regalo_validar($invId, 'cuna')['ok'] === true, 'la cuna de Ines quedó libre para otro invitado');
+h_check(cb_rsvp_borrar($partyId + 999, (int) $pdo->query('SELECT id FROM cc_rsvps LIMIT 1')->fetchColumn()) === false, 'no se borra una confirmación de otra fiesta');
 
 echo "OK $tests checks rsvp-regalo-http\n";

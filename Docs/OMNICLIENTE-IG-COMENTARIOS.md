@@ -98,7 +98,27 @@ Supuesto sin verificar: el nombre exacto de los botones del panel de hoy.
 servidor (no se imprime). Se mandan los dos campos, porque la llamada reemplaza la lista: sin `messages`, se cortarían los mensajes
 directos. Se verifica con `GET <IG_ID>/subscribed_apps`.
 
-## 5. Despliegue a PROD (pendiente del OK de Luis)
+## 5. Despliegue a PROD (hecho el 24-oct-2026, con el OK de Luis)
+
+**Evidencia (24-oct):**
+- Cotejo previo: md5 de PROD igual al de la mañana.
+- Respaldo en `~/respaldos/ig-comentarios-antes-20261024-1249/`: los 3 archivos, la fila de `bot_configs` del canal 2 y la conversación 6.
+- Los 4 archivos subidos con `php -l` y md5 de git (`540c7608…`, `2ab78087…`, `62ed90c4…`, `2e117c7e…`).
+- Verificación desde afuera:
+  - `ig-comments/poll` responde 503;
+  - `ig-metrics` y `reel-diario/token-check` sin secreto responden 403;
+  - `admin/ig-comments` sin sesión responde 403;
+  - el webhook sin parámetros responde 400, y con un secreto malo, 403.
+- Seis palabras guardadas (texto público «¡Hola! 👋 Te lo enviamos por mensaje, revisa tu bandeja 📩», aplicado a las 13:01).
+- Conversación 6, a nombre de la cuenta, archivada.
+- La cuenta quedó suscrita a `["messages","comments"]` (antes, solo `["messages"]`); el token del publicador sigue `ok`.
+- **Prueba real** con @chachi_morales y la palabra MÉTODO: llegó por el **webhook** (sin acceso avanzado), con la pública y la privada `sent` en el primer intento. Su respuesta por mensaje directo entró a la misma conversación (12) y el eco no se duplicó. **El plan B no hizo falta.**
+
+**Pendiente:**
+- Nadie responde automáticamente después del mensaje privado: el canal 2 no tiene flujo de n8n. Es el asistente de mensajes directos, que va en su propia sesión.
+- El contador `active_chats` del ejecutivo 2 sigue contando la conversación 6 archivada.
+
+La tabla queda como procedimiento y para la vuelta atrás:
 
 Subir el **contenido de git** (`git show <commit>:<archivo>`, fin de línea LF, igual que PROD), no la copia de trabajo de Windows.
 

@@ -100,5 +100,17 @@ test('baby-osito no suena con la voz de Alice: vozPropia apaga los audios compar
   const temas = JSON.parse(leer('public/data/themes.json'))
   assert.equal((temas.themes || temas)['baby-osito'].vozPropia, true, 'baby-osito debe declarar vozPropia')
   // Con vozPropia, el cierre y la despedida del recorrido salen solo de narracion-video/ de la temática.
-  assert.match(php, /\['vozPropia'\][\s\S]{0,900}\$narrationIntroUrl = '';[\s\S]{0,200}\$narrationOutroUrl = \$vozDeLaTematica\('narracion-final\.mp3'\);[\s\S]{0,200}\$narrationPlaylistEndUrl = \$vozDeLaTematica\(/)
+  const bloque = php.slice(php.indexOf("['vozPropia']"), php.indexOf("['vozPropia']") + 1200)
+  assert.match(bloque, /\$narrationOutroUrl = \$vozDeLaTematica\('narracion-final\.mp3'\);/)
+  assert.match(bloque, /\$narrationPlaylistEndUrl = \$vozDeLaTematica\(/)
+  // La narración de inicio es propia de cada invitación: vozPropia no la apaga.
+  assert.doesNotMatch(bloque.slice(0, bloque.indexOf('$narrationPlaylistEndUrl')), /\$narrationIntroUrl = '';/)
+})
+
+test('baby-osito trae su voz propia: despedida en tres versiones y cierre, en MP3', () => {
+  for (const archivo of ['despedida-baby-osito-nino', 'despedida-baby-osito-nina', 'despedida-baby-osito-neutro', 'narracion-final']) {
+    const datos = readFileSync(join(raiz, 'public/themes/baby-osito/narracion-video', archivo + '.mp3'))
+    assert.ok(datos.length > 10000, archivo + ' parece vacío')
+    assert.ok(datos.subarray(0, 3).toString() === 'ID3' || (datos[0] === 0xff && (datos[1] & 0xe0) === 0xe0), archivo + ' no es MP3')
+  }
 })

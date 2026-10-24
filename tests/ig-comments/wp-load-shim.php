@@ -11,7 +11,9 @@ add_filter('pre_wp_mail', static fn() => true);
 add_filter('pre_http_request', static function ($pre, $args, $url) {
 	if (strpos($url, 'https://graph.instagram.com/') !== 0) {
 		// Se anota (sin cuerpo) para que la prueba vea si algo intentó ir a n8n.
-		file_put_contents(__DIR__ . '/http.log', $url . "\n", FILE_APPEND);
+		// El contexto del comentario también, para ver lo que recibe el asistente (no lleva el token del canal).
+		$ctx = isset($args['body']) ? (json_decode($args['body'], true)['contexto'] ?? null) : null;
+		file_put_contents(__DIR__ . '/http.log', $url . ($ctx ? "\tcontexto=" . wp_json_encode($ctx, JSON_UNESCAPED_UNICODE) : '') . "\n", FILE_APPEND);
 		return new WP_Error('prueba_local', 'HTTP externo bloqueado en pruebas.');
 	}
 	$method = $args['method'] ?? 'GET';

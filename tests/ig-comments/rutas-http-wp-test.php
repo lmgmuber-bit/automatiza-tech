@@ -34,7 +34,7 @@ $igc->save_config($CID, ['activo' => true, 'activo_desde' => gmdate('c', time() 
 
 $DIR = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'igc-rutas-' . bin2hex(random_bytes(4));
 mkdir($DIR);
-foreach (['webhook-omnichannel.php', 'api-omnichannel.php', 'omnichannel-controller.php', 'omnichannel-atfinance-controller.php',
+foreach (['webhook-omnichannel.php', 'api-omnichannel.php', 'omnichannel-controller.php', 'omnichannel-derivacion.php', 'omnichannel-atfinance-controller.php',
 	'omnichannel-ig-insights-controller.php', 'omnichannel-ig-comments-controller.php'] as $f) {
 	copy($ROOT . '/' . $f, $DIR . '/' . $f);
 }
@@ -119,6 +119,8 @@ $n8n_calls = static function () use ($DIR, $N8N) {
 	return substr_count((string) @file_get_contents($DIR . '/http.log'), $N8N);
 };
 ok($n8n_calls() === 1, 'control: un mensaje directo normal en modo bot sí va a n8n');
+ok(strpos((string) @file_get_contents($DIR . '/http.log'), 'contexto={"origen":"comentario_palabra_clave","palabra":"MÉTODO"') !== false,
+	'a n8n le llega el contexto: comentó MÉTODO');
 
 // --- Ecos (is_echo): lo que envía la propia cuenta vuelve por el webhook
 $CONV = (int) $row->conversation_id;
@@ -158,6 +160,19 @@ ok($n8n_calls() === $n8n_before, 'un eco nunca va a n8n');
 ok($wpdb->get_var($wpdb->prepare("SELECT status FROM {$P}conversations WHERE id = %d", $CONV)) === 'bot', 'el eco no cambia el estado de la conversación');
 $r = req('POST', $WH, $eco('mid-app-2', 'igsid-nadie', 'Hola, ¿cómo estás?'));
 ok(($r['json']['status'] ?? '') === 'echo_no_conversation' && !$wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$P}conversations WHERE channel_id = %d AND external_contact_id = %s", $CID, 'igsid-nadie')), 'eco a alguien sin conversación: no crea nada');
+
+// --- Callback del asistente (n8n): derivar a una persona y descarte posterior
+$CB = $BASE . '/api-omnichannel.php?route=' . rawurlencode('webhook/n8n-callback');
+$tok = hash_hmac('sha256', $CONV . ':' . $CID, defined('OMNI_ADMIN_SECRET') ? OMNI_ADMIN_SECRET : 'omni_default_secret');
+$r = req('POST', $CB, ['conversation_id' => $CONV, 'channel_id' => $CID, 'callback_token' => 'malo', 'action' => 'escalate', 'motivo' => 'x']);
+ok($r['code'] === 400, 'callback escalate con token malo → 400');
+$r = req('POST', $CB, ['conversation_id' => $CONV, 'channel_id' => $CID, 'callback_token' => $tok, 'action' => 'escalate',
+	'motivo' => 'Pidió hablar con una persona', 'content' => 'Le avisé a Luis, te va a responder por aquí mismo.']);
+ok($r['code'] === 200 && !empty($r['json']['derivada']), 'callback escalate → 200 derivada');
+if ($r['code'] !== 200) { echo '     ' . substr($r['body'], 0, 300) . "\n"; }
+ok($wpdb->get_var($wpdb->prepare("SELECT intervention_mode FROM {$P}conversations WHERE id = %d", $CONV)) === 'human', 'la conversación queda en modo humano');
+$r = req('POST', $CB, ['conversation_id' => $CONV, 'channel_id' => $CID, 'callback_token' => $tok, 'content' => 'respuesta tardía']);
+ok($r['code'] === 200 && ($r['json']['ignorada'] ?? '') === 'conversacion_humana', 'una respuesta tardía del bot se descarta (200 ignorada)');
 
 // --- Rutas del plan B
 $r = $api('POST', 'ig-comments/poll');

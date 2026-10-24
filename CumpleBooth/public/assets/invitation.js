@@ -67,17 +67,34 @@
       reset();
     }
   };
+  // Una sola voz a la vez (Luis, 2026-10-24): al tocar «Toca para seguir» con la narración de
+  // inicio todavía sonando, la voz de la sección siguiente se montaba encima. Cada voz que
+  // arranca calla a las demás y les devuelve su parte de la música baja; sin eso, una voz
+  // cortada a mitad nunca dispara `ended` y la música quedaría baja para siempre.
+  const vocesSonando = new Map(); // <audio> -> función que libera su música baja
+  const callarVoces = (excepto) => {
+    vocesSonando.forEach((liberar, voz) => {
+      if (voz === excepto) return;
+      voz.pause();
+      liberar();
+    });
+  };
   const duckWhile = (audio) => {
     if (!(audio instanceof HTMLAudioElement) || !audio.getAttribute('src')) return Promise.resolve(false);
+    callarVoces(audio);
+    // El mismo <audio> se reutiliza entre capítulos: lo que pidió su clip anterior se suelta antes.
+    if (vocesSonando.has(audio)) vocesSonando.get(audio)();
     duckDepth += 1;
     applyMusicVolume();
     let released = false;
     const done = () => {
       if (released) return;
       released = true;
+      vocesSonando.delete(audio);
       duckDepth = Math.max(0, duckDepth - 1);
       applyMusicVolume();
     };
+    vocesSonando.set(audio, done);
     audio.currentTime = 0;
     audio.addEventListener('ended', done, { once: true });
     audio.addEventListener('error', done, { once: true });
@@ -167,6 +184,8 @@
   const botonHistoria = document.querySelector('.inv-hero [data-inv-historia]');
   let historiaArmada = false;
   const irALaHistoria = () => {
+    // Quien toca para seguir ya quiere la sección siguiente: la voz de la portada se calla ahí.
+    callarVoces(null);
     const heroSection = document.querySelector('.inv-hero');
     const nextSection = heroSection ? heroSection.nextElementSibling : null;
     const target = nextSection

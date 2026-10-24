@@ -21,6 +21,19 @@ grep -o 'assets/[a-zA-Z0-9._-]*' dist/index.html   # lo que index.html pide
 Sube **todos** los de `dist/assets/` junto con `dist/index.html` en la misma
 tanda. Los que sobren del build anterior se pueden borrar después.
 
+## DESPLEGADO 2026-10-24 (~02:30): baby shower con regalo validado y temática Osito de Bienvenida (rama `claude/baby-shower-regalos`)
+
+Go de Luis el 24-oct («Mándala ahora mismo»). Diseño y plan en `Docs/superpowers/specs/2026-10-24-cumpleclick-baby-shower-invitacion-design.md` y `Docs/superpowers/plans/2026-10-24-cumpleclick-baby-shower-invitacion.md`.
+
+- **Migración 028** (`cc_rsvps`: `team`, `gift_item_id`, `baby_photo_key`) aplicada con `database/aplicar-028.php` ANTES del código: `applied 028_rsvp_regalo`, tres conteos en 0.
+- **Código (14 archivos de `app/`, sha256 cotejado):** `lib.regalos-confirmacion.php` (nuevo), `lib.gifts.php`, `lib.rsvp.php`, `rsvp-api.php`, `gift-api.php`, `regalos-papas.php`, `asistencia-papas.php`, `admin/index.php`, `admin/agenda.php`, `data/themes.json`, `data/event-profile-presets.json`, `assets/invitation.css`, `assets/invitation.js`, `invitacion.php`. Antes de pisar, los 13 reemplazados eran idénticos a `main` (`ca57fcc`).
+- **Temática nueva `themes/baby-osito/`** (7 archivos): fondos Soul 2 sin texto, intro del sobre y despedida con Kling 3.0, música de `baby-nube` provisoria. `vozPropia`: no suena Alice; mientras no haya voz propia, va con música sola.
+- **CLI privados en `database/`:** `modo-regalo-confirmacion.php <slug>` pone `gift_mode='rsvp'` (el admin no lo ofrece todavía).
+- **Respaldo:** `~/respaldos/cumpleclick-db-antes-028-20261024-0225.sql` (40 tablas) y `~/respaldos/app-antes-028-20261024-0225.tar.gz` (13 archivos). El CSS corregido después tiene su propio respaldo `app-invitation.css.antes-*`.
+- **Verificado en PROD:** confirmación por la invitación a 375 px; «cochecito» después de «Coche de paseo» → 422 con el mensaje exacto; «sorpresa» → 422 genérico; foto de 2,9 MB 3024×4032 aceptada y guardada 1200×1600 fuera del webroot; la lista pública sin nombres. Las dos confirmaciones de prueba se borraron con `cb_rsvp_borrar` (fila, regalo y foto).
+- **No probado:** el bloqueo `FOR UPDATE` con dos confirmaciones simultáneas; los enlaces de los papás con datos (exigen la fiesta activa); un iPhone real; la revisión B de Codex (NOT_RUN).
+- **Rollback:** restaurar el tar sobre `app/` y borrar `themes/baby-osito/` y `lib.regalos-confirmacion.php`. La 028 es aditiva y puede quedarse; su `.down.php` está en `database/migrations/`.
+
 ## DESPLEGADO 2026-10-16 (tarde): transiciones habladas y ruleta del baile (rama `claude/animador-voces`)
 
 Go de Luis en cada paso. **Transiciones** (`7ca9898`): «Paso esta» y «Siguiente» dicen una frase («¡Uy, esa no nos

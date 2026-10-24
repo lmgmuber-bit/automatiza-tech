@@ -21,7 +21,7 @@ function agenda_horas(array $e):string{
 function agenda_theme(string $slug):string{
     // Se muestran los nombres comerciales aprobados, también para slugs históricos.
     return ['hielo'=>'Reino de Hielo','spidey'=>'Aventura Arácnida','heroes'=>'Aventura Arácnida','carreras'=>'Carreras',
-        'familia-canina'=>'Familia Canina','tropical'=>'Tropical','kpop'=>'K-Pop','baby-nube'=>'Entre Nubes',
+        'familia-canina'=>'Familia Canina','tropical'=>'Tropical','kpop'=>'K-Pop','baby-nube'=>'Entre Nubes','baby-osito'=>'Osito de Bienvenida',
         'baby-safari'=>'Safari','baby-rosas'=>'Entre Rosas'][$slug]??cb_theme_public_name($slug);
 }
 function agenda_tarjeta(array $e,bool $detalle=false):void {

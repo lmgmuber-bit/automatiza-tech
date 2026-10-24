@@ -1,0 +1,377 @@
+{
+ "name": "Agente Tech Instagram · Herramientas",
+ "nodes": [
+  {
+   "id": "igh-entrada",
+   "name": "Entrada",
+   "type": "n8n-nodes-base.executeWorkflowTrigger",
+   "typeVersion": 1.1,
+   "position": [
+    0,
+    300
+   ],
+   "parameters": {
+    "inputSource": "workflowInputs",
+    "workflowInputs": {
+     "values": [
+      {
+       "name": "accion"
+      },
+      {
+       "name": "fecha"
+      },
+      {
+       "name": "hora"
+      },
+      {
+       "name": "nombre"
+      },
+      {
+       "name": "correo"
+      },
+      {
+       "name": "telefono"
+      },
+      {
+       "name": "igsid"
+      },
+      {
+       "name": "prueba"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "id": "igh-switch",
+   "name": "¿Qué herramienta?",
+   "type": "n8n-nodes-base.switch",
+   "typeVersion": 1,
+   "position": [
+    220,
+    300
+   ],
+   "parameters": {
+    "dataType": "string",
+    "value1": "={{ $json.accion }}",
+    "rules": {
+     "rules": [
+      {
+       "value2": "disponibilidad"
+      },
+      {
+       "value2": "agendar",
+       "output": 1
+      }
+     ]
+    }
+   }
+  },
+  {
+   "id": "igh-config",
+   "name": "Agenda",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.1,
+   "position": [
+    440,
+    200
+   ],
+   "parameters": {
+    "url": "https://automatizatech.cl/wp-json/automatiza-tech/v1/appointments-config",
+    "options": {
+     "timeout": 15000
+    }
+   }
+  },
+  {
+   "id": "igh-fechas",
+   "name": "Fechas a revisar",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    660,
+    200
+   ],
+   "parameters": {
+    "jsCode": "// Días a revisar según la agenda real (appointments-config): el pedido, o los próximos 4 hábiles para la agenda.\nconst cfg = ($json && $json.data) || {};\nconst t = $('Entrada').first().json;\nconst feriados = new Set(cfg.holidays || []);\nconst semana = cfg.weekSchedule || {};\nconst nombres = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];\nconst hoy = DateTime.now().setZone('America/Santiago').startOf('day');\nconst abre = d => { const s = semana[nombres[d.weekday % 7]]; return s && s.enabled ? s : null; };\nconst fin = msg => [{ json: { fin: true, result: msg } }];\nconst pedida = String(t.fecha || '').trim();\nif (pedida) {\n  if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(pedida)) return fin('Fecha inválida: usa el formato AAAA-MM-DD.');\n  const d = DateTime.fromISO(pedida, { zone: 'America/Santiago' });\n  if (!d.isValid) return fin('Fecha inválida.');\n  if (d < hoy) return fin('Esa fecha ya pasó. Ofrece los próximos días disponibles.');\n  if (d > hoy.plus({ days: 60 })) return fin('Solo agendamos hasta 60 días adelante.');\n  if (feriados.has(pedida)) return fin('El ' + pedida + ' es feriado: no hay reuniones ese día. Ofrece otro día.');\n  const s = abre(d);\n  if (!s) return fin('Ese día no atendemos. Ofrece otro día.');\n  return [{ json: { fin: false, date: pedida, start: s.start, end: s.end } }];\n}\nconst out = [];\nfor (let i = 0; i < 21 && out.length < 4; i++) {\n  const d = hoy.plus({ days: i });\n  const iso = d.toISODate();\n  const s = abre(d);\n  if (s && !feriados.has(iso)) out.push({ json: { fin: false, date: iso, start: s.start, end: s.end } });\n}\nreturn out.length ? out : fin('No encontramos días disponibles en las próximas semanas.');\n"
+   }
+  },
+  {
+   "id": "igh-fin",
+   "name": "¿Ya hay respuesta?",
+   "type": "n8n-nodes-base.if",
+   "typeVersion": 1,
+   "position": [
+    880,
+    200
+   ],
+   "parameters": {
+    "conditions": {
+     "boolean": [
+      {
+       "value1": "={{ $json.fin }}",
+       "value2": true
+      }
+     ]
+    }
+   }
+  },
+  {
+   "id": "igh-check",
+   "name": "Horas ocupadas",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.1,
+   "position": [
+    1100,
+    260
+   ],
+   "parameters": {
+    "method": "POST",
+    "url": "https://automatizatech.cl/wp-json/automatiza-tech/v1/check-availability",
+    "sendBody": true,
+    "specifyBody": "json",
+    "jsonBody": "={{ JSON.stringify({ date: $json.date }) }}",
+    "options": {
+     "timeout": 15000
+    }
+   }
+  },
+  {
+   "id": "igh-horas",
+   "name": "Horas libres",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    1320,
+    260
+   ],
+   "parameters": {
+    "jsCode": "// Horas libres por día (en punto, con al menos 2 horas de anticipación). Hasta 3 días y 8 horas por día.\nconst fechas = $('Fechas a revisar').all().map(i => i.json);\nconst res = $input.all().map(i => i.json);\nconst ahora = DateTime.now().setZone('America/Santiago');\nconst lineas = [];\nres.forEach((r, i) => {\n  const f = fechas[i];\n  if (!f || lineas.length >= 3) return;\n  const etiqueta = DateTime.fromISO(f.date, { zone: 'America/Santiago' }).setLocale('es').toFormat(\"cccc d 'de' LLLL\") + ' (' + f.date + ')';\n  const ini = parseInt(((r.workingHours || {}).start) || f.start, 10);\n  const fin = parseInt(((r.workingHours || {}).end) || f.end, 10);\n  const ocupadas = new Set((r.busySlots || []).map(x => String(x).slice(0, 5)));\n  const libres = [];\n  if (!r.isFullDay) {\n    for (let h = ini; h < fin; h++) {\n      const hh = String(h).padStart(2, '0') + ':00';\n      if (ocupadas.has(hh)) continue;\n      if (DateTime.fromISO(f.date + 'T' + hh, { zone: 'America/Santiago' }) < ahora.plus({ hours: 2 })) continue;\n      libres.push(hh);\n    }\n  }\n  if (libres.length) lineas.push('- ' + etiqueta + ': ' + libres.slice(0, 8).join(', '));\n  else if (fechas.length === 1) lineas.push('- ' + etiqueta + ': sin horas libres. Ofrece otro día.');\n});\nconst txt = lineas.length ? 'Horas libres (hora de Chile, reuniones de 1 hora):\\n' + lineas.join('\\n')\n  : 'No hay horas libres en los próximos días. Ofrece derivar a una persona.';\nreturn [{ json: { result: txt } }];\n"
+   }
+  },
+  {
+   "id": "igh-validar",
+   "name": "Validar cita",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    440,
+    420
+   ],
+   "parameters": {
+    "jsCode": "// Revisa la cita antes de agendar. El sub-workflow de PROD vuelve a revisar el horario en WordPress y en Calendar.\nconst t = $('Entrada').first().json;\nconst fecha = String(t.fecha || '').trim();\nconst hora = String(t.hora || '').trim().slice(0, 5);\nconst correo = String(t.correo || '').trim().toLowerCase();\nconst nombre = String(t.nombre || '').trim().slice(0, 80);\nlet tel = String(t.telefono || '').replace(/[^\\d+]/g, '');\nif (/^9\\d{8}$/.test(tel)) tel = '+56' + tel;\nelse if (/^569\\d{8}$/.test(tel)) tel = '+' + tel;\nconst malo = msg => [{ json: { ok: false, result: msg } }];\nif (!nombre) return malo('Falta el nombre de la persona.');\nif (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]{2,}$/.test(correo)) return malo('El correo no es válido: pídeselo de nuevo.');\nif (!/^\\d{4}-\\d{2}-\\d{2}$/.test(fecha) || !/^\\d{2}:00$/.test(hora)) return malo('Fecha u hora inválida: fecha AAAA-MM-DD y hora en punto (HH:00).');\nconst dt = DateTime.fromISO(fecha + 'T' + hora, { zone: 'America/Santiago' });\nif (!dt.isValid) return malo('Fecha u hora inválida.');\nif (dt < DateTime.now().setZone('America/Santiago').plus({ hours: 2 })) return malo('Esa hora ya pasó o es muy pronto: ofrece otra con ver_disponibilidad.');\nreturn [{ json: { ok: true, prueba: t.prueba === 'si', date: fecha, time: hora, email: correo, name: nombre, phone: tel,\n  session_id: 'ig:' + String(t.igsid || ''), appointmentType: 'Demo' } }];\n"
+   }
+  },
+  {
+   "id": "igh-ok",
+   "name": "¿Cita válida?",
+   "type": "n8n-nodes-base.if",
+   "typeVersion": 1,
+   "position": [
+    660,
+    420
+   ],
+   "parameters": {
+    "conditions": {
+     "boolean": [
+      {
+       "value1": "={{ $json.ok }}",
+       "value2": true
+      }
+     ]
+    }
+   }
+  },
+  {
+   "id": "igh-prueba",
+   "name": "¿Es prueba?",
+   "type": "n8n-nodes-base.if",
+   "typeVersion": 1,
+   "position": [
+    880,
+    380
+   ],
+   "parameters": {
+    "conditions": {
+     "boolean": [
+      {
+       "value1": "={{ $json.prueba }}",
+       "value2": true
+      }
+     ]
+    }
+   }
+  },
+  {
+   "id": "igh-simulada",
+   "name": "Cita simulada",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    1100,
+    320
+   ],
+   "parameters": {
+    "jsCode": "const c = $json;\nreturn [{ json: { simulada: true, result: '¡Listo ' + c.name + '! He agendado la reunión para el ' + c.date.split('-').reverse().join('-') + ' a las ' + c.time + ' hrs. Te llegará una invitación a tu correo ' + c.email + '.' } }];\n"
+   }
+  },
+  {
+   "id": "igh-agendar",
+   "name": "Agendar en PROD",
+   "type": "n8n-nodes-base.executeWorkflow",
+   "typeVersion": 1,
+   "position": [
+    1100,
+    460
+   ],
+   "parameters": {
+    "workflowId": "PejBgr2LZQSAbbBy",
+    "options": {}
+   }
+  },
+  {
+   "id": "igh-resultado",
+   "name": "Resultado",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    1320,
+    460
+   ],
+   "parameters": {
+    "jsCode": "return [{ json: { result: String($json.result || 'No pudimos agendar esa hora. Ofrece otra o deriva a una persona.') } }];\n"
+   }
+  }
+ ],
+ "connections": {
+  "Entrada": {
+   "main": [
+    [
+     {
+      "node": "¿Qué herramienta?",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "¿Qué herramienta?": {
+   "main": [
+    [
+     {
+      "node": "Agenda",
+      "type": "main",
+      "index": 0
+     }
+    ],
+    [
+     {
+      "node": "Validar cita",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Agenda": {
+   "main": [
+    [
+     {
+      "node": "Fechas a revisar",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Fechas a revisar": {
+   "main": [
+    [
+     {
+      "node": "¿Ya hay respuesta?",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "¿Ya hay respuesta?": {
+   "main": [
+    [],
+    [
+     {
+      "node": "Horas ocupadas",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Horas ocupadas": {
+   "main": [
+    [
+     {
+      "node": "Horas libres",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Validar cita": {
+   "main": [
+    [
+     {
+      "node": "¿Cita válida?",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "¿Cita válida?": {
+   "main": [
+    [
+     {
+      "node": "¿Es prueba?",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "¿Es prueba?": {
+   "main": [
+    [
+     {
+      "node": "Cita simulada",
+      "type": "main",
+      "index": 0
+     }
+    ],
+    [
+     {
+      "node": "Agendar en PROD",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Agendar en PROD": {
+   "main": [
+    [
+     {
+      "node": "Resultado",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  }
+ },
+ "settings": {
+  "executionOrder": "v1",
+  "timezone": "America/Santiago"
+ }
+}

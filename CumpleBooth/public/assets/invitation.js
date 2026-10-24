@@ -1311,7 +1311,8 @@
       if (Date.now() - ultimoGesto < GUIA_QUIETO_MS) return;
       clearInterval(vigilar);
       const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-      seccion.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' });
+      // Al botón y no a la sección: centrada la sección, el botón quedaba pegado al borde de abajo.
+      botonConfirmar.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' });
     }, 1000);
   })();
 

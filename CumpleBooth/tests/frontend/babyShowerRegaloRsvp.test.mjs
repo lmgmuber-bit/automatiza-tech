@@ -154,7 +154,7 @@ test('guía al final: si el invitado no baja, la página lo lleva a confirmar y 
   assert.match(guia, /\['wheel', 'touchstart', 'pointerdown', 'keydown'\]/)
   assert.match(guia, /vocesSonando\.size > 0/)
   assert.match(guia, /cc_rsvp_ok_/)
-  assert.match(guia, /seccion\.scrollIntoView\(/)
+  assert.match(guia, /botonConfirmar\.scrollIntoView\(/)
   // Al llegar (solo o llevado) habla una vez, destrabada en un toque para iOS, y el botón late.
   assert.match(guia, /duckWhile\(vozGuia\)/)
   assert.match(guia, /vozGuia\.muted = true/)

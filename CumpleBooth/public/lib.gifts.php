@@ -33,6 +33,9 @@ const CB_GIFT_MAX_POR_INVITADO = 3;
  *   'open' — no hay lista: cada invitado anota lo que va a llevar y todos ven
  *            lo anotado. Para las familias a las que pedir una lista se les
  *            hace incómodo, que son muchas.
+ *   'rsvp' — el regalo se dice al CONFIRMAR asistencia (rsvp-api.php) y se valida
+ *            ahí; la invitación solo lo muestra. Solo lo activa el CLI
+ *            modo-regalo-confirmacion.php (ver lib.regalos-confirmacion.php).
  *
  * Los dos usan la misma tabla y el mismo mecanismo de reserva; lo que cambia
  * es quién escribe y cómo se presenta. Cualquier valor desconocido —incluida
@@ -41,7 +44,7 @@ const CB_GIFT_MAX_POR_INVITADO = 3;
 function cb_gift_mode($invitation): string
 {
     $modo = is_array($invitation) ? (string) ($invitation['gift_mode'] ?? '') : (string) $invitation;
-    return $modo === 'open' ? 'open' : 'list';
+    return in_array($modo, ['open', 'rsvp'], true) ? $modo : 'list';
 }
 
 function cb_gift_require_db(): PDO
@@ -232,14 +235,19 @@ function cb_gift_add(int $invitationId, array $data, string $addedBy = 'guest'):
 function cb_gift_set_hidden(int $invitationId, int $giftId, bool $hidden): array
 {
     $pdo = cb_gift_require_db();
+    // En modo `rsvp` todo regalo nace tomado: los papás sí pueden ocultarlo (queda libre para otro invitado).
+    $modoStmt = $pdo->prepare('SELECT gift_mode FROM cc_invitations WHERE id = ?');
+    $modoStmt->execute([$invitationId]);
+    $enRsvp = cb_gift_mode(['gift_mode' => $modoStmt->fetchColumn()]) === 'rsvp';
     $stmt = $pdo->prepare(
         'UPDATE cc_gift_items SET moderation_status = ?, updated_at = ?
-          WHERE id = ? AND invitation_id = ? AND status = ?'
+          WHERE id = ? AND invitation_id = ?' . ($enRsvp ? '' : ' AND status = ?')
     );
-    $stmt->execute([
-        $hidden ? 'hidden' : 'approved', gmdate('Y-m-d H:i:s'),
-        $giftId, $invitationId, CB_GIFT_DISPONIBLE,
-    ]);
+    $params = [$hidden ? 'hidden' : 'approved', gmdate('Y-m-d H:i:s'), $giftId, $invitationId];
+    if (!$enRsvp) {
+        $params[] = CB_GIFT_DISPONIBLE;
+    }
+    $stmt->execute($params);
     return $stmt->rowCount() > 0 ? ['ok' => true] : ['ok' => false, 'error' => 'no_se_puede_ocultar'];
 }
 
@@ -318,6 +326,14 @@ function cb_gift_board_url(string $token): string
 function cb_gift_set_mode(int $invitationId, string $modo): array
 {
     $pdo = cb_gift_require_db();
+    if ($modo === 'rsvp') {
+        return ['ok' => false, 'error' => 'modo_invalido']; // solo lo pone el CLI
+    }
+    $actual = $pdo->prepare('SELECT gift_mode FROM cc_invitations WHERE id = ?');
+    $actual->execute([$invitationId]);
+    if (cb_gift_mode(['gift_mode' => $actual->fetchColumn()]) === 'rsvp') {
+        return ['ok' => false, 'error' => 'modo_fijo'];
+    }
     $modo = $modo === 'open' ? 'open' : 'list';
     $stmt = $pdo->prepare('UPDATE cc_invitations SET gift_mode = ?, updated_at = ? WHERE id = ?');
     try {

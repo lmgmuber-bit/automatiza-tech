@@ -26,13 +26,23 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST') {
     $salir(405, ['ok' => false, 'error' => 'method_not_allowed']);
 }
 
-$raw = file_get_contents('php://input');
-if (!is_string($raw) || strlen($raw) > 4096) {
-    $salir(413, ['ok' => false, 'error' => 'payload_too_large']);
-}
-$input = json_decode($raw, true);
-if (!is_array($input)) {
-    $salir(400, ['ok' => false, 'error' => 'invalid_json']);
+// Dos formas de entrar: JSON (como siempre) o multipart/form-data (modo `rsvp`, con foto de bebé opcional).
+$esMultipart = stripos((string) ($_SERVER['CONTENT_TYPE'] ?? ''), 'multipart/form-data') === 0;
+if ($esMultipart) {
+    if (!$_POST && (int) ($_SERVER['CONTENT_LENGTH'] ?? 0) > 0) {
+        // PHP descarta todo el cuerpo cuando supera post_max_size: lo único que puede ser es una foto enorme.
+        $salir(422, ['ok' => false, 'error' => 'foto_invalida', 'mensaje' => 'No pudimos usar esa foto. Prueba con otra o confirma sin foto.']);
+    }
+    $input = $_POST;
+} else {
+    $raw = file_get_contents('php://input');
+    if (!is_string($raw) || strlen($raw) > 4096) {
+        $salir(413, ['ok' => false, 'error' => 'payload_too_large']);
+    }
+    $input = json_decode($raw, true);
+    if (!is_array($input)) {
+        $salir(400, ['ok' => false, 'error' => 'invalid_json']);
+    }
 }
 
 $token = (string) ($input['t'] ?? '');
@@ -54,6 +64,23 @@ try {
     $partyId = (int) ($invitation['party_id'] ?? 0);
     if ($partyId <= 0) {
         $salir(404, ['ok' => false, 'error' => 'sin_evento']);
+    }
+    if (cb_gift_mode($invitation) === 'rsvp') {
+        // El enlace es público: sin límite, un script llena la lista de regalos y de fotos.
+        $rate = cb_rate_limit('rsvp:' . $partyId, cb_request_identity(), 30, 600, 600);
+        if (!$rate['allowed']) {
+            header('Retry-After: ' . max(1, (int) $rate['retry_after']));
+            $salir(429, ['ok' => false, 'error' => 'rate_limited']);
+        }
+        $res = cb_rsvp_confirmar_con_regalo($invitation, [
+            'family_name' => $input['family_name'] ?? '',
+            'gift' => $input['gift'] ?? '',
+            'team' => $input['team'] ?? '',
+        ], isset($_FILES['baby_photo']) && is_array($_FILES['baby_photo']) ? $_FILES['baby_photo'] : null);
+        if (empty($res['ok'])) {
+            $salir(422, ['ok' => false, 'error' => $res['error'], 'mensaje' => $res['mensaje']]);
+        }
+        $salir(200, ['ok' => true, 'regalo' => $res['regalo']]);
     }
     $resultado = cb_rsvp_save(
         $partyId,

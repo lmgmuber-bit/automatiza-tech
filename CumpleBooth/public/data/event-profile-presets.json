@@ -372,9 +372,9 @@
             "scene": "cozy watercolor nursery with a light-brown teddy bear, green and yellow balloons, little paw prints, a green gingham blanket, a baby bottle and knitted booties",
             "text_area": {
                 "x": 0.2,
-                "y": 0.18,
-                "w": 0.6,
-                "h": 0.42,
+                "y": 0.28,
+                "w": 0.62,
+                "h": 0.4,
                 "tone": "#3D4A2F"
             }
         },

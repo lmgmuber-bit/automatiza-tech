@@ -2074,9 +2074,9 @@
       "personajes": [],
       "frameBox": {
         "x": 0.2,
-        "y": 0.18,
-        "w": 0.6,
-        "h": 0.42
+        "y": 0.28,
+        "w": 0.62,
+        "h": 0.4
       },
       "musicaHint": "Cuna suave",
       "transition": "none"

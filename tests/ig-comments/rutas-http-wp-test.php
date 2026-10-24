@@ -103,6 +103,10 @@ $r = req('POST', $WH, $aviso('c-http-1', 'método'));
 ok(($r['json']['results'][0]['status'] ?? '') === 'duplicate', 'webhook repetido → duplicate');
 $r = req('POST', $WH, $aviso('c-http-2', 'MÉTODO', $ACC, 'automatizatech.cl'));
 ok(($r['json']['results'][0]['status'] ?? '') === 'own_account', 'webhook de la propia cuenta → se ignora');
+$r = req('POST', $WH, $aviso('c-http-4', 'MÉTODO', 'u-http-4', 'otra.persona'));
+ok(($r['json']['results'][0]['status'] ?? '') === 'no_keyword' && !$wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$P}ig_comment_replies WHERE comment_id = %s", 'c-http-4')), 'aviso falsificado (en Meta el comentario no dice la palabra) → no responde');
+$r = req('POST', $WH, $aviso('c-http-5', 'MÉTODO'));
+ok(($r['json']['results'][0]['status'] ?? '') === 'unverified', 'aviso de un comentario que Meta no conoce → unverified');
 $r = req('POST', $BASE . '/webhook-omnichannel.php?channel_id=' . $CID . '&secret=malo', $aviso('c-http-3', 'MÉTODO'));
 ok($r['code'] === 403 && !$wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$P}ig_comment_replies WHERE comment_id = %s", 'c-http-3')), 'webhook con secret malo → 403 y nada registrado');
 // La persona contesta por directo: entra por el camino de siempre a la misma conversación.

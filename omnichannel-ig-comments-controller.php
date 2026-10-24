@@ -39,6 +39,8 @@ class OmniIgCommentsController {
     const POLL_COMMENTS_LIMIT = 50;
     const POLL_LOCK_SECONDS = 120;
     const ACCOUNT_CACHE_SECONDS = 43200;
+    /** Un aviso inflado no agota el proceso ni la cuota de Meta: el resto se descarta y se informa. */
+    const MAX_CHANGES_PER_PAYLOAD = 20;
 
     private $wpdb;
     private $prefix;
@@ -163,13 +165,18 @@ class OmniIgCommentsController {
         return false;
     }
 
-    /** Aviso del webhook: procesa cada comentario de cada entry. */
+    /** Aviso del webhook: procesa cada comentario de cada entry (hasta MAX_CHANGES_PER_PAYLOAD). */
     public function handle_webhook($channel_id, array $payload) {
         $this->maybe_create_tables();
         $results = [];
+        $seen = 0;
         foreach ((array) ($payload['entry'] ?? []) as $entry) {
             foreach ((array) ($entry['changes'] ?? []) as $change) {
                 if (($change['field'] ?? '') !== 'comments' || !is_array($change['value'] ?? null)) continue;
+                if (++$seen > self::MAX_CHANGES_PER_PAYLOAD) {
+                    $results[] = ['comment_id' => (string) ($change['value']['id'] ?? ''), 'status' => 'over_limit'];
+                    continue;
+                }
                 $v = $change['value'];
                 $results[] = $this->process_comment($channel_id, [
                     'id'         => (string) ($v['id'] ?? ''),
@@ -264,31 +271,53 @@ class OmniIgCommentsController {
 
     /**
      * Un comentario: reglas, reserva, respuesta pública, respuesta privada y registro.
+     * Si viene del webhook se relee en Meta y se decide solo con lo que dice Meta: el aviso
+     * podría no venir de Meta, y con él no se elige a quién ni a qué comentario responder.
      * @param array $c id, text, from_id, username, media_id, time, account_id?
-     * @return array ['status' => disabled|own_account|too_old|no_keyword|duplicate|limit|replied|partial|failed, ...]
+     * @return array ['status' => invalid|disabled|error|unverified|own_account|too_old|no_keyword|duplicate|limit|replied|partial|failed, ...]
      */
     public function process_comment($channel_id, array $c, $source) {
         $channel_id = absint($channel_id);
-        $comment_id = preg_replace('/[^0-9A-Za-z_\-]/', '', (string) ($c['id'] ?? ''));
-        if ($comment_id === '') return ['status' => 'invalid'];
+        $raw_id = (string) ($c['id'] ?? '');
+        $comment_id = preg_replace('/[^0-9A-Za-z_\-]/', '', $raw_id);
+        if ($comment_id === '' || $comment_id !== $raw_id || strlen($comment_id) > 64) {
+            return ['comment_id' => substr($comment_id, 0, 64), 'status' => 'invalid'];
+        }
         $out = ['comment_id' => $comment_id];
 
         $cfg = $this->get_config($channel_id);
         if (!$cfg || !$cfg['activo']) return $out + ['status' => 'disabled'];
+        $acc = $this->account($channel_id);
+        if (!$acc['ids'] && $acc['username'] === '') {
+            return $out + ['status' => 'error', 'error' => 'No se pudo identificar la cuenta propia: no se responde'];
+        }
 
-        if ($this->is_own_account($channel_id, (string) ($c['from_id'] ?? ''), (string) ($c['username'] ?? ''), (string) ($c['account_id'] ?? ''))) {
-            return $out + ['status' => 'own_account'];
+        $stop = $this->rule_stop($cfg, $acc, $c);
+        if ($stop) return $out + ['status' => $stop];
+
+        if ($source !== 'poll') {
+            $real = $this->omni->ig_graph_get($channel_id, rawurlencode($comment_id) . '?fields=id,text,timestamp,from,username,media');
+            if (empty($real['success']) || (string) ($real['data']['id'] ?? '') !== $comment_id) {
+                return $out + ['status' => 'unverified', 'error' => $real['error'] ?? 'Meta no devolvió el comentario'];
+            }
+            $d = $real['data'];
+            $c = [
+                'id'         => $comment_id,
+                'text'       => (string) ($d['text'] ?? ''),
+                'from_id'    => (string) ($d['from']['id'] ?? ''),
+                'username'   => (string) ($d['from']['username'] ?? ($d['username'] ?? '')),
+                'media_id'   => (string) ($d['media']['id'] ?? ''),
+                'time'       => (int) strtotime((string) ($d['timestamp'] ?? '')),
+                'account_id' => (string) ($c['account_id'] ?? ''),
+            ];
+            $stop = $this->rule_stop($cfg, $acc, $c);
+            if ($stop) return $out + ['status' => $stop];
         }
-        $time = (int) ($c['time'] ?? time());
-        if ($time < $cfg['activo_desde'] || $time < time() - self::MAX_AGE_SECONDS) {
-            return $out + ['status' => 'too_old'];
-        }
+
         $key = self::normalize_text($c['text'] ?? '');
-        if (!isset($cfg['palabras'][$key])) return $out + ['status' => 'no_keyword'];
-        $word = $cfg['palabras'][$key];
         $out['keyword'] = $key;
-
         $from_id = sanitize_text_field((string) ($c['from_id'] ?? ''));
+        if ($from_id === '') return $out + ['status' => 'invalid'];
         $table = $this->prefix . 'ig_comment_replies';
         $now = current_time('mysql', 1);
 
@@ -317,7 +346,7 @@ class OmniIgCommentsController {
                  AND status IN ('replied','partial','failed','pending') AND created_at >= %s",
                 $channel_id, $from_id, $comment_id, gmdate('Y-m-d H:i:s', time() - DAY_IN_SECONDS)
             ));
-            if ($from_id !== '' && $recent >= $cfg['max_24h']) {
+            if ($recent >= $cfg['max_24h']) {
                 $this->wpdb->update($table, ['status' => 'limit', 'public_status' => 'skipped', 'dm_status' => 'skipped', 'updated_at' => $now],
                     ['comment_id' => $comment_id]);
                 return $out + ['status' => 'limit'];
@@ -325,17 +354,26 @@ class OmniIgCommentsController {
         }
 
         $row = $this->wpdb->get_row($this->wpdb->prepare("SELECT * FROM {$table} WHERE comment_id = %s", $comment_id));
+        // La palabra es la de la reserva (en un reintento no la decide el aviso nuevo).
+        $word = $cfg['palabras'][$row->keyword] ?? null;
+        if (!$word) {
+            $this->wpdb->update($table, ['dm_status' => 'failed', 'error' => 'La palabra ya no está configurada', 'updated_at' => $now],
+                ['comment_id' => $comment_id]);
+            return $out + ['status' => 'no_keyword'];
+        }
+        $out['keyword'] = $row->keyword;
         $errors = [];
         $upd = [];
 
-        // 1) Respuesta pública (solo si todavía no salió).
-        if ($row->public_status !== 'sent') {
+        // 1) Respuesta pública: si nunca se intentó o si Meta la rechazó de forma explícita. Una que
+        //    quedó en «unknown» (sin respuesta de Meta, p. ej. por tiempo) pudo haber salido: no se repite.
+        if (in_array($row->public_status, ['pending', 'failed'], true)) {
             $pub = $this->omni->reply_instagram_comment($channel_id, $comment_id, $word['publica']);
             if (!empty($pub['success'])) {
                 $upd['public_status'] = 'sent';
                 $upd['public_reply_id'] = sanitize_text_field((string) $pub['id']);
             } else {
-                $upd['public_status'] = 'failed';
+                $upd['public_status'] = ((int) ($pub['code'] ?? 0)) >= 400 ? 'failed' : 'unknown';
                 $errors[] = 'pública: ' . ($pub['error'] ?? 'error desconocido');
             }
         }
@@ -426,10 +464,20 @@ class OmniIgCommentsController {
 
     /* ============================== apoyo ============================== */
 
+    /** Motivo para no responder según las reglas (o null si sigue): propia cuenta, antigüedad, palabra. */
+    private function rule_stop(array $cfg, array $acc, array $c) {
+        if ($this->is_own_account($acc, (string) ($c['from_id'] ?? ''), (string) ($c['username'] ?? ''), (string) ($c['account_id'] ?? ''))) {
+            return 'own_account';
+        }
+        $time = (int) ($c['time'] ?? 0);
+        if ($time < $cfg['activo_desde'] || $time < time() - self::MAX_AGE_SECONDS) return 'too_old';
+        if (!isset($cfg['palabras'][self::normalize_text($c['text'] ?? '')])) return 'no_keyword';
+        return null;
+    }
+
     /** La propia cuenta: sus respuestas también llegan como comentarios y no se responden. */
-    private function is_own_account($channel_id, $from_id, $username, $account_id) {
+    private function is_own_account(array $acc, $from_id, $username, $account_id) {
         if ($from_id !== '' && $account_id !== '' && $from_id === $account_id) return true;
-        $acc = $this->account($channel_id);
         if ($from_id !== '' && in_array($from_id, $acc['ids'], true)) return true;
         return $username !== '' && $acc['username'] !== '' && strcasecmp($username, $acc['username']) === 0;
     }

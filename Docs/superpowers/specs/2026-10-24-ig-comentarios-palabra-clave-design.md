@@ -38,6 +38,7 @@ Mismo patrón que `omnichannel-ig-insights-controller.php`: recibe el controlado
   2. **Propia cuenta:** si `from.id` es el de la cuenta (el `entry.id` o el `user_id` de `/me`) o el usuario es el de la cuenta, se ignora. Así no se responde a sí misma ni entra en bucle con sus propias respuestas.
   3. **Antigüedad:** solo comentarios posteriores a `activo_desde` y de menos de 7 días (lo que permite Meta). Evita que la primera consulta responda comentarios viejos.
   4. **Palabra:** el comentario, sin tildes, mayúsculas, emojis ni signos, tiene que ser **exactamente una** de las palabras configuradas. «Quiero el método» no cuenta.
+  4b. **Relectura (solo webhook):** el comentario se lee en Meta (`GET /<COMMENT_ID>`) y las reglas 2 a 4 se aplican sobre el texto, el autor y la hora que devuelve Meta, no sobre el aviso. Sin autor o sin poder identificar la cuenta propia, no se responde. *(Agregado tras la revisión de Vigía del 24-oct.)*
   5. **Tope por persona:** como máximo `max_por_persona_24h` respuestas (3 por omisión) a la misma persona en 24 horas.
   6. **Reserva atómica:** `INSERT` en la tabla de registro con `comment_id` como clave única. Si ya existía, se termina ahí: nunca se responde dos veces el mismo comentario, aunque Meta repita el aviso o el webhook y la consulta lleguen a la vez.
   7. **Respuesta pública** al comentario y, después, **respuesta privada** con `recipient.comment_id`. Nunca se escribe por IGSID: Meta entrega el privado solo a quien escribió ese comentario. Si la pública falla, igual se intenta la privada (es lo que vale), y se registran las dos por separado.
@@ -89,5 +90,4 @@ Con un script que no imprime el token: `GET me` (cuenta), `GET <IG_ID>/subscribe
 
 - Clasificar frío/tibio/caliente y avisar al instante cuando llega uno caliente (queda previsto vía `conversation_id`).
 - Responder con IA comentarios que no son palabra clave, menciones e historias.
-- Validar la firma `X-Hub-Signature-256` de Meta (el Portal no guarda el secreto de la app; hoy el webhook se protege con el secreto del canal en la URL).
 - Una pestaña del Portal para editar las palabras (por ahora, script o ruta de configuración).

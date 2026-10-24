@@ -3274,7 +3274,8 @@ class OmnichannelController {
         if (!empty($res['success']) && !empty($res['data']['id'])) {
             return ['success' => true, 'id' => (string) $res['data']['id']];
         }
-        return ['error' => $res['error'] ?? 'Error desconocido al responder el comentario'];
+        // code: el HTTP de Meta (0 si no hubo respuesta, p. ej. por tiempo: la respuesta pudo haber salido).
+        return ['error' => $res['error'] ?? 'Error desconocido al responder el comentario', 'code' => (int) ($res['code'] ?? 0)];
     }
 
     /**

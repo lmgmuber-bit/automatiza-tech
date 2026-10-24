@@ -34,6 +34,15 @@ add_filter('pre_http_request', static function ($pre, $args, $url) {
 	if ($method === 'POST' && $path === 'me/messages' && isset($body['recipient']['comment_id']) && !isset($body['recipient']['id'])) {
 		return $json(200, ['recipient_id' => 'igsid-' . $body['recipient']['comment_id'], 'message_id' => 'mid-' . $body['recipient']['comment_id']]);
 	}
+	// Relectura del comentario (GET /<comment_id>): lo que Meta dice de verdad.
+	$cdata = [
+		'c-http-1' => ['text' => 'método', 'from' => ['id' => 'u-http-1', 'username' => 'cliente.http']],
+		'c-http-2' => ['text' => 'MÉTODO', 'from' => ['id' => '17841400000000002', 'username' => 'automatizatech.cl']],
+		'c-http-4' => ['text' => 'hola, buen video', 'from' => ['id' => 'u-http-4', 'username' => 'otra.persona']],
+	];
+	if ($method === 'GET' && isset($cdata[$path])) {
+		return $json(200, ['id' => $path, 'timestamp' => gmdate('Y-m-d\TH:i:s') . '+0000', 'media' => ['id' => 'm-http']] + $cdata[$path]);
+	}
 	if ($method === 'GET' && strpos($path, 'igsid-') === 0) {
 		return $json(200, ['name' => '', 'username' => 'cliente.http']);
 	}

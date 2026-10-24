@@ -41,8 +41,9 @@ $now = time();
 $iso = static function ($ts) { return gmdate('Y-m-d\TH:i:s', $ts) . '+0000'; };
 $GLOBALS['ig'] = [
 	'calls' => [], 'auth_ok' => true, 'token_in_url' => false, 'token' => $TOKEN, 'acc' => $ACC,
-	'fail_public' => false, 'fail_dm' => false, 'dm_by_id' => false,
+	'fail_public' => false, 'public_timeout' => false, 'fail_dm' => false, 'dm_by_id' => false, 'me_fail' => false,
 	'media' => [], 'comments' => [],
+	'cdata' => [],   // lo que Meta dice de cada comentario (GET /<comment_id>)
 ];
 function ig_resp($code, $body) {
 	return ['headers' => [], 'body' => wp_json_encode($body), 'response' => ['code' => $code, 'message' => ''], 'cookies' => [], 'filename' => null];
@@ -61,6 +62,7 @@ add_filter('pre_http_request', static function ($pre, $args, $url) {
 	$body = isset($args['body']) ? json_decode($args['body'], true) : null;
 	$g['calls'][] = ['method' => $method, 'path' => $path, 'body' => $body];
 	if ($method === 'GET' && $path === 'me') {
+		if ($g['me_fail']) { return ig_err(2, 'Servicio no disponible'); }
 		return ig_resp(200, ['user_id' => $g['acc'], 'id' => '9001', 'username' => 'automatizatech.cl']);
 	}
 	if ($method === 'GET' && $path === 'me/media') {
@@ -69,7 +71,12 @@ add_filter('pre_http_request', static function ($pre, $args, $url) {
 	if ($method === 'GET' && preg_match('#^([^/]+)/comments$#', $path, $m)) {
 		return ig_resp(200, ['data' => $g['comments'][$m[1]] ?? []]);
 	}
+	if ($method === 'GET' && strpos($path, '/') === false) {
+		if (!isset($g['cdata'][$path])) { return ig_err(100, 'Object with ID does not exist'); }
+		return ig_resp(200, $g['cdata'][$path]);
+	}
 	if ($method === 'POST' && preg_match('#^([^/]+)/replies$#', $path, $m)) {
+		if ($g['public_timeout']) { return new WP_Error('http_request_failed', 'cURL error 28: Operation timed out'); }
 		if ($g['fail_public']) { return ig_err(100, 'No se pudo responder el comentario'); }
 		return ig_resp(200, ['id' => 'r-' . $m[1]]);
 	}
@@ -88,8 +95,14 @@ function calls_of($method, $suffix) {
 	}));
 }
 function reset_calls() { $GLOBALS['ig']['calls'] = []; }
+function posts() { return count(array_filter($GLOBALS['ig']['calls'], static function ($c) { return $c['method'] === 'POST'; })); }
+// Aviso de Meta; por omisión Meta confirma lo mismo que dice el aviso (salvo que la prueba ya haya fijado otra cosa).
 function webhook($from_id, $username, $text, $comment_id, $time = null, $media = 'media-1') {
 	global $ACC;
+	if (!isset($GLOBALS['ig']['cdata'][$comment_id])) {
+		$GLOBALS['ig']['cdata'][$comment_id] = ['id' => $comment_id, 'text' => $text, 'timestamp' => gmdate('Y-m-d\TH:i:s', $time ?? time()) . '+0000',
+			'from' => ['id' => $from_id, 'username' => $username], 'media' => ['id' => $media]];
+	}
 	return ['object' => 'instagram', 'entry' => [[
 		'id' => $ACC, 'time' => $time ?? time(),
 		'changes' => [['field' => 'comments', 'value' => [
@@ -164,7 +177,7 @@ ok((bool) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$P}audit_log WHER
 // --- El mismo comentario otra vez (Meta repite el aviso): no se responde dos veces
 reset_calls();
 $r = $igc->handle_webhook($CID, webhook('u-ana', 'ana.prueba', 'Método 🙌', 'c-100'));
-ok(($r['results'][0]['status'] ?? '') === 'duplicate' && count($GLOBALS['ig']['calls']) === 0, 'aviso repetido: no vuelve a responder');
+ok(($r['results'][0]['status'] ?? '') === 'duplicate' && posts() === 0, 'aviso repetido: no vuelve a responder');
 
 // --- La propia cuenta (sus respuestas también llegan como comentarios)
 reset_calls();
@@ -226,7 +239,7 @@ $igc->handle_webhook($CID, webhook('u-h', 'hugo', 'METODO', 'c-501'));
 reset_calls();
 $r = $igc->handle_webhook($CID, webhook('u-h', 'hugo', 'METODO', 'c-501'));
 $GLOBALS['ig']['fail_dm'] = false;
-ok(($r['results'][0]['status'] ?? '') === 'duplicate' && count($GLOBALS['ig']['calls']) === 0, 'después de 3 intentos no se insiste');
+ok(($r['results'][0]['status'] ?? '') === 'duplicate' && posts() === 0, 'después de 3 intentos no se insiste');
 
 // --- Conversación que ya atiende una persona: se agregan los mensajes, el modo no cambia
 $wpdb->insert($P . 'conversations', ['client_id' => 0, 'channel_id' => $CID, 'external_contact_id' => 'igsid-600',
@@ -236,6 +249,66 @@ $wpdb->query($wpdb->prepare("UPDATE {$P}conversations SET metadata_json = NULL W
 $r = $igc->handle_webhook($CID, webhook('u-isa', 'isa', 'METODO', 'c-600'));
 $hc = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$P}conversations WHERE id = %d", $HCONV));
 ok((int) row('c-600')->conversation_id === $HCONV && $hc->status === 'assigned' && $hc->contact_name === 'Isa Real', 'conversación existente: se usa, sin cambiar el modo ni el nombre');
+
+// --- Aviso falsificado: se decide con lo que dice Meta, no con el aviso
+reset_calls();
+$GLOBALS['ig']['cdata']['c-1000'] = ['id' => 'c-1000', 'text' => 'qué bueno el video', 'timestamp' => gmdate('Y-m-d\TH:i:s') . '+0000',
+	'from' => ['id' => 'u-real', 'username' => 'real'], 'media' => ['id' => 'media-1']];
+$r = $igc->handle_webhook($CID, webhook('u-real', 'real', 'MÉTODO', 'c-1000'));
+ok(($r['results'][0]['status'] ?? '') === 'no_keyword' && posts() === 0 && !row('c-1000'), 'aviso con palabra sobre un comentario que en Meta no la dice: no responde');
+$GLOBALS['ig']['cdata']['c-1001'] = ['id' => 'c-1001', 'text' => 'MÉTODO', 'timestamp' => gmdate('Y-m-d\TH:i:s') . '+0000',
+	'from' => ['id' => $ACC, 'username' => 'automatizatech.cl'], 'media' => ['id' => 'media-1']];
+$r = $igc->handle_webhook($CID, webhook('u-otro', 'otro', 'MÉTODO', 'c-1001'));
+ok(($r['results'][0]['status'] ?? '') === 'own_account' && posts() === 0, 'aviso que esconde a la propia cuenta: Meta dice el autor real');
+$GLOBALS['ig']['cdata']['c-1002'] = ['id' => 'c-1002', 'text' => 'METODO', 'timestamp' => gmdate('Y-m-d\TH:i:s') . '+0000',
+	'from' => ['id' => 'u-verdad', 'username' => 'verdad'], 'media' => ['id' => 'media-1']];
+$r = $igc->handle_webhook($CID, webhook('u-falso', 'falso', 'METODO', 'c-1002'));
+ok(($r['results'][0]['status'] ?? '') === 'replied' && row('c-1002')->from_igsid === 'u-verdad' && row('c-1002')->from_username === 'verdad', 'el autor registrado es el que dice Meta');
+$GLOBALS['ig']['cdata']['c-1003'] = ['id' => 'c-1003', 'text' => 'METODO', 'timestamp' => gmdate('Y-m-d\TH:i:s', $now - 8 * DAY_IN_SECONDS) . '+0000',
+	'from' => ['id' => 'u-viejo', 'username' => 'viejo'], 'media' => ['id' => 'media-1']];
+reset_calls();
+$r = $igc->handle_webhook($CID, webhook('u-viejo', 'viejo', 'METODO', 'c-1003'));
+ok(($r['results'][0]['status'] ?? '') === 'too_old' && posts() === 0, 'aviso reciente sobre un comentario viejo: manda la hora de Meta');
+reset_calls();
+$r = $igc->handle_webhook($CID, ['object' => 'instagram', 'entry' => [['id' => $ACC, 'time' => time(), 'changes' => [['field' => 'comments',
+	'value' => ['id' => 'c-inexistente', 'from' => ['id' => 'u-z', 'username' => 'z'], 'text' => 'MÉTODO']]]]]]);
+ok(($r['results'][0]['status'] ?? '') === 'unverified' && posts() === 0 && !row('c-inexistente'), 'comentario que Meta no conoce: no responde');
+$GLOBALS['ig']['cdata']['c-1004'] = ['id' => 'c-1004', 'text' => 'METODO', 'timestamp' => gmdate('Y-m-d\TH:i:s') . '+0000', 'media' => ['id' => 'media-1']];
+$r = $igc->handle_webhook($CID, webhook('', '', 'METODO', 'c-1004'));
+ok(($r['results'][0]['status'] ?? '') === 'invalid' && posts() === 0 && !row('c-1004'), 'sin autor: no responde');
+$largo = 'c' . str_repeat('9', 70);
+$r = $igc->handle_webhook($CID, webhook('u-largo', 'largo', 'METODO', $largo));
+ok(($r['results'][0]['status'] ?? '') === 'invalid' && posts() === 0, 'id de más de 64 caracteres: se rechaza');
+$r = $igc->handle_webhook($CID, webhook('u-raro', 'raro', 'METODO', 'c-1005;DROP'));
+ok(($r['results'][0]['status'] ?? '') === 'invalid', 'id con caracteres raros: se rechaza');
+
+// --- Aviso inflado: hasta 20 comentarios
+reset_calls();
+$big = webhook('u-big-0', 'big0', 'qué bueno', 'c-big-0');
+for ($i = 1; $i < 25; $i++) { $big['entry'][0]['changes'][] = webhook('u-big-' . $i, 'big' . $i, 'qué bueno', 'c-big-' . $i)['entry'][0]['changes'][0]; }
+$r = $igc->handle_webhook($CID, $big);
+$over = count(array_filter($r['results'], static function ($x) { return $x['status'] === 'over_limit'; }));
+ok(count($r['results']) === 25 && $over === 5, 'un aviso con 25 comentarios procesa 20 y descarta 5');
+
+// --- Respuesta pública sin respuesta de Meta (tiempo): no se repite en el reintento
+reset_calls();
+$GLOBALS['ig']['public_timeout'] = true;
+$GLOBALS['ig']['fail_dm'] = true;
+$igc->handle_webhook($CID, webhook('u-t', 'tiempo', 'METODO', 'c-1100'));
+$GLOBALS['ig']['public_timeout'] = false;
+$GLOBALS['ig']['fail_dm'] = false;
+ok(row('c-1100')->public_status === 'unknown' && row('c-1100')->dm_status === 'failed', 'pública sin respuesta queda «unknown»');
+reset_calls();
+$r = $igc->handle_webhook($CID, webhook('u-t', 'tiempo', 'METODO', 'c-1100'));
+ok(count(calls_of('POST', 'c-1100/replies')) === 0 && count(calls_of('POST', 'me/messages')) === 1 && ($r['results'][0]['status'] ?? '') === 'partial', 'reintento: no repite una pública que pudo haber salido');
+
+// --- Sin poder identificar la cuenta propia: no responde
+delete_option('omni_ig_comments_account_' . $CID);
+$GLOBALS['ig']['me_fail'] = true;
+reset_calls();
+$r = $igc->handle_webhook($CID, webhook('u-sin', 'sincuenta', 'METODO', 'c-1200'));
+$GLOBALS['ig']['me_fail'] = false;
+ok(($r['results'][0]['status'] ?? '') === 'error' && posts() === 0 && !row('c-1200'), 'sin saber cuál es la cuenta propia: no responde');
 
 // --- Configuración apagada
 $off = $CONFIG; $off['activo'] = false;

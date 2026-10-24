@@ -117,6 +117,7 @@ if ($channel->channel_type === 'instagram' && OmniIgCommentsController::payload_
     // Meta pide responder rápido: si el servidor lo permite, se contesta 200 y se sigue trabajando.
     // Los reintentos de Meta no duplican nada (el comment_id es único en el registro).
     ignore_user_abort(true);
+    @set_time_limit(180); // tope del aviso: 20 comentarios × (relectura + pública + privada)
     $igc_early = function_exists('litespeed_finish_request') || function_exists('fastcgi_finish_request');
     if ($igc_early) {
         http_response_code(200);

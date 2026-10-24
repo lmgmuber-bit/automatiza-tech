@@ -116,6 +116,9 @@ Header: X-AT-Secret: <secret>  (wp-config.php del servidor — no exponer)
   `deploy_dominio.py` y con el ok de Luis.
 - **Relevo completo:** bóveda privada `10-Projects/GT-Baseball/README.md`. Diseño e historial en
   `Docs/superpowers/specs/2026-09-27-gt-baseball-prototipo-design.md`.
+- **Asistente de mensajes directos de Instagram (24-oct-2026, rama `claude/asistente-ig-directos`, LOCAL hasta el OK de
+  Luis):** guía `Docs/METODO_AT/ASISTENTE-INSTAGRAM.md`, flujos en `N8N/instagram/`. Para los archivos del Portal, PROD es
+  esta línea, no `main`; `omnichannel-derivacion.php` se sube antes que el controlador.
 
 ## graphify
 

@@ -1,0 +1,982 @@
+{
+ "name": "Agente Tech Instagram (PROD)",
+ "nodes": [
+  {
+   "id": "ig-webhook",
+   "name": "Webhook",
+   "type": "n8n-nodes-base.webhook",
+   "typeVersion": 1,
+   "position": [
+    0,
+    300
+   ],
+   "parameters": {
+    "httpMethod": "POST",
+    "path": "RUTA_WEBHOOK",
+    "options": {}
+   },
+   "webhookId": "RUTA_WEBHOOK"
+  },
+  {
+   "id": "ig-validar",
+   "name": "Validar",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    220,
+    300
+   ],
+   "parameters": {
+    "jsCode": "// Solo avisos del Portal para el canal de Instagram, con los datos completos. Si no, termina sin responder.\nconst b = $json.body || {};\nconst contacto = b.contact || {};\nconst m = b.message || {};\nconst prueba = b.prueba === true;\nconst conv = Number(b.conversation_id) || 0;\nconst canal = Number(b.channel_id) || 0;\nconst igsid = String(contacto.external_id || '');\nconst tok = String(b.callback_token || '');\nconst cb = String(b.callback_url || '');\nif (b.event !== 'new_message' || canal !== 2 || !conv) return [];\nif (!/^[0-9A-Za-z_-]{3,64}$/.test(igsid) || !/^[0-9a-f]{64}$/.test(tok)) return [];\nif (!prueba && !cb.startsWith('https://automatizatech.cl/')) return [];\nconst texto = String(m.content || '').trim().slice(0, 2000);\nconst tipo = String(m.type || 'text');\nconst ctx = (b.contexto && typeof b.contexto === 'object') ? b.contexto : null;\nreturn [{ json: {\n  conversation_id: conv, channel_id: canal, igsid, nombre: String(contacto.name || '').slice(0, 80),\n  callback_url: cb, callback_token: tok, mensaje_id: String(m.id || Date.now()), texto,\n  es_texto: tipo === 'text' && texto !== '', prueba,\n  contexto: ctx ? { palabra: String(ctx.palabra || '').slice(0, 40), mensaje_privado: String(ctx.mensaje_privado || '').slice(0, 1000) } : null,\n} }];\n"
+   }
+  },
+  {
+   "id": "ig-es-texto",
+   "name": "¿Es texto?",
+   "type": "n8n-nodes-base.if",
+   "typeVersion": 1,
+   "position": [
+    440,
+    300
+   ],
+   "parameters": {
+    "conditions": {
+     "boolean": [
+      {
+       "value1": "={{ $json.es_texto }}",
+       "value2": true
+      }
+     ]
+    }
+   }
+  },
+  {
+   "id": "ig-push",
+   "name": "Anotar en la ráfaga",
+   "type": "n8n-nodes-base.redis",
+   "typeVersion": 1,
+   "position": [
+    660,
+    200
+   ],
+   "parameters": {
+    "operation": "push",
+    "list": "=ig:rafaga:{{ $('Validar').first().json.igsid }}",
+    "tail": true,
+    "messageData": "={{ JSON.stringify({ t: $('Validar').first().json.texto, ts: Date.now() }) }}"
+   },
+   "credentials": {
+    "redis": {
+     "id": "fgxjc2NeBOcUCA3v",
+     "name": "Redis32"
+    }
+   }
+  },
+  {
+   "id": "ig-ultimo",
+   "name": "Marcar el último",
+   "type": "n8n-nodes-base.redis",
+   "typeVersion": 1,
+   "position": [
+    880,
+    200
+   ],
+   "parameters": {
+    "operation": "set",
+    "key": "=ig:ultimo:{{ $('Validar').first().json.igsid }}",
+    "keyType": "string",
+    "expire": true,
+    "ttl": 120,
+    "value": "={{ $('Validar').first().json.mensaje_id }}"
+   },
+   "credentials": {
+    "redis": {
+     "id": "fgxjc2NeBOcUCA3v",
+     "name": "Redis32"
+    }
+   }
+  },
+  {
+   "id": "ig-esperar",
+   "name": "Esperar 6 s",
+   "type": "n8n-nodes-base.wait",
+   "typeVersion": 1,
+   "position": [
+    1100,
+    200
+   ],
+   "parameters": {
+    "amount": 6,
+    "unit": "seconds"
+   },
+   "webhookId": "ig-esperar-6s"
+  },
+  {
+   "id": "ig-leer-ultimo",
+   "name": "Leer el último",
+   "type": "n8n-nodes-base.redis",
+   "typeVersion": 1,
+   "position": [
+    1320,
+    200
+   ],
+   "parameters": {
+    "operation": "get",
+    "propertyName": "ultimo",
+    "key": "=ig:ultimo:{{ $('Validar').first().json.igsid }}",
+    "keyType": "string",
+    "options": {}
+   },
+   "credentials": {
+    "redis": {
+     "id": "fgxjc2NeBOcUCA3v",
+     "name": "Redis32"
+    }
+   }
+  },
+  {
+   "id": "ig-soy-ultimo",
+   "name": "¿Es el último?",
+   "type": "n8n-nodes-base.if",
+   "typeVersion": 1,
+   "position": [
+    1540,
+    200
+   ],
+   "parameters": {
+    "conditions": {
+     "boolean": [
+      {
+       "value1": "={{ String($json.ultimo) === $('Validar').first().json.mensaje_id }}",
+       "value2": true
+      }
+     ]
+    }
+   }
+  },
+  {
+   "id": "ig-leer-rafaga",
+   "name": "Leer la ráfaga",
+   "type": "n8n-nodes-base.redis",
+   "typeVersion": 1,
+   "position": [
+    1760,
+    120
+   ],
+   "parameters": {
+    "operation": "get",
+    "propertyName": "rafaga",
+    "key": "=ig:rafaga:{{ $('Validar').first().json.igsid }}",
+    "keyType": "list",
+    "options": {}
+   },
+   "credentials": {
+    "redis": {
+     "id": "fgxjc2NeBOcUCA3v",
+     "name": "Redis32"
+    }
+   }
+  },
+  {
+   "id": "ig-vaciar",
+   "name": "Vaciar la ráfaga",
+   "type": "n8n-nodes-base.redis",
+   "typeVersion": 1,
+   "position": [
+    1980,
+    120
+   ],
+   "parameters": {
+    "operation": "delete",
+    "key": "=ig:rafaga:{{ $('Validar').first().json.igsid }}"
+   },
+   "credentials": {
+    "redis": {
+     "id": "fgxjc2NeBOcUCA3v",
+     "name": "Redis32"
+    }
+   }
+  },
+  {
+   "id": "ig-unir",
+   "name": "Unir textos",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    2200,
+    120
+   ],
+   "parameters": {
+    "jsCode": "// Junta los mensajes de la ráfaga (los de los últimos 2 minutos). Si la lista llegó vacía, usa el propio mensaje.\nconst v = $('Validar').first().json;\nconst lista = $json.rafaga;\nconst ahora = Date.now();\nlet textos = [];\nfor (const s of (Array.isArray(lista) ? lista : (lista ? [lista] : []))) {\n  try { const x = JSON.parse(s); if (x && x.t && ahora - Number(x.ts || 0) < 120000) textos.push(String(x.t)); } catch (e) {}\n}\nif (!textos.length) textos = [v.texto];\nreturn [{ json: { texto: textos.join('\\n').slice(0, 3000), mensajes: textos.length } }];\n"
+   }
+  },
+  {
+   "id": "ig-cambio",
+   "name": "Tipo de cambio",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.1,
+   "position": [
+    2420,
+    120
+   ],
+   "parameters": {
+    "url": "https://automatizatech.cl/wp-json/automatiza-tech/v1/exchange-rate",
+    "options": {
+     "timeout": 10000
+    }
+   },
+   "onError": "continueRegularOutput"
+  },
+  {
+   "id": "ig-entrada",
+   "name": "Preparar entrada",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    2640,
+    120
+   ],
+   "parameters": {
+    "jsCode": "// Entrada del agente: el texto, el tipo de cambio (el prompt web usa $json.rate), la fecha de hoy en Chile y,\n// si la persona llegó desde un comentario, qué comentó y qué le enviamos por privado.\nconst v = $('Validar').first().json;\nconst texto = $('Unir textos').first().json.texto;\nconst rate = Number(($json || {}).rate) || 0;\nconst ahora = DateTime.now().setZone('America/Santiago').setLocale('es');\nconst dias = [];\nfor (let i = 0; i < 8; i++) {\n  const d = ahora.plus({ days: i });\n  dias.push((i === 0 ? 'hoy ' : i === 1 ? 'mañana ' : '') + d.toFormat(\"cccc d 'de' LLLL\") + ' (' + d.toISODate() + ')');\n}\nlet ctx = '';\nif (v.contexto && v.contexto.palabra) {\n  ctx = '\\n\\n#### De dónde viene esta persona\\nComentó «' + v.contexto.palabra + '» en una publicación de @automatizatech.cl'\n    + (v.contexto.mensaje_privado ? ' y le enviamos este mensaje privado: «' + v.contexto.mensaje_privado + '».' : '.')\n    + ' Lo que escribe ahora es la respuesta a eso: si dice algo como «quiero agendar», «sí» o «me interesa», ofrécele agendar'\n    + ' el diagnóstico gratis aquí mismo. No le repitas el mensaje que ya le enviamos.';\n}\nreturn [{ json: {\n  chatInput: texto, rate, igsid: v.igsid, prueba: v.prueba,\n  ahora_txt: ahora.toFormat(\"cccc d 'de' LLLL 'de' yyyy, HH:mm\"), dias_txt: dias.join('; '), contexto_txt: ctx,\n} }];\n"
+   }
+  },
+  {
+   "id": "ig-agente",
+   "name": "Agente IA - Tech Instagram",
+   "type": "@n8n/n8n-nodes-langchain.agent",
+   "typeVersion": 1.8,
+   "position": [
+    2880,
+    120
+   ],
+   "parameters": {
+    "promptType": "define",
+    "text": "={{ $json.chatInput }}",
+    "options": {
+     "systemMessage": "=PROMPT_AGENTE_WEB\n\n### 📸 CANAL INSTAGRAM (estas reglas mandan sobre las anteriores)\nEstás respondiendo mensajes directos de Instagram de @automatizatech.cl. La persona escribe desde la app de Instagram.\n- Respuestas cortas: de 1 a 3 párrafos breves, en texto plano. Sin Markdown (nada de **, # ni tablas), sin listas largas y sin enlaces largos. Como máximo 2 emojis.\n- Saluda solo en el primer mensaje de la conversación.\n- Nunca pidas que llene un formulario de la web: el diagnóstico se agenda aquí mismo, en este chat.\n- Hoy es {{ $json.ahora_txt }} (hora de Chile). Próximos días: {{ $json.dias_txt }}.\n\n#### Agendar el diagnóstico gratis (videollamada de 1 hora por Google Meet)\n1. Cuando la persona quiera agendar, pregúntale qué día le acomoda u ofrécele los próximos días disponibles.\n2. SIEMPRE usa la herramienta ver_disponibilidad antes de ofrecer o confirmar una hora. Nunca inventes horarios ni digas que una hora está libre sin consultarla.\n3. Pide su nombre, su correo (ahí le llega la invitación con el enlace de Meet) y, si quiere, un WhatsApp para los recordatorios. Si no quiere dar el teléfono, sigue sin él.\n4. Antes de agendar, confirma en un solo mensaje el día, la hora y el correo, y pregunta «¿Confirmo?». Agenda solo cuando la persona responda que sí a esa confirmación. Aunque la persona te dé todos los datos de una vez, nunca llames a agendar en esa misma respuesta: primero confirma y espera su «sí».\n5. Llama a la herramienta agendar con la fecha en formato AAAA-MM-DD y la hora en formato HH:MM (24 horas, en punto). Cuenta el resultado tal como viene: si dice que la hora está ocupada o que no se pudo, ofrece otras horas consultando ver_disponibilidad.\n6. No vuelvas a agendar si ya agendaste en esta conversación, salvo que la persona pida otra reunión.\n\n#### Derivar a una persona\nUsa la herramienta derivar_a_persona cuando la persona pida hablar con una persona, con Luis o con un ejecutivo; cuando tenga un reclamo; cuando ya sea cliente y pida el seguimiento de su proyecto; o cuando pida algo que no puedes resolver (un precio a medida, una factura o un contrato). Si eso pasa en medio de un agendamiento, deriva y no agendes. Después de derivar, despídete en una sola frase, por ejemplo: «Le avisé a Luis, te va a responder por aquí mismo.».{{ $json.contexto_txt }}",
+     "maxIterations": 8,
+     "returnIntermediateSteps": true
+    }
+   }
+  },
+  {
+   "id": "ig-cerebro",
+   "name": "Cerebro",
+   "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+   "typeVersion": 1.2,
+   "position": [
+    2780,
+    360
+   ],
+   "parameters": {
+    "model": {
+     "__rl": true,
+     "value": "gpt-4o-mini",
+     "mode": "list",
+     "cachedResultName": "gpt-4o-mini"
+    },
+    "options": {}
+   },
+   "credentials": {
+    "openAiApi": {
+     "id": "g52IEXpRfN5r7jKw",
+     "name": "OpenAi account"
+    }
+   }
+  },
+  {
+   "id": "ig-memoria",
+   "name": "Memoria Instagram",
+   "type": "@n8n/n8n-nodes-langchain.memoryRedisChat",
+   "typeVersion": 1.5,
+   "position": [
+    2920,
+    360
+   ],
+   "parameters": {
+    "sessionIdType": "customKey",
+    "sessionKey": "=ig:{{ $('Preparar entrada').first().json.igsid }}",
+    "sessionTTL": 2592000,
+    "contextWindowLength": 30
+   },
+   "credentials": {
+    "redis": {
+     "id": "fgxjc2NeBOcUCA3v",
+     "name": "Redis32"
+    }
+   }
+  },
+  {
+   "id": "ig-tool-disp",
+   "name": "ver_disponibilidad",
+   "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+   "typeVersion": 2.2,
+   "position": [
+    3060,
+    360
+   ],
+   "parameters": {
+    "description": "Consulta las horas libres para el diagnóstico gratis (hora de Chile, reuniones de 1 hora). Pasa una fecha AAAA-MM-DD, o vacío para ver los próximos días disponibles.",
+    "workflowId": {
+     "__rl": true,
+     "value": "ID_HERRAMIENTAS",
+     "mode": "id"
+    },
+    "workflowInputs": {
+     "mappingMode": "defineBelow",
+     "value": {
+      "accion": "disponibilidad",
+      "fecha": "={{ $fromAI('fecha', 'Día que pide la persona en formato AAAA-MM-DD, o vacío para los próximos días disponibles', 'string') }}",
+      "hora": "",
+      "nombre": "",
+      "correo": "",
+      "telefono": "",
+      "igsid": "={{ $('Preparar entrada').first().json.igsid }}",
+      "prueba": "={{ $('Preparar entrada').first().json.prueba ? 'si' : 'no' }}"
+     },
+     "matchingColumns": [],
+     "schema": [
+      {
+       "id": "accion",
+       "displayName": "accion",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "canBeUsedToMatch": true,
+       "type": "string",
+       "removed": false
+      },
+      {
+       "id": "fecha",
+       "displayName": "fecha",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "canBeUsedToMatch": true,
+       "type": "string",
+       "removed": false
+      },
+      {
+       "id": "hora",
+       "displayName": "hora",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "canBeUsedToMatch": true,
+       "type": "string",
+       "removed": false
+      },
+      {
+       "id": "nombre",
+       "displayName": "nombre",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "canBeUsedToMatch": true,
+       "type": "string",
+       "removed": false
+      },
+      {
+       "id": "correo",
+       "displayName": "correo",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "canBeUsedToMatch": true,
+       "type": "string",
+       "removed": false
+      },
+      {
+       "id": "telefono",
+       "displayName": "telefono",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "canBeUsedToMatch": true,
+       "type": "string",
+       "removed": false
+      },
+      {
+       "id": "igsid",
+       "displayName": "igsid",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "canBeUsedToMatch": true,
+       "type": "string",
+       "removed": false
+      },
+      {
+       "id": "prueba",
+       "displayName": "prueba",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "canBeUsedToMatch": true,
+       "type": "string",
+       "removed": false
+      }
+     ],
+     "attemptToConvertTypes": false,
+     "convertFieldsToString": false
+    }
+   }
+  },
+  {
+   "id": "ig-tool-agendar",
+   "name": "agendar",
+   "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+   "typeVersion": 2.2,
+   "position": [
+    3200,
+    360
+   ],
+   "parameters": {
+    "description": "Agenda el diagnóstico gratis por Google Meet. Úsala solo después de consultar la disponibilidad y de que la persona confirme día, hora y correo.",
+    "workflowId": {
+     "__rl": true,
+     "value": "ID_HERRAMIENTAS",
+     "mode": "id"
+    },
+    "workflowInputs": {
+     "mappingMode": "defineBelow",
+     "value": {
+      "accion": "agendar",
+      "fecha": "={{ $fromAI('fecha', 'Fecha confirmada, formato AAAA-MM-DD', 'string') }}",
+      "hora": "={{ $fromAI('hora', 'Hora confirmada, formato HH:MM de 24 horas', 'string') }}",
+      "nombre": "={{ $fromAI('nombre', 'Nombre de la persona', 'string') }}",
+      "correo": "={{ $fromAI('correo', 'Correo de la persona, donde le llega la invitación', 'string') }}",
+      "telefono": "={{ $fromAI('telefono', 'WhatsApp o teléfono para recordatorios; vacío si no lo dio', 'string') }}",
+      "igsid": "={{ $('Preparar entrada').first().json.igsid }}",
+      "prueba": "={{ $('Preparar entrada').first().json.prueba ? 'si' : 'no' }}"
+     },
+     "matchingColumns": [],
+     "schema": [
+      {
+       "id": "accion",
+       "displayName": "accion",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "canBeUsedToMatch": true,
+       "type": "string",
+       "removed": false
+      },
+      {
+       "id": "fecha",
+       "displayName": "fecha",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "canBeUsedToMatch": true,
+       "type": "string",
+       "removed": false
+      },
+      {
+       "id": "hora",
+       "displayName": "hora",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "canBeUsedToMatch": true,
+       "type": "string",
+       "removed": false
+      },
+      {
+       "id": "nombre",
+       "displayName": "nombre",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "canBeUsedToMatch": true,
+       "type": "string",
+       "removed": false
+      },
+      {
+       "id": "correo",
+       "displayName": "correo",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "canBeUsedToMatch": true,
+       "type": "string",
+       "removed": false
+      },
+      {
+       "id": "telefono",
+       "displayName": "telefono",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "canBeUsedToMatch": true,
+       "type": "string",
+       "removed": false
+      },
+      {
+       "id": "igsid",
+       "displayName": "igsid",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "canBeUsedToMatch": true,
+       "type": "string",
+       "removed": false
+      },
+      {
+       "id": "prueba",
+       "displayName": "prueba",
+       "required": false,
+       "defaultMatch": false,
+       "display": true,
+       "canBeUsedToMatch": true,
+       "type": "string",
+       "removed": false
+      }
+     ],
+     "attemptToConvertTypes": false,
+     "convertFieldsToString": false
+    }
+   }
+  },
+  {
+   "id": "ig-tool-derivar",
+   "name": "derivar_a_persona",
+   "type": "@n8n/n8n-nodes-langchain.toolCode",
+   "typeVersion": 1.3,
+   "position": [
+    3340,
+    360
+   ],
+   "parameters": {
+    "description": "Deriva la conversación a una persona del equipo (Luis), que responde por este mismo chat. Úsala cuando pidan hablar con una persona, tengan un reclamo, sean clientes pidiendo seguimiento o pidan algo que no puedes resolver.",
+    "language": "javaScript",
+    "jsCode": "return 'Derivación registrada. Despídete en una frase: Luis le va a responder por este mismo chat.';\n",
+    "specifyInputSchema": true,
+    "schemaType": "manual",
+    "inputSchema": "{\n \"type\": \"object\",\n \"properties\": {\n  \"motivo\": {\n   \"type\": \"string\",\n   \"description\": \"Qué necesita la persona, en una frase\"\n  }\n },\n \"required\": [\n  \"motivo\"\n ]\n}"
+   }
+  },
+  {
+   "id": "ig-respuesta",
+   "name": "Preparar respuesta",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    3120,
+    120
+   ],
+   "parameters": {
+    "jsCode": "// Texto plano para Instagram (máximo 1000 caracteres) y, si el agente usó derivar_a_persona, la derivación.\nconst v = $('Validar').first().json;\nlet txt = String($json.output || '');\ntxt = txt.replace(/<<[A-Z_:]+>>/g, '').replace(/\\*\\*|__|`/g, '').replace(/^#+\\s*/gm, '').replace(/\\n{3,}/g, '\\n\\n').trim();\nif (txt.length > 990) {\n  const corte = txt.slice(0, 990);\n  const p = Math.max(corte.lastIndexOf('. '), corte.lastIndexOf('\\n'));\n  txt = (p > 500 ? corte.slice(0, p + 1) : corte).trim();\n}\nlet motivo = null;\nfor (const s of ($json.intermediateSteps || [])) {\n  const a = s && s.action;\n  if (a && a.tool === 'derivar_a_persona') {\n    const e = a.toolInput;\n    motivo = typeof e === 'string' ? e : String((e && (e.motivo || e.input)) || '');\n  }\n}\nconst body = { conversation_id: v.conversation_id, channel_id: v.channel_id, callback_token: v.callback_token };\nif (motivo !== null) {\n  body.action = 'escalate';\n  body.motivo = (motivo || 'Pidió hablar con una persona').slice(0, 300);\n  body.content = txt || 'Le avisé a Luis, te va a responder por aquí mismo.';\n} else {\n  if (!txt) return [];\n  body.content = txt;\n}\nconst usadas = ($json.intermediateSteps || []).map(s => s && s.action && s.action.tool).filter(Boolean);\nreturn [{ json: { callback_url: v.callback_url, prueba: v.prueba, body, herramientas: usadas } }];\n"
+   }
+  },
+  {
+   "id": "ig-ya-aviso",
+   "name": "¿Ya avisamos?",
+   "type": "n8n-nodes-base.redis",
+   "typeVersion": 1,
+   "position": [
+    660,
+    460
+   ],
+   "parameters": {
+    "operation": "get",
+    "propertyName": "aviso",
+    "key": "=ig:notexto:{{ $('Validar').first().json.igsid }}",
+    "keyType": "string",
+    "options": {}
+   },
+   "credentials": {
+    "redis": {
+     "id": "fgxjc2NeBOcUCA3v",
+     "name": "Redis32"
+    }
+   }
+  },
+  {
+   "id": "ig-sin-aviso",
+   "name": "¿Sin aviso reciente?",
+   "type": "n8n-nodes-base.if",
+   "typeVersion": 1,
+   "position": [
+    880,
+    460
+   ],
+   "parameters": {
+    "conditions": {
+     "boolean": [
+      {
+       "value1": "={{ !$json.aviso }}",
+       "value2": true
+      }
+     ]
+    }
+   }
+  },
+  {
+   "id": "ig-recordar",
+   "name": "Recordar el aviso",
+   "type": "n8n-nodes-base.redis",
+   "typeVersion": 1,
+   "position": [
+    1100,
+    460
+   ],
+   "parameters": {
+    "operation": "set",
+    "key": "=ig:notexto:{{ $('Validar').first().json.igsid }}",
+    "keyType": "string",
+    "value": "1",
+    "expire": true,
+    "ttl": 600
+   },
+   "credentials": {
+    "redis": {
+     "id": "fgxjc2NeBOcUCA3v",
+     "name": "Redis32"
+    }
+   }
+  },
+  {
+   "id": "ig-no-texto",
+   "name": "Respuesta no texto",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    1320,
+    460
+   ],
+   "parameters": {
+    "jsCode": "const v = $('Validar').first().json;\nreturn [{ json: { callback_url: v.callback_url, prueba: v.prueba, herramientas: [], body: {\n  conversation_id: v.conversation_id, channel_id: v.channel_id, callback_token: v.callback_token,\n  content: 'Por ahora leo solo texto: ¿me lo escribes? 🙂' } } }];\n"
+   }
+  },
+  {
+   "id": "ig-es-prueba",
+   "name": "¿Es prueba?",
+   "type": "n8n-nodes-base.if",
+   "typeVersion": 1,
+   "position": [
+    3340,
+    120
+   ],
+   "parameters": {
+    "conditions": {
+     "boolean": [
+      {
+       "value1": "={{ $json.prueba }}",
+       "value2": true
+      }
+     ]
+    }
+   }
+  },
+  {
+   "id": "ig-callback",
+   "name": "Responder al Portal",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.1,
+   "position": [
+    3560,
+    200
+   ],
+   "parameters": {
+    "method": "POST",
+    "url": "={{ $json.callback_url }}",
+    "sendBody": true,
+    "specifyBody": "json",
+    "jsonBody": "={{ JSON.stringify($json.body) }}",
+    "options": {
+     "timeout": 20000
+    }
+   }
+  }
+ ],
+ "connections": {
+  "Webhook": {
+   "main": [
+    [
+     {
+      "node": "Validar",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Validar": {
+   "main": [
+    [
+     {
+      "node": "¿Es texto?",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "¿Es texto?": {
+   "main": [
+    [
+     {
+      "node": "Anotar en la ráfaga",
+      "type": "main",
+      "index": 0
+     }
+    ],
+    [
+     {
+      "node": "¿Ya avisamos?",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Anotar en la ráfaga": {
+   "main": [
+    [
+     {
+      "node": "Marcar el último",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Marcar el último": {
+   "main": [
+    [
+     {
+      "node": "Esperar 6 s",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Esperar 6 s": {
+   "main": [
+    [
+     {
+      "node": "Leer el último",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Leer el último": {
+   "main": [
+    [
+     {
+      "node": "¿Es el último?",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "¿Es el último?": {
+   "main": [
+    [
+     {
+      "node": "Leer la ráfaga",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Leer la ráfaga": {
+   "main": [
+    [
+     {
+      "node": "Vaciar la ráfaga",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Vaciar la ráfaga": {
+   "main": [
+    [
+     {
+      "node": "Unir textos",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Unir textos": {
+   "main": [
+    [
+     {
+      "node": "Tipo de cambio",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Tipo de cambio": {
+   "main": [
+    [
+     {
+      "node": "Preparar entrada",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Preparar entrada": {
+   "main": [
+    [
+     {
+      "node": "Agente IA - Tech Instagram",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Agente IA - Tech Instagram": {
+   "main": [
+    [
+     {
+      "node": "Preparar respuesta",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Preparar respuesta": {
+   "main": [
+    [
+     {
+      "node": "¿Es prueba?",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "¿Es prueba?": {
+   "main": [
+    [],
+    [
+     {
+      "node": "Responder al Portal",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "¿Ya avisamos?": {
+   "main": [
+    [
+     {
+      "node": "¿Sin aviso reciente?",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "¿Sin aviso reciente?": {
+   "main": [
+    [
+     {
+      "node": "Recordar el aviso",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Recordar el aviso": {
+   "main": [
+    [
+     {
+      "node": "Respuesta no texto",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Respuesta no texto": {
+   "main": [
+    [
+     {
+      "node": "¿Es prueba?",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Cerebro": {
+   "ai_languageModel": [
+    [
+     {
+      "node": "Agente IA - Tech Instagram",
+      "type": "ai_languageModel",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Memoria Instagram": {
+   "ai_memory": [
+    [
+     {
+      "node": "Agente IA - Tech Instagram",
+      "type": "ai_memory",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "ver_disponibilidad": {
+   "ai_tool": [
+    [
+     {
+      "node": "Agente IA - Tech Instagram",
+      "type": "ai_tool",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "agendar": {
+   "ai_tool": [
+    [
+     {
+      "node": "Agente IA - Tech Instagram",
+      "type": "ai_tool",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "derivar_a_persona": {
+   "ai_tool": [
+    [
+     {
+      "node": "Agente IA - Tech Instagram",
+      "type": "ai_tool",
+      "index": 0
+     }
+    ]
+   ]
+  }
+ },
+ "settings": {
+  "executionOrder": "v1",
+  "timezone": "America/Santiago"
+ }
+}

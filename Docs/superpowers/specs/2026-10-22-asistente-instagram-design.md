@@ -179,3 +179,21 @@ Las que dicen *Eje* puede corregirlas Luis.
 - Los nombres internos de los nodos y el texto exacto del bloque «Canal Instagram» del prompt, dentro de lo decidido.
 - Cómo formatear las horas disponibles en el texto.
 - El diseño HTML del correo de derivación, siguiendo el estilo de los correos del Portal.
+
+## Ajustes del 24-oct (al retomar; confirmados por Luis)
+
+Verificado antes de construir (lectura de PROD y de n8n, 24-oct):
+- PROD tiene los 4 archivos del Portal de `claude/ig-comentarios-palabra-clave` (md5 iguales a git). Desde ahí se construye, no desde `main`.
+- Canal 2: `bot_configs` activo, `n8n_webhook_url` vacía y `custom_functions_json` solo con `palabras_clave`. No hay ejecutivo con el correo de Luis.
+- Conversaciones del canal 2: dos asignadas a una ejecutiva en modo humano, una archivada y una en modo bot que nació de un comentario (MÉTODO).
+- n8n: existen OpenAi account, Redis32 (la usa el bot de WhatsApp), AT REST Secret y Google Calendar. El agente web usa memoria en proceso (Window Buffer), no Redis: el de Instagram usa Redis para no perder la conversación al reiniciar n8n.
+- `PejBgr2LZQSAbbBy` acepta el teléfono vacío para una Demo (`/leads` solo exige nombre y correo) y devuelve `result`. Un horario tomado vuelve como «ocupado» o como rechazo de WordPress.
+- La agenda real (`/appointments-config`) atiende también sábado 15–18 h, domingo 15–17 h y lunes hasta las 22 h, con feriados. El agente ofrece lo que diga la agenda; la prueba de «día no disponible» usa un feriado, no el sábado.
+
+Cambios al diseño:
+1. **Quien llega desde un comentario.** Su primer directo responde al privado («quiero agendar» responde a «agenda tu diagnóstico gratis»). El Portal agrega al aviso para n8n un bloque `contexto` = `{origen: 'comentario_palabra_clave', palabra, mensaje_privado, fecha}`, leído de esa conversación (nota de sistema y privado con `metadata_json.origen = comentario_palabra_clave`, de los últimos 7 días). n8n lo pone en las instrucciones del agente, no en su memoria. Sin comentario reciente, el bloque no va.
+2. **Vuelta automática al bot tras 24 h: solo las conversaciones derivadas por el asistente.** Las que tomó a mano un ejecutivo siguen con él hasta que las libere. Se reconoce porque el takeover activo dice «Derivado por el asistente», o porque la conversación quedó sin ejecutivo después de una derivación del bot.
+3. **Origen del lead.** `/leads` marca `source = 'instagram'` cuando `session_id` empieza con `ig:` y no viene otro origen. El CRM ya tiene ícono para Instagram. Se toca `inc/api-endpoints.php` del tema (cotejado: PROD = git, md5 `80952740`); `functions.php` no se toca.
+4. **Despedida y derivación en un solo aviso.** El agente no avisa al Portal desde la herramienta: `derivar_a_persona` solo deja constancia y, al terminar, n8n manda un único callback `action: 'escalate'` con `motivo` y `content` (la despedida). El Portal envía primero la despedida y después deriva; así la despedida no cae en el descarte de conversaciones humanas.
+5. **Un solo correo.** La derivación del bot no manda el correo genérico de asignación de `takeover_conversation`: llega solo «Instagram: <nombre> quiere hablar contigo», a los correos de la configuración.
+6. **Nombre de la reunión.** El privado ofrece un «diagnóstico gratis»; el agente lo llama así. El evento de Calendar conserva el título del sub-workflow («Demo de AutomatizaTech»), que no se toca.

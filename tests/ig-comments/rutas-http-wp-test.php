@@ -22,7 +22,8 @@ $wpdb->insert($P . 'channels', [
 	'created_at' => current_time('mysql'), 'updated_at' => current_time('mysql'),
 ]);
 $CID = (int) $wpdb->insert_id;
-$wpdb->insert($P . 'bot_configs', ['client_id' => 0, 'channel_id' => $CID, 'bot_name' => '[PRUEBA]', 'is_active' => 1]);
+$N8N = 'https://n8n.prueba.invalid/webhook/ig-' . bin2hex(random_bytes(4));
+$wpdb->insert($P . 'bot_configs', ['client_id' => 0, 'channel_id' => $CID, 'bot_name' => '[PRUEBA]', 'is_active' => 1, 'n8n_webhook_url' => $N8N]);
 $BCID = (int) $wpdb->insert_id;
 $igc = new OmniIgCommentsController(new OmnichannelController());
 $igc->maybe_create_tables();
@@ -114,6 +115,49 @@ $dm = ['object' => 'instagram', 'entry' => [['id' => $ACC, 'time' => time(), 'me
 	'sender' => ['id' => 'igsid-c-http-1'], 'recipient' => ['id' => $ACC], 'message' => ['mid' => 'mid-respuesta-1', 'text' => 'Hola, me interesa']]]]]];
 $r = req('POST', $WH, $dm);
 ok($r['code'] === 200 && $row && (int) ($r['json']['conversation_id'] ?? 0) === (int) $row->conversation_id, 'la respuesta por directo entra a la misma conversación');
+$n8n_calls = static function () use ($DIR, $N8N) {
+	return substr_count((string) @file_get_contents($DIR . '/http.log'), $N8N);
+};
+ok($n8n_calls() === 1, 'control: un mensaje directo normal en modo bot sí va a n8n');
+
+// --- Ecos (is_echo): lo que envía la propia cuenta vuelve por el webhook
+$CONV = (int) $row->conversation_id;
+$eco = static function ($mid, $to, $text) use ($ACC) {
+	return ['object' => 'instagram', 'entry' => [['id' => $ACC, 'time' => time(), 'messaging' => [[
+		'sender' => ['id' => $ACC], 'recipient' => ['id' => $to], 'timestamp' => time() * 1000,
+		'message' => ['mid' => $mid, 'text' => $text, 'is_echo' => true]]]]]];
+};
+$count_msgs = static function () use ($wpdb, $P, $CONV) {
+	return (int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$P}messages WHERE conversation_id = %d", $CONV));
+};
+$own_convs = static function () use ($wpdb, $P, $CID, $ACC) {
+	return (int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$P}conversations WHERE channel_id = %d AND external_contact_id = %s", $CID, $ACC));
+};
+$before = $count_msgs();
+$r = req('POST', $WH, $eco('mid-c-http-1', 'igsid-c-http-1', 'Hola, así trabajamos.'));
+ok(($r['json']['status'] ?? '') === 'echo_duplicate' && $count_msgs() === $before, 'eco de la respuesta privada ya registrada: no se repite');
+$wpdb->insert($P . 'messages', ['conversation_id' => $CONV, 'channel_type' => 'instagram', 'direction' => 'outbound', 'sender_type' => 'agent',
+	'sender_name' => 'Luis', 'message_type' => 'text', 'content' => 'Te respondo desde el portal', 'external_message_id' => 'mid-portal-1',
+	'delivery_status' => 'sent', 'created_at' => current_time('mysql', 1)]);
+$before = $count_msgs();
+$r = req('POST', $WH, $eco('mid-portal-1', 'igsid-c-http-1', 'Te respondo desde el portal'));
+ok(($r['json']['status'] ?? '') === 'echo_duplicate' && $count_msgs() === $before, 'eco de un mensaje enviado desde el portal: no se repite');
+$wpdb->insert($P . 'messages', ['conversation_id' => $CONV, 'channel_type' => 'instagram', 'direction' => 'outbound', 'sender_type' => 'agent',
+	'sender_name' => 'Luis', 'message_type' => 'text', 'content' => 'Te escribo enseguida', 'delivery_status' => 'pending', 'created_at' => current_time('mysql', 1)]);
+$PEND = (int) $wpdb->insert_id;
+$before = $count_msgs();
+$r = req('POST', $WH, $eco('mid-portal-2', 'igsid-c-http-1', 'Te escribo enseguida'));
+ok(($r['json']['status'] ?? '') === 'echo_matched' && $count_msgs() === $before
+	&& $wpdb->get_var($wpdb->prepare("SELECT external_message_id FROM {$P}messages WHERE id = %d", $PEND)) === 'mid-portal-2', 'eco que llega antes de guardar el mid: se le asigna al mensaje del portal');
+$n8n_before = $n8n_calls();
+$r = req('POST', $WH, $eco('mid-app-1', 'igsid-c-http-1', 'Hola, soy Luis desde el celular'));
+$app = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$P}messages WHERE external_message_id = %s", 'mid-app-1'));
+ok(($r['json']['status'] ?? '') === 'echo_recorded' && $app && (int) $app->conversation_id === $CONV && $app->direction === 'outbound' && $app->sender_type === 'agent', 'eco escrito desde la app: saliente en la conversación del destinatario');
+ok($own_convs() === 0, 'ningún eco crea una conversación a nombre de la propia cuenta');
+ok($n8n_calls() === $n8n_before, 'un eco nunca va a n8n');
+ok($wpdb->get_var($wpdb->prepare("SELECT status FROM {$P}conversations WHERE id = %d", $CONV)) === 'bot', 'el eco no cambia el estado de la conversación');
+$r = req('POST', $WH, $eco('mid-app-2', 'igsid-nadie', 'Hola, ¿cómo estás?'));
+ok(($r['json']['status'] ?? '') === 'echo_no_conversation' && !$wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$P}conversations WHERE channel_id = %d AND external_contact_id = %s", $CID, 'igsid-nadie')), 'eco a alguien sin conversación: no crea nada');
 
 // --- Rutas del plan B
 $r = $api('POST', 'ig-comments/poll');

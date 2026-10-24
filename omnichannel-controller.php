@@ -3581,6 +3581,76 @@ class OmnichannelController {
     }
 
     /**
+     * Eco de Instagram (message.is_echo): un mensaje que envió la propia cuenta, desde el portal,
+     * la app de Instagram o la respuesta privada a un comentario. Antes se guardaba como entrante
+     * en una conversación a nombre de la cuenta; ahora:
+     *   - si ya está registrado (mismo mid), no se repite;
+     *   - si coincide con un saliente reciente sin mid de esa conversación, se le pone el mid;
+     *   - si no, queda como saliente del ejecutivo en la conversación del destinatario.
+     * Si no hay conversación con ese destinatario, se ignora: la abre el primer mensaje de la
+     * persona, y así un eco que llega antes de que se registre la respuesta privada no la duplica.
+     * Nunca se reenvía al bot ni cambia el estado de la conversación.
+     */
+    public function record_instagram_echo($channel_id, $data) {
+        $channel_id = absint($channel_id);
+        $mid = sanitize_text_field($data['external_message_id'] ?? '');
+        $recipient = sanitize_text_field($data['external_contact_id'] ?? '');
+        if ($mid === '' || $recipient === '') return ['status' => 'echo_ignored'];
+
+        $known = $this->wpdb->get_var($this->wpdb->prepare(
+            "SELECT m.id FROM {$this->prefix}messages m
+             JOIN {$this->prefix}conversations c ON c.id = m.conversation_id
+             WHERE c.channel_id = %d AND m.external_message_id = %s LIMIT 1",
+            $channel_id, $mid
+        ));
+        if ($known) return ['status' => 'echo_duplicate', 'message_id' => (int) $known];
+
+        $conv = $this->wpdb->get_row($this->wpdb->prepare(
+            "SELECT id FROM {$this->prefix}conversations
+             WHERE channel_id = %d AND external_contact_id = %s AND status != 'archived' ORDER BY id DESC LIMIT 1",
+            $channel_id, $recipient
+        ));
+        if (!$conv) return ['status' => 'echo_no_conversation'];
+
+        $content = sanitize_textarea_field($data['content'] ?? '');
+        // El eco puede llegar antes de que el envío del portal guarde su mid: se le asigna a ese mensaje.
+        $pending = $this->wpdb->get_var($this->wpdb->prepare(
+            "SELECT id FROM {$this->prefix}messages
+             WHERE conversation_id = %d AND direction = 'outbound' AND sender_type IN ('agent','bot')
+               AND (external_message_id IS NULL OR external_message_id = '') AND content = %s AND created_at >= %s
+             ORDER BY id DESC LIMIT 1",
+            $conv->id, $content, gmdate('Y-m-d H:i:s', time() - 120)
+        ));
+        if ($pending) {
+            $this->wpdb->update($this->prefix . 'messages', ['external_message_id' => $mid, 'delivery_status' => 'sent'], ['id' => $pending]);
+            return ['status' => 'echo_matched', 'message_id' => (int) $pending, 'conversation_id' => (int) $conv->id];
+        }
+
+        $now = current_time('mysql', 1);
+        $type = $data['type'] ?? 'text';
+        $this->wpdb->insert($this->prefix . 'messages', [
+            'conversation_id'     => $conv->id,
+            'channel_type'        => 'instagram',
+            'direction'           => 'outbound',
+            'sender_type'         => 'agent',
+            'sender_name'         => 'Instagram (app)',
+            'message_type'        => in_array($type, ['text','image','video','audio','document','location','sticker'], true) ? $type : 'text',
+            'content'             => $content,
+            'media_url'           => esc_url_raw($data['media_url'] ?? ''),
+            'external_message_id' => $mid,
+            'delivery_status'     => 'sent',
+            'metadata_json'       => wp_json_encode(['origen' => 'eco_instagram']),
+            'created_at'          => $now,
+        ]);
+        $message_id = (int) $this->wpdb->insert_id;
+        $this->wpdb->update($this->prefix . 'conversations', [
+            'last_message_at'      => $now,
+            'last_message_preview' => mb_substr(sanitize_text_field($content), 0, 500),
+        ], ['id' => $conv->id]);
+        return ['status' => 'echo_recorded', 'message_id' => $message_id, 'conversation_id' => (int) $conv->id];
+    }
+
+    /**
      * Look up an Instagram user's profile from their IGSID.
      * Returns ['name'=>..,'username'=>..,'profile_pic'=>..] or null on failure.
      */

@@ -453,6 +453,16 @@ class OmniIgCommentsController {
             'content' => '💬 Comentó «' . $word['palabra'] . '» en una publicación: «' . mb_substr(sanitize_textarea_field((string) ($c['text'] ?? '')), 0, 300) . '»',
             'delivery_status' => 'delivered', 'metadata_json' => $meta, 'created_at' => $now,
         ]);
+        // Si el eco de Meta ya registró este privado (llegó antes), se corrige ese mensaje en vez de repetirlo.
+        $echoed = $dm_message_id === '' ? null : $this->wpdb->get_var($this->wpdb->prepare(
+            "SELECT id FROM {$this->prefix}messages WHERE conversation_id = %d AND external_message_id = %s LIMIT 1",
+            $conv_id, $dm_message_id
+        ));
+        if ($echoed) {
+            $this->wpdb->update($this->prefix . 'messages', ['sender_type' => 'bot', 'sender_name' => 'Respuesta automática',
+                'metadata_json' => $meta], ['id' => $echoed]);
+            return $conv_id;
+        }
         $this->wpdb->insert($this->prefix . 'messages', [
             'conversation_id' => $conv_id, 'channel_type' => 'instagram', 'direction' => 'outbound',
             'sender_type' => 'bot', 'sender_name' => 'Respuesta automática', 'message_type' => 'text',

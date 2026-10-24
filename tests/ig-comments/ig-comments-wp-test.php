@@ -310,6 +310,17 @@ $r = $igc->handle_webhook($CID, webhook('u-sin', 'sincuenta', 'METODO', 'c-1200'
 $GLOBALS['ig']['me_fail'] = false;
 ok(($r['results'][0]['status'] ?? '') === 'error' && posts() === 0 && !row('c-1200'), 'sin saber cuál es la cuenta propia: no responde');
 
+// --- El eco de la privada llegó antes de registrarla: no se duplica en la conversación
+$wpdb->insert($P . 'conversations', ['client_id' => 0, 'channel_id' => $CID, 'external_contact_id' => 'igsid-1300',
+	'contact_name' => '@eco', 'channel_type' => 'instagram', 'status' => 'bot', 'last_message_at' => current_time('mysql', 1)]);
+$ECONV = (int) $wpdb->insert_id;
+$wpdb->insert($P . 'messages', ['conversation_id' => $ECONV, 'channel_type' => 'instagram', 'direction' => 'outbound', 'sender_type' => 'agent',
+	'sender_name' => 'Instagram (app)', 'message_type' => 'text', 'content' => 'Hola, así trabajamos en AutomatizaTech.',
+	'external_message_id' => 'mid-c-1300', 'delivery_status' => 'sent', 'created_at' => current_time('mysql', 1)]);
+$r = $igc->handle_webhook($CID, webhook('u-1300', 'eco', 'METODO', 'c-1300'));
+$out = $wpdb->get_results($wpdb->prepare("SELECT sender_type FROM {$P}messages WHERE conversation_id = %d AND external_message_id = %s", $ECONV, 'mid-c-1300'));
+ok(($r['results'][0]['status'] ?? '') === 'replied' && count($out) === 1 && $out[0]->sender_type === 'bot', 'eco previo de la privada: queda un solo mensaje, marcado como respuesta automática');
+
 // --- Configuración apagada
 $off = $CONFIG; $off['activo'] = false;
 $igc->save_config($CID, $off);

@@ -144,6 +144,14 @@ if (!$normalized) {
     exit;
 }
 
+// Eco de Instagram: queda como saliente en la conversación del destinatario y nunca va al bot.
+if (!empty($normalized['echo'])) {
+    $echo_result = $controller->record_instagram_echo($channel_id, $normalized);
+    http_response_code(200);
+    echo wp_json_encode($echo_result);
+    exit;
+}
+
 $result = $controller->receive_message($channel_id, $normalized);
 
 if (!isset($result['error'])) {
@@ -254,16 +262,19 @@ function normalize_instagram($payload) {
     
     $msg = $messaging['message'];
     $sender_id = $messaging['sender']['id'] ?? '';
-    
+    // Eco: un mensaje que envió la propia cuenta (portal, app de Instagram o respuesta privada a un
+    // comentario). El contacto es el destinatario, no la cuenta; lo registra record_instagram_echo().
+    $is_echo = !empty($msg['is_echo']);
+
     $content = $msg['text'] ?? '';
     $type = 'text';
     $media_url = '';
-    
+
     if (!empty($msg['attachments'])) {
         $attachment = $msg['attachments'][0];
         $att_type = $attachment['type'] ?? 'fallback';
         $media_url = $attachment['payload']['url'] ?? '';
-        
+
         switch ($att_type) {
             case 'image': $type = 'image'; $content = $content ?: '[Imagen]'; break;
             case 'video': $type = 'video'; $content = '[Video]'; break;
@@ -271,9 +282,10 @@ function normalize_instagram($payload) {
             default: $content = $content ?: '[Archivo adjunto]';
         }
     }
-    
+
     return [
-        'external_contact_id' => $sender_id,
+        'echo'                => $is_echo,
+        'external_contact_id' => $is_echo ? ($messaging['recipient']['id'] ?? '') : $sender_id,
         'contact_name'        => '',
         'content'             => $content,
         'type'                => $type,

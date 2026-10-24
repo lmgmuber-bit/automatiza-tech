@@ -2670,3 +2670,13 @@ button.inv-scroll-hint.inv-scroll-hint--waiting {
   border-color: #6e9b5a;
   color: #3d4a2f;
 }
+
+.inv-body[data-theme="baby-osito"] .inv-rsvp-dialog .inv-button:not(.inv-button-ghost) {
+  background: #6e9b5a;
+  color: #fff;
+}
+
+.inv-body[data-theme="baby-osito"] .inv-rsvp-campo input[type="text"].is-error,
+.inv-body[data-theme="baby-osito"] .inv-rsvp-equipo.is-error .inv-rsvp-team span {
+  border-color: #a6402f;
+}

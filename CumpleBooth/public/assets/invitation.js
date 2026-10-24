@@ -1082,12 +1082,21 @@
     // silencio al tocar «Confirmar» y suena cuando vuelve el 200.
     const vozGracias = document.querySelector('[data-inv-narration-gracias]');
     let graciasDestrabada = false;
+    let graciasPedida = false;
     const prepararGracias = () => {
       if (graciasDestrabada || !(vozGracias instanceof HTMLAudioElement)) return;
       graciasDestrabada = true;
       // `muted` y no `volume`: iOS ignora el volumen que fija la página y se oiría un instante.
       vozGracias.muted = true;
-      const volver = () => { vozGracias.pause(); vozGracias.currentTime = 0; vozGracias.muted = false; };
+      const volver = () => {
+        // El audio puede terminar de cargar DESPUÉS de que el servidor confirmó (probado en PROD el
+        // 24-oct): si ya se pidió que suene, solo se le quita el silencio. Pausarlo ahí lo callaba y
+        // dejaba la música baja para siempre, porque la voz nunca llegaba a `ended`.
+        vozGracias.muted = false;
+        if (graciasPedida) return;
+        vozGracias.pause();
+        vozGracias.currentTime = 0;
+      };
       const intento = vozGracias.play();
       if (intento && typeof intento.then === 'function') {
         intento.then(volver).catch(() => { vozGracias.muted = false; });
@@ -1211,7 +1220,11 @@
           }
           sumarALista(cuerpo.regalo);
           yaConfirmo = true;
-          if (vozGracias) duckWhile(vozGracias);
+          if (vozGracias) {
+            graciasPedida = true;
+            vozGracias.muted = false;
+            duckWhile(vozGracias);
+          }
         }
         abrir.textContent = modoRsvp ? '✅ Asistencia confirmada' : '✅ Asistencia confirmada · toca para editar';
         try { window.localStorage.setItem(claveLocal, '1'); } catch {}

@@ -134,6 +134,10 @@ test('al confirmar suena «Gracias por confirmar, te esperamos»', () => {
   // Se destraba dentro del toque de «Confirmar» (iOS) y suena al volver el 200.
   assert.match(js, /prepararGracias\(\)/)
   assert.match(js, /duckWhile\(vozGracias\)/)
+  // Si el audio termina de cargar después del 200, el destrabe no debe callarlo (pasó en PROD).
+  const volver = js.slice(js.indexOf('const volver = () => {', js.indexOf('const prepararGracias')), js.indexOf('const intento = vozGracias.play()'))
+  assert.match(volver, /if \(graciasPedida\) return;[\s\S]*vozGracias\.pause\(\)/)
+  assert.match(js, /graciasPedida = true;\s*vozGracias\.muted = false;\s*duckWhile\(vozGracias\)/)
   const datos = readFileSync(join(raiz, 'public/themes/baby-osito/narracion-video/gracias-confirmar.mp3'))
   assert.ok(datos.length > 5000, 'gracias-confirmar.mp3 parece vacío')
 })

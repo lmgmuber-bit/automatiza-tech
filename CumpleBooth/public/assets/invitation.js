@@ -992,13 +992,94 @@
     const base = (seccion && seccion.getAttribute('data-inv-base')) || '';
     const claveLocal = 'cc_rsvp_ok_' + token.slice(0, 12);
 
+    const modoRsvp = formulario.getAttribute('data-rsvp-modo') === 'rsvp';
     let yaConfirmo = false;
     try { yaConfirmo = window.localStorage.getItem(claveLocal) === '1'; } catch {}
-    if (yaConfirmo) abrir.textContent = '✅ Asistencia confirmada · toca para editar';
+    if (yaConfirmo) abrir.textContent = modoRsvp ? '✅ Asistencia confirmada' : '✅ Asistencia confirmada · toca para editar';
+
+    // Modo "confirmar con regalo" (baby shower): nombre + regalo + equipo +
+    // foto opcional, por FormData. El servidor valida y devuelve el mensaje.
+    const MAX_FOTO = 10 * 1024 * 1024;
+    const campoFoto = formulario.querySelector('[data-rsvp-foto]');
+    const vistaFoto = formulario.querySelector('[data-rsvp-foto-prev]');
+    const textoFoto = formulario.querySelector('.inv-rsvp-foto-btn');
+    const MENSAJE_FOTO = 'No pudimos usar esa foto. Prueba con otra o confirma sin foto.';
+    let urlVista = '';
+    const quitarVista = () => {
+      if (urlVista) { try { URL.revokeObjectURL(urlVista); } catch {} urlVista = ''; }
+      if (vistaFoto) { vistaFoto.hidden = true; vistaFoto.removeAttribute('src'); }
+    };
+    if (modoRsvp && campoFoto) {
+      campoFoto.addEventListener('change', () => {
+        quitarVista();
+        if (error) error.hidden = true;
+        const archivo = campoFoto.files && campoFoto.files[0];
+        if (textoFoto) textoFoto.textContent = archivo ? 'Cambiar foto de bebé' : 'Elegir foto de bebé';
+        if (!archivo) return;
+        if (archivo.size > MAX_FOTO) {
+          campoFoto.value = '';
+          if (textoFoto) textoFoto.textContent = 'Elegir foto de bebé';
+          if (error) { error.textContent = MENSAJE_FOTO; error.hidden = false; }
+          return;
+        }
+        if (vistaFoto) {
+          try { urlVista = URL.createObjectURL(archivo); vistaFoto.src = urlVista; vistaFoto.hidden = false; } catch {}
+        }
+      });
+    }
+    const marcarCulpable = (codigo) => {
+      formulario.querySelectorAll('.is-error').forEach((el) => el.classList.remove('is-error'));
+      const mapa = {
+        nombre_requerido: 'family_name', nombre_repetido: 'family_name',
+        regalo_requerido: 'gift', regalo_generico: 'gift', regalo_tomado: 'gift', panales_completos: 'gift',
+        equipo_requerido: 'team', foto_invalida: 'baby_photo',
+      };
+      const nombre = mapa[codigo];
+      if (!nombre || nombre === 'baby_photo') return;
+      if (nombre === 'team') {
+        const caja = formulario.querySelector('[data-rsvp-equipo]');
+        if (caja) caja.classList.add('is-error');
+        const primero = formulario.querySelector('input[name="team"]');
+        if (primero) primero.focus();
+        return;
+      }
+      const campo = formulario.querySelector('[name="' + nombre + '"]');
+      if (campo) { campo.classList.add('is-error'); campo.focus(); }
+    };
+    // Suma el regalo recién confirmado a la lista de solo lectura, sin nombres.
+    const sumarALista = (titulo) => {
+      const sec = document.querySelector('[data-inv-gifts][data-gifts-rsvp]');
+      if (!sec || !titulo) return;
+      const lista = sec.querySelector('[data-gifts-list]');
+      if (!lista) return;
+      const li = document.createElement('li');
+      li.className = 'inv-gift inv-gift--tomado';
+      const caja = document.createElement('div');
+      caja.className = 'inv-gift-texto';
+      const t = document.createElement('p');
+      t.className = 'inv-gift-title';
+      t.textContent = titulo;
+      caja.appendChild(t);
+      const marca = document.createElement('span');
+      marca.className = 'inv-gift-estado';
+      marca.textContent = sec.getAttribute('data-gifts-tomado') || 'Ya lo traen';
+      li.appendChild(caja);
+      li.appendChild(marca);
+      lista.appendChild(li);
+      const vacio = sec.querySelector('.inv-gifts-vacio');
+      if (vacio) vacio.hidden = true;
+      const contador = sec.querySelector('[data-gifts-count]');
+      if (contador) {
+        const n = lista.children.length;
+        contador.textContent = n === 1 ? '1 cosa anotada' : n + ' cosas anotadas';
+        contador.hidden = false;
+      }
+    };
 
     abrir.addEventListener('click', () => {
-      formulario.hidden = false;
-      if (exito) exito.hidden = true;
+      const yaListo = modoRsvp && yaConfirmo;
+      formulario.hidden = yaListo;
+      if (exito) exito.hidden = !yaListo;
       if (error) error.hidden = true;
       try { dialogo.showModal(); } catch { dialogo.setAttribute('open', ''); }
     });
@@ -1011,21 +1092,54 @@
       if (error) error.hidden = true;
       if (enviarBtn) { enviarBtn.disabled = true; enviarBtn.textContent = 'Guardando…'; }
       const datos = new FormData(formulario);
+      formulario.querySelectorAll('.is-error').forEach((el) => el.classList.remove('is-error'));
+      // El mensaje vuelve a su texto de siempre; un 422 lo reemplaza.
+      if (error) error.textContent = 'No pudimos guardar tu confirmación. Inténtalo de nuevo.';
       try {
-        const respuesta = await fetch(base + 'rsvp-api.php', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            t: token,
-            family_name: datos.get('family_name') || '',
-            guest_names: datos.get('guest_names') || '',
-          }),
-        });
-        const cuerpo = await respuesta.json();
-        if (!cuerpo || cuerpo.ok !== true) throw new Error('rechazado');
+        let respuesta;
+        if (modoRsvp) {
+          const archivo = campoFoto && campoFoto.files && campoFoto.files[0];
+          if (archivo && archivo.size > MAX_FOTO) {
+            if (error) { error.textContent = MENSAJE_FOTO; error.hidden = false; }
+            return;
+          }
+          datos.set('t', token);
+          if (!archivo) datos.delete('baby_photo');
+          respuesta = await fetch(base + 'rsvp-api.php', { method: 'POST', body: datos });
+        } else {
+          respuesta = await fetch(base + 'rsvp-api.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              t: token,
+              family_name: datos.get('family_name') || '',
+              guest_names: datos.get('guest_names') || '',
+            }),
+          });
+        }
+        let cuerpo = null;
+        try { cuerpo = await respuesta.json(); } catch { cuerpo = null; }
+        if (!cuerpo || cuerpo.ok !== true) {
+          if (modoRsvp && cuerpo && typeof cuerpo.mensaje === 'string' && cuerpo.mensaje) {
+            // Se queda todo lo escrito: solo se dice qué falló y se marca el campo.
+            if (error) { error.textContent = cuerpo.mensaje; error.hidden = false; }
+            marcarCulpable(cuerpo.error);
+            return;
+          }
+          throw new Error('rechazado');
+        }
         formulario.hidden = true;
         if (exito) exito.hidden = false;
-        abrir.textContent = '✅ Asistencia confirmada · toca para editar';
+        if (modoRsvp) {
+          const lineaRegalo = dialogo.querySelector('[data-rsvp-ok-regalo]');
+          if (lineaRegalo && cuerpo.regalo) {
+            lineaRegalo.textContent = 'Anotamos tu regalo: ' + cuerpo.regalo + '.';
+            lineaRegalo.hidden = false;
+          }
+          sumarALista(cuerpo.regalo);
+          yaConfirmo = true;
+        }
+        abrir.textContent = modoRsvp ? '✅ Asistencia confirmada' : '✅ Asistencia confirmada · toca para editar';
         try { window.localStorage.setItem(claveLocal, '1'); } catch {}
       } catch {
         if (error) error.hidden = false;
@@ -1342,6 +1456,9 @@
 (() => {
   const seccion = document.querySelector('[data-inv-gifts]');
   if (!seccion) return;
+  // Modo "confirmar con regalo": la lista es de solo lectura y la alimenta el
+  // formulario de confirmación (más arriba). Acá no hay nada que cablear.
+  if (seccion.hasAttribute('data-gifts-rsvp')) return;
 
   const invitacion = seccion.getAttribute('data-inv-token') || '';
   const lista = seccion.querySelector('[data-gifts-list]');

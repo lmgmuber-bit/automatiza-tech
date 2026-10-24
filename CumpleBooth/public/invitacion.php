@@ -240,7 +240,17 @@ $aQuienRegalo = $hayNombreBebe ? ' a ' . $birthdayName : '';
 // El gancho nombra el problema del invitado, no la sección. Y ese problema
 // es otro en cada modo: con lista es "no sé qué regalar"; sin lista es "ya
 // sé lo que llevo, ¿dónde lo anoto para que nadie repita?".
-if ($modoRegalos === 'open') {
+$regalosReglas = '';
+if ($modoRegalos === 'rsvp') {
+    // Regalo validado: el invitado lo escribe al confirmar y el servidor
+    // impide repetidos. Acá solo se lee lo que ya llevan, sin nombres.
+    $regalosGancho = '¿Qué le vas a llevar' . $aQuienRegalo . '?';
+    $regalosBajada = 'Nos lo cuentas al confirmar. Así nadie repite.';
+    $regalosReglas = 'Coche, cuna y otros regalos grandes: uno por persona. Pañales: hasta 3 personas. Ropa, aseo, dinero o gift card: libre.';
+    $regalosBoton = '';
+    $regalosVacio = 'Todavía nadie anota su regalo.';
+    $regalosTomado = 'Ya lo traen';
+} elseif ($modoRegalos === 'open') {
     $regalosGancho = '¿Vas a llevarle algo' . $aQuienRegalo . '?';
     $regalosBajada = 'Anótalo acá y los demás lo van a ver. Así nadie lleva lo mismo.';
     $regalosBoton = 'Anotar lo que voy a llevar';
@@ -562,6 +572,8 @@ if ($themeSlug === 'hielo') {
     $heroKicker = 'El Reino de Hielo te invita a celebrar a:';
 } elseif ($themeSlug === 'baby-nube') {
     $heroKicker = 'Entre nubes y estrellas, te esperamos para recibir a:';
+} elseif ($themeSlug === 'baby-osito') {
+    $heroKicker = 'Con mucho amor, te esperamos para recibir a:';
 } elseif ($themeSlug === 'baby-safari') {
     $heroKicker = 'La manada se prepara para recibir a:';
 } elseif ($esBabyShower) {
@@ -656,6 +668,18 @@ $playlistOrdersByTheme = [
         'despedida-baby-nube.mp4' => [
             'caption' => 'Ven a esperar con nosotros',
             'narracion' => 'despedida-baby-nube-' . $sufijoSexoBebe,
+        ],
+    ],
+    'baby-osito' => [
+        'invitation/capitulo-1-la-espera.mp4' => 'Hay esperas que se sienten distintas',
+        'invitation/capitulo-2-antes-de-nacer.mp4' => 'Todo empieza mucho antes de nacer',
+        'invitation/capitulo-3-alguien-te-espera.mp4' => 'Alguien ya te está esperando',
+        'invitation/capitulo-4-su-nombre.mp4' => $capituloNombre,
+        'invitation/capitulo-5-el-mundo-se-acomoda.mp4' => 'El mundo se acomoda para recibirte',
+        // La narración lleva género y el video no: un solo clip, tres voces.
+        'despedida-baby-osito.mp4' => [
+            'caption' => 'Ven a esperar con nosotros',
+            'narracion' => 'despedida-baby-osito-' . $sufijoSexoBebe,
         ],
     ],
     'baby-safari' => [
@@ -1663,20 +1687,23 @@ $cssVer = static function (string $rel): string {
         // vacía ES el estado normal al principio y hay que invitar a anotar.
         // En modo lista, vacía significa que los papás no cargaron nada, y
         // mostrar una sección hueca sería peor que no mostrarla. ?>
-  <?php if ($esBabyShower && ($regalos['total'] > 0 || $modoRegalos === 'open')): ?>
+  <?php if ($esBabyShower && ($regalos['total'] > 0 || $modoRegalos === 'open' || $modoRegalos === 'rsvp')): ?>
   <?php // "Para cuando llegue" — el nombre lo decidió Luis el 2026-08-25.
         // Se renderiza entero en el servidor: sin JS se ve igual, solo que
         // no se puede reservar, y eso es mejor que una sección vacía. ?>
   <section class="inv-gifts inv-reveal" data-inv-gifts data-inv-token="<?= $esc($token) ?>"
            data-inv-base="<?= $esc(rtrim((string) cb_public_base_url(), '/')) ?>/"
-           data-gifts-tomado="<?= $esc($regalosTomado) ?>">
+           data-gifts-tomado="<?= $esc($regalosTomado) ?>"<?= $modoRegalos === 'rsvp' ? ' data-gifts-rsvp' : '' ?>>
     <p class="inv-kicker">Para cuando llegue</p>
     <h2 class="inv-gifts-title"><?= $esc($regalosGancho) ?></h2>
     <p class="inv-gifts-lede"><?= $esc($regalosBajada) ?></p>
+    <?php if ($modoRegalos === 'rsvp'): ?>
+    <p class="inv-gifts-reglas"><?= $esc($regalosReglas) ?></p>
+    <?php endif; ?>
     <?php // El pulso de la lista, sin nombres. En modo abierto no hay un total
           // contra el cual medir, así que se cuenta lo anotado y ya. ?>
-    <p class="inv-gifts-count" data-gifts-count data-gifts-modo="<?= $esc($modoRegalos) ?>">
-      <?php if ($modoRegalos === 'open'): ?>
+    <p class="inv-gifts-count" data-gifts-count data-gifts-modo="<?= $esc($modoRegalos) ?>"<?= $modoRegalos === 'rsvp' && !$regalos['total'] ? ' hidden' : '' ?>>
+      <?php if ($modoRegalos === 'open' || $modoRegalos === 'rsvp'): ?>
       <?= $esc($regalos['total'] === 1 ? '1 cosa anotada' : $regalos['total'] . ' cosas anotadas') ?>
       <?php else: ?>
       <?= $esc($regalos['tomados'] . ' de ' . $regalos['total'] . ' ya tienen quien los lleve') ?>
@@ -1688,12 +1715,14 @@ $cssVer = static function (string $rel): string {
           // navegador encima rompe el tono justo en el único momento en que
           // el invitado hace algo. Sin JS queda oculto, porque sin JS no hay
           // reserva posible. ?>
+    <?php if ($modoRegalos !== 'rsvp'): ?>
     <div class="inv-gifts-yo" data-gifts-yo hidden>
       <label for="inv-gifts-nombre">Te anotamos como</label>
       <input id="inv-gifts-nombre" type="text" maxlength="80" autocomplete="name"
              placeholder="Tu nombre" data-gifts-nombre>
       <span class="inv-gifts-yo-nota">Solo lo ven los papás.</span>
     </div>
+    <?php endif; ?>
 
     <ul class="inv-gifts-list" data-gifts-list>
       <?php foreach ($regalos['items'] as $regalo): ?>
@@ -1705,7 +1734,7 @@ $cssVer = static function (string $rel): string {
           <?php endif; ?>
         </div>
         <?php // Nunca sale de acá quién lo tomó: ver lib.gifts.php. ?>
-        <?php if ($regalo['tomado']): ?>
+        <?php if ($regalo['tomado'] || $modoRegalos === 'rsvp'): ?>
         <span class="inv-gift-estado"><?= $esc($regalosTomado) ?></span>
         <?php else: ?>
         <button class="inv-gift-btn" type="button" data-gift-claim>Yo lo regalo</button>
@@ -1716,21 +1745,25 @@ $cssVer = static function (string $rel): string {
 
     <p class="inv-gifts-status" data-gifts-status role="status" aria-live="polite"></p>
 
-    <?php if ($modoRegalos === 'open' && !$regalos['items']): ?>
+    <?php if (($modoRegalos === 'open' || $modoRegalos === 'rsvp') && !$regalos['items']): ?>
     <p class="inv-gifts-vacio"><?= $esc($regalosVacio) ?></p>
     <?php endif; ?>
 
+    <?php if ($modoRegalos !== 'rsvp'): ?>
     <button class="inv-gifts-otro" type="button" data-gift-add hidden><?= $esc($regalosBoton) ?></button>
     <div class="inv-gifts-nuevo" data-gifts-nuevo hidden>
       <input type="text" maxlength="120" placeholder="¿Qué vas a regalar?" data-gifts-nuevo-titulo>
       <button class="inv-gift-btn" type="button" data-gifts-nuevo-ok>Agregarlo</button>
     </div>
+    <?php endif; ?>
     <?php // El costo de no tener cuentas se dice, no se esconde. ?>
+    <?php if ($modoRegalos !== 'rsvp'): ?>
     <p class="inv-gifts-nota" data-gifts-nota hidden>
       Lo que marques queda guardado en este navegador. Si borras sus datos, el
       regalo sigue reservado a tu nombre, pero ya no vas a poder liberarlo tú
       mismo: avísale a la familia y ellos lo sueltan.
     </p>
+    <?php endif; ?>
   </section>
   <?php endif; ?>
 
@@ -1956,7 +1989,7 @@ $cssVer = static function (string $rel): string {
     </button>
 
     <dialog class="inv-rsvp-dialog" data-rsvp-dialog aria-label="Confirmar asistencia">
-      <form data-rsvp-form>
+      <form data-rsvp-form<?= $esBabyShower && $modoRegalos === 'rsvp' ? ' data-rsvp-modo="rsvp" enctype="multipart/form-data"' : '' ?>>
         <h3 class="inv-rsvp-title">Confirma tu asistencia</h3>
         <label class="inv-rsvp-campo">
           <span><?= $esc($esBabyShower || $esAdulto ? 'Tu nombre' : 'Nombre del apoderado o familia') ?></span>
@@ -1970,6 +2003,32 @@ $cssVer = static function (string $rel): string {
                  placeholder="<?= $esc($esAdulto ? 'Ej: con Jorge' : 'Ej: Emma y Lucas') ?>">
         </label>
         <?php endif; ?>
+        <?php if ($esBabyShower && $modoRegalos === 'rsvp'): ?>
+        <label class="inv-rsvp-campo">
+          <span>¿Qué regalo llevarás?</span>
+          <input type="text" name="gift" maxlength="120" required
+                 placeholder="Ej: un coche, pañales talla RN, un body">
+        </label>
+        <fieldset class="inv-rsvp-campo inv-rsvp-equipo" data-rsvp-equipo>
+          <legend>¿De qué equipo eres?</legend>
+          <div class="inv-rsvp-equipos">
+            <label class="inv-rsvp-team">
+              <input type="radio" name="team" value="mama" required>
+              <span>Team Mamá</span>
+            </label>
+            <label class="inv-rsvp-team">
+              <input type="radio" name="team" value="papa" required>
+              <span>Team Papá</span>
+            </label>
+          </div>
+        </fieldset>
+        <div class="inv-rsvp-campo inv-rsvp-foto">
+          <span>¿Juegas a "¿Quién es este bebé?"? Sube una foto tuya de bebé (opcional). Solo se verá en la fiesta.</span>
+          <input type="file" id="inv-rsvp-foto" name="baby_photo" accept="image/*" data-rsvp-foto hidden>
+          <label for="inv-rsvp-foto" class="inv-button inv-button-ghost inv-rsvp-foto-btn">Elegir foto de bebé</label>
+          <img class="inv-rsvp-foto-prev" data-rsvp-foto-prev alt="Vista previa de tu foto de bebé" hidden>
+        </div>
+        <?php endif; ?>
         <p class="inv-rsvp-error" data-rsvp-error hidden>No pudimos guardar tu confirmación. Inténtalo de nuevo.</p>
         <div class="inv-rsvp-acciones">
           <button class="inv-button" type="submit" data-rsvp-enviar>Confirmar asistencia</button>
@@ -1982,6 +2041,7 @@ $cssVer = static function (string $rel): string {
         <p><?= $esc($esBabyShower
             ? 'Gracias por avisar. ¡Nos vemos en el baby shower!'
             : ($esAdulto ? '¡Te esperamos! Nos vemos en la fiesta.' : '¡La familia ya sabe que vienen! Nos vemos en la fiesta.')) ?></p>
+        <p class="inv-rsvp-ok-regalo" data-rsvp-ok-regalo hidden></p>
         <button class="inv-button inv-button-ghost" type="button" data-rsvp-cerrar>Cerrar</button>
       </div>
     </dialog>

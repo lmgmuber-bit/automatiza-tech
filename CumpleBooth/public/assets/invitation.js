@@ -1046,6 +1046,56 @@
         }
       });
     }
+    // Regalos sugeridos (Luis, 24-oct-2026: que escriban lo menos posible): un toque escribe el
+    // regalo en el campo. Sin foco a propósito, para que en el celular no se abra el teclado.
+    const campoRegalo = formulario.querySelector('[name="gift"]');
+    const apagarSugerencia = (texto) => {
+      const buscado = String(texto || '').trim().toLowerCase();
+      formulario.querySelectorAll('[data-rsvp-sug]').forEach((boton) => {
+        const idea = boton.getAttribute('data-rsvp-sug') || '';
+        if (boton.getAttribute('data-rsvp-sug-libre') === '1' || idea.toLowerCase() !== buscado) return;
+        boton.disabled = true;
+        boton.classList.remove('is-elegida');
+        boton.classList.add('inv-rsvp-sug--tomado');
+        boton.setAttribute('aria-label', idea + ', ya lo traen');
+      });
+    };
+    formulario.addEventListener('click', (evento) => {
+      const sugerencia = evento.target.closest('[data-rsvp-sug]');
+      if (!sugerencia || sugerencia.disabled || !campoRegalo) return;
+      campoRegalo.value = sugerencia.getAttribute('data-rsvp-sug') || '';
+      campoRegalo.classList.remove('is-error');
+      if (error) error.hidden = true;
+      formulario.querySelectorAll('.inv-rsvp-sug.is-elegida').forEach((b) => b.classList.remove('is-elegida'));
+      sugerencia.classList.add('is-elegida');
+    });
+    if (campoRegalo) {
+      campoRegalo.addEventListener('input', () => {
+        formulario.querySelectorAll('.inv-rsvp-sug.is-elegida').forEach((b) => {
+          if ((b.getAttribute('data-rsvp-sug') || '') !== campoRegalo.value) b.classList.remove('is-elegida');
+        });
+      });
+    }
+
+    // «Gracias por confirmar, te esperamos» (Luis, 24-oct-2026). iOS solo deja sonar un audio que
+    // se destrabó dentro de un toque, y la respuesta del servidor llega después: se destraba en
+    // silencio al tocar «Confirmar» y suena cuando vuelve el 200.
+    const vozGracias = document.querySelector('[data-inv-narration-gracias]');
+    let graciasDestrabada = false;
+    const prepararGracias = () => {
+      if (graciasDestrabada || !(vozGracias instanceof HTMLAudioElement)) return;
+      graciasDestrabada = true;
+      // `muted` y no `volume`: iOS ignora el volumen que fija la página y se oiría un instante.
+      vozGracias.muted = true;
+      const volver = () => { vozGracias.pause(); vozGracias.currentTime = 0; vozGracias.muted = false; };
+      const intento = vozGracias.play();
+      if (intento && typeof intento.then === 'function') {
+        intento.then(volver).catch(() => { vozGracias.muted = false; });
+      } else {
+        volver();
+      }
+    };
+
     const marcarCulpable = (codigo) => {
       formulario.querySelectorAll('.is-error').forEach((el) => el.classList.remove('is-error'));
       const mapa = {
@@ -1108,6 +1158,7 @@
 
     formulario.addEventListener('submit', async (evento) => {
       evento.preventDefault();
+      if (modoRsvp) prepararGracias();
       if (error) error.hidden = true;
       if (enviarBtn) { enviarBtn.disabled = true; enviarBtn.textContent = 'Guardando…'; }
       const datos = new FormData(formulario);
@@ -1143,6 +1194,9 @@
             // Se queda todo lo escrito: solo se dice qué falló y se marca el campo.
             if (error) { error.textContent = cuerpo.mensaje; error.hidden = false; }
             marcarCulpable(cuerpo.error);
+            // Otro invitado se lo llevó mientras esta página estaba abierta: la idea se apaga.
+            if (cuerpo.error === 'regalo_tomado') apagarSugerencia(datos.get('gift'));
+            if (cuerpo.error === 'panales_completos') apagarSugerencia('Pañales');
             return;
           }
           throw new Error('rechazado');
@@ -1157,6 +1211,7 @@
           }
           sumarALista(cuerpo.regalo);
           yaConfirmo = true;
+          if (vozGracias) duckWhile(vozGracias);
         }
         abrir.textContent = modoRsvp ? '✅ Asistencia confirmada' : '✅ Asistencia confirmada · toca para editar';
         try { window.localStorage.setItem(claveLocal, '1'); } catch {}

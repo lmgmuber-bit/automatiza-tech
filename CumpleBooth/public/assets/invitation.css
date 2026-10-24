@@ -2663,6 +2663,64 @@ button.inv-scroll-hint.inv-scroll-hint--waiting {
   color: #34472a;
 }
 
+/* Regalos sugeridos: pastillas que se acomodan en filas; un toque escribe el regalo. */
+.inv-rsvp-sugerencias {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: -4px 0 14px;
+}
+
+.inv-rsvp-sug {
+  min-height: 40px;
+  padding: 8px 14px;
+  border: 1.5px solid rgba(255, 255, 255, .3);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .07);
+  color: inherit;
+  font: inherit;
+  font-size: .9rem;
+  font-weight: 600;
+  line-height: 1.1;
+  cursor: pointer;
+  transition: background .15s ease, border-color .15s ease, transform .15s ease;
+}
+
+.inv-rsvp-sug:focus-visible {
+  outline: 3px solid var(--inv-highlight, #f2cb55);
+  outline-offset: 2px;
+}
+
+.inv-rsvp-sug.is-elegida {
+  border-color: var(--inv-highlight, #f2cb55);
+  background: color-mix(in srgb, var(--inv-highlight, #f2cb55) 28%, transparent);
+  transform: scale(1.04);
+}
+
+.inv-rsvp-sug--tomado,
+.inv-rsvp-sug:disabled {
+  opacity: .45;
+  text-decoration: line-through;
+  cursor: not-allowed;
+}
+
+.inv-body[data-theme="baby-osito"] .inv-rsvp-sug {
+  border-color: #b9d3a0;
+  background: #fff;
+  color: #3d4a2f;
+}
+
+.inv-body[data-theme="baby-osito"] .inv-rsvp-sug.is-elegida {
+  border-color: #6e9b5a;
+  background: #e6f0dc;
+  color: #34472a;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .inv-rsvp-sug { transition: none; }
+  .inv-rsvp-sug.is-elegida { transform: none; }
+}
+
 .inv-body[data-theme="baby-osito"] .inv-rsvp-foto-prev {
   border-color: #b98a5e;
 }

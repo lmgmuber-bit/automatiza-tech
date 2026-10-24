@@ -23,7 +23,7 @@ test('el modal en modo rsvp trae nombre, regalo, equipo y foto opcional', () => 
   assert.match(php, /data-rsvp-modo="rsvp"/)
   assert.match(php, /name="gift"[^>]*required/)
   assert.match(php, /name="gift"[^>]*maxlength="120"/)
-  assert.match(php, /Ej: un coche, pañales talla RN, un body/)
+  assert.match(php, /Toca una idea o escribe el tuyo/)
   assert.match(php, /name="team" value="mama"/)
   assert.match(php, /name="team" value="papa"/)
   assert.match(php, /Team Mamá/)
@@ -113,4 +113,27 @@ test('baby-osito trae su voz propia: despedida en tres versiones y cierre, en MP
     assert.ok(datos.length > 10000, archivo + ' parece vacío')
     assert.ok(datos.subarray(0, 3).toString() === 'ID3' || (datos[0] === 0xff && (datos[1] & 0xe0) === 0xe0), archivo + ' no es MP3')
   }
+})
+
+test('regalos sugeridos: botones que escriben el regalo, y los únicos tomados salen desactivados', () => {
+  // Solo en el modo de confirmar con regalo, y la disponibilidad la decide el servidor con sus reglas.
+  assert.match(php, /\$sugerenciasRegalo = \[\];[\s\S]{0,200}\$modoRegalos === 'rsvp'[\s\S]{0,900}cb_regalo_validar\(/)
+  assert.match(php, /data-rsvp-sug="<\?= \$esc\(\$s\['texto'\]\) \?>"/)
+  assert.match(php, /\$s\['disponible'\] \? '' : ' disabled/)
+  for (const sugerencia of ["'Coche'", "'Cuna'", "'Pañales'", "'Ropa'", "'Gift card'"]) {
+    assert.ok(php.includes(sugerencia), 'falta la sugerencia ' + sugerencia)
+  }
+  // Tocar una sugerencia escribe el regalo en el campo; si el servidor dice que ya está tomada, se apaga.
+  assert.match(js, /closest\('\[data-rsvp-sug\]'\)[\s\S]{0,400}campoRegalo\.value = /)
+  assert.match(js, /apagarSugerencia\(/)
+})
+
+test('al confirmar suena «Gracias por confirmar, te esperamos»', () => {
+  assert.match(php, /<audio data-inv-narration-gracias src=/)
+  assert.match(php, /'gracias-confirmar\.mp3'/)
+  // Se destraba dentro del toque de «Confirmar» (iOS) y suena al volver el 200.
+  assert.match(js, /prepararGracias\(\)/)
+  assert.match(js, /duckWhile\(vozGracias\)/)
+  const datos = readFileSync(join(raiz, 'public/themes/baby-osito/narracion-video/gracias-confirmar.mp3'))
+  assert.ok(datos.length > 5000, 'gracias-confirmar.mp3 parece vacío')
 })

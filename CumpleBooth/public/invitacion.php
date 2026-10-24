@@ -251,6 +251,33 @@ if ($esBabyShower && function_exists('cb_gift_list_public')) {
     }
 }
 $modoRegalos = function_exists('cb_gift_mode') ? cb_gift_mode($invitation) : 'list';
+// Regalos sugeridos del formulario de confirmación (Luis, 24-oct-2026: que escriban lo menos
+// posible). Un toque escribe el regalo; el servidor lo valida igual. La disponibilidad sale de
+// las mismas reglas del servidor, así que un único ya tomado o los pañales completos salen apagados.
+$sugerenciasRegalo = [];
+if ($esBabyShower && $modoRegalos === 'rsvp' && function_exists('cb_regalo_validar')) {
+    $ideas = ['Coche', 'Cuna', 'Corral', 'Silla de auto', 'Bañera', 'Mochila portabebé', 'Monitor', 'Silla de comer',
+        'Mudador', 'Esterilizador', 'Pañales', 'Ropa', 'Mantita', 'Toallitas húmedas', 'Kit de aseo', 'Gift card'];
+    foreach ($ideas as $idea) {
+        try {
+            $v = cb_regalo_validar((int) $invitation['id'], $idea);
+            $categoria = (string) ($v['categoria'] ?? cb_regalo_clasificar($idea)['categoria']);
+            $sugerenciasRegalo[] = ['texto' => $idea, 'disponible' => !empty($v['ok']), 'libre' => $categoria === 'libre'];
+        } catch (Throwable $e) {
+            error_log('CumpleClick sugerencias de regalo: ' . $e->getMessage());
+            $sugerenciasRegalo = [];
+            break;
+        }
+    }
+}
+// «Gracias por confirmar, te esperamos» al confirmar: audio de la temática, si existe.
+$vozGraciasUrl = '';
+$vozGraciasArchivo = 'gracias-confirmar.mp3';
+$vozGraciasRuta = __DIR__ . '/themes/' . $themeSlug . '/narracion-video/' . $vozGraciasArchivo;
+if (preg_match('/^[a-z0-9-]+$/', $themeSlug) && is_file($vozGraciasRuta)) {
+    $vozGraciasUrl = 'themes/' . rawurlencode($themeSlug) . '/narracion-video/' . $vozGraciasArchivo
+        . '?v=' . rawurlencode((string) filemtime($vozGraciasRuta));
+}
 $aQuienRegalo = $hayNombreBebe ? ' a ' . $birthdayName : '';
 // El gancho nombra el problema del invitado, no la sección. Y ese problema
 // es otro en cada modo: con lista es "no sé qué regalar"; sin lista es "ya
@@ -1198,6 +1225,9 @@ $cssVer = static function (string $rel): string {
   <?php if ($narrationOutroUrl !== ''): ?>
   <audio data-inv-narration-outro src="<?= $esc($narrationOutroUrl) ?>" preload="none"></audio>
   <?php endif; ?>
+  <?php if ($vozGraciasUrl !== ''): ?>
+  <audio data-inv-narration-gracias src="<?= $esc($vozGraciasUrl) ?>" preload="none"></audio>
+  <?php endif; ?>
   <?php if ($musicUrl !== '' || $narrationIntroUrl !== ''): ?>
   <button class="inv-audio-activate" type="button" data-inv-audio-activate hidden>Activar música y voz</button>
   <?php endif; ?>
@@ -2022,8 +2052,16 @@ $cssVer = static function (string $rel): string {
         <label class="inv-rsvp-campo">
           <span>¿Qué regalo llevarás?</span>
           <input type="text" name="gift" maxlength="120" required
-                 placeholder="Ej: un coche, pañales talla RN, un body">
+                 placeholder="Toca una idea o escribe el tuyo">
         </label>
+        <?php if ($sugerenciasRegalo): ?>
+        <div class="inv-rsvp-sugerencias" data-rsvp-sugerencias role="group" aria-label="Ideas de regalo">
+          <?php foreach ($sugerenciasRegalo as $s): ?>
+          <button type="button" class="inv-rsvp-sug<?= $s['disponible'] ? '' : ' inv-rsvp-sug--tomado' ?>"
+                  data-rsvp-sug="<?= $esc($s['texto']) ?>" data-rsvp-sug-libre="<?= $s['libre'] ? '1' : '0' ?>"<?= $s['disponible'] ? '' : ' disabled aria-label="' . $esc($s['texto'] . ', ya lo traen') . '"' ?>><?= $esc($s['texto']) ?></button>
+          <?php endforeach; ?>
+        </div>
+        <?php endif; ?>
         <fieldset class="inv-rsvp-campo inv-rsvp-equipo" data-rsvp-equipo>
           <legend>¿De qué equipo eres?</legend>
           <div class="inv-rsvp-equipos">

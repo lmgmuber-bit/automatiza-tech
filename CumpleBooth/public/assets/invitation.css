@@ -2520,12 +2520,17 @@ button.inv-scroll-hint.inv-scroll-hint--waiting {
    previa y las reglas de la lista de solo lectura. El radio real queda
    dentro del botón (visualmente oculto, no `display:none`) para que el
    teclado y los lectores de pantalla lo sigan viendo. */
+/* La sección va sobre fondo oscuro: el color de tinta de la temática (verde muy oscuro en Osito)
+   no se leía. Mismo blanco suave que la bajada, sobre una franja apenas marcada. */
 .inv-gifts-reglas {
   max-width: 30rem;
-  margin: 0 auto 14px;
+  margin: 12px auto 14px;
+  padding: 10px 14px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, .07);
+  color: rgba(255, 255, 255, .86);
   font-size: .88rem;
   line-height: 1.45;
-  opacity: .82;
 }
 
 .inv-rsvp-equipo {

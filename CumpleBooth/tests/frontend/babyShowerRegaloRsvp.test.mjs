@@ -159,6 +159,8 @@ test('guía al final: si el invitado no baja, la página lo lleva a confirmar y 
   assert.match(guia, /duckWhile\(vozGuia\)/)
   assert.match(guia, /vozGuia\.muted = true/)
   assert.match(guia, /classList\.add\('inv-rsvp-open--guia'\)/)
+  // Si otra voz la corta antes de terminar (pasa al bajar sola por «Guarda y comparte»), vuelve a sonar.
+  assert.match(guia, /vozGuia\.addEventListener\('pause'[\s\S]{0,200}vozGuia\.ended[\s\S]{0,120}reintentos >= 2[\s\S]{0,120}sonarCuandoHayaSilencio/)
   const datos = readFileSync(join(raiz, 'public/themes/baby-osito/narracion-video/guia-confirmar.mp3'))
   assert.ok(datos.length > 5000, 'guia-confirmar.mp3 parece vacío')
 })

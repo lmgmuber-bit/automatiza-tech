@@ -1282,20 +1282,32 @@
       || Array.from(document.querySelectorAll('video')).some((v) => !v.loop && !v.paused && !v.ended);
     const dialogoAbierto = () => !!(dialogo && (dialogo.open || dialogo.hasAttribute('open')));
 
-    const hablar = () => {
-      if (hablo || yaConfirmo() || dialogoAbierto()) return;
-      // Si otra voz o un video están sonando, se espera a que terminen (hasta 20 s).
+    // Si otra voz o un video están sonando, se espera a que terminen (hasta 20 s).
+    const sonarCuandoHayaSilencio = () => {
       let esperas = 0;
       const intentar = () => {
-        if (hablo || yaConfirmo() || dialogoAbierto()) return;
+        if (yaConfirmo() || dialogoAbierto()) return;
         if (algoSonando() && esperas < 40) { esperas += 1; setTimeout(intentar, 500); return; }
-        hablo = true;
         vozGuia.muted = false;
         botonConfirmar.classList.add('inv-rsvp-open--guia');
         duckWhile(vozGuia);
       };
       intentar();
     };
+    const hablar = () => {
+      if (hablo || yaConfirmo() || dialogoAbierto()) return;
+      hablo = true;
+      sonarCuandoHayaSilencio();
+    };
+    // Al bajar sola, la página pasa por «Guarda y comparte» y su voz arranca casi a la vez que la
+    // guía: por la regla de una sola voz la callaba antes de empezar (visto en PROD el 24-oct). Si la
+    // guía se corta sin terminar, vuelve a sonar entera cuando haya silencio, hasta dos veces.
+    let reintentos = 0;
+    vozGuia.addEventListener('pause', () => {
+      if (!hablo || vozGuia.ended || vozGuia.muted || reintentos >= 2) return;
+      reintentos += 1;
+      setTimeout(sonarCuandoHayaSilencio, 300);
+    });
     botonConfirmar.addEventListener('click', () => botonConfirmar.classList.remove('inv-rsvp-open--guia'));
 
     new IntersectionObserver((entradas) => {

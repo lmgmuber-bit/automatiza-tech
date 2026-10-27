@@ -37,10 +37,19 @@ function at_colab_historial(int $crm_id): array {
 			'fecha' => (string) $h['created_at'],
 		];
 	}
-	$det = (array) $wpdb->get_results($wpdb->prepare(
-		"SELECT detail_type, title, description, metadata, created_by, created_at FROM {$wpdb->prefix}automatiza_clients_details WHERE client_id = %d",
-		$crm_id
-	), ARRAY_A);
+	// Los detalles cuelgan de la ficha operativa (wp_automatiza_tech_clients), nunca del id del CRM: así lo hace la
+	// ficha del CRM (Task 16). Sin el módulo de cierre cargado no se busca nada (falla cerrada).
+	$fichas = function_exists('at_cc_techs_de_crm')
+		? array_values(array_filter(array_map(function ($t) { return (int) $t->id; }, at_cc_techs_de_crm($crm_id))))
+		: [];
+	$det = [];
+	if ($fichas) {
+		$marcas = implode(',', array_fill(0, count($fichas), '%d'));
+		$det = (array) $wpdb->get_results($wpdb->prepare(
+			"SELECT detail_type, title, description, metadata, created_by, created_at FROM {$wpdb->prefix}automatiza_clients_details WHERE client_id IN ($marcas)",
+			$fichas
+		), ARRAY_A);
+	}
 	foreach ($det as $d) {
 		$filas[] = [
 			'source' => 'client', 'detail_type' => (string) $d['detail_type'], 'title' => (string) $d['title'],

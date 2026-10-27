@@ -59,7 +59,10 @@ register_shutdown_function(function () {
 	}
 	foreach ($GLOBALS['col_basura']['clientes'] as $c) {
 		$wpdb->delete($wpdb->prefix . 'crm_historial', ['cliente_id' => $c]);
-		$wpdb->delete($wpdb->prefix . 'automatiza_clients_details', ['client_id' => $c]);
+		foreach ((array) $wpdb->get_col($wpdb->prepare("SELECT id FROM {$wpdb->prefix}automatiza_tech_clients WHERE crm_cliente_id = %d", $c)) as $ficha) {
+			$wpdb->delete($wpdb->prefix . 'automatiza_clients_details', ['client_id' => (int) $ficha]);
+			$wpdb->delete($wpdb->prefix . 'automatiza_tech_clients', ['id' => (int) $ficha]);
+		}
 		if (function_exists('at_en_de_crm')) {
 			$t = at_en_tablas();
 			foreach (at_en_de_crm($c) as $e) {
@@ -69,6 +72,9 @@ register_shutdown_function(function () {
 			}
 		}
 		$wpdb->delete($wpdb->prefix . 'crm_clientes', ['id' => $c]);
+	}
+	foreach ($GLOBALS['col_basura']['detalles_sueltos'] ?? [] as $d) {
+		$wpdb->delete($wpdb->prefix . 'automatiza_clients_details', ['id' => $d]);
 	}
 });
 
@@ -93,6 +99,13 @@ function col_crear_cliente(string $nombre, string $empresa = 'Empresa Prueba'): 
 	$id = (int) $wpdb->insert_id;
 	$GLOBALS['col_basura']['clientes'][] = $id;
 	return $id;
+}
+
+/** Ficha operativa (wp_automatiza_tech_clients) enlazada a un cliente del CRM: ahí cuelgan sus detalles. */
+function col_crear_ficha(int $crm_id): int {
+	global $wpdb;
+	$wpdb->insert($wpdb->prefix . 'automatiza_tech_clients', ['name' => 'Ficha de prueba', 'email' => 'ficha-' . wp_generate_password(8, false) . '@ejemplo.test', 'crm_cliente_id' => $crm_id]);
+	return (int) $wpdb->insert_id;
 }
 
 /** Usuario de prueba con un rol y, opcionalmente, clientes asignados. */

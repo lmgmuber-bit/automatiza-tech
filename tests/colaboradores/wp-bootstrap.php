@@ -35,7 +35,7 @@ add_filter('pre_wp_mail', function ($nulo, $atts) {
 	}
 	$GLOBALS['col_correos'][] = $atts;
 	return true;
-}, 1, 2);
+}, -100, 2); // antes que cualquier filtro local que corte el correo (en este WordPress hay uno en la prioridad 1)
 
 $GLOBALS['fallas'] = 0;
 function ok($cond, $msg) { if ($cond) { echo "ok   $msg\n"; } else { $GLOBALS['fallas']++; echo "FALLA $msg\n"; } }

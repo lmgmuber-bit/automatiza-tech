@@ -12,3 +12,4 @@ require_once __DIR__ . '/permisos.php';
 require_once __DIR__ . '/perfil.php';
 require_once __DIR__ . '/datos.php';
 require_once __DIR__ . '/pagina.php';
+require_once __DIR__ . '/acciones.php';

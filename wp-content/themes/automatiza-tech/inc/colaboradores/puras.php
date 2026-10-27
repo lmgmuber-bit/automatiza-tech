@@ -24,6 +24,18 @@ function at_colab_normalizar_ids($crudo): array {
 	return array_values($ids);
 }
 
+/** Nota del colaborador para el historial: ['ok', 'error' => ''|'nota_vacia'|'nota_larga', 'texto' recortado]. */
+function at_colab_validar_nota(string $t): array {
+	$t = trim(str_replace(["\r\n", "\r"], "\n", $t));
+	if ($t === '') {
+		return ['ok' => false, 'error' => 'nota_vacia', 'texto' => ''];
+	}
+	if (mb_strlen($t, 'UTF-8') > 6000) {
+		return ['ok' => false, 'error' => 'nota_larga', 'texto' => $t];
+	}
+	return ['ok' => true, 'error' => '', 'texto' => $t];
+}
+
 /** Tipos de detalle que el colaborador nunca ve: dinero, propuestas y contratos. */
 function at_colab_tipos_excluidos(): array {
 	return ['propuesta_enviada', 'cotizacion', 'boleta', 'factura', 'pago', 'contrato', 'contratacion'];

@@ -65,10 +65,10 @@ register_shutdown_function(function () {
 		}
 		if (function_exists('at_en_de_crm')) {
 			$t = at_en_tablas();
-			foreach (at_en_de_crm($c) as $e) {
-				$wpdb->delete($t['n'] ?? '', ['entregable_id' => $e->id]);
-				$wpdb->delete($t['v'], ['entregable_id' => $e->id]);
-				$wpdb->delete($t['e'], ['id' => $e->id]);
+			foreach ((array) $wpdb->get_col($wpdb->prepare("SELECT id FROM {$t['e']} WHERE crm_id = %d", $c)) as $en) {
+				$wpdb->delete($t['n'], ['entregable_id' => (int) $en]);
+				$wpdb->delete($t['v'], ['entregable_id' => (int) $en]);
+				$wpdb->delete($t['e'], ['id' => (int) $en]);
 			}
 		}
 		$wpdb->delete($wpdb->prefix . 'crm_clientes', ['id' => $c]);
@@ -106,6 +106,25 @@ function col_crear_ficha(int $crm_id): int {
 	global $wpdb;
 	$wpdb->insert($wpdb->prefix . 'automatiza_tech_clients', ['name' => 'Ficha de prueba', 'email' => 'ficha-' . wp_generate_password(8, false) . '@ejemplo.test', 'crm_cliente_id' => $crm_id]);
 	return (int) $wpdb->insert_id;
+}
+
+/**
+ * Entregable de prueba de un cliente: detalle 'entregable' en su ficha operativa, activado, con la v1 enviada por
+ * correo y un comentario del cliente sin responder. Devuelve ['ent' => id, 'nota' => id].
+ */
+function col_crear_entregable(int $crm_id, int $ficha, string $titulo = 'Sitio web'): array {
+	global $wpdb;
+	$wpdb->insert($wpdb->prefix . 'automatiza_clients_details', ['client_id' => $ficha, 'detail_type' => 'entregable', 'title' => $titulo, 'description' => '', 'created_at' => current_time('mysql')]);
+	$ent = at_en_activar((int) $wpdb->insert_id);
+	if (is_wp_error($ent)) {
+		fwrite(STDERR, 'No se pudo activar el entregable: ' . $ent->get_error_message() . "
+");
+		exit(2);
+	}
+	at_en_crear_version((int) $ent, 'https://ejemplo.test/v1/', 'Primera versión para revisar.');
+	at_en_marcar_version_enviada((int) $ent, 1, 'correo');
+	$nota = at_en_agregar_nota((int) $ent, 'cliente', 'Cliente Prueba', 'Me gustaría otro color en la portada.', [], str_repeat('a', 64), 1);
+	return ['ent' => (int) $ent, 'nota' => (int) $nota];
 }
 
 /** Usuario de prueba con un rol y, opcionalmente, clientes asignados. */

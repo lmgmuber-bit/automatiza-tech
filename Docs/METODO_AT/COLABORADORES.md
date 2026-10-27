@@ -10,9 +10,13 @@ los clientes del CRM que un administrador le asigna. De cada uno:
 - **Ve** el historial (la misma línea de tiempo del CRM, con quién hizo cada cosa) y los entregables (versiones
   enviadas, comentarios del cliente y respuestas).
 - **Puede** agregar notas al historial (a AT le llega un correo con cada una) y responder los comentarios del
-  cliente en los entregables. La respuesta lleva su nombre.
-- **No ve** otros clientes, montos, adjuntos, propuestas, cotizaciones, boletas, facturas, pagos ni contratos, ni
-  el correo o el teléfono del cliente. No entra al CRM ni al resto del panel.
+  cliente en los entregables. La respuesta lleva su nombre. **Ojo:** las notas del historial también las ve el
+  cliente en su portal (como las de Luis); el formulario lo avisa.
+- **No ve** otros clientes, montos, adjuntos, propuestas ni su aceptación, cotizaciones, boletas, facturas, pagos,
+  contratos, correos, WhatsApp ni avisos internos, ni el correo o el teléfono del cliente. El historial usa una
+  lista de tipos **permitidos** (`at_colab_tipos_permitidos`): un tipo nuevo no se muestra hasta agregarlo ahí.
+- **No sale de «Mis clientes»:** para este rol el resto del panel, `admin-post.php` (salvo sus dos acciones) y
+  `admin-ajax.php` (salvo el heartbeat) quedan cerrados, y el widget MAXTECH no se dibuja (`cerrar.php`).
 
 ## Crear el usuario
 
@@ -36,7 +40,7 @@ borrar el usuario.
 
 - `wp-content/mu-plugins/at-colaboradores.php` carga `wp-content/themes/automatiza-tech/inc/colaboradores/`.
   `functions.php` y `crm-ai-completo.php` no se tocan.
-- Una sola puerta: `at_colab_puede($crm_id)`. La usan la página y las dos acciones (`admin-post.php`
+- Una sola puerta por cliente: `at_colab_puede($crm_id)`. La usan la página y las dos acciones (`admin-post.php`
   `at_colab_nota` y `at_colab_responder`), siempre con el cliente real del dato.
 - Los detalles del cliente se leen por su ficha operativa (`at_cc_techs_de_crm`), como la ficha del CRM.
 - Sin migración: el rol se crea solo en `init` y la lista vive en la meta de usuario `at_clientes_asignados`.

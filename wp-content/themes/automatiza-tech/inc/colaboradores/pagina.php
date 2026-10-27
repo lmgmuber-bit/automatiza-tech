@@ -83,6 +83,7 @@ function at_colab_html_form_nota(int $crm_id): string {
 		. '<input type="hidden" name="action" value="at_colab_nota"><input type="hidden" name="crm_id" value="' . $crm_id . '">'
 		. wp_nonce_field('at_colab_nota_' . $crm_id, '_at_colab', true, false)
 		. '<p><label for="at-colab-nota"><strong>Agregar una nota al historial</strong></label><br>'
+		. '<span class="description">El cliente también ve estas notas en su portal: escribe como si te leyera.</span><br>'
 		. '<textarea id="at-colab-nota" name="nota" rows="3" maxlength="6000" style="width:100%;max-width:680px" required></textarea></p>'
 		. '<p><button type="submit" class="button button-primary">Guardar nota</button></p></form>';
 }

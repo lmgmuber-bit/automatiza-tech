@@ -35,6 +35,7 @@ ok(strpos($html, 'Sitio funeraria') !== false && strpos($html, 'https://ejemplo.
 ok(strpos($html, 'Me gustaría otro color en la portada.') !== false, 'ficha: muestra el comentario del cliente');
 ok(strpos($html, 'value="at_colab_responder"') !== false && strpos($html, 'name="nota_id" value="' . $e['nota'] . '"') !== false, 'ficha: comentario sin responder trae el formulario de respuesta');
 ok(strpos($html, 'value="at_colab_nota"') !== false, 'ficha: trae el formulario para agregar una nota');
+ok(strpos($html, 'El cliente también ve estas notas') !== false, 'ficha: el formulario avisa que el cliente ve las notas');
 
 $v = at_colab_html_pagina($colab, $vacio);
 ok(strpos($v, 'Todavía no hay movimientos') !== false, 'cliente vacío: estado vacío del historial');

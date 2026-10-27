@@ -84,4 +84,14 @@ $antes = $cuenta($c);
 $msg = col_accion('at_colab_accion_nota', ['crm_id' => $c, 'nota' => 'Después de quitarlo', '_at_colab' => wp_create_nonce('at_colab_nota_' . $c)]);
 ok($msg === 'sin_acceso' && $cuenta($c) === $antes, 'cliente quitado de la lista: la nota siguiente se rechaza');
 
+// Responder después de quitarle el cliente, y con el rol cambiado.
+$e2 = col_crear_entregable($c, $ficha, 'Segundo entregable');
+$msg = col_accion('at_colab_accion_responder', ['nota_id' => $e2['nota'], 'texto' => 'Sin acceso ya', '_at_colab' => wp_create_nonce('at_colab_resp_' . $e2['nota'])]);
+ok($msg === 'sin_acceso' && !(int) at_en_nota($e2['nota'])->respondida, 'responder con el cliente quitado: sin_acceso y la nota sigue sin responder');
+update_user_meta($colab, 'at_clientes_asignados', [$c]);
+(new WP_User($colab))->set_role('subscriber');
+wp_set_current_user($colab);
+$msg = col_accion('at_colab_accion_responder', ['nota_id' => $e2['nota'], 'texto' => 'Como suscriptor', '_at_colab' => wp_create_nonce('at_colab_resp_' . $e2['nota'])]);
+ok($msg === 'sin_acceso' && !(int) at_en_nota($e2['nota'])->respondida, 'responder con el rol cambiado: sin_acceso');
+
 fin();

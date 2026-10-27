@@ -38,8 +38,11 @@ La página nueva solo lee lo necesario y cada acción revisa el permiso en el se
   etiqueta de origen de `at-timeline-origen.php` (👤 Cliente / 👥 Equipo AutomatizaTech / ⚙️ Automático) y el
   nombre de quien lo escribió.
 - **Nunca** el monto (`amount`) ni archivos adjuntos.
-- **Fuera** los detalles de dinero y contratos: `propuesta_enviada`, `cotizacion`, `boleta`, `factura`, `pago`,
-  `contrato`, `contratacion`.
+- Solo tipos **permitidos** (`at_colab_tipos_permitidos`): notas, reuniones, llamadas, seguimiento, proyecto, hitos y
+  entregables. Quedan fuera dinero y contratos, propuestas y su aceptación (traen precios o la llave pública de la
+  propuesta), correos, WhatsApp, avisos internos, documentos y transcripciones. Un tipo nuevo no sale hasta agregarlo.
+  (Corrección tras la revisión final: la primera versión usaba una lista de excluidos y dejaba pasar montos.)
+- Los detalles se leen por la ficha operativa del cliente (`at_cc_techs_de_crm`), como la ficha del CRM.
 - Solo lectura: no hay editar ni borrar eventos.
 
 ## 5. Qué muestra en entregables
@@ -54,15 +57,19 @@ de Luis. Un comentario sin responder trae el formulario de respuesta.
 - Los ids se leen con `absint` y se rechazan si no existen.
 - La página no imprime el nonce del CRM (`crm_nonce`) ni enlaza a la ficha del CRM.
 - El colaborador no ve correo ni teléfono del cliente: solo nombre y empresa.
+- Para este rol el resto del admin queda cerrado: solo «Mis clientes», su perfil, las dos acciones de
+  `admin-post.php` y el heartbeat de `admin-ajax.php`; el widget MAXTECH no se dibuja (sus acciones ajax solo piden
+  un nonce que se imprime en cualquier página del admin).
+- Las notas del historial también las ve el cliente en su portal; el formulario lo avisa.
 - Quitar un cliente de la lista corta el acceso en el acto; deshabilitar al usuario lo saca.
 
 ## 7. Pruebas
 
-Puras (`tests/colaboradores/permisos-test.php`): la puerta con administrador, con colaborador asignado y no
+Puras (`tests/colaboradores/puras-test.php`): la puerta con administrador, con colaborador asignado y no
 asignado, con usuario sin rol, con id 0 o inexistente; el filtro de tipos del historial y que el monto nunca
 salga.
 
-Con WordPress local (`tests/colaboradores/colaborador-wp-test.php`): el colaborador con Orly asignada ve a Orly;
+Con WordPress local (`tests/colaboradores/*-wp-test.php`): el colaborador con Orly asignada ve a Orly;
 con el id de otro cliente recibe «No tienes acceso»; no abre `automatiza-crm-ficha`; su nota queda con su
 `usuario_id` y llega el aviso; responde un comentario de un entregable de Orly y no puede responder uno de otro
 cliente cambiando el id; un colaborador no puede guardar su propia lista de clientes.
@@ -71,7 +78,7 @@ cliente cambiando el id; un colaborador no puede guardar su propia lista de clie
 
 - `wp-content/mu-plugins/at-colaboradores.php`: carga el módulo (no se toca `functions.php`).
 - `wp-content/themes/automatiza-tech/inc/colaboradores/`: `permisos.php` (puras), `datos.php`, `perfil.php`,
-  `pagina.php`, `acciones.php`.
+  `pagina.php`, `acciones.php`, `cerrar.php`.
 - `tests/colaboradores/` y guía corta en `Docs/METODO_AT/COLABORADORES.md`.
 
 ## 9. Puesta en PROD

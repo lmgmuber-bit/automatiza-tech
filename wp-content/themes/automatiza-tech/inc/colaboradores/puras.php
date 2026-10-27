@@ -24,6 +24,28 @@ function at_colab_normalizar_ids($crudo): array {
 	return array_values($ids);
 }
 
+/**
+ * ¿Puede el colaborador estar en esta ruta del admin? Solo «Mis clientes», su perfil, las dos acciones propias de
+ * admin-post y, por ajax, el heartbeat de WordPress. Todo lo demás (escritorio, CRM, widget MAXTECH, ajax de otros
+ * módulos que solo piden un nonce) queda cerrado.
+ */
+function at_colab_ruta_permitida(string $pagenow, array $get, array $post, bool $ajax): bool {
+	$accion = (string) ($post['action'] ?? $get['action'] ?? '');
+	if ($ajax) {
+		return $accion === 'heartbeat';
+	}
+	if ($pagenow === 'admin.php') {
+		return (string) ($get['page'] ?? '') === 'at-mis-clientes';
+	}
+	if ($pagenow === 'profile.php') {
+		return true;
+	}
+	if ($pagenow === 'admin-post.php') {
+		return in_array($accion, ['at_colab_nota', 'at_colab_responder'], true);
+	}
+	return false;
+}
+
 /** Nota del colaborador para el historial: ['ok', 'error' => ''|'nota_vacia'|'nota_larga', 'texto' recortado]. */
 function at_colab_validar_nota(string $t): array {
 	$t = trim(str_replace(["\r\n", "\r"], "\n", $t));

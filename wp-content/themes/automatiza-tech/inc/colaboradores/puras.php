@@ -36,24 +36,34 @@ function at_colab_validar_nota(string $t): array {
 	return ['ok' => true, 'error' => '', 'texto' => $t];
 }
 
-/** Tipos de detalle que el colaborador nunca ve: dinero, propuestas y contratos. */
-function at_colab_tipos_excluidos(): array {
-	return ['propuesta_enviada', 'cotizacion', 'boleta', 'factura', 'pago', 'contrato', 'contratacion'];
+/**
+ * Tipos del historial que el colaborador sí ve (detail_type de los detalles o tipo_evento de crm_historial). Es una
+ * lista de PERMITIDOS: un tipo nuevo o desconocido queda fuera hasta que se agregue aquí. Quedan fuera a propósito
+ * el dinero y los contratos, las propuestas y su aceptación (traen precios o la llave pública de la propuesta), los
+ * correos y WhatsApp, los tipos internos del CRM, documentos y transcripciones.
+ */
+function at_colab_tipos_permitidos(): array {
+	return [
+		'nota', 'reunion', 'llamada', 'seguimiento', 'acta_reunion', 'brief', 'mockup', 'informe',
+		'proyecto_creado', 'proyecto_update', 'item_proyecto', 'inicio_proyecto', 'milestone',
+		'entregable', 'entregable_nota', 'entregable_version', 'entregable_respuesta',
+		'hito_cierre_publicado', 'hito_cierre_correo', 'hito_cierre_whatsapp',
+	];
 }
 
 /**
- * Filas ya unidas del historial: quita las de tipo excluido (por detail_type o tipo_evento), borra el monto y los
- * adjuntos de las demás y las ordena por 'fecha', de la más nueva a la más antigua.
+ * Filas ya unidas del historial: deja solo las de tipo permitido (por detail_type o tipo_evento), borra el monto y
+ * los adjuntos y las ordena por 'fecha', de la más nueva a la más antigua.
  */
 function at_colab_filtrar_eventos(array $eventos): array {
-	$excluidos = at_colab_tipos_excluidos();
+	$permitidos = at_colab_tipos_permitidos();
 	$quedan = [];
 	foreach ($eventos as $e) {
 		if (!is_array($e)) {
 			continue;
 		}
 		$tipo = (string) ($e['detail_type'] ?? $e['tipo_evento'] ?? '');
-		if (in_array($tipo, $excluidos, true)) {
+		if (!in_array($tipo, $permitidos, true)) {
 			continue;
 		}
 		unset($e['amount'], $e['attachment_url'], $e['attachment_name']);

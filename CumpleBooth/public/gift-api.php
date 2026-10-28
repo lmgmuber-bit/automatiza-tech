@@ -70,6 +70,11 @@ try {
         $salir(429, ['ok' => false, 'error' => 'rate_limited']);
     }
 
+    // En modo `rsvp` el regalo se dice al confirmar asistencia (rsvp-api.php): aquí solo se lee.
+    if ($accion !== 'listar' && cb_gift_mode($invitation) === 'rsvp') {
+        $salir(409, ['ok' => false, 'error' => 'modo_confirmacion']);
+    }
+
     if ($accion === 'listar') {
         // Solo lectura: sirve para que, al abrir la invitación, el navegador
         // que ya reservó algo vea cuáles son suyos. No cambia nada.

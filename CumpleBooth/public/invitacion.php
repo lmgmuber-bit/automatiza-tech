@@ -270,6 +270,15 @@ if ($esBabyShower && $modoRegalos === 'rsvp' && function_exists('cb_regalo_valid
         }
     }
 }
+// Guía al final (Luis, 24-oct-2026): quien no baja no ve el botón de confirmar. Si se queda quieto,
+// la página lo lleva hasta «Confirma tu asistencia» y esta voz le explica el botón y los regalos.
+// Solo en el modo de confirmar con regalo, porque la voz habla del regalo.
+$vozGuiaUrl = '';
+$vozGuiaRuta = __DIR__ . '/themes/' . $themeSlug . '/narracion-video/' . 'guia-confirmar.mp3';
+if ($modoRegalos === 'rsvp' && preg_match('/^[a-z0-9-]+$/', $themeSlug) && is_file($vozGuiaRuta)) {
+    $vozGuiaUrl = 'themes/' . rawurlencode($themeSlug) . '/narracion-video/guia-confirmar.mp3?v='
+        . rawurlencode((string) filemtime($vozGuiaRuta));
+}
 // «Gracias por confirmar, te esperamos» al confirmar: audio de la temática, si existe.
 $vozGraciasUrl = '';
 $vozGraciasArchivo = 'gracias-confirmar.mp3';
@@ -1227,6 +1236,9 @@ $cssVer = static function (string $rel): string {
   <?php endif; ?>
   <?php if ($vozGraciasUrl !== ''): ?>
   <audio data-inv-narration-gracias src="<?= $esc($vozGraciasUrl) ?>" preload="none"></audio>
+  <?php endif; ?>
+  <?php if ($vozGuiaUrl !== ''): ?>
+  <audio data-inv-narration-guia src="<?= $esc($vozGuiaUrl) ?>" preload="none"></audio>
   <?php endif; ?>
   <?php if ($musicUrl !== '' || $narrationIntroUrl !== ''): ?>
   <button class="inv-audio-activate" type="button" data-inv-audio-activate hidden>Activar música y voz</button>

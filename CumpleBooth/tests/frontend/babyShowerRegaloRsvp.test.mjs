@@ -141,3 +141,26 @@ test('al confirmar suena «Gracias por confirmar, te esperamos»', () => {
   const datos = readFileSync(join(raiz, 'public/themes/baby-osito/narracion-video/gracias-confirmar.mp3'))
   assert.ok(datos.length > 5000, 'gracias-confirmar.mp3 parece vacío')
 })
+
+test('guía al final: si el invitado no baja, la página lo lleva a confirmar y la voz le explica', () => {
+  // La voz solo existe en el modo de confirmar con regalo (habla del regalo).
+  assert.match(php, /<audio data-inv-narration-guia src=/)
+  assert.match(php, /'guia-confirmar\.mp3'/)
+  assert.match(php, /\$modoRegalos === 'rsvp'[\s\S]{0,300}guia-confirmar/)
+  const guia = js.slice(js.indexOf('// ---------- Guía hasta confirmar'), js.indexOf('// ---------- Descubrir lo que sigue'))
+  assert.ok(guia.length > 200, 'falta el bloque «Guía hasta confirmar»')
+  // Quieto 10 s (cualquier gesto reinicia la cuenta), sin voz ni video sonando, y sin haber llegado ni confirmado.
+  assert.match(guia, /GUIA_QUIETO_MS = 10000/)
+  assert.match(guia, /\['wheel', 'touchstart', 'pointerdown', 'keydown'\]/)
+  assert.match(guia, /vocesSonando\.size > 0/)
+  assert.match(guia, /cc_rsvp_ok_/)
+  assert.match(guia, /botonConfirmar\.scrollIntoView\(/)
+  // Al llegar (solo o llevado) habla una vez, destrabada en un toque para iOS, y el botón late.
+  assert.match(guia, /duckWhile\(vozGuia\)/)
+  assert.match(guia, /vozGuia\.muted = true/)
+  assert.match(guia, /classList\.add\('inv-rsvp-open--guia'\)/)
+  // Si otra voz la corta antes de terminar (pasa al bajar sola por «Guarda y comparte»), vuelve a sonar.
+  assert.match(guia, /vozGuia\.addEventListener\('pause'[\s\S]{0,200}vozGuia\.ended[\s\S]{0,120}reintentos >= 2[\s\S]{0,120}sonarCuandoHayaSilencio/)
+  const datos = readFileSync(join(raiz, 'public/themes/baby-osito/narracion-video/guia-confirmar.mp3'))
+  assert.ok(datos.length > 5000, 'guia-confirmar.mp3 parece vacío')
+})

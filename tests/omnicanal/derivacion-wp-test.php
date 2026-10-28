@@ -205,4 +205,37 @@ $recibir($IG, $fila($c6)->external_contact_id, 'hola');
 ok($fila($c6)->intervention_mode === 'human' && (int) $fila($c6)->assigned_agent_id === $AG2 && count($a_n8n()) === 0,
 	'vuelta: la que tomó un ejecutivo a mano no vuelve sola');
 
+// ============ 5. Contacto nuevo con foto de perfil larga (caso real del 28-oct: 523 caracteres, la columna acepta 500) ============
+$foto = 'https://scontent.cdninstagram.com/v/t51.2885-19/' . str_repeat('a', 480) . '.jpg?stp=dst-jpg';
+$igsid_f = 'igsid-foto-' . bin2hex(random_bytes(4));
+$limpiar();
+$r = $ctl->receive_message($IG, ['external_contact_id' => $igsid_f, 'contact_name' => 'Ana Foto', 'contact_avatar_url' => $foto,
+	'content' => 'hola', 'type' => 'text']);
+$cf = (int) ($r['conversation_id'] ?? 0);
+$ff = $cf ? $fila($cf) : null;
+ok($cf > 0 && $ff && $ff->external_contact_id === $igsid_f, 'foto larga: la conversación se crea igual');
+ok($ff && $ff->contact_avatar_url === '', 'foto larga: queda sin foto (cortarla rompería la dirección firmada)');
+$env = $a_n8n();
+ok(count($env) === 1 && (int) ($env[0]['body']['conversation_id'] ?? 0) === $cf, 'foto larga: a n8n llega la conversación real, no 0');
+$igsid_roto = 'igsid-' . bin2hex(random_bytes(4)) . str_repeat('x', 300);
+$huerfanos = static fn() => (int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$P}messages WHERE conversation_id = 0 AND sender_id IN (%s, %s)",
+	$igsid_f, mb_substr($igsid_roto, 0, 255)));
+register_shutdown_function(static function () use ($wpdb, $P, $igsid_f, $igsid_roto) {   // por si falla: no dejar huérfanos de prueba
+	$wpdb->query($wpdb->prepare("DELETE FROM {$P}messages WHERE conversation_id = 0 AND sender_id IN (%s, %s)", $igsid_f, mb_substr($igsid_roto, 0, 255)));
+});
+ok($huerfanos() === 0, 'foto larga: ningún mensaje queda sin conversación');
+
+// Conversación que existía sin foto: la foto larga no debe tumbar la actualización
+$wpdb->update($P . 'conversations', ['last_message_at' => $gmt(3600)], ['id' => $cf]);
+$limpiar();
+$r = $ctl->receive_message($IG, ['external_contact_id' => $igsid_f, 'contact_name' => 'Ana Foto', 'contact_avatar_url' => $foto,
+	'content' => 'sigo', 'type' => 'text']);
+ok((int) ($r['conversation_id'] ?? 0) === $cf && strtotime($fila($cf)->last_message_at . ' UTC') > time() - 120, 'foto larga en una conversación existente: se actualiza igual');
+
+// Si la conversación no se puede crear, no se guarda un mensaje huérfano ni se avisa a n8n
+$limpiar();
+$r = $ctl->receive_message($IG, ['external_contact_id' => $igsid_roto, 'contact_name' => 'Ana Rota',
+	'content' => 'hola', 'type' => 'text']);
+ok(isset($r['error']) && count($a_n8n()) === 0 && $huerfanos() === 0, 'conversación imposible: error, sin huérfanos y sin aviso a n8n');
+
 fin();

@@ -1073,6 +1073,11 @@ class OmnichannelController {
             }
         }
 
+        // La foto de perfil de Instagram es una dirección firmada que puede pasar los 500 caracteres de la columna:
+        // con ella WordPress rechaza la fila entera (28-oct: 523). Cortarla la rompería, así que no se guarda.
+        $avatar = esc_url_raw($message_data['contact_avatar_url'] ?? '');
+        $message_data['contact_avatar_url'] = strlen($avatar) <= 500 ? $avatar : '';
+
         if (!$conversation) {
             $this->wpdb->insert($this->prefix . 'conversations', [
                 'client_id'           => $channel->client_id,
@@ -1089,6 +1094,11 @@ class OmnichannelController {
                 'unread_count'        => 1,
             ]);
             $conversation_id = $this->wpdb->insert_id;
+            // Sin conversación no se guarda el mensaje (quedaría huérfano, invisible en el Portal) ni se avisa a n8n.
+            if (!$conversation_id) {
+                error_log('[omnicanal] no se pudo crear la conversación del canal ' . $channel_id . ': ' . $this->wpdb->last_error);
+                return ['error' => 'No se pudo crear la conversación'];
+            }
         } else {
             $conversation_id = $conversation->id;
             $update_data = [

@@ -402,17 +402,27 @@ return [{ json: { ok: true, prueba: t.prueba === 'si', date: fecha, time: hora, 
 """.replace('ZONA', ZONA)
 
 
-JS_REVISAR_CONSULTA = r"""
-// Guarda firme (propuesta de Eje, 28-oct): solo se agenda una fecha que esta conversación consultó con ver_disponibilidad
-// en las últimas 3 horas (Redis ig:disp:<IGSID>, la anota «Anotar fechas consultadas»).
+JS_REVISAR_HORA = r"""
+// Guarda firme (28-oct): la herramienta revisa ella misma la agenda real del día antes de agendar (feriado, día sin
+// atención, horario y horas tomadas). Así no depende de que el modelo consulte antes ni hace confirmar dos veces.
+// $json = respuesta de POST /check-availability {date}. El sub-workflow de PROD vuelve a revisar choques en WordPress y Calendar.
 const cita = $('Validar cita').first().json;
-let fechas = [];
-try { const v = JSON.parse(String($json.disp || '[]')); if (Array.isArray(v)) fechas = v; } catch (e) {}
-if (!fechas.includes(cita.date)) {
-  return [{ json: { ok: false, result: 'Antes de agendar consulta ver_disponibilidad para ' + cita.date
-    + ' y confirma la hora con la persona. No agendes todavía.' } }];
+const r = $json || {};
+const wh = r.workingHours || {};
+const ini = parseInt(wh.start, 10), fin = parseInt(wh.end, 10);
+const ocupadas = new Set((r.busySlots || []).map(x => String(x).slice(0, 5)));
+const libres = [];
+if (!r.isFullDay && !isNaN(ini) && !isNaN(fin)) {
+  for (let h = ini; h < fin; h++) { const hh = String(h).padStart(2, '0') + ':00'; if (!ocupadas.has(hh)) libres.push(hh); }
 }
-return [{ json: cita }];
+if (libres.includes(cita.time)) return [{ json: cita }];
+const motivo = r.reason === 'Holiday' ? 'es feriado'
+  : (r.isFullDay && r.reason === 'Day disabled') || isNaN(ini) ? 'no atendemos ese día'
+  : ocupadas.has(cita.time) ? 'las ' + cita.time + ' ya está tomada'
+  : 'las ' + cita.time + ' está fuera del horario de atención';
+return [{ json: { ok: false, result: 'No se agendó: el ' + cita.date + ' ' + motivo + '. '
+  + (libres.length ? 'Horas libres ese día: ' + libres.join(', ') + '. Ofrécele una de esas y confírmala con la persona.'
+                   : 'Ofrécele otro día consultando ver_disponibilidad.') } }];
 """
 
 
@@ -431,19 +441,13 @@ def flujo_herramientas():
              {'method': 'POST', 'url': WP + '/check-availability', 'sendBody': True, 'specifyBody': 'json',
               'jsonBody': '={{ JSON.stringify({ date: $json.date }) }}', 'options': {'timeout': 15000}}),
         code('igh-horas', 'Horas libres', [1320, 260], JS_HORAS),
-        redis('igh-anotar', 'Anotar fechas consultadas', [1540, 260],
-              {'operation': 'set', 'key': "=ig:disp:{{ $('Entrada').first().json.igsid }}", 'keyType': 'string',
-               'value': "={{ JSON.stringify($('Fechas a revisar').all().map(i => i.json.date)) }}",
-               'expire': True, 'ttl': 10800}),
-        code('igh-resultado-disp', 'Resultado disponibilidad', [1760, 260],
-             "return [{ json: { result: $('Horas libres').first().json.result } }];"),
         code('igh-validar', 'Validar cita', [440, 420], JS_VALIDAR_CITA.replace('VALIDACION_AT', validacion_at())),
         si_booleano('igh-ok', '¿Cita válida?', [660, 420], '$json.ok'),
-        redis('igh-leer-disp', 'Leer fechas consultadas', [880, 420],
-              {'operation': 'get', 'propertyName': 'disp', 'key': "=ig:disp:{{ $('Entrada').first().json.igsid }}",
-               'keyType': 'string', 'options': {}}),
-        code('igh-revisar', 'Revisar consulta', [1100, 420], JS_REVISAR_CONSULTA),
-        si_booleano('igh-consulto', '¿Consultó la fecha?', [1320, 420], '$json.ok'),
+        nodo('igh-check-cita', 'Agenda del día', 'n8n-nodes-base.httpRequest', 4.1, [880, 420],
+             {'method': 'POST', 'url': WP + '/check-availability', 'sendBody': True, 'specifyBody': 'json',
+              'jsonBody': '={{ JSON.stringify({ date: $json.date }) }}', 'options': {'timeout': 15000}}),
+        code('igh-revisar', 'Revisar hora', [1100, 420], JS_REVISAR_HORA),
+        si_booleano('igh-hora-libre', '¿Hora libre?', [1320, 420], '$json.ok'),
         si_booleano('igh-prueba', '¿Es prueba?', [1540, 400], '$json.prueba'),
         # Igual al mensaje de éxito del sub-workflow de PROD («Set Success Message»), para que el agente se comporte igual.
         code('igh-simulada', 'Cita simulada', [1760, 340],
@@ -459,10 +463,9 @@ def flujo_herramientas():
         ('¿Qué herramienta?', 'Agenda', 0), ('¿Qué herramienta?', 'Validar cita', 1),
         ('Agenda', 'Fechas a revisar', 0), ('Fechas a revisar', '¿Ya hay respuesta?', 0),
         ('¿Ya hay respuesta?', 'Horas ocupadas', 1), ('Horas ocupadas', 'Horas libres', 0),
-        ('Horas libres', 'Anotar fechas consultadas', 0), ('Anotar fechas consultadas', 'Resultado disponibilidad', 0),
-        ('Validar cita', '¿Cita válida?', 0), ('¿Cita válida?', 'Leer fechas consultadas', 0),
-        ('Leer fechas consultadas', 'Revisar consulta', 0), ('Revisar consulta', '¿Consultó la fecha?', 0),
-        ('¿Consultó la fecha?', '¿Es prueba?', 0),
+        ('Validar cita', '¿Cita válida?', 0), ('¿Cita válida?', 'Agenda del día', 0),
+        ('Agenda del día', 'Revisar hora', 0), ('Revisar hora', '¿Hora libre?', 0),
+        ('¿Hora libre?', '¿Es prueba?', 0),
         ('¿Es prueba?', 'Cita simulada', 0), ('¿Es prueba?', 'Agendar en PROD', 1),
         ('Agendar en PROD', 'Resultado', 0),
     )

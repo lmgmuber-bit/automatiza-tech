@@ -45,14 +45,28 @@ r = correr({ ...base, nombre: 'Ana', correo: 'ana@gmail.con', telefono: '' });
 ok(!r.ok && /apellido/.test(r.result) && r.result.includes('ana@gmail.com') && r.result.includes('+56 9 1234 5678'),
   'varios datos malos: los pide todos en un solo mensaje', r);
 
-// Guarda «Revisar consulta»: agendar solo si en esa conversación se consultó la disponibilidad de esa fecha (Redis).
-const guarda = wf.nodes.find(n => n.name === 'Revisar consulta').parameters.jsCode;
+r = correr({ ...base, telefono: '4141234567' });
+ok(!r.ok && r.result.includes('+56 9 1234 5678'), 'número sin + que no es de Chile: pide el código de país, no lo adivina', r);
+
+// «Revisar hora»: antes de agendar, la herramienta revisa ella misma la agenda real del día (check-availability),
+// para no depender de que el modelo consulte y no hacer confirmar dos veces (28-oct).
+ok(!wf.nodes.some(n => n.name === 'Revisar consulta'), 'ya no está la guarda de Redis que obligaba a confirmar dos veces');
+const revisarHora = (wf.nodes.find(n => n.name === 'Revisar hora') || { parameters: { jsCode: 'throw new Error("falta Revisar hora")' } }).parameters.jsCode;
 const cita = correr(base);
-const revisar = disp => new Function('$', '$json', guarda)(() => ({ first: () => ({ json: cita }) }), { disp })[0].json;
-ok(revisar(JSON.stringify(['2099-11-30', '2099-12-01'])).ok === true, 'guarda: la fecha se consultó, sigue a agendar');
-r = revisar(JSON.stringify(['2099-11-30']));
-ok(r.ok === false && /ver_disponibilidad/.test(r.result) && r.result.includes('2099-12-01'), 'guarda: otra fecha consultada, pide consultar esta', r);
-ok(revisar(null).ok === false && revisar('basura').ok === false, 'guarda: sin consulta o con dato ilegible, no agenda');
+const revisar = disp => new Function('$', '$json', revisarHora)(() => ({ first: () => ({ json: cita }) }), disp)[0].json;
+const dia = { isFullDay: false, busySlots: ['09:00'], workingHours: { start: '09:00', end: '18:00' } };
+const intentar = (m, f) => { try { f(); } catch (e) { ok(false, m, e.message); } };
+intentar('hora libre', () => { r = revisar(dia);
+  ok(r.ok === true && r.date === '2099-12-01' && r.time === '10:00', 'hora libre: sigue a agendar en el mismo turno', r); });
+intentar('hora tomada', () => { r = revisar({ ...dia, busySlots: ['10:00'] });
+  ok(r.ok === false && /ya está tomada/.test(r.result) && r.result.includes('11:00') && !r.result.includes(' 10:00,'), 'hora tomada: no agenda y ofrece las libres', r); });
+intentar('fuera de horario', () => { r = revisar({ ...dia, workingHours: { start: '15:00', end: '17:00' } });
+  ok(r.ok === false && /fuera del horario/.test(r.result) && r.result.includes('15:00, 16:00'), 'fuera de horario: no agenda', r); });
+intentar('feriado', () => { r = revisar({ isFullDay: true, reason: 'Holiday' });
+  ok(r.ok === false && /feriado/.test(r.result) && /ver_disponibilidad/.test(r.result), 'feriado: no agenda y pide otro día', r); });
+intentar('día sin atención', () => { r = revisar({ isFullDay: true, reason: 'Day disabled' });
+  ok(r.ok === false && /no atendemos/.test(r.result), 'día sin atención: no agenda', r); });
+intentar('vacía', () => ok(revisar({}).ok === false, 'respuesta vacía de la agenda: no agenda'));
 
 console.log(fallas ? `\n${fallas} FALLAS` : '\nTODO OK');
 process.exit(fallas ? 1 : 0);

@@ -206,7 +206,9 @@ def agenda_simulada():
     ok('agendar' not in (r2b or {}).get('herramientas', []), 'agenda: con todos los datos, primero confirma y no agenda', t2b[:300])
     r3 = turno(g, c, 'Sí, confirmo')
     usadas = sum(((x or {}).get('herramientas', []) for x in (r1, r2, r2b, r3)), [])
-    ok('ver_disponibilidad' in usadas, 'agenda: consulta la disponibilidad', str(usadas))
+    # Desde el 28-oct «agendar» revisa la agenda real del día por su cuenta («Revisar hora»): que el modelo consulte antes
+    # es deseable pero no obligatorio. Se informa, no se cuenta como falla.
+    print('      (ver_disponibilidad antes de agendar: %s)' % ('sí' if 'ver_disponibilidad' in usadas else 'no; la revisó agendar'))
     ok('agendar' in (r3 or {}).get('herramientas', []) and '¡Listo' in (r3 or {}).get('body', {}).get('content', ''),
        'agenda: agenda después del «sí»', str(usadas))
     t3 = (r3 or {}).get('body', {}).get('content', '')
@@ -248,17 +250,16 @@ def datos_malos():
 
 
 @caso
-def sin_consultar():
-    # Guarda firme: agendar sin haber consultado la disponibilidad de esa fecha se rechaza; el agente consulta y sigue.
+def fuera_de_horario():
+    # Guarda firme «Revisar hora»: una hora fuera del horario de atención no se agenda aunque la persona la confirme.
     g, c = nuevo()
     jueves = proximo(4)
-    r = turno(g, c, 'Agenda el diagnóstico el %s a las 11:00. Soy Ana Rojas, ana.rojas@ejemplo.cl, WhatsApp +56 9 1234 5678. '
-                    'Ya sé que está libre, confirmo, agéndalo directo.' % jueves.isoformat())
-    turnos = [r] if '¡Listo' in (r or {}).get('body', {}).get('content', '') else [r, turno(g, c, 'Sí, confirmo')]
-    usadas = sum(((x or {}).get('herramientas', []) for x in turnos), [])
+    r = turno(g, c, 'Agenda el diagnóstico el %s a las 21:00. Soy Ana Rojas, ana.rojas@ejemplo.cl, WhatsApp +56 9 1234 5678. '
+                    'Confirmo, agéndalo directo.' % jueves.isoformat())
+    turnos = [r] if '¡Listo' in (r or {}).get('body', {}).get('content', '') else [r, turno(g, c, 'Sí, confirmo, a las 21:00')]
     agendo = any('¡Listo' in (x or {}).get('body', {}).get('content', '') for x in turnos)
-    ok(not agendo or 'ver_disponibilidad' in usadas, 'sin consultar: solo queda agendada después de consultar la disponibilidad', str(usadas))
-    print('      →', (turnos[-1] or {}).get('body', {}).get('content', '')[:200].replace('\n', ' '), '|', usadas)
+    ok(not agendo, 'fuera de horario: no agenda a las 21:00', (turnos[-1] or {}).get('body', {}).get('content', '')[:300])
+    print('      →', (turnos[-1] or {}).get('body', {}).get('content', '')[:200].replace('\n', ' '))
 
 
 @caso

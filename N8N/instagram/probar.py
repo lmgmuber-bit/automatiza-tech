@@ -1,5 +1,5 @@
 """Pruebas del asistente de Instagram con JSON falso del Portal, en modo prueba: n8n no llama al Portal y agendar no crea
-la cita. Activa los dos flujos solo durante la prueba y los desactiva al terminar (aunque falle). No imprime la ruta.
+la cita. Activa los dos flujos durante la prueba y al terminar (aunque falle) los deja como estaban: si estaban activos (PROD), siguen activos. No imprime la ruta.
 
 Uso:  python probar.py            (todos los casos)
       python probar.py precio     (solo los casos nombrados)
@@ -228,9 +228,11 @@ def comentario():
 
 def main():
     elegidos = [a for a in sys.argv[1:] if a in CASOS] or list(CASOS)
+    # Estado previo: si ya estaban activos (PROD desde el 28-oct), se dejan activos al terminar.
+    activos = {w: bool(aplicar.api('GET', '/workflows/' + w)[1].get('active')) for w in (HERR, WF)}
     c0, _ = aplicar.api('POST', '/workflows/%s/activate' % HERR)  # n8n solo ejecuta sub-workflows activos
     c, _ = aplicar.api('POST', '/workflows/%s/activate' % WF)
-    print('flujos activados para la prueba:', c0, c)
+    print('flujos activados para la prueba:', c0, c, '· antes:', 'activos' if all(activos.values()) else activos)
     try:
         time.sleep(3)
         for n in elegidos:
@@ -240,9 +242,11 @@ def main():
             except Exception as e:  # noqa: BLE001
                 ok(False, n + ': error ' + type(e).__name__, str(e)[:200])
     finally:
-        c, _ = aplicar.api('POST', '/workflows/%s/deactivate' % WF)
-        c0, _ = aplicar.api('POST', '/workflows/%s/deactivate' % HERR)
-        print('\nflujos desactivados:', c, c0)
+        for w in (WF, HERR):
+            if not activos[w]:
+                aplicar.api('POST', '/workflows/%s/deactivate' % w)
+        fin = {w: bool(aplicar.api('GET', '/workflows/' + w)[1].get('active')) for w in (WF, HERR)}
+        print('\nestado final (igual al de antes):', fin == activos, fin)
     print('\n%d fallas' % len(fallas) if fallas else '\nTODO OK')
     sys.exit(1 if fallas else 0)
 

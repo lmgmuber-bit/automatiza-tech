@@ -1,4 +1,5 @@
-"""Crea o actualiza en n8n los dos flujos del asistente de Instagram, siempre INACTIVOS. No imprime secretos ni la ruta.
+"""Crea o actualiza en n8n los dos flujos del asistente de Instagram. Uno nuevo queda INACTIVO; uno que ya estaba activo
+(en PROD desde el 28-oct) se republica y sigue activo. No imprime secretos ni la ruta.
 
 Uso:  python aplicar.py            (genera con build_agente_instagram.py y sube)
       python aplicar.py --ver      (solo dice qué haría)
@@ -97,15 +98,22 @@ def rellenar(o, reemplazos):
 
 
 def subir(wf, wid):
+    """Crea (inactivo) o actualiza. Si el flujo estaba ACTIVO (en PROD desde el 28-oct), queda activo: se republica."""
     cuerpo = {'name': wf['name'], 'nodes': wf['nodes'], 'connections': wf['connections'],
               'settings': {k: v for k, v in wf.get('settings', {}).items() if k in SETTINGS_OK}}
+    estaba_activo = False
     if wid:
+        c0, w0 = api('GET', '/workflows/' + wid)
+        estaba_activo = c0 == 200 and bool(w0.get('active'))
         c, r = api('PUT', '/workflows/' + wid, cuerpo)
     else:
         c, r = api('POST', '/workflows', cuerpo)
     if c not in (200, 201):
         sys.exit('n8n rechazó «%s»: HTTP %s %s' % (wf['name'], c, r.get('error', '')[:300]))
-    if r.get('active'):
+    if estaba_activo:
+        c2, _ = api('POST', '/workflows/%s/activate' % r['id'])  # republica la versión nueva
+        print('  «%s» estaba activo: reactivado (%s)' % (wf['name'], c2))
+    elif r.get('active'):
         api('POST', '/workflows/%s/deactivate' % r['id'])
     return r['id']
 
@@ -127,7 +135,7 @@ def main():
                                                      'PROMPT_AGENTE_WEB': prompt})
     estado['principal'] = subir(principal, estado.get('principal'))
     json.dump(estado, open(ESTADO, 'w', encoding='utf-8'), indent=1)
-    print('herramientas:', estado['herramientas'], '· principal:', estado['principal'], '· los dos inactivos')
+    print('herramientas:', estado['herramientas'], '· principal:', estado['principal'])
 
 
 if __name__ == '__main__':

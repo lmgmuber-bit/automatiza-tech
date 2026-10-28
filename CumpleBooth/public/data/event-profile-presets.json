@@ -355,6 +355,29 @@
                 "tone": "#24384D"
             }
         },
+        "baby-osito": {
+            "status": "active",
+            "background": "fondo-banner.jpg",
+            "base_image": "fondo-sala.jpg",
+            "layout": "storybook-kids-v1",
+            "intro_style": "mágico",
+            "surface": {
+                "scrim": 0.72,
+                "blur": 13,
+                "saturate": 0.85,
+                "title": "#e6f0dc",
+                "surface_mix": 89,
+                "hero_dim": 0.38
+            },
+            "scene": "cozy watercolor nursery with a light-brown teddy bear, green and yellow balloons, little paw prints, a green gingham blanket, a baby bottle and knitted booties",
+            "text_area": {
+                "x": 0.2,
+                "y": 0.28,
+                "w": 0.62,
+                "h": 0.4,
+                "tone": "#3D4A2F"
+            }
+        },
         "baby-safari": {
             "status": "active",
             "background": "fondo-banner.jpg",

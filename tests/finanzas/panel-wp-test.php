@@ -306,8 +306,12 @@ $_GET = [];
 // --- Renovaciones: «Sí, lo pagué» registra el pago real
 $fin = at_finanzas_get_controller();
 $hace_2_meses = (new DateTimeImmutable('now', new DateTimeZone('America/Santiago')))->modify('-2 months')->format('Y-m-d');
+// Igual que en wp-admin: la acción se procesa antes de dibujar (load-…) y la página se dibuja después, ya sin la acción.
 function renovar(int $id, string $accion = 'renew_paid'): string {
 	$_GET = ['page' => 'at-finanzas', 'action' => $accion, 'id' => (string) $id, '_wpnonce' => wp_create_nonce('at_fin_renew_' . $id)];
+	$avisos = at_finanzas_procesar_renovacion();
+	if ($avisos !== null) { at_finanzas_guardar_avisos($avisos); }
+	$_GET = ['page' => 'at-finanzas'];
 	$out = salida('at_finanzas_admin_page');
 	$_GET = [];
 	return $out;
@@ -339,6 +343,39 @@ ok(strpos($sal, 'Renovación registrada') !== false && strpos($sal, 'no se pudo 
 ok(cantidad('referencia = %s', ['renov-' . $id_cero . '-' . substr($hoy, 0, 7)]) === 0, 'y no queda ningún movimiento a medias');
 $activos = (int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$te} WHERE provider = %s AND active = 1", 'PRUEBA-Cero ' . $marca));
 ok($activos === 1, 'el catálogo renovó: queda el período nuevo activo');
+
+// --- Renovación doble: recargar la página o repetir el clic no crea otro período
+$prov_doble = 'PRUEBA-Doble ' . $marca;
+$id_doble = $crear(['category' => 'hosting', 'provider' => $prov_doble, 'description' => '', 'amount' => 7000, 'currency' => 'CLP', 'start_date' => $hace_2_meses]);
+renovar($id_doble);
+$sal = renovar($id_doble);
+$filas = (int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$te} WHERE provider = %s", $prov_doble));
+$activos = (int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$te} WHERE provider = %s AND active = 1", $prov_doble));
+ok($filas === 2 && $activos === 1, 'renovar dos veces el mismo id deja una sola fila nueva activa (2 filas: la vieja y la nueva)');
+ok(strpos($sal, 'ya fue renovada o cerrada') !== false && strpos($sal, 'notice-error') !== false, 'el segundo intento avisa que ya fue renovada');
+$prov_cerrada = 'PRUEBA-Cerrada ' . $marca;
+$id_cerrada = $crear(['category' => 'hosting', 'provider' => $prov_cerrada, 'description' => '', 'amount' => 3000, 'currency' => 'CLP', 'start_date' => $hace_2_meses]);
+renovar($id_cerrada, 'renew_skip');
+$antes = $wpdb->get_row($wpdb->prepare("SELECT notes, updated_at FROM {$te} WHERE id = %d", $id_cerrada), ARRAY_A);
+$sal = renovar($id_cerrada, 'renew_skip');
+$despues = $wpdb->get_row($wpdb->prepare("SELECT notes, updated_at FROM {$te} WHERE id = %d", $id_cerrada), ARRAY_A);
+ok(strpos($sal, 'ya fue renovada o cerrada') !== false && $antes === $despues, '«No / cancelado» sobre una fila ya cerrada da error y no la toca');
+$sal = renovar($id_cerrada, 'renew_paid');
+ok((int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$te} WHERE provider = %s", $prov_cerrada)) === 1, '«Sí, lo pagué» sobre una fila ya cerrada no crea período nuevo');
+
+// --- Post/Redirect/Get: la URL de vuelta no trae la acción y los avisos se muestran una sola vez
+$_GET = ['page' => 'at-finanzas', 'tab' => 'suscripciones', 'action' => 'renew_paid', 'id' => '5', '_wpnonce' => 'x'];
+$url = at_finanzas_url_sin_accion();
+ok(strpos($url, 'page=at-finanzas') !== false && strpos($url, 'tab=suscripciones') !== false && strpos($url, 'action') === false && strpos($url, '_wpnonce') === false && strpos($url, 'id=') === false, 'la URL de vuelta conserva página y pestaña, sin action, id ni nonce');
+$_GET = ['page' => 'at-finanzas', 'action' => 'renew_paid', 'id' => (string) $id_doble, '_wpnonce' => 'vencido'];
+ok(at_finanzas_procesar_renovacion() === null, 'con nonce inválido no se procesa nada');
+$_GET = [];
+at_finanzas_guardar_avisos([['nivel' => 'success', 'texto' => 'Aviso de prueba <b>']]);
+$_GET = ['page' => 'at-finanzas'];
+$p1 = salida('at_finanzas_admin_page');
+$p2 = salida('at_finanzas_admin_page');
+$_GET = [];
+ok(strpos($p1, 'Aviso de prueba &lt;b&gt;') !== false && strpos($p2, 'Aviso de prueba') === false, 'el aviso se muestra escapado y una sola vez');
 
 ok($GLOBALS['mi_otras'] === 0, 'ninguna otra petición HTTP salió en las pruebas');
 fin();

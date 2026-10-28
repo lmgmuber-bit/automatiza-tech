@@ -823,6 +823,7 @@ function automatiza_tech_save_lead($request) {
     }
 
     $lead_id = (int) $wpdb->insert_id;
+    do_action('automatiza_tech_lead_guardado', $lead_id, $data); // Lead por CAPI (inc/meta-capi/), 28-oct-2026
     if (function_exists('automatiza_tech_home_premium_store_lead_attribution')) {
         automatiza_tech_home_premium_store_lead_attribution($lead_id, $params);
     }

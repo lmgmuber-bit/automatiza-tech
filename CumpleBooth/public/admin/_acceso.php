@@ -191,6 +191,7 @@ $ccAccesoSoloSuper = ['invitations.php', 'comprobante.php', 'aceptaciones.php', 
 // página => [módulos que la abren (basta uno), nombre del parámetro con la fiesta]
 $ccAccesoPorFiesta = [
     'album.php' => [['fotos', 'album'], 'party'],
+    'descargar-fotos.php' => [['fotos', 'album'], 'party'], // y adentro, cada carpeta pide su módulo
     'mensajes.php' => [['mensajes'], 'p'],
     'event-profile.php' => [['perfil'], 'party'],
     'carteles-api.php' => [['carteles'], 'p'],

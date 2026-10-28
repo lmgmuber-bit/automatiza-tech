@@ -30,6 +30,8 @@ class OmniIgInsightsController {
     /** @var OmnichannelController */
     private $omni;
     private $api_calls = 0;
+    /** Error de límite de Meta en esta pasada: desde ahí no se hace ninguna llamada más. */
+    private $rate_limited = null;
 
     const DB_VERSION = '1';
     const TZ = 'America/Santiago';
@@ -41,6 +43,17 @@ class OmniIgInsightsController {
     /** Cada cuánto se refresca la toma "latest" de una publicación de hasta 35 días. */
     const LATEST_EVERY_HOURS = 6;
     const LATEST_MAX_AGE_HOURS = 840;
+    /** Las publicaciones de menos de 72 h (cuando más se mueven) se releen cada hora. */
+    const FRESH_HOURS = 72;
+    const FRESH_EVERY_HOURS = 1;
+    /** Margen para los intervalos: el cron corre al minuto 7 y la toma anterior pudo terminar unos segundos después. */
+    const INTERVAL_TOLERANCE = 300;
+    /** Si Meta avisa que se pasó el límite de llamadas, las tomas se pausan este tiempo. */
+    const RATE_LIMIT_COOLDOWN = 3600;
+    /** Códigos de Meta para «demasiadas llamadas» (app, usuario, página, personalizado e Instagram BUC). */
+    const RATE_LIMIT_CODES = [4, 17, 32, 613, 80002];
+    /** Publicaciones antiguas sin ninguna toma que se leen por pasada (una vez cada una). */
+    const BACKFILL_PER_RUN = 10;
     /** Cada cuánto se vuelven a pedir los días de la cuenta (Meta tarda hasta 48 h en asentar). */
     const ACCOUNT_EVERY_HOURS = 6;
     const ACCOUNT_DAYS_BACK = 3;
@@ -98,6 +111,7 @@ class OmniIgInsightsController {
         'token_invalid' => 'El token de Instagram venció o no es válido: hay que generar uno nuevo y pegarlo en Canales.',
         'no_permission' => 'El token de Instagram no tiene el permiso instagram_business_manage_insights: hay datos básicos (likes, comentarios, seguidores), pero no alcance ni reproducciones.',
         'error'         => 'La última toma de métricas falló.',
+        'rate_limited'  => 'Meta pidió bajar el ritmo de llamadas: las tomas quedan en pausa una hora para no arriesgar el token ni el publicador.',
     ];
 
     public function __construct($omni) {
@@ -212,8 +226,15 @@ class OmniIgInsightsController {
     }
 
     private function graph_get($channel_id, $path) {
+        if ($this->rate_limited) {
+            return ['error' => 'Pausa por límite de Meta', 'fb_error' => ['code' => 4]];
+        }
         $this->api_calls++;
-        return $this->omni->ig_graph_get($channel_id, $path);
+        $res = $this->omni->ig_graph_get($channel_id, $path);
+        if (empty($res['success']) && self::is_rate_limit($res)) {
+            $this->rate_limited = self::classify_error($res);
+        }
+        return $res;
     }
 
     /* ============================== sincronización ============================== */
@@ -231,6 +252,12 @@ class OmniIgInsightsController {
         $state = $this->get_state($channel_id);
         $now = time();
 
+        // Pausa por límite de Meta: ninguna llamada hasta que pase (vale también con force).
+        $cooldown = (int) get_option('omni_ig_insights_cooldown_' . $channel_id, 0);
+        if ($cooldown > $now) {
+            return ['ok' => true, 'skipped' => true, 'status' => 'rate_limited',
+                    'reason' => 'Pausa por límite de Meta hasta ' . gmdate('Y-m-d\TH:i:s\Z', $cooldown)];
+        }
         // Vale también con force: protege la cuota de Meta de clics y agentes repetidos.
         if (!empty($state['last_sync_at']) && $now - strtotime($state['last_sync_at'] . ' UTC') < self::MIN_SYNC_SECONDS) {
             return ['ok' => true, 'skipped' => true, 'reason' => 'Hubo una toma hace menos de ' . self::MIN_SYNC_SECONDS . ' s', 'last_summary' => $state['last_summary'] ?? null];
@@ -247,6 +274,7 @@ class OmniIgInsightsController {
             }
         }
         $this->api_calls = 0;
+        $this->rate_limited = null;
 
         $summary = ['ok' => false, 'status' => 'error', 'posts_seen' => 0, 'snapshots' => 0, 'account_days' => 0, 'api_calls' => 0, 'errors' => []];
         try {
@@ -255,6 +283,12 @@ class OmniIgInsightsController {
             delete_option($lock);
         }
         $summary['api_calls'] = $this->api_calls;
+        if ($this->rate_limited) {
+            // Lo ya leído queda guardado; el resto espera a que pase la pausa. No es una falla de la toma.
+            update_option('omni_ig_insights_cooldown_' . $channel_id, $now + self::RATE_LIMIT_COOLDOWN, false);
+            $summary = array_merge($summary, ['ok' => true, 'status' => 'rate_limited',
+                'message' => self::STATUS_MESSAGES['rate_limited'], 'code' => $this->rate_limited['code']]);
+        }
 
         $state['status'] = $summary['status'];
         $state['message'] = $summary['message'] ?? (self::STATUS_MESSAGES[$summary['status']] ?? '');
@@ -297,6 +331,9 @@ class OmniIgInsightsController {
         // 2) Publicaciones (feed y reels) y 3) historias vigentes.
         $listed = $this->sync_media_list($channel_id, $summary);
         $this->sync_stories($channel_id);
+        if ($this->rate_limited) {
+            return array_merge($summary, ['posts_seen' => $listed]); // sync() marca la pausa
+        }
 
         // 4) Métricas por publicación (tomas fijas 24h/48h/7d/30d y la última).
         $perm = null;   // primer error de permiso o token que aparezca
@@ -308,9 +345,9 @@ class OmniIgInsightsController {
                 $insights_ok = true;
             }
             if (!empty($res['error'])) {
-                if (in_array($res['error']['status'], ['no_permission', 'token_invalid'], true)) {
+                if (in_array($res['error']['status'], ['no_permission', 'token_invalid', 'rate_limited'], true)) {
                     $perm = $perm ?: $res['error'];
-                    break; // con un token sin permiso, las demás darán el mismo error
+                    break; // sin permiso, con el token vencido o con límite de Meta, las demás darán el mismo error
                 }
                 $summary['errors'][] = 'media ' . $post->media_id . ': ' . $res['error']['message'];
             }
@@ -322,7 +359,7 @@ class OmniIgInsightsController {
             $summary['account_days'] = $acc['days'];
             if ($acc['days'] > 0) $insights_ok = true;
             if (!empty($acc['error'])) {
-                if (in_array($acc['error']['status'], ['no_permission', 'token_invalid'], true)) {
+                if (in_array($acc['error']['status'], ['no_permission', 'token_invalid', 'rate_limited'], true)) {
                     $perm = $acc['error'];
                 } else {
                     $summary['errors'][] = 'cuenta: ' . $acc['error']['message'];
@@ -452,19 +489,36 @@ class OmniIgInsightsController {
 
     /** Publicaciones que necesitan una toma ahora. */
     private function posts_due($channel_id, $force) {
+        $cutoff = gmdate('Y-m-d H:i:s', time() - self::LATEST_MAX_AGE_HOURS * HOUR_IN_SECONDS);
         $rows = $this->wpdb->get_results($this->wpdb->prepare(
             "SELECT * FROM {$this->prefix}ig_posts
              WHERE channel_id = %d AND status = 'published' AND posted_at IS NOT NULL AND posted_at >= %s
              ORDER BY posted_at DESC",
-            $channel_id, gmdate('Y-m-d H:i:s', time() - self::LATEST_MAX_AGE_HOURS * HOUR_IN_SECONDS)
+            $channel_id, $cutoff
         ));
-        if (!$rows) return [];
-        $ids = array_map(function ($r) { return (int) $r->id; }, $rows);
-        $taken = $this->taken_checkpoints($ids);
         $due = [];
-        foreach ($rows as $r) {
-            $r->due = $this->due_checkpoints($r, $taken[(int) $r->id] ?? [], $force);
-            if ($r->due) $due[] = $r;
+        if ($rows) {
+            $ids = array_map(function ($r) { return (int) $r->id; }, $rows);
+            $taken = $this->taken_checkpoints($ids);
+            foreach ($rows as $r) {
+                $r->due = $this->due_checkpoints($r, $taken[(int) $r->id] ?? [], $force);
+                if ($r->due) $due[] = $r;
+            }
+        }
+        // Publicaciones de más de 35 días sin ninguna toma: una sola lectura cada una, unas
+        // pocas por pasada, para que todas tengan cifras sin gastar la cuota de golpe.
+        $old = $this->wpdb->get_results($this->wpdb->prepare(
+            "SELECT p.* FROM {$this->prefix}ig_posts p
+             LEFT JOIN {$this->prefix}ig_post_metrics m ON m.post_id = p.id
+             WHERE p.channel_id = %d AND p.status = 'published' AND p.media_product_type <> 'STORY'
+               AND p.posted_at IS NOT NULL AND p.posted_at < %s
+               AND p.insights_state IN ('pending', 'no_permission', 'token_invalid', 'rate_limited') AND m.id IS NULL
+             ORDER BY p.posted_at DESC LIMIT %d",
+            $channel_id, $cutoff, self::BACKFILL_PER_RUN
+        ));
+        foreach ((array) $old as $r) {
+            $r->due = ['latest'];
+            $due[] = $r;
         }
         return $due;
     }
@@ -488,7 +542,8 @@ class OmniIgInsightsController {
      * Qué tomas faltan para una publicación. Pública para las pruebas.
      * Regla: una toma fija se toma al cumplir su edad y solo hasta 1,5 veces esa edad
      * (si la publicación se descubrió tarde, esa toma queda sin registrar en vez de mal rotulada).
-     * La "latest" se refresca cada 6 h (las historias, en cada pasada) o, con force, si tiene más de 30 min.
+     * La "latest" se refresca cada hora hasta las 72 h y después cada 6 h (las historias, en cada pasada; con
+     * force, si tiene más de 30 min), con 5 min de margen porque el cron corre siempre al mismo minuto.
      *
      * @return string[] checkpoints a guardar con la misma lectura
      */
@@ -504,11 +559,17 @@ class OmniIgInsightsController {
             }
         }
         $latest_at = isset($taken['latest']) ? strtotime($taken['latest'] . ' UTC') : 0;
-        $every = $post->media_product_type === 'STORY' ? 0 : self::LATEST_EVERY_HOURS * HOUR_IN_SECONDS;
+        if ($post->media_product_type === 'STORY') {
+            $every = 0;
+        } elseif ($age_h < self::FRESH_HOURS) {
+            $every = self::FRESH_EVERY_HOURS * HOUR_IN_SECONDS;
+        } else {
+            $every = self::LATEST_EVERY_HOURS * HOUR_IN_SECONDS;
+        }
         if ($force) {
             $every = min($every, self::FORCE_MIN_SECONDS);
         }
-        if ($due || !$latest_at || $now - $latest_at >= $every) {
+        if ($due || !$latest_at || $now - $latest_at >= $every - self::INTERVAL_TOLERANCE) {
             $due[] = 'latest';
         }
         return array_values(array_unique($due));
@@ -594,7 +655,7 @@ class OmniIgInsightsController {
                 $channel_id, $ymd
             ));
             $every = $force ? self::FORCE_MIN_SECONDS : self::ACCOUNT_EVERY_HOURS * HOUR_IN_SECONDS;
-            if ($prev && time() - strtotime($prev . ' UTC') < $every) {
+            if ($prev && time() - strtotime($prev . ' UTC') < $every - self::INTERVAL_TOLERANCE) {
                 continue;
             }
             $since = $day->getTimestamp();
@@ -834,7 +895,8 @@ class OmniIgInsightsController {
 
     /**
      * Error de la Graph API → estado para el portal. Público para las pruebas.
-     * 190 = token vencido o inválido; 10 / 200 o mensaje de permiso = falta el permiso de insights.
+     * 190 = token vencido o inválido; 4 / 17 / 32 / 613 / 80002 = límite de llamadas;
+     * 10 / 200 o mensaje de permiso = falta el permiso de insights.
      */
     public static function classify_error($res) {
         $code = (int) ($res['fb_error']['code'] ?? 0);
@@ -843,11 +905,24 @@ class OmniIgInsightsController {
         if ($code === 190) {
             return ['status' => 'token_invalid', 'code' => $code, 'message' => self::STATUS_MESSAGES['token_invalid'] . ' (Meta: ' . $clean . ')'];
         }
+        if (self::is_rate_limit($res)) {
+            return ['status' => 'rate_limited', 'code' => $code, 'message' => self::STATUS_MESSAGES['rate_limited'] . ' (Meta: ' . $clean . ')'];
+        }
         $is_perm = $code === 200 || ($code === 10 && stripos($msg, 'not enough viewers') === false) || stripos($msg, 'permission') !== false;
         if ($is_perm) {
             return ['status' => 'no_permission', 'code' => $code, 'message' => self::STATUS_MESSAGES['no_permission'] . ' (Meta: ' . $clean . ')'];
         }
         return ['status' => 'error', 'code' => $code, 'message' => $clean];
+    }
+
+    /** true si Meta respondió que se pasó el límite de llamadas (por código o por el texto del error). */
+    public static function is_rate_limit($res) {
+        $code = (int) ($res['fb_error']['code'] ?? 0);
+        $msg = (string) ($res['error'] ?? '');
+        return in_array($code, self::RATE_LIMIT_CODES, true)
+            || stripos($msg, 'request limit') !== false
+            || stripos($msg, 'rate limit') !== false
+            || stripos($msg, 'too many calls') !== false;
     }
 
     /** Recorta el mensaje y tacha cualquier cadena larga tipo token por si Meta la devolviera. */

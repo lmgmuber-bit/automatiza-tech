@@ -102,7 +102,7 @@ export default function ChannelsView() {
       phone_number: ch.phone_number || '',
       page_id: ch.page_id || '',
       bot_token: '', // el servidor ya no envía el token (has_bot_token); vacío = se conserva
-      ycloud_api_key: ch.ycloud_api_key || '',
+      ycloud_api_key: '', // tampoco viaja (has_ycloud_api_key); vacío = se conserva
       ycloud_waba_id: ch.ycloud_waba_id || '',
       ycloud_phone_id: ch.ycloud_phone_id || '',
       provider: ch.provider || 'ycloud',
@@ -419,7 +419,7 @@ export default function ChannelsView() {
                         <span className="text-[10px] text-gray-400 dark:text-slate-500">
                           {META_TYPES.includes(ch.channel_type) ? 'Token IG:' : 'API Key:'}
                         </span>
-                        {(META_TYPES.includes(ch.channel_type) ? ch.has_bot_token : ch.ycloud_api_key) ? (
+                        {(META_TYPES.includes(ch.channel_type) ? ch.has_bot_token : ch.has_ycloud_api_key) ? (
                           <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">✓ Configurado</span>
                         ) : (
                           <span className="text-[10px] text-rose-500 dark:text-rose-400 font-medium">✗ No configurado</span>
@@ -562,8 +562,8 @@ export default function ChannelsView() {
                       type={showEditApiKey ? 'text' : 'password'}
                       value={editForm.ycloud_api_key}
                       onChange={e => setEditForm({ ...editForm, ycloud_api_key: e.target.value })}
-                      placeholder="Pega tu API Key de YCloud aquí"
-                      title="Clave secreta de autenticación de YCloud. Necesaria para enviar mensajes WhatsApp. La encuentras en YCloud Console → Settings → API Keys."
+                      placeholder={editChannel.has_ycloud_api_key ? 'API Key guardada · déjala vacía para conservarla o pega una nueva' : 'Pega tu API Key de YCloud aquí'}
+                      title="Clave secreta de autenticación de YCloud. Necesaria para enviar mensajes WhatsApp. Se guarda y no se vuelve a mostrar. La encuentras en YCloud Console → Settings → API Keys."
                       className="w-full px-3 py-2 pr-10 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 font-mono"
                     />
                     <button

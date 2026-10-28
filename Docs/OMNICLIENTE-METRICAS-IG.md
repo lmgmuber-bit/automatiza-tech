@@ -1,7 +1,8 @@
 # Métricas de Instagram en el Portal OmniCliente
 
-> Estado (21-oct-2026): **LOCAL, en la rama `claude/omni-metricas-ig-b7cf03`**, con pruebas en verde. Nada de esto está en PROD
-> hasta que Luis autorice el despliegue (lista exacta en §7). Dueño del área: Eje (plataforma AT).
+> Estado: **EN PROD desde el 21-oct-2026 (21:20–21:30, hora de Chile)**, con autorización de Luis, desde la rama
+> `claude/omni-secretos-canales` (incluye `claude/omni-metricas-ig-b7cf03`, PR lmgmuber-bit/automatiza-tech#100). Evidencia en §10.
+> Dueño del área: Eje (plataforma AT).
 
 La vista **Marketing IG** del portal dejó de ser una maqueta: muestra las métricas reales de @automatizatech.cl, las guarda en la
 base y las entrega a los agentes (Claqueta, la sesión de redes) por una ruta protegida. Si falta el permiso de Meta o todavía no
@@ -26,14 +27,24 @@ Agentes ─ GET ig-metrics (secret) ──────┴─ lee las tablas, no 
   `REEL_DIARIO_CHANNEL_ID`) a través de `OmnichannelController::ig_graph_get()`, que solo hace GET. Los métodos del
   publicador (`reel-diario/*`, `ig_api_request`, `check_instagram_token`) no cambiaron.
 - **Tomas por publicación:** a las **24 h, 48 h, 7 días y 30 días** de publicada (fijas, no se pisan) y una **«última»** que se
-  refresca cada 6 h mientras la publicación tenga hasta 35 días. Una toma fija se registra solo hasta 1,5 veces su edad (la de
-  24 h, hasta las 36 h): si se descubrió tarde, queda vacía en vez de mal rotulada. Las historias se leen en cada pasada mientras
-  duran (24 h).
+  refresca **cada hora hasta las 72 h** (cuando más se mueve) y después cada 6 h, mientras la publicación tenga hasta 35 días
+  (decisión de Luis, 21-oct). Los intervalos tienen 5 minutos de margen porque el cron corre siempre al minuto 7. Una toma fija se
+  registra solo hasta 1,5 veces su edad (la de 24 h, hasta las 36 h): si se descubrió tarde, queda vacía en vez de mal rotulada. Las
+  historias se leen en cada pasada mientras duran (24 h). Las publicaciones de más de 35 días sin ninguna toma reciben una sola
+  lectura (10 por pasada).
 - **Cuenta por día:** alcance, visualizaciones, cuentas que interactuaron, interacciones, likes, comentarios, compartidos,
   guardados, respuestas y toques de enlaces del perfil, de ayer y dos días antes (Meta tarda hasta 48 h en asentar las cifras), más
   la foto de seguidores de cada día. Los seguidores nuevos por día (`follower_count`) Meta solo los da a cuentas con 100 o más.
-- **Costo en llamadas:** unas 5 por hora en régimen (11 en la primera toma de la prueba). El tope de Meta es 4.800 × impresiones
-  de 24 h por cuenta (doc de Meta, [overview](https://developers.facebook.com/docs/instagram-platform/instagram-api-with-instagram-login/overview)).
+- **Costo en llamadas:** con 2 reels al día hay hasta ~6 publicaciones de menos de 72 h, así que una pasada hace unas 10
+  llamadas (perfil, lista, historias, ~6 publicaciones y, cada 6 h, 3 días de cuenta): ~230 al día. La primera toma real en PROD
+  hizo 8. El tope de Meta es 4.800 × impresiones de la cuenta en 24 h (doc de Meta,
+  [overview](https://developers.facebook.com/docs/instagram-platform/instagram-api-with-instagram-login/overview)): con un reel de
+  ~500 visualizaciones son millones; en un día casi sin vistas (2 al día, como el 18–20 de octubre) serían ~9.600, unas 40 veces
+  más de lo que se usa. No verificado: qué hace Meta con cero impresiones (la doc no lo dice); para eso está el freno de abajo.
+- **Freno por límite de Meta:** si Meta responde que se pasó el límite (códigos 4, 17, 32, 613 u 80002, o un mensaje de «request
+  limit» / «too many calls»), la toma se corta en el acto (lo ya leído queda guardado), el estado pasa a `rate_limited` y no se
+  hace ninguna llamada durante una hora, ni con el botón ni desde la ruta de agentes. Así el token y la cuota del publicador
+  quedan a salvo. El flujo de n8n avisa por correo el cambio de estado.
 - **Freno:** dos tomas seguidas con menos de 2 minutos de diferencia se saltan (también con `force`), y un candado atómico
   (`add_option`) impide que corran dos a la vez. El botón del portal fuerza la toma, pero aun así no relee lo tomado hace menos de
   30 minutos; los agentes no pueden forzar (el token y su cuota son los mismos del publicador).
@@ -146,6 +157,7 @@ Las cifras del ejemplo son ilustrativas. Fechas en ISO 8601 UTC (`Z`); los días
 | `token_invalid` | Token vencido o inválido (código 190): **el publicador también falla** | Renovar el token (§5) |
 | `no_token` | El canal no tiene token | Pegar el token en Canales → Instagram |
 | `error` | Otro fallo; detalle en `last_errors` | Revisar el mensaje |
+| `rate_limited` | Meta pidió bajar el ritmo: pausa de una hora sin llamadas | Nada; se reanuda sola. Si se repite, revisar el volumen de llamadas |
 
 `posts[].insights_state`: `ok`, `pending`, `no_permission`, `token_invalid`, `not_enough_viewers` (Meta no da cifras de historias con
 menos de 5 espectadores), `deleted` o `error`. `posts[].status`: `published`, `deleted` (ya no está en Instagram) o `expired`
@@ -163,8 +175,8 @@ curl -s -H "X-IG-Metrics-Secret: $AT_IG_METRICS_SECRET" "https://automatizatech.
   estado, cuatro indicadores (seguidores, visualizaciones, alcance sumado, interacciones), gráfico por día con selector de métrica y
   vista de tabla, y la lista de publicaciones con la última toma y las fichas 24h/48h/7d/30d. Se quitó lo que no tenía fuente (embudo
   DMs→leads→demos, ROI por pilar, créditos de Higgsfield, costo de Gemini).
-- **Canales:** la API de canales entrega `has_bot_token` en lugar del token y la auditoría guarda `[oculto]` en ese campo. La
-  tarjeta muestra «✓ Configurado» con `has_bot_token`. Al editar, el campo vacío
+- **Canales:** la API de canales entrega `has_bot_token` en lugar del token y la auditoría guarda `[oculto]` en ese campo (lo mismo
+  para la API key de YCloud y los demás secretos: §9). La tarjeta muestra «✓ Configurado» con `has_bot_token`. Al editar, el campo vacío
   conserva el token guardado; para cambiarlo se pega uno nuevo.
 
 ## 5. Pasos manuales de Luis
@@ -214,7 +226,7 @@ no se crucen. La vista se revisó en el navegador (claro y oscuro, sin y con per
 A por Vigía (Claude) el 21-oct: sin inyección SQL, XSS ni fugas del token en lo nuevo; sus hallazgos de esta rama quedaron
 corregidos (límite antes del secreto, sin `force` para agentes, candado atómico, pruebas solo por línea de comandos).
 
-## 7. Despliegue a PROD (requiere autorización de Luis)
+## 7. Despliegue a PROD (hecho el 21-oct; la tabla queda como procedimiento y para la reversa)
 
 Base: `main` = PROD para estos archivos (cotejado el 21-oct por SSH, solo lectura: `api-omnichannel.php` y
 `omnichannel-controller.php` iguales salvo el fin de línea; el build `omnicliente/` también).
@@ -242,7 +254,72 @@ en el servidor), desactivar el flujo de n8n y, si se quiere, quitar la constante
 
 ## 8. Pendientes conocidos
 
-- Endurecimiento pendiente de la API de canales y de la auditoría: detalle en la bóveda privada
+- Endurecimiento de la API de canales y de la auditoría: §9. Lo que sigue abierto se detalla en la bóveda privada
   (`10-Projects/2026-10-21-Portal-OmniCliente-Metricas-IG.md`), no en este repo público.
 - Revisión B por el homólogo en Codex (Forja/Vigía) antes del despliegue (tarea C3).
 - El embudo DMs → leads → demos no tiene fuente conectada; se puede armar con los mensajes del canal de Instagram y el CRM.
+
+## 9. Secretos de canales y auditoría (rama `claude/omni-secretos-canales`)
+
+Cómo queda:
+
+- **API de canales:** `mask_channel_secrets()` entrega `has_bot_token` y `has_ycloud_api_key` en lugar de las claves y
+  `credentials_json` vacío. `webhook_secret` llega solo al admin (`get_all_channels`), que arma con él la URL del webhook; la vista de
+  agentes y clientes (`get_channels`) no lo usa y lo recibe vacío. Al editar, `bot_token` o `ycloud_api_key` vacíos conservan lo
+  guardado; para cambiarlos se pega uno nuevo. El servidor lee las claves directo de la base (envío por YCloud, publicador,
+  renovador del token): nada de eso pasa por la API de canales.
+- **Auditoría:** `audit_log()` guarda `[oculto]`, en todas las entidades y a cualquier profundidad, en los campos de
+  `OmnichannelController::AUDIT_SECRET_KEYS` (`api_key`, `password`, `password_hash`, `password_reset_code`, `access_token`,
+  `reset_token`, `bot_token`, `ycloud_api_key`, `webhook_secret`, `credentials_json`). Un campo vacío queda vacío.
+- **Filas anteriores:** `tools/omni-audit-secretos.php` aplica el mismo tachado a lo ya guardado. Solo por línea de comandos y fuera de
+  `public_html`; nunca imprime un valor (solo conteos por entidad y por campo). Sin `--aplicar` solo cuenta; con `--aplicar` exige
+  `--respaldo=<archivo>` nuevo y fuera del sitio, donde guarda antes cada fila original. Las filas con JSON ilegible se cuentan y
+  no se tocan. `--ids=` limita el barrido. Es idempotente.
+
+**Despliegue (hecho el 21-oct junto con el de Métricas IG; evidencia en §10):**
+
+| Orden | Qué | Dónde | Clase |
+|---|---|---|---|
+| 1 | Respaldo de `omnichannel-controller.php`, `omnicliente/index.html` y de la tabla `wp_omnichannel_audit_log` (PHP `SHORTINIT` con `SHOW CREATE TABLE` + un INSERT por fila; `wp db export` falla en esta cuenta) | `~/respaldos/` | OBLIGATORIO |
+| 2 | `omnichannel-controller.php` | `public_html/` | OBLIGATORIO |
+| 3 | `omnicliente/assets/*` nuevos (15 `.js`) y después `omnicliente/index.html` | `public_html/omnicliente/` | OBLIGATORIO |
+| 4 | `tools/omni-audit-secretos.php` | `~/respaldos/omni-audit-<fecha>/` (nunca en `public_html`) | OBLIGATORIO |
+| 5 | `php omni-audit-secretos.php --wp=<home>/domains/automatizatech.cl/public_html/wp-load.php --host=automatizatech.cl` (conteo; sin `--host` wp-config.php elige la base local y falla) y luego con `--aplicar --respaldo=<carpeta del paso 4>/filas.jsonl` | SSH | OBLIGATORIO |
+| 6 | Verificar: un segundo conteo da 0 cambios; `GET channels` como cliente y como agente sin claves; editar un canal sin tocar la clave la conserva | SSH + portal | OBLIGATORIO |
+| 7 | Renovar el token de Instagram (§5.1) y la API key de YCloud de los canales de WhatsApp (YCloud Console → API Keys, pegarla en Canales) | Luis | RECOMENDADO |
+| 8 | Borrar `filas.jsonl` cuando la tabla esté verificada (guarda los valores originales) | SSH | OBLIGATORIO al cierre |
+
+**Reversa:** volver a subir el controlador y el `index.html` del respaldo; las filas tachadas se recuperan desde `filas.jsonl`
+(un `UPDATE` por fila con `old_values_json`/`new_values_json`), mientras no se haya borrado.
+
+**Pruebas:** `AT_WP_LOAD=<wp-load.php local> php tests/omnicliente/secretos-canales-wp-test.php` (39 casos: lo que recibe cada rol,
+edición que conserva, auditoría nueva y anterior, conteo sin valores, respaldo, idempotencia y el script por línea de comandos). Las
+suites de Métricas IG siguen en 70/70 y 28/28. Revisado en el navegador: Canales con «✓ Configurado» para WhatsApp, la URL del
+webhook para admin y el guardado con la clave vacía (la base la conservó y la auditoría no guardó valores).
+
+## 10. Despliegue del 21-oct-2026 (evidencia)
+
+Autorizado por Luis. Base cotejada antes de subir: `api-omnichannel.php`, `omnichannel-controller.php` y `omnicliente/index.html` de
+PROD eran iguales a `main` (md5 sin cambios desde el cotejo de la tarde).
+
+- **Respaldos en el servidor:** `~/respaldos/omni-metricas-ig-antes-20261021/` (los tres archivos, `wp-config.php` con permisos 600,
+  `omnichannel-ig-insights-controller.php.v1` y `audit_log.sql`, 117 de 117 filas); `~/respaldos/omni-audit-20261021/filas.jsonl`
+  (las 31 filas originales de la auditoría, 600).
+- **Subido** (cada archivo con nombre temporal, renombrado y cotejado por md5): los tres PHP, 19 bundles nuevos de `omnicliente/assets/`,
+  `manifest.json` e `index.html` al final. A las 21:30 se subió de nuevo `omnichannel-ig-insights-controller.php` con el relleno de
+  publicaciones antiguas.
+- **Secreto:** `AT_IG_METRICS_SECRET` en `wp-config.php` (línea 172, antes de `wp-settings.php`; `php -l` antes de reemplazar; PHP la
+  ve definida, 48 caracteres), en el archivo de claves con la etiqueta `AT IG METRICS SECRET` y en la credencial de n8n
+  `AT IG Metrics Secret`. Nunca se mostró el valor.
+- **n8n:** flujo «OmniCliente · Métricas IG (toma cada hora)» (`0XI7qHPgg0TEPclm`) creado y activo, minuto 7 de cada hora.
+- **Verificado desde afuera:** `health` 200; `ig-metrics` sin cabecera 403 y con la credencial 200; `admin/ig-insights` sin sesión 403;
+  `reel-diario/token-check` sin secreto 403. **Primera toma real: `status: ok`** (el token ya tenía el permiso de insights), 50
+  publicaciones, 3 días de la cuenta, 8 llamadas a Meta.
+- **Publicador:** `check_instagram_token` del canal 2 en el servidor: `ok`, usuario `automatizatech.cl`.
+- **Canales:** con los datos reales, `get_all_channels` (admin, 2 canales) y `get_channels` (clientes y agentes, 2 canales) no
+  devuelven ninguna clave; el admin conserva la URL del webhook.
+- **Auditoría:** el conteo en seco marcó 31 filas (20 de canales, 9 de agentes, 2 de clientes); se aplicó con respaldo y un segundo
+  conteo dio 0.
+
+**No verificado:** la vista Marketing IG con una sesión de admin en PROD (se probó en local contra la misma API; en PROD se comprobó
+que el portal sirve el bundle nuevo y que la API responde).

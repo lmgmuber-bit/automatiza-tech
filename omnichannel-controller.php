@@ -22,6 +22,17 @@ class OmnichannelController {
     const IG_GRAPH_VERSION = 'v23.0';
     const IG_GRAPH_BASE    = 'https://graph.instagram.com';
 
+    /**
+     * Campos que nunca se guardan en claro en la auditoría (la ven el admin, los
+     * supervisores y los clientes): tokens de canal, API keys, la sesión y los
+     * códigos de reseteo de los agentes y sus hashes de contraseña.
+     */
+    const AUDIT_SECRET_KEYS = [
+        'api_key', 'password', 'password_hash', 'password_reset_code', 'access_token',
+        'reset_token', 'bot_token', 'ycloud_api_key', 'webhook_secret', 'credentials_json',
+    ];
+    const AUDIT_REDACTED = '[oculto]';
+
     public function __construct() {
         global $wpdb;
         $this->wpdb = $wpdb;
@@ -69,7 +80,9 @@ class OmnichannelController {
         $user_id    = $user->ID ?: null;
         $user_email = $user->user_email ?: ($this->actor_email ?: null);
         $user_role  = $user->ID ? implode(',', $user->roles) : ($this->actor_role ?: null);
-        
+        $old_values = self::redact_audit_values($old_values);
+        $new_values = self::redact_audit_values($new_values);
+
         $this->wpdb->insert(
             $this->prefix . 'audit_log',
             [
@@ -90,6 +103,100 @@ class OmnichannelController {
         );
 
         return $this->wpdb->insert_id;
+    }
+
+    /**
+     * Copia de los valores para la auditoría con los secretos tachados (AUDIT_SECRET_KEYS,
+     * a cualquier profundidad). Un secreto vacío queda vacío: así se sigue viendo si había uno.
+     *
+     * @param array|object|null $values
+     * @return array|null
+     */
+    public static function redact_audit_values($values) {
+        if ($values === null || $values === '' || $values === false) return $values ?: null;
+        if (is_object($values)) $values = get_object_vars($values);
+        if (!is_array($values)) return $values;
+        foreach ($values as $k => $v) {
+            if (is_string($k) && in_array(strtolower($k), self::AUDIT_SECRET_KEYS, true)) {
+                $values[$k] = ($v === null || $v === '' || $v === self::AUDIT_REDACTED) ? $v : self::AUDIT_REDACTED;
+            } elseif (is_array($v) || is_object($v)) {
+                $values[$k] = self::redact_audit_values($v);
+            }
+        }
+        return $values;
+    }
+
+    /**
+     * Tacha los secretos que ya quedaron guardados en la auditoría antes de que
+     * audit_log() los tachara (fix-omni-audit-secretos.php). Sin $apply solo cuenta.
+     *
+     * @param bool          $apply   true = escribe; false = solo cuenta.
+     * @param callable|null $backup  recibe cada fila original antes de escribirla (respaldo).
+     * @param int[]|null    $only_ids limita el barrido a esas filas (pruebas o corrección puntual).
+     * @return array conteos: rows_seen, rows_changed, unreadable, by_entity, by_key (sin valores)
+     */
+    public function redact_audit_history($apply = false, $backup = null, $only_ids = null) {
+        $table = $this->prefix . 'audit_log';
+        $likes = [];
+        foreach (self::AUDIT_SECRET_KEYS as $key) {
+            $pattern = '%' . $this->wpdb->esc_like('"' . $key . '"') . '%';
+            $likes[] = $this->wpdb->prepare('old_values_json LIKE %s OR new_values_json LIKE %s', $pattern, $pattern);
+        }
+        $where = '(' . implode(' OR ', $likes) . ')';
+        if ($only_ids !== null) {
+            $ids = array_values(array_filter(array_map('absint', (array) $only_ids)));
+            $where .= $ids ? ' AND id IN (' . implode(',', $ids) . ')' : ' AND 1 = 0';
+        }
+        $out = ['rows_seen' => 0, 'rows_changed' => 0, 'unreadable' => 0, 'by_entity' => [], 'by_key' => []];
+        $last_id = 0;
+        do {
+            $rows = $this->wpdb->get_results($this->wpdb->prepare(
+                "SELECT id, entity_type, old_values_json, new_values_json FROM {$table} WHERE id > %d AND {$where} ORDER BY id ASC LIMIT 500",
+                $last_id
+            ));
+            foreach ((array) $rows as $row) {
+                $last_id = (int) $row->id;
+                $out['rows_seen']++;
+                $update = [];
+                foreach (['old_values_json', 'new_values_json'] as $col) {
+                    if ($row->$col === null || $row->$col === '') continue;
+                    $decoded = json_decode($row->$col, true);
+                    if (!is_array($decoded)) {
+                        $out['unreadable']++;
+                        continue;
+                    }
+                    $redacted = self::redact_audit_values($decoded);
+                    if ($redacted !== $decoded) {
+                        $update[$col] = wp_json_encode($redacted);
+                        foreach (self::audit_secret_keys_found($decoded) as $key) {
+                            $out['by_key'][$key] = ($out['by_key'][$key] ?? 0) + 1;
+                        }
+                    }
+                }
+                if (!$update) continue;
+                $out['rows_changed']++;
+                $entity = (string) $row->entity_type;
+                $out['by_entity'][$entity] = ($out['by_entity'][$entity] ?? 0) + 1;
+                if ($apply) {
+                    if ($backup) $backup($row);
+                    $this->wpdb->update($table, $update, ['id' => (int) $row->id]);
+                }
+            }
+        } while ($rows && count($rows) === 500);
+        return $out;
+    }
+
+    /** Nombres (nunca valores) de los secretos no vacíos que trae un arreglo. */
+    private static function audit_secret_keys_found(array $values) {
+        $found = [];
+        foreach ($values as $k => $v) {
+            if (is_string($k) && in_array(strtolower($k), self::AUDIT_SECRET_KEYS, true)) {
+                if ($v !== null && $v !== '' && $v !== self::AUDIT_REDACTED) $found[] = strtolower($k);
+            } elseif (is_array($v)) {
+                $found = array_merge($found, self::audit_secret_keys_found($v));
+            }
+        }
+        return array_values(array_unique($found));
     }
 
     private function get_client_ip() {
@@ -495,7 +602,7 @@ class OmnichannelController {
             // Crear configuración de bot por defecto
             $this->create_default_bot_config($client_id, $channel_id);
 
-            $this->audit_log('create', 'channel', $channel_id, "Canal $channel_type creado para cliente $client_id", null, $this->channel_for_audit($insert), $client_id);
+            $this->audit_log('create', 'channel', $channel_id, "Canal $channel_type creado para cliente $client_id", null, $insert, $client_id);
             return ['id' => $channel_id, 'webhook_secret' => $webhook_secret];
         }
 
@@ -515,16 +622,18 @@ class OmnichannelController {
                 $update[$field] = $field === 'config_json' ? wp_json_encode($data[$field]) : sanitize_text_field($data[$field]);
             }
         }
-        // El navegador ya no recibe el token (mask_channel_tokens): vacío = conservar el actual.
-        if (isset($update['bot_token']) && trim($update['bot_token']) === '') {
-            unset($update['bot_token']);
+        // El navegador ya no recibe estos secretos (mask_channel_secrets): vacío = conservar el actual.
+        foreach (['bot_token', 'ycloud_api_key'] as $secret) {
+            if (isset($update[$secret]) && trim($update[$secret]) === '') {
+                unset($update[$secret]);
+            }
         }
         if (!$update) {
             return true;
         }
 
         $result = $this->wpdb->update($this->prefix . 'channels', $update, ['id' => $channel_id]);
-        $this->audit_log('update', 'channel', $channel_id, "Canal actualizado", $this->channel_for_audit($old), $this->channel_for_audit($update), $old['client_id']);
+        $this->audit_log('update', 'channel', $channel_id, "Canal actualizado", $old, $update, $old['client_id']);
         return $result !== false;
     }
 
@@ -538,35 +647,37 @@ class OmnichannelController {
         // Delete related bot configs
         $this->wpdb->delete($this->prefix . 'bot_configs', ['channel_id' => $channel_id]);
         $this->wpdb->delete($this->prefix . 'channels', ['id' => $channel_id]);
-        $this->audit_log('delete', 'channel', $channel_id, "Canal eliminado: {$channel->channel_name}", $this->channel_for_audit($channel), null, $channel->client_id);
+        $this->audit_log('delete', 'channel', $channel_id, "Canal eliminado: {$channel->channel_name}", (array) $channel, null, $channel->client_id);
         return true;
     }
 
     public function get_channels($client_id) {
-        return $this->mask_channel_tokens($this->wpdb->get_results(
+        return $this->mask_channel_secrets($this->wpdb->get_results(
             $this->wpdb->prepare("SELECT * FROM {$this->prefix}channels WHERE client_id = %d ORDER BY channel_type", absint($client_id))
         ));
     }
 
     /**
-     * El token de Instagram (bot_token) nunca va al navegador: se reemplaza por
-     * has_bot_token. Para cambiarlo se pega uno nuevo en Canales; vacío = se conserva.
+     * Los secretos de un canal nunca van al navegador: bot_token (Instagram) y
+     * ycloud_api_key (WhatsApp) se reemplazan por has_bot_token / has_ycloud_api_key
+     * (para cambiarlos se pega uno nuevo en Canales; vacío = se conserva) y
+     * credentials_json se vacía. webhook_secret solo lo recibe el admin, que arma con
+     * él la URL del webhook; agentes y clientes no lo usan.
      */
-    private function mask_channel_tokens($rows) {
+    private function mask_channel_secrets($rows, $keep_webhook_secret = false) {
         foreach ((array) $rows as $row) {
             $row->has_bot_token = !empty($row->bot_token);
             $row->bot_token = '';
+            $row->has_ycloud_api_key = !empty($row->ycloud_api_key);
+            $row->ycloud_api_key = '';
+            if (property_exists($row, 'credentials_json')) {
+                $row->credentials_json = null;
+            }
+            if (!$keep_webhook_secret) {
+                $row->webhook_secret = '';
+            }
         }
         return $rows;
-    }
-
-    /** Copia del canal para la auditoría, con el token de Instagram tachado (la auditoría se ve en el portal). */
-    private function channel_for_audit($row) {
-        $row = (array) $row;
-        if (array_key_exists('bot_token', $row)) {
-            $row['bot_token'] = empty($row['bot_token']) ? '' : '[oculto]';
-        }
-        return $row;
     }
 
     // =========================================================
@@ -2394,12 +2505,13 @@ class OmnichannelController {
     }
 
     public function get_all_channels() {
-        return $this->mask_channel_tokens($this->wpdb->get_results(
+        // Solo el admin ve todos los canales: conserva webhook_secret para armar la URL del webhook.
+        return $this->mask_channel_secrets($this->wpdb->get_results(
             "SELECT ch.*, cl.company_name as client_name
              FROM {$this->prefix}channels ch
              LEFT JOIN {$this->prefix}clients cl ON ch.client_id = cl.id
              ORDER BY cl.company_name, ch.channel_type"
-        ));
+        ), true);
     }
 
     public function get_all_bot_configs() {

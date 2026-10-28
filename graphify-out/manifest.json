@@ -675,8 +675,8 @@
     "semantic_hash": "d0f46b9024d90bc80aee38f73b623393"
   },
   "client-portal-omnichannel/src/components/ChannelsView.jsx": {
-    "mtime": 1793225916.3071651,
-    "ast_hash": "82cb3cc554a254342d588fe069b93ec2",
+    "mtime": 1793226956.059223,
+    "ast_hash": "87ad058b5eeee19600af1b1e47324b25",
     "semantic_hash": ""
   },
   "client-portal-omnichannel/src/components/ClientsView.jsx": {
@@ -920,8 +920,8 @@
     "semantic_hash": "facfad74f10941f44c495d53757cf12e"
   },
   "omnichannel-controller.php": {
-    "mtime": 1793225916.4189377,
-    "ast_hash": "d3628a1f9c28e76c69dda8558195df7b",
+    "mtime": 1793226956.2122798,
+    "ast_hash": "12113dab6b9351dbfa3a1cef416e086c",
     "semantic_hash": ""
   },
   "omnichannel-cron-expiry.php": {
@@ -1775,7 +1775,7 @@
     "semantic_hash": "aeb6d7540054b3ab842fce4b411247dc"
   },
   "wp-content/mu-plugins/crm-ai-completo.php": {
-    "mtime": 1793225939.219862,
+    "mtime": 1793226994.5032096,
     "ast_hash": "7ad5050b56df4793fd69eea373e41721",
     "semantic_hash": ""
   },
@@ -2665,7 +2665,7 @@
     "semantic_hash": ""
   },
   "wp-content/themes/automatiza-tech/assets/home-premium/at-home.js": {
-    "mtime": 1793225939.2213445,
+    "mtime": 1793226994.505477,
     "ast_hash": "ae53d695e50471636f3fc9b9a0748498",
     "semantic_hash": ""
   },
@@ -2705,7 +2705,7 @@
     "semantic_hash": "d5eac2e9bba1991de490649db19d490f"
   },
   "wp-content/themes/automatiza-tech/footer.php": {
-    "mtime": 1793225939.222353,
+    "mtime": 1793226994.5074942,
     "ast_hash": "5c24d1ceb6e83febc18155f9b921689b",
     "semantic_hash": ""
   },
@@ -2725,7 +2725,7 @@
     "semantic_hash": "a2c789af689b8718c23cd0d520d5ea46"
   },
   "wp-content/themes/automatiza-tech/inc/admin-followup-meetings.php": {
-    "mtime": 1793225939.2293463,
+    "mtime": 1793226994.5114775,
     "ast_hash": "211d6b4be5973f7a7af84dc5a6be7c8e",
     "semantic_hash": ""
   },
@@ -2760,7 +2760,7 @@
     "semantic_hash": "f6b518a8ff47ec44a1fd02b45c414dda"
   },
   "wp-content/themes/automatiza-tech/inc/api-endpoints.php": {
-    "mtime": 1793225939.2310123,
+    "mtime": 1793226994.523621,
     "ast_hash": "bedb42cfa3200ee68a29ee95ddb92cf4",
     "semantic_hash": ""
   },
@@ -3540,7 +3540,7 @@
     "semantic_hash": ""
   },
   "CumpleBooth/public/asistencia-papas.php": {
-    "mtime": 1793225938.8892002,
+    "mtime": 1793226994.1825795,
     "ast_hash": "c766dfe212bf6c2370ce4f24ab34179e",
     "semantic_hash": ""
   },
@@ -3550,7 +3550,7 @@
     "semantic_hash": ""
   },
   "CumpleBooth/public/assets/invitation.js": {
-    "mtime": 1793225938.8932655,
+    "mtime": 1793226994.1869211,
     "ast_hash": "51b33efafa6855a6c63aaf585c476346",
     "semantic_hash": ""
   },
@@ -3570,7 +3570,7 @@
     "semantic_hash": ""
   },
   "CumpleBooth/public/data/event-profile-presets.json": {
-    "mtime": 1793225938.8944502,
+    "mtime": 1793226994.1889822,
     "ast_hash": "ca6ee7c050d458aa6e6df77b598cb6ee",
     "semantic_hash": ""
   },
@@ -3595,7 +3595,7 @@
     "semantic_hash": ""
   },
   "CumpleBooth/public/data/themes.json": {
-    "mtime": 1793225938.896462,
+    "mtime": 1793226994.1909416,
     "ast_hash": "e5c9e4c2abda856206c42d9d3e0970e8",
     "semantic_hash": ""
   },
@@ -3615,12 +3615,12 @@
     "semantic_hash": ""
   },
   "CumpleBooth/public/gift-api.php": {
-    "mtime": 1793225938.8974614,
+    "mtime": 1793226994.191942,
     "ast_hash": "c25aac1c860d7819f5005e64ddcdd47b",
     "semantic_hash": ""
   },
   "CumpleBooth/public/invitacion.php": {
-    "mtime": 1793225938.8994725,
+    "mtime": 1793226994.1942327,
     "ast_hash": "fb3d17e7c51f03c513cb0ae1ebd876ab",
     "semantic_hash": ""
   },
@@ -3745,7 +3745,7 @@
     "semantic_hash": ""
   },
   "CumpleBooth/public/lib.gifts.php": {
-    "mtime": 1793225938.9017923,
+    "mtime": 1793226994.1952314,
     "ast_hash": "99cd8f12509611304a2aba73622185e5",
     "semantic_hash": ""
   },
@@ -3800,7 +3800,7 @@
     "semantic_hash": ""
   },
   "CumpleBooth/public/lib.rsvp.php": {
-    "mtime": 1793225938.903809,
+    "mtime": 1793226994.1972141,
     "ast_hash": "5793cae13b6993f279e5a858c51c60d5",
     "semantic_hash": ""
   },
@@ -3825,12 +3825,12 @@
     "semantic_hash": ""
   },
   "CumpleBooth/public/regalos-papas.php": {
-    "mtime": 1793225938.9048119,
+    "mtime": 1793226994.1992145,
     "ast_hash": "db966845e5d16afc34e64d9f5b2c020f",
     "semantic_hash": ""
   },
   "CumpleBooth/public/rsvp-api.php": {
-    "mtime": 1793225938.9058094,
+    "mtime": 1793226994.2002215,
     "ast_hash": "6bbc2e8623879834abd2f8404d11ac91",
     "semantic_hash": ""
   },
@@ -4615,7 +4615,7 @@
     "semantic_hash": ""
   },
   "CLAUDE.md": {
-    "mtime": 1793225966.4086802,
+    "mtime": 1793226994.1695378,
     "ast_hash": "c91b17ab7c1380958a2d254568f71ea8",
     "semantic_hash": ""
   },
@@ -5190,7 +5190,7 @@
     "semantic_hash": ""
   },
   "CumpleBooth/docs/FTP-MANIFEST.md": {
-    "mtime": 1793225938.883106,
+    "mtime": 1793226994.177051,
     "ast_hash": "7634d011491f9073ae336a7a3e490124",
     "semantic_hash": ""
   },
@@ -5605,7 +5605,7 @@
     "semantic_hash": ""
   },
   "Docs/METODO_AT/README.md": {
-    "mtime": 1793225938.9907968,
+    "mtime": 1793226994.317785,
     "ast_hash": "fef5f089f813e3ab668fc267f71dfd6d",
     "semantic_hash": ""
   },
@@ -5935,8 +5935,8 @@
     "semantic_hash": ""
   },
   "omnicliente/index.html": {
-    "mtime": 1793225916.433757,
-    "ast_hash": "ba9edc68cc69adea7a6511efe9ff85d0",
+    "mtime": 1793226956.2292366,
+    "ast_hash": "c32de6d4c4e4f20e0e2c7fd0c673f62c",
     "semantic_hash": ""
   },
   "promo-assets/PROMPTS-IMAGEN-GEMINI.md": {
@@ -10585,7 +10585,7 @@
     "semantic_hash": ""
   },
   "CumpleBooth/public/admin/agenda.php": {
-    "mtime": 1793225938.8851197,
+    "mtime": 1793226994.17905,
     "ast_hash": "3cd4122784e43216fead79e36b6a57dc",
     "semantic_hash": ""
   },
@@ -11545,7 +11545,7 @@
     "semantic_hash": ""
   },
   "omnichannel-atfinance-controller.php": {
-    "mtime": 1793225939.1342597,
+    "mtime": 1793226994.4522374,
     "ast_hash": "464cd85e12a8d402ba286d523212da45",
     "semantic_hash": ""
   },
@@ -11650,7 +11650,7 @@
     "semantic_hash": ""
   },
   "tests/followup/verify-client-wp-test.php": {
-    "mtime": 1793225939.1727793,
+    "mtime": 1793226994.4660969,
     "ast_hash": "a82663080bd49e3df225d36f0e8f05f0",
     "semantic_hash": ""
   },
@@ -11720,7 +11720,7 @@
     "semantic_hash": ""
   },
   "wp-content/themes/automatiza-tech/inc/admin-at-finanzas.php": {
-    "mtime": 1793225939.2273562,
+    "mtime": 1793226994.5084796,
     "ast_hash": "ec991dd34632ddcffc84962eaf90a9c1",
     "semantic_hash": ""
   },
@@ -11920,7 +11920,7 @@
     "semantic_hash": ""
   },
   "Docs/superpowers/specs/2026-09-27-gt-baseball-prototipo-design.md": {
-    "mtime": 1793225938.9948184,
+    "mtime": 1793226994.324086,
     "ast_hash": "68536b428d2d8ef45c1a89801cee7548",
     "semantic_hash": ""
   },
@@ -11940,7 +11940,7 @@
     "semantic_hash": ""
   },
   "demos/gt-baseball/index.html": {
-    "mtime": 1793225939.0193472,
+    "mtime": 1793226994.3496108,
     "ast_hash": "25f4ec32fef8e27ee2361965a14674e8",
     "semantic_hash": ""
   },
@@ -12960,27 +12960,27 @@
     "semantic_hash": ""
   },
   "CumpleBooth/database/aplicar-028.php": {
-    "mtime": 1793225938.8762858,
+    "mtime": 1793226994.1705368,
     "ast_hash": "4b911717a51ad3dc832bf350f144d769",
     "semantic_hash": ""
   },
   "CumpleBooth/database/migrations/028_rsvp_regalo.down.php": {
-    "mtime": 1793225938.877282,
+    "mtime": 1793226994.17154,
     "ast_hash": "4226f32a778e350558f1608a387579f4",
     "semantic_hash": ""
   },
   "CumpleBooth/database/migrations/028_rsvp_regalo.php": {
-    "mtime": 1793225938.8782904,
+    "mtime": 1793226994.1725564,
     "ast_hash": "832b2888900bcd2a7c85f4b0d57206e7",
     "semantic_hash": ""
   },
   "CumpleBooth/database/modo-regalo-confirmacion.php": {
-    "mtime": 1793225938.8782904,
+    "mtime": 1793226994.1730552,
     "ast_hash": "5149c8581a4887697468366daa3f95c6",
     "semantic_hash": ""
   },
   "CumpleBooth/public/lib.regalos-confirmacion.php": {
-    "mtime": 1793225938.902801,
+    "mtime": 1793226994.1962311,
     "ast_hash": "9ad4ccb652f127b7d865eea0a350f5d5",
     "semantic_hash": ""
   },
@@ -13005,12 +13005,12 @@
     "semantic_hash": ""
   },
   "CumpleBooth/tests/backend/regalos-confirmacion.php": {
-    "mtime": 1793225938.9810712,
+    "mtime": 1793226994.3065355,
     "ast_hash": "13f5495588d9e7cd6feed971abf27b90",
     "semantic_hash": ""
   },
   "CumpleBooth/tests/backend/rsvp-regalo-http.php": {
-    "mtime": 1793225938.9824553,
+    "mtime": 1793226994.3075173,
     "ast_hash": "bf518d7df5029928165f26d1419d91d3",
     "semantic_hash": ""
   },
@@ -13025,12 +13025,12 @@
     "semantic_hash": ""
   },
   "CumpleBooth/tests/frontend/babyShowerRegaloRsvp.test.mjs": {
-    "mtime": 1793225938.9834538,
+    "mtime": 1793226994.3095334,
     "ast_hash": "fa480909468527e3b535ca6a3081a836",
     "semantic_hash": ""
   },
   "CumpleBooth/tests/frontend/unaSolaVoz.test.mjs": {
-    "mtime": 1793225938.9844594,
+    "mtime": 1793226994.3115232,
     "ast_hash": "694f49ae9a19a8391f9489669dd9f262",
     "semantic_hash": ""
   },
@@ -13060,47 +13060,47 @@
     "semantic_hash": ""
   },
   "tests/colaboradores/acciones-wp-test.php": {
-    "mtime": 1793225939.1352522,
+    "mtime": 1793226994.4545243,
     "ast_hash": "16b631ce6a7da0433fb2f06113c6d1f5",
     "semantic_hash": ""
   },
   "tests/colaboradores/cerrar-wp-test.php": {
-    "mtime": 1793225939.1476438,
+    "mtime": 1793226994.455521,
     "ast_hash": "6e413d278ff46f06d07f948219075121",
     "semantic_hash": ""
   },
   "tests/colaboradores/correr.sh": {
-    "mtime": 1793225939.1486464,
+    "mtime": 1793226994.4565206,
     "ast_hash": "ffba72c2f4469a0c8a807485ac340f7f",
     "semantic_hash": ""
   },
   "tests/colaboradores/datos-wp-test.php": {
-    "mtime": 1793225939.149985,
+    "mtime": 1793226994.457524,
     "ast_hash": "f01a632a6f6819a05876aaff923cf967",
     "semantic_hash": ""
   },
   "tests/colaboradores/pagina-wp-test.php": {
-    "mtime": 1793225939.151999,
+    "mtime": 1793226994.458524,
     "ast_hash": "81ce36efaa207ac42df9260eae7b5bcd",
     "semantic_hash": ""
   },
   "tests/colaboradores/permisos-wp-test.php": {
-    "mtime": 1793225939.1529994,
+    "mtime": 1793226994.459634,
     "ast_hash": "c372a8e0c6bafc04c05336be947504cc",
     "semantic_hash": ""
   },
   "tests/colaboradores/puras-test.php": {
-    "mtime": 1793225939.1529994,
+    "mtime": 1793226994.4606264,
     "ast_hash": "7848f2fe8d657b0875aa5cadc7a81c01",
     "semantic_hash": ""
   },
   "tests/colaboradores/wp-bootstrap.php": {
-    "mtime": 1793225939.1540027,
+    "mtime": 1793226994.4606264,
     "ast_hash": "5fd2ecc5b1889305d8d29c1f203cd6d8",
     "semantic_hash": ""
   },
   "tests/consentimiento/consentimiento-test.php": {
-    "mtime": 1793225939.1673622,
+    "mtime": 1793226994.4616337,
     "ast_hash": "b68ac9b9c14cb0a6f2691d96085b21cb",
     "semantic_hash": ""
   },
@@ -13115,7 +13115,7 @@
     "semantic_hash": ""
   },
   "tests/finanzas/panel-wp-test.php": {
-    "mtime": 1793225939.169383,
+    "mtime": 1793226994.4626386,
     "ast_hash": "6454be4d66ad84f21b777b705a69f946",
     "semantic_hash": ""
   },
@@ -13145,22 +13145,22 @@
     "semantic_hash": ""
   },
   "tests/security/crm-guardar-nota.test.php": {
-    "mtime": 1793225939.2012448,
+    "mtime": 1793226994.482755,
     "ast_hash": "736f5c5c21bea6a672fd68fde5b47c36",
     "semantic_hash": ""
   },
   "wp-content/mu-plugins/at-colaboradores.php": {
-    "mtime": 1793225939.2025187,
+    "mtime": 1793226994.494085,
     "ast_hash": "6081d5d200fd821555a8f17fdc216691",
     "semantic_hash": ""
   },
   "wp-content/mu-plugins/at-consentimiento.php": {
-    "mtime": 1793225939.2025187,
+    "mtime": 1793226994.4950871,
     "ast_hash": "5e6a5b594b86c7b7d5e76ff306a7e002",
     "semantic_hash": ""
   },
   "wp-content/mu-plugins/at-crm-validar-nota.php": {
-    "mtime": 1793225939.2114353,
+    "mtime": 1793226994.4970925,
     "ast_hash": "34cd604a43e12c80b95b232eeac99400",
     "semantic_hash": ""
   },
@@ -13170,42 +13170,42 @@
     "semantic_hash": ""
   },
   "wp-content/themes/automatiza-tech/inc/colaboradores/acciones.php": {
-    "mtime": 1793225939.242767,
+    "mtime": 1793226994.5256414,
     "ast_hash": "ef58789bec2a2551b4f0a557c57ebb74",
     "semantic_hash": ""
   },
   "wp-content/themes/automatiza-tech/inc/colaboradores/cargar.php": {
-    "mtime": 1793225939.242767,
+    "mtime": 1793226994.5266411,
     "ast_hash": "b76c48927a65f55c614bdf7c31c9744c",
     "semantic_hash": ""
   },
   "wp-content/themes/automatiza-tech/inc/colaboradores/cerrar.php": {
-    "mtime": 1793225939.2439759,
+    "mtime": 1793226994.5276265,
     "ast_hash": "5df66f27e5bfa915dae8751cde55a9c5",
     "semantic_hash": ""
   },
   "wp-content/themes/automatiza-tech/inc/colaboradores/datos.php": {
-    "mtime": 1793225939.2449853,
+    "mtime": 1793226994.5286272,
     "ast_hash": "931de080aa5c81cfa63b49c47e3fa8fb",
     "semantic_hash": ""
   },
   "wp-content/themes/automatiza-tech/inc/colaboradores/pagina.php": {
-    "mtime": 1793225939.2574756,
+    "mtime": 1793226994.5296514,
     "ast_hash": "4df5f7392edb9a0458c09c8e45a248fb",
     "semantic_hash": ""
   },
   "wp-content/themes/automatiza-tech/inc/colaboradores/perfil.php": {
-    "mtime": 1793225939.2594812,
+    "mtime": 1793226994.5306516,
     "ast_hash": "db3caa37b218532297531254e3d0a4cb",
     "semantic_hash": ""
   },
   "wp-content/themes/automatiza-tech/inc/colaboradores/permisos.php": {
-    "mtime": 1793225939.2607677,
+    "mtime": 1793226994.5316665,
     "ast_hash": "a5c2fadb87ac725150fbd5de051f5178",
     "semantic_hash": ""
   },
   "wp-content/themes/automatiza-tech/inc/colaboradores/puras.php": {
-    "mtime": 1793225939.2622232,
+    "mtime": 1793226994.532919,
     "ast_hash": "f6af5b45b7650e754e2099f6e9fa44b8",
     "semantic_hash": ""
   },
@@ -13260,17 +13260,17 @@
     "semantic_hash": ""
   },
   "Docs/MARKETING/2026-10-22-CONSENTIMIENTO-Y-EVENTO-LEAD.md": {
-    "mtime": 1793225938.9864564,
+    "mtime": 1793226994.3125205,
     "ast_hash": "7eb836a46bcbec57ca5bf74566e7263b",
     "semantic_hash": ""
   },
   "Docs/METODO_AT/COLABORADORES.md": {
-    "mtime": 1793225938.9884605,
+    "mtime": 1793226994.3147833,
     "ast_hash": "f27ce961b29966e265d3bcfe0a250e4c",
     "semantic_hash": ""
   },
   "Docs/METODO_AT/FINANZAS-BALANCE.md": {
-    "mtime": 1793225938.9894753,
+    "mtime": 1793226994.3167949,
     "ast_hash": "b286ab1103b426a98590db439bd85337",
     "semantic_hash": ""
   },
@@ -13285,12 +13285,12 @@
     "semantic_hash": ""
   },
   "Docs/superpowers/plans/2026-10-24-cumpleclick-baby-shower-invitacion.md": {
-    "mtime": 1793225938.9918115,
+    "mtime": 1793226994.3197823,
     "ast_hash": "144a9f29b5ca845ebad4c5d58719a98d",
     "semantic_hash": ""
   },
   "Docs/superpowers/plans/2026-10-27-crm-colaborador-por-cliente.md": {
-    "mtime": 1793225938.9928143,
+    "mtime": 1793226994.3207812,
     "ast_hash": "f37ac8b02350b1e990ec4623f49997ac",
     "semantic_hash": ""
   },
@@ -13305,72 +13305,72 @@
     "semantic_hash": ""
   },
   "Docs/superpowers/specs/2026-10-24-cumpleclick-baby-shower-invitacion-design.md": {
-    "mtime": 1793225938.9958153,
+    "mtime": 1793226994.3251028,
     "ast_hash": "15dc9349e4938d279005e24400812c0e",
     "semantic_hash": ""
   },
   "Docs/superpowers/specs/2026-10-27-crm-colaborador-por-cliente-design.md": {
-    "mtime": 1793225938.9968238,
+    "mtime": 1793226994.3373518,
     "ast_hash": "7d8985e0b740acbe516f76417315849d",
     "semantic_hash": ""
   },
   "CumpleBooth/public/themes/baby-osito/fondo-banner.jpg": {
-    "mtime": 1793225938.918692,
+    "mtime": 1793226994.2134933,
     "ast_hash": "e09aeb9d0cad5372df07c0ccf87c7036",
     "semantic_hash": ""
   },
   "CumpleBooth/public/themes/baby-osito/fondo-sala.jpg": {
-    "mtime": 1793225938.923694,
+    "mtime": 1793226994.2288725,
     "ast_hash": "4ae1245b0e3cc1fd97200209b7d1390e",
     "semantic_hash": ""
   },
   "CumpleBooth/public/themes/baby-osito/invitation/intro-invitacion-wow-v1-poster.jpg": {
-    "mtime": 1793225938.9262054,
+    "mtime": 1793226994.2308578,
     "ast_hash": "c02f4ea9643a1f7ca359c4ec8ea9cb19",
     "semantic_hash": ""
   },
   "CumpleBooth/public/themes/baby-osito/despedida-baby-osito.mp4": {
-    "mtime": 1793225938.9141574,
+    "mtime": 1793226994.208225,
     "ast_hash": "ce0bd78073a87083a4ad08b40f0b0823",
     "semantic_hash": ""
   },
   "CumpleBooth/public/themes/baby-osito/invitation/intro-invitacion-wow-v1.mp4": {
-    "mtime": 1793225938.9342237,
+    "mtime": 1793226994.240327,
     "ast_hash": "884c8207beec3ceeb8af293dca30ee2e",
     "semantic_hash": ""
   },
   "CumpleBooth/public/themes/baby-osito/musica-fondo.mp3": {
-    "mtime": 1793225938.9500847,
+    "mtime": 1793226994.2694168,
     "ast_hash": "a55873ed0e095c4880ebc8b73767b69c",
     "semantic_hash": ""
   },
   "CumpleBooth/public/themes/baby-osito/musica-juego.mp3": {
-    "mtime": 1793225938.9685879,
+    "mtime": 1793226994.2883685,
     "ast_hash": "6d1ac92e756e7397bf955f4fa1a44fde",
     "semantic_hash": ""
   },
   "CumpleBooth/public/themes/baby-osito/narracion-video/despedida-baby-osito-neutro.mp3": {
-    "mtime": 1793225938.9710658,
+    "mtime": 1793226994.2972517,
     "ast_hash": "11aa25e768ab0af24ae6caeb9e28798b",
     "semantic_hash": ""
   },
   "CumpleBooth/public/themes/baby-osito/narracion-video/despedida-baby-osito-nina.mp3": {
-    "mtime": 1793225938.97307,
+    "mtime": 1793226994.29927,
     "ast_hash": "2d4cbc94fa9e0eb2f68b332d99e7b18d",
     "semantic_hash": ""
   },
   "CumpleBooth/public/themes/baby-osito/narracion-video/despedida-baby-osito-nino.mp3": {
-    "mtime": 1793225938.9750707,
+    "mtime": 1793226994.3012662,
     "ast_hash": "52a89129a3c88fadd01c56a045625515",
     "semantic_hash": ""
   },
   "CumpleBooth/public/themes/baby-osito/narracion-video/gracias-confirmar.mp3": {
-    "mtime": 1793225938.9770699,
+    "mtime": 1793226994.3022842,
     "ast_hash": "c5e97aecf22e9c7fc1561de2e1140f14",
     "semantic_hash": ""
   },
   "CumpleBooth/public/themes/baby-osito/narracion-video/narracion-final.mp3": {
-    "mtime": 1793225938.9780655,
+    "mtime": 1793226994.3045487,
     "ast_hash": "028c5dbf0fbfaa2440c451c9e05abec3",
     "semantic_hash": ""
   },
@@ -13380,63 +13380,23 @@
     "semantic_hash": ""
   },
   "N8N/cerebro-at/sincronizar.py": {
-    "mtime": 1793225939.0160313,
+    "mtime": 1793226994.345814,
     "ast_hash": "96ee76719d4d0feba629965f7ebfad57",
     "semantic_hash": ""
   },
   "N8N/cerebro-at/validacion.js": {
-    "mtime": 1793225939.0160313,
+    "mtime": 1793226994.345814,
     "ast_hash": "d794f42402581cc1e4324ada4852b6c6",
     "semantic_hash": ""
   },
   "N8N/cerebro-at/validacion.test.js": {
-    "mtime": 1793225939.0171688,
+    "mtime": 1793226994.3476026,
     "ast_hash": "fab09666f21d8a95dfcb7ee72b570ea3",
     "semantic_hash": ""
   },
   "omnichannel-ig-insights-controller.php": {
-    "mtime": 1793225916.4213927,
-    "ast_hash": "11465b46e201f7398a0b10225eba70e5",
-    "semantic_hash": ""
-  },
-  "omnicliente/assets/AgentsView-Dqp3cr5R.js": {
-    "mtime": 1793225916.4223938,
-    "ast_hash": "5e4581a6ab194b701a575e6ca755f8e7",
-    "semantic_hash": ""
-  },
-  "omnicliente/assets/AiPromptView-BKal4pol.js": {
-    "mtime": 1793225916.4233944,
-    "ast_hash": "ef9e9d48b4b5b5895aec654aa6910aa8",
-    "semantic_hash": ""
-  },
-  "omnicliente/assets/AuditView-BoHBHfZd.js": {
-    "mtime": 1793225916.4244,
-    "ast_hash": "66675bf77f4975a96c764eb7a5bb4a24",
-    "semantic_hash": ""
-  },
-  "omnicliente/assets/BotConfigUnifiedView-DBfQmMaV.js": {
-    "mtime": 1793225916.4244,
-    "ast_hash": "ae66fa67f0bbee2b75440bff29147548",
-    "semantic_hash": ""
-  },
-  "omnicliente/assets/BotsView-Crq1_ZZW.js": {
-    "mtime": 1793225916.4254,
-    "ast_hash": "eb8fb57a012e153297d6d1a75cd934b3",
-    "semantic_hash": ""
-  },
-  "omnicliente/assets/ChannelTypesView-CP6QSoWU.js": {
-    "mtime": 1793225916.4263935,
-    "ast_hash": "3621555df1cf250b488d41ccd06f5142",
-    "semantic_hash": ""
-  },
-  "omnicliente/assets/ChannelsView-BgU2nqh_.js": {
-    "mtime": 1793225916.4263935,
-    "ast_hash": "92d073a33f14bbe410da87e1104a31f5",
-    "semantic_hash": ""
-  },
-  "omnicliente/assets/ClientsView-CY8dVjPK.js": {
-    "mtime": 1793225916.4274116,
-    "ast_hash": "3c41e84daa218c4aee37d12b575e338f",
+    "mtime": 1793226956.2145543,
+    "ast_hash": "7fd717fe09183c1e4f70cbc0933bc758",
     "semantic_hash": ""
   },
   "omnicliente/assets/ConfirmDeleteModal-_3T3xSYv.js": {
@@ -13444,39 +13404,9 @@
     "ast_hash": "3bb2ecb9f823a0a7be21b8173fd59bed",
     "semantic_hash": ""
   },
-  "omnicliente/assets/DashboardView-DooTxfzJ.js": {
-    "mtime": 1793225916.4284115,
-    "ast_hash": "9032d979fd9c90cc36ef1e8a5835111b",
-    "semantic_hash": ""
-  },
-  "omnicliente/assets/InboxView-BC1klYPR.js": {
-    "mtime": 1793225916.4284115,
-    "ast_hash": "2e5a877f2644cc3cbfa3ba40ddc252a3",
-    "semantic_hash": ""
-  },
-  "omnicliente/assets/MarketingIgView-D_dKPZW6.js": {
-    "mtime": 1793225916.4293923,
-    "ast_hash": "bfde23e2bc253aa2b1d614ef1beabfc9",
-    "semantic_hash": ""
-  },
-  "omnicliente/assets/ProfileView-DmJC1Eop.js": {
-    "mtime": 1793225916.4293923,
-    "ast_hash": "2e77fc21c43015d1f4deb4ddd0245350",
-    "semantic_hash": ""
-  },
-  "omnicliente/assets/PromptsView-goVstSdL.js": {
-    "mtime": 1793225916.4303916,
-    "ast_hash": "028fb258eb4085c0f0f6071e6f250217",
-    "semantic_hash": ""
-  },
   "omnicliente/assets/ResultModal-CqNpb07G.js": {
     "mtime": 1792604492.9126587,
     "ast_hash": "1d3b9ea0b1289447c0de8cf04324730d",
-    "semantic_hash": ""
-  },
-  "omnicliente/assets/SupportView-C-Le6Jnf.js": {
-    "mtime": 1793225916.4317584,
-    "ast_hash": "994fa51c0a3f7aa29a4ce9e10cc17c75",
     "semantic_hash": ""
   },
   "omnicliente/assets/icons-FUum9V-O.js": {
@@ -13484,19 +13414,14 @@
     "ast_hash": "2a6e45e1d3442aef47bf60414b3bac2c",
     "semantic_hash": ""
   },
-  "omnicliente/assets/index-D6JzxkFE.js": {
-    "mtime": 1793225916.433757,
-    "ast_hash": "c5da0505d003a878e5cd89f68d45f798",
-    "semantic_hash": ""
-  },
   "tests/followup/verify-client-clave-wp-test.php": {
-    "mtime": 1793225939.1707819,
+    "mtime": 1793226994.4640195,
     "ast_hash": "de54786a2acf355b3ee1b32b4bfa5ced",
     "semantic_hash": ""
   },
   "tests/ig-insights/ig-insights-wp-test.php": {
-    "mtime": 1793225916.4367535,
-    "ast_hash": "488bb39f4581737ef275ca714244e8b9",
+    "mtime": 1793226956.235941,
+    "ast_hash": "e738ffe412ae0f322994d25b13119102",
     "semantic_hash": ""
   },
   "tests/ig-insights/rutas-http-wp-test.php": {
@@ -13510,113 +13435,198 @@
     "semantic_hash": ""
   },
   "tests/meta-capi/atlead-test.mjs": {
-    "mtime": 1793225939.1834254,
+    "mtime": 1793226994.4681036,
     "ast_hash": "621a608909cf18c321c950342235c9c7",
     "semantic_hash": ""
   },
   "tests/meta-capi/correr.sh": {
-    "mtime": 1793225939.1860952,
+    "mtime": 1793226994.4681036,
     "ast_hash": "ae748a97db1effcdb9b6666c6b2f63ff",
     "semantic_hash": ""
   },
   "tests/meta-capi/envio-wp-test.php": {
-    "mtime": 1793225939.1871083,
+    "mtime": 1793226994.469103,
     "ast_hash": "bd585f4969ab8f4b51a1ef5c1a66216a",
     "semantic_hash": ""
   },
   "tests/meta-capi/paridad-test.mjs": {
-    "mtime": 1793225939.196944,
+    "mtime": 1793226994.4711182,
     "ast_hash": "5fbee6d33803d963a5c7e43a259566d7",
     "semantic_hash": ""
   },
   "tests/meta-capi/plantillas-test.php": {
-    "mtime": 1793225939.197945,
+    "mtime": 1793226994.4799285,
     "ast_hash": "120bad14a6b0ada66a00ac782c71ec32",
     "semantic_hash": ""
   },
   "tests/meta-capi/puras-test.php": {
-    "mtime": 1793225939.2002442,
+    "mtime": 1793226994.4814327,
     "ast_hash": "717197b98ea4c8cb1836b044e945ad32",
     "semantic_hash": ""
   },
   "wp-content/mu-plugins/at-meta-capi.php": {
-    "mtime": 1793225939.2134175,
+    "mtime": 1793226994.4970925,
     "ast_hash": "f8a2cb1bfb0069cb05e2d9d0b2757de7",
     "semantic_hash": ""
   },
   "wp-content/themes/automatiza-tech/assets/js/at-lead-id.js": {
-    "mtime": 1793225939.2213445,
+    "mtime": 1793226994.5064769,
     "ast_hash": "2bf5b3b1b0a25fd60ee0cf5d5973f2e6",
     "semantic_hash": ""
   },
   "wp-content/themes/automatiza-tech/inc/lead-origen.php": {
-    "mtime": 1793225939.2622232,
+    "mtime": 1793226994.5349357,
     "ast_hash": "92151eaccd6604bcd6365e1db8a6f383",
     "semantic_hash": ""
   },
   "wp-content/themes/automatiza-tech/inc/meta-capi/cargar.php": {
-    "mtime": 1793225939.2739735,
+    "mtime": 1793226994.535921,
     "ast_hash": "664a0484261d7d922c2e566d590242c5",
     "semantic_hash": ""
   },
   "wp-content/themes/automatiza-tech/inc/meta-capi/envio.php": {
-    "mtime": 1793225939.2749772,
+    "mtime": 1793226994.53692,
     "ast_hash": "82dc39e29478c5276da7332b1ee4192c",
     "semantic_hash": ""
   },
   "wp-content/themes/automatiza-tech/inc/meta-capi/puras.php": {
-    "mtime": 1793225939.2759752,
+    "mtime": 1793226994.5379193,
     "ast_hash": "8820722df0d55ad3e1583355d3a1c670",
     "semantic_hash": ""
   },
   "Docs/MARKETING/2026-10-28-META-CAPI-LEAD.md": {
-    "mtime": 1793225938.9874513,
+    "mtime": 1793226994.313785,
     "ast_hash": "857d606fc8bd031d5beb5c98a27c86bc",
     "semantic_hash": ""
   },
   "Docs/OMNICLIENTE-METRICAS-IG.md": {
-    "mtime": 1793225916.2840662,
-    "ast_hash": "5e554ccaea81bcc702559b3f0104d4f2",
+    "mtime": 1793226955.475898,
+    "ast_hash": "2c4785a0492df6dc535fbe51062f89be",
     "semantic_hash": ""
   },
   "Docs/superpowers/plans/2026-10-28-meta-capi-lead.md": {
-    "mtime": 1793225938.9938126,
+    "mtime": 1793226994.3217998,
     "ast_hash": "8e42347e2d11692e05b72d4167e5f84a",
     "semantic_hash": ""
   },
   "Docs/superpowers/specs/2026-10-28-meta-capi-lead-design.md": {
-    "mtime": 1793225938.9978163,
+    "mtime": 1793226994.33834,
     "ast_hash": "65bb18b8d37bc50ddbdcf8cb17f4d3c6",
     "semantic_hash": ""
   },
   "N8N/cerebro-at/README.md": {
-    "mtime": 1793225938.9988077,
+    "mtime": 1793226994.3395178,
     "ast_hash": "120e8d18566289468037c0a94426107e",
     "semantic_hash": ""
   },
   "N8N/cerebro-at/cerebro-at.md": {
-    "mtime": 1793225939.0002239,
+    "mtime": 1793226994.3405771,
     "ast_hash": "49fdbda4df7fad5f9132578b177a76b6",
     "semantic_hash": ""
   },
   "N8N/cerebro-at/personalidad-instagram.md": {
-    "mtime": 1793225939.0122442,
+    "mtime": 1793226994.3415244,
     "ast_hash": "b9dc0d06091af2240438b91e89b03d50",
     "semantic_hash": ""
   },
   "N8N/cerebro-at/personalidad-web.md": {
-    "mtime": 1793225939.0132601,
+    "mtime": 1793226994.3425455,
     "ast_hash": "ca81c22a2edac2f7d0c89d53bf4e42ea",
     "semantic_hash": ""
   },
   "N8N/cerebro-at/personalidad-whatsapp.md": {
-    "mtime": 1793225939.0132601,
+    "mtime": 1793226994.344307,
     "ast_hash": "ea47cd4c57ec3969631951e6f1d34a84",
     "semantic_hash": ""
   },
   "N8N/cerebro-at/reglas.md": {
-    "mtime": 1793225939.014769,
+    "mtime": 1793226994.344307,
     "ast_hash": "eb11e5ec9f846b812c366b634e82e155",
+    "semantic_hash": ""
+  },
+  "omnicliente/assets/AgentsView-Cgk03-D1.js": {
+    "mtime": 1793226956.2155547,
+    "ast_hash": "375124de11dd734cecafb0cd896cd503",
+    "semantic_hash": ""
+  },
+  "omnicliente/assets/AiPromptView-CDaMOm0d.js": {
+    "mtime": 1793226956.2177737,
+    "ast_hash": "3070dd085f20a5fe8d18152bda700c0a",
+    "semantic_hash": ""
+  },
+  "omnicliente/assets/AuditView-CmrThETz.js": {
+    "mtime": 1793226956.2187908,
+    "ast_hash": "005a2fa3a4708877f3967f1f5cb9aea7",
+    "semantic_hash": ""
+  },
+  "omnicliente/assets/BotConfigUnifiedView-Cey7JYf2.js": {
+    "mtime": 1793226956.219788,
+    "ast_hash": "73c31dd21cfbf8937c00032af482e1cc",
+    "semantic_hash": ""
+  },
+  "omnicliente/assets/BotsView-CZITqJ2i.js": {
+    "mtime": 1793226956.219788,
+    "ast_hash": "19a27fbaf15acf441946a7ec69d22792",
+    "semantic_hash": ""
+  },
+  "omnicliente/assets/ChannelTypesView-oHttT4sf.js": {
+    "mtime": 1793226956.2207892,
+    "ast_hash": "d530913af9d6ff090d22d373fdb63c89",
+    "semantic_hash": ""
+  },
+  "omnicliente/assets/ChannelsView-dCgmBjXM.js": {
+    "mtime": 1793226956.2207892,
+    "ast_hash": "485a9a1fb3f6471e21bf7aaa0eb5b1c7",
+    "semantic_hash": ""
+  },
+  "omnicliente/assets/ClientsView-5ryrC-Rr.js": {
+    "mtime": 1793226956.2222166,
+    "ast_hash": "216683ec2d47286ad4461ae55b3386ad",
+    "semantic_hash": ""
+  },
+  "omnicliente/assets/DashboardView-BwgK6q03.js": {
+    "mtime": 1793226956.2236576,
+    "ast_hash": "e503c0c6d1417a6b6e86112be3f6172d",
+    "semantic_hash": ""
+  },
+  "omnicliente/assets/InboxView-Cr3wKOle.js": {
+    "mtime": 1793226956.2239766,
+    "ast_hash": "81bf683f7327cfcd6d06f66a9f657d62",
+    "semantic_hash": ""
+  },
+  "omnicliente/assets/MarketingIgView-DfrQgCJC.js": {
+    "mtime": 1793226956.224977,
+    "ast_hash": "64cc2134b6a12acdfeea9af7ca04c9e6",
+    "semantic_hash": ""
+  },
+  "omnicliente/assets/ProfileView-WBE0Vbp2.js": {
+    "mtime": 1793226956.22623,
+    "ast_hash": "f4181f208570bab9de697db1911f72a1",
+    "semantic_hash": ""
+  },
+  "omnicliente/assets/PromptsView-0DQKcO6a.js": {
+    "mtime": 1793226956.227238,
+    "ast_hash": "0082121a17cafc9ec7a71be7af2c65f4",
+    "semantic_hash": ""
+  },
+  "omnicliente/assets/SupportView-bJCPjgC4.js": {
+    "mtime": 1793226956.227238,
+    "ast_hash": "567bec2c1ce74584ce14f3f5a8e4dfd1",
+    "semantic_hash": ""
+  },
+  "omnicliente/assets/index-V2DUMac_.js": {
+    "mtime": 1793226956.2292366,
+    "ast_hash": "66b120622f9b6635a0abde7c30bc2c6d",
+    "semantic_hash": ""
+  },
+  "tests/omnicliente/secretos-canales-wp-test.php": {
+    "mtime": 1793226956.236939,
+    "ast_hash": "fff511069097b0ffad5fee8bb020f5eb",
+    "semantic_hash": ""
+  },
+  "tools/omni-audit-secretos.php": {
+    "mtime": 1793226956.23794,
+    "ast_hash": "627527f8287ca3fab40932664da0a862",
     "semantic_hash": ""
   }
 }

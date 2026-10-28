@@ -3260,6 +3260,53 @@ class OmnichannelController {
     }
 
     /**
+     * Respuesta pública bajo un comentario (POST /<COMMENT_ID>/replies).
+     * Returns ['success'=>true,'id'=>..] or ['error'=>..].
+     */
+    public function reply_instagram_comment($channel_id, $comment_id, $content) {
+        // local: el error es de este lado y nada llegó a Meta (seguro que no se publicó).
+        $channel = $this->get_instagram_channel_for_api($channel_id);
+        if (!$channel) return ['error' => 'Canal no encontrado', 'local' => true];
+        if (empty($channel->bot_token)) return ['error' => 'Canal sin token de Instagram configurado', 'local' => true];
+        $comment_id = preg_replace('/[^0-9A-Za-z_\-]/', '', (string) $comment_id);
+        if ($comment_id === '') return ['error' => 'Falta el id del comentario', 'local' => true];
+        if ($content === '' || $content === null) return ['error' => 'Contenido vacío', 'local' => true];
+
+        $res = $this->ig_api_request('POST', $channel, $comment_id . '/replies', ['message' => $content]);
+        if (!empty($res['success']) && !empty($res['data']['id'])) {
+            return ['success' => true, 'id' => (string) $res['data']['id']];
+        }
+        // code: el HTTP de Meta (0 si no hubo respuesta, p. ej. por tiempo: la respuesta pudo haber salido).
+        return ['error' => $res['error'] ?? 'Error desconocido al responder el comentario', 'code' => (int) ($res['code'] ?? 0)];
+    }
+
+    /**
+     * Respuesta privada ligada a un comentario: recipient.comment_id, nunca un IGSID, así Meta
+     * la entrega solo a quien escribió ese comentario. Una por comentario, dentro de 7 días.
+     * Returns ['success'=>true,'message_id'=>..,'recipient_id'=>..] or ['error'=>..].
+     */
+    public function send_instagram_private_reply($channel_id, $comment_id, $content) {
+        $channel = $this->get_instagram_channel_for_api($channel_id);
+        if (!$channel) return ['error' => 'Canal no encontrado'];
+        $comment_id = preg_replace('/[^0-9A-Za-z_\-]/', '', (string) $comment_id);
+        if ($comment_id === '') return ['error' => 'Falta el id del comentario'];
+        if ($content === '' || $content === null) return ['error' => 'Contenido vacío'];
+
+        $res = $this->ig_api_request('POST', $channel, 'me/messages', [
+            'recipient' => ['comment_id' => $comment_id],
+            'message'   => ['text' => $content],
+        ]);
+        if (!empty($res['success'])) {
+            return [
+                'success'      => true,
+                'message_id'   => $res['data']['message_id']   ?? '',
+                'recipient_id' => $res['data']['recipient_id'] ?? '',
+            ];
+        }
+        return ['error' => $res['error'] ?? 'Error desconocido al enviar la respuesta privada'];
+    }
+
+    /**
      * Crea un contenedor de media de Instagram sin esperar el procesamiento.
      * Usado por n8n para evitar requests HTTP bloqueantes de varios minutos.
      */
@@ -3531,6 +3578,76 @@ class OmnichannelController {
                 'error_message'   => $ig['error'] ?? 'Error desconocido',
             ], ['id' => $message_id]);
         }
+    }
+
+    /**
+     * Eco de Instagram (message.is_echo): un mensaje que envió la propia cuenta, desde el portal,
+     * la app de Instagram o la respuesta privada a un comentario. Antes se guardaba como entrante
+     * en una conversación a nombre de la cuenta; ahora:
+     *   - si ya está registrado (mismo mid), no se repite;
+     *   - si coincide con un saliente reciente sin mid de esa conversación, se le pone el mid;
+     *   - si no, queda como saliente del ejecutivo en la conversación del destinatario.
+     * Si no hay conversación con ese destinatario, se ignora: la abre el primer mensaje de la
+     * persona, y así un eco que llega antes de que se registre la respuesta privada no la duplica.
+     * Nunca se reenvía al bot ni cambia el estado de la conversación.
+     */
+    public function record_instagram_echo($channel_id, $data) {
+        $channel_id = absint($channel_id);
+        $mid = sanitize_text_field($data['external_message_id'] ?? '');
+        $recipient = sanitize_text_field($data['external_contact_id'] ?? '');
+        if ($mid === '' || $recipient === '') return ['status' => 'echo_ignored'];
+
+        $known = $this->wpdb->get_var($this->wpdb->prepare(
+            "SELECT m.id FROM {$this->prefix}messages m
+             JOIN {$this->prefix}conversations c ON c.id = m.conversation_id
+             WHERE c.channel_id = %d AND m.external_message_id = %s LIMIT 1",
+            $channel_id, $mid
+        ));
+        if ($known) return ['status' => 'echo_duplicate', 'message_id' => (int) $known];
+
+        $conv = $this->wpdb->get_row($this->wpdb->prepare(
+            "SELECT id FROM {$this->prefix}conversations
+             WHERE channel_id = %d AND external_contact_id = %s AND status != 'archived' ORDER BY id DESC LIMIT 1",
+            $channel_id, $recipient
+        ));
+        if (!$conv) return ['status' => 'echo_no_conversation'];
+
+        $content = sanitize_textarea_field($data['content'] ?? '');
+        // El eco puede llegar antes de que el envío del portal guarde su mid: se le asigna a ese mensaje.
+        $pending = $this->wpdb->get_var($this->wpdb->prepare(
+            "SELECT id FROM {$this->prefix}messages
+             WHERE conversation_id = %d AND direction = 'outbound' AND sender_type IN ('agent','bot')
+               AND (external_message_id IS NULL OR external_message_id = '') AND content = %s AND created_at >= %s
+             ORDER BY id DESC LIMIT 1",
+            $conv->id, $content, gmdate('Y-m-d H:i:s', time() - 120)
+        ));
+        if ($pending) {
+            $this->wpdb->update($this->prefix . 'messages', ['external_message_id' => $mid, 'delivery_status' => 'sent'], ['id' => $pending]);
+            return ['status' => 'echo_matched', 'message_id' => (int) $pending, 'conversation_id' => (int) $conv->id];
+        }
+
+        $now = current_time('mysql', 1);
+        $type = $data['type'] ?? 'text';
+        $this->wpdb->insert($this->prefix . 'messages', [
+            'conversation_id'     => $conv->id,
+            'channel_type'        => 'instagram',
+            'direction'           => 'outbound',
+            'sender_type'         => 'agent',
+            'sender_name'         => 'Instagram (app)',
+            'message_type'        => in_array($type, ['text','image','video','audio','document','location','sticker'], true) ? $type : 'text',
+            'content'             => $content,
+            'media_url'           => esc_url_raw($data['media_url'] ?? ''),
+            'external_message_id' => $mid,
+            'delivery_status'     => 'sent',
+            'metadata_json'       => wp_json_encode(['origen' => 'eco_instagram']),
+            'created_at'          => $now,
+        ]);
+        $message_id = (int) $this->wpdb->insert_id;
+        $this->wpdb->update($this->prefix . 'conversations', [
+            'last_message_at'      => $now,
+            'last_message_preview' => mb_substr(sanitize_text_field($content), 0, 500),
+        ], ['id' => $conv->id]);
+        return ['status' => 'echo_recorded', 'message_id' => $message_id, 'conversation_id' => (int) $conv->id];
     }
 
     /**

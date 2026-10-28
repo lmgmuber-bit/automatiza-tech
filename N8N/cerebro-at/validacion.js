@@ -2,20 +2,26 @@
 // Fuente única: sincronizar.py copia el tramo marcado al nodo «Check Email Booking» de WhatsApp, y el asistente
 // de Instagram usa las mismas funciones en «Validar cita». No cambiar las reglas en n8n a mano: cambiarlas aquí.
 // <<VALIDACION AT: inicio>>
-const AT_NO_NOMBRES = new Set(['hola', 'holi', 'ola', 'buenas', 'buenos', 'buena', 'dias', 'días', 'tardes', 'noches',
-  'si', 'sí', 'no', 'ok', 'oka', 'okey', 'dale', 'claro', 'gracias', 'listo', 'perfecto', 'bueno', 'quiero', 'agendar',
-  'agenda', 'cita', 'reunion', 'reunión', 'demo', 'diagnostico', 'diagnóstico', 'test', 'prueba', 'nombre', 'apellido',
-  'correo', 'email', 'whatsapp', 'tech', 'bot']);
+// Palabras con que la gente responde sin dar su nombre. Un texto se rechaza si EMPIEZA con un saludo o una
+// confirmación, o si TODAS sus palabras están en la lista; así pasan apellidos reales como Claro, Bueno o Prueba.
+const AT_NO_NOMBRE_INICIO = new Set(['hola', 'holi', 'ola', 'buenas', 'buenos', 'buena', 'si', 'sí', 'no', 'ok', 'oka',
+  'okey', 'dale', 'gracias', 'listo', 'perfecto', 'claro', 'bueno', 'quiero', 'agendar', 'cita', 'demo', 'nombre',
+  'correo', 'email']);
+const AT_NO_NOMBRES = new Set([...AT_NO_NOMBRE_INICIO, 'dias', 'días', 'tardes', 'noches', 'agenda',
+  'reunion', 'reunión', 'diagnostico', 'diagnóstico', 'apellido', 'whatsapp', 'test', 'prueba', 'tech', 'bot']);
 
 // Nombre y apellido: al menos dos palabras de dos letras o más, solo letras (con tildes, ñ, ü), guion o apóstrofo.
+// Acepta que la persona lo presente: «Soy Ana Pérez», «me llamo Ana Pérez», «mi nombre es Ana Pérez».
 function atValidarNombre(texto) {
-  const limpio = String(texto || '').replace(/\s+/g, ' ').trim();
+  const limpio = String(texto || '').replace(/\s+/g, ' ').trim()
+    .replace(/^(hola[,!.]?\s+)?(me llamo|mi nombre es|soy)\s+/i, '').replace(/[.!]+$/, '').trim();
   if (!limpio) return { ok: false, motivo: 'vacio' };
   if (limpio.length > 60) return { ok: false, motivo: 'largo' };
   if (/[0-9@]/.test(limpio)) return { ok: false, motivo: 'caracteres' };
   if (!/^[A-Za-zÁÉÍÓÚáéíóúÑñÜü' -]+$/.test(limpio)) return { ok: false, motivo: 'caracteres' };
   const palabras = limpio.split(' ').filter(p => p.replace(/['-]/g, '').length > 0);
-  if (palabras.some(p => AT_NO_NOMBRES.has(p.toLowerCase()))) return { ok: false, motivo: 'no_es_nombre' };
+  const minus = palabras.map(p => p.toLowerCase());
+  if (AT_NO_NOMBRE_INICIO.has(minus[0]) || minus.every(p => AT_NO_NOMBRES.has(p))) return { ok: false, motivo: 'no_es_nombre' };
   if (palabras.length < 2 || palabras.filter(p => p.replace(/['-]/g, '').length >= 2).length < 2) {
     return { ok: false, motivo: 'falta_apellido' };
   }
@@ -50,13 +56,14 @@ function atValidarCorreo(texto) {
 }
 
 // WhatsApp con código de país, en formato +<código><número>. Un celular chileno sin código se completa con +56.
-// En Chile el celular es +56 9 y ocho dígitos.
+// En Chile el celular es +56 9 y ocho dígitos. Cualquier otro número sin «+» (o «00») se rechaza: no se adivina el
+// país, porque un venezolano que escribe 4141234567 quedaría como +41 (Suiza) y el recordatorio iría a otra persona.
 function atValidarWhatsApp(texto) {
   let tel = String(texto || '').replace(/[^\d+]/g, '');
   if (/^00\d/.test(tel)) tel = '+' + tel.slice(2);
   if (/^9\d{8}$/.test(tel)) tel = '+56' + tel;
   else if (/^569\d{8}$/.test(tel)) tel = '+' + tel;
-  else if (/^\d{8,15}$/.test(tel) && !tel.startsWith('0')) tel = '+' + tel;
+  if (/^\d+$/.test(tel)) return { ok: false, motivo: tel.length >= 8 ? 'falta_codigo' : 'formato' };
   if (!/^\+[1-9]\d{7,14}$/.test(tel)) return { ok: false, motivo: 'formato' };
   if (tel.startsWith('+56') && !/^\+569\d{8}$/.test(tel)) return { ok: false, motivo: 'chile' };
   return { ok: true, valor: tel };

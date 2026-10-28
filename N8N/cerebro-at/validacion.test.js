@@ -19,6 +19,15 @@ ok('con correo', () => assert.strictEqual(N('juan@correo.cl').ok, false));
 ok('vacío', () => assert.strictEqual(N('   ').motivo, 'vacio'));
 ok('muy largo', () => assert.strictEqual(N('Ana ' + 'Muylargo'.repeat(10)).motivo, 'largo'));
 ok('emoji', () => assert.strictEqual(N('Ana Pérez 😀').motivo, 'caracteres'));
+ok('apellidos reales que parecen palabras', () => ['Ricardo Claro', 'Ana Prueba', 'Pedro Bueno', 'Luis Días']
+  .forEach(x => assert.strictEqual(N(x).ok, true, x)));
+ok('«Soy Ana Pérez»', () => assert.strictEqual(N('Soy Ana Pérez').valor, 'Ana Pérez'));
+ok('«Hola, me llamo Ana Pérez.»', () => assert.strictEqual(N('Hola, me llamo Ana Pérez.').valor, 'Ana Pérez'));
+ok('«mi nombre es Ana Pérez»', () => assert.strictEqual(N('mi nombre es Ana Pérez').valor, 'Ana Pérez'));
+ok('«Soy Ana»: falta apellido', () => assert.strictEqual(N('Soy Ana').motivo, 'falta_apellido'));
+ok('«buenas tardes» no es nombre', () => assert.strictEqual(N('buenas tardes').motivo, 'no_es_nombre'));
+ok('«claro que sí» no es nombre', () => assert.strictEqual(N('claro que sí').motivo, 'no_es_nombre'));
+ok('«hola soy» sin nombre', () => assert.strictEqual(N('hola soy').ok, false));
 
 // Correo
 ok('correo válido en minúsculas', () => assert.deepStrictEqual(C('  Ana.Perez@Empresa.CL '), { ok: true, valor: 'ana.perez@empresa.cl' }));
@@ -43,7 +52,9 @@ ok('chileno sin código', () => assert.strictEqual(W('9 1234 5678').valor, '+569
 ok('chileno con 56 sin +', () => assert.strictEqual(W('56912345678').valor, '+56912345678'));
 ok('con 00 adelante', () => assert.strictEqual(W('0056912345678').valor, '+56912345678'));
 ok('venezolano', () => assert.strictEqual(W('+58 414 123 4567').valor, '+584141234567'));
-ok('número de WhatsApp sin + (como lo entrega Meta)', () => assert.strictEqual(W('584141234567').valor, '+584141234567'));
+ok('extranjero sin + no se adivina', () => assert.strictEqual(W('584141234567').motivo, 'falta_codigo'));
+ok('venezolano sin código no queda como otro país', () => assert.strictEqual(W('4141234567').motivo, 'falta_codigo'));
+ok('venezolano con 00', () => assert.strictEqual(W('00584141234567').valor, '+584141234567'));
 ok('chileno incompleto', () => assert.strictEqual(W('+56 9 1234 567').ok, false));
 ok('fijo chileno no es WhatsApp', () => assert.strictEqual(W('+56 2 2345 6789').motivo, 'chile'));
 ok('muy corto', () => assert.strictEqual(W('12345').motivo, 'formato'));

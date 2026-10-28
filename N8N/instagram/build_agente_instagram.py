@@ -160,7 +160,8 @@ return [{ json: { callback_url: v.callback_url, prueba: v.prueba, herramientas: 
 """
 
 
-CEREBRO = os.path.join(AQUI, '..', 'cerebro-at')  # fuente única de Eje (personalidad y validación), 28-oct
+# Fuente única de Eje (personalidad y validación), 28-oct. AT_CEREBRO_DIR apunta a otra copia (p. ej. la rama de Eje).
+CEREBRO = os.environ.get('AT_CEREBRO_DIR') or os.path.join(AQUI, '..', 'cerebro-at')
 
 
 def leer(*partes):

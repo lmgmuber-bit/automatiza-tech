@@ -1,0 +1,46 @@
+// Prueba del nodo «Validar cita» del flujo de herramientas, tal como lo genera build_agente_instagram.py
+// (con la validación común del Cerebro AT). Sin red ni n8n. Correr: node N8N/instagram/validar-cita.test.js
+const fs = require('fs');
+const path = require('path');
+
+const wf = JSON.parse(fs.readFileSync(path.join(__dirname, 'agente-tech-instagram-herramientas.json'), 'utf8'));
+const codigo = wf.nodes.find(n => n.name === 'Validar cita').parameters.jsCode;
+
+// Lo mínimo de Luxon que usa el nodo: fechas como milisegundos.
+const DateTime = {
+  fromISO: s => { const d = new Date(s + ':00-03:00'); return { isValid: !isNaN(d), valueOf: () => d.getTime() }; },
+  now: () => ({ setZone: () => ({ plus: ({ hours }) => ({ valueOf: () => Date.now() + hours * 3600e3 }) }) }),
+};
+const correr = entrada => new Function('$', 'DateTime', codigo)(() => ({ first: () => ({ json: entrada }) }), DateTime)[0].json;
+const base = { nombre: 'ana rojas', correo: 'Ana.Rojas@Ejemplo.cl', telefono: '9 1234 5678', fecha: '2099-12-01',
+  hora: '10:00', igsid: '123', prueba: 'si' };
+
+let fallas = 0;
+const ok = (c, m, d) => { console.log((c ? 'ok    ' : 'FALLA ') + m + (c ? '' : '  ' + JSON.stringify(d))); if (!c) fallas++; };
+
+let r = correr(base);
+ok(r.ok === true && r.name === 'Ana Rojas' && r.email === 'ana.rojas@ejemplo.cl' && r.phone === '+56912345678',
+  'datos buenos: nombre con mayúsculas, correo en minúscula y celular chileno con +56', r);
+ok(r.session_id === 'ig:123' && r.appointmentType === 'Demo' && r.prueba === true, 'sesión ig:, tipo Demo y modo prueba', r);
+r = correr({ ...base, nombre: 'Ana' });
+ok(!r.ok && /apellido/.test(r.result), 'sin apellido: lo pide', r);
+r = correr({ ...base, nombre: 'Hola Ana' });
+ok(!r.ok && /no parece un nombre/.test(r.result), 'un saludo no es un nombre', r);
+r = correr({ ...base, correo: 'ana@gmail.con' });
+ok(!r.ok && r.result.includes('ana@gmail.com'), 'gmail.con: sugiere gmail.com', r);
+r = correr({ ...base, correo: 'ana@' });
+ok(!r.ok && /correo no es válido/.test(r.result), 'correo inválido: lo vuelve a pedir', r);
+r = correr({ ...base, telefono: '' });
+ok(!r.ok && r.result.includes('+56 9 1234 5678'), 'sin WhatsApp: lo pide con el ejemplo', r);
+r = correr({ ...base, telefono: '+56 2 2345 6789' });
+ok(!r.ok && /\+56 9 y ocho dígitos/.test(r.result), 'número de Chile que no es celular: lo rechaza', r);
+r = correr({ ...base, telefono: '+58 414 123 4567' });
+ok(r.ok && r.phone === '+584141234567', 'celular de otro país con código: sirve', r);
+r = correr({ ...base, hora: '10:30' });
+ok(!r.ok && /hora en punto/.test(r.result), 'hora que no es en punto: se rechaza', r);
+r = correr({ ...base, fecha: '2020-01-01' });
+ok(!r.ok && /ya pasó/.test(r.result), 'fecha pasada: se rechaza', r);
+for (const x of [correr({ ...base, nombre: 'Ana' })]) ok(/No agendes/.test(x.result), 'cada rechazo le dice al agente que no agende', x);
+
+console.log(fallas ? `\n${fallas} FALLAS` : '\nTODO OK');
+process.exit(fallas ? 1 : 0);

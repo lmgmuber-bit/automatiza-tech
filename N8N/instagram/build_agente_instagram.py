@@ -160,9 +160,34 @@ return [{ json: { callback_url: v.callback_url, prueba: v.prueba, herramientas: 
 """
 
 
+CEREBRO = os.path.join(AQUI, '..', 'cerebro-at')  # fuente única de Eje (personalidad y validación), 28-oct
+
+
+def leer(*partes):
+    with open(os.path.join(*partes), encoding='utf-8') as f:
+        return f.read()
+
+
 def prompt_instagram():
-    with open(os.path.join(AQUI, 'prompt-canal-instagram.md'), encoding='utf-8') as f:
-        return f.read().strip()
+    """Bloque del canal con la personalidad común de Tech Instagram (N8N/cerebro-at/personalidad-instagram.md)."""
+    bloque = leer(AQUI, 'prompt-canal-instagram.md').strip()
+    personalidad = leer(CEREBRO, 'personalidad-instagram.md').strip()
+    if bloque.count('{{PERSONALIDAD_INSTAGRAM}}') != 1 or not personalidad.startswith('### '):
+        raise SystemExit('falta la marca {{PERSONALIDAD_INSTAGRAM}} o la personalidad de Instagram del Cerebro AT')
+    return bloque.replace('{{PERSONALIDAD_INSTAGRAM}}', personalidad)
+
+
+def validacion_at():
+    """Tramo marcado de N8N/cerebro-at/validacion.js: atValidarNombre, atValidarCorreo y atValidarWhatsApp."""
+    js = leer(CEREBRO, 'validacion.js')
+    ini, fin = '// <<VALIDACION AT: inicio>>', '// <<VALIDACION AT: fin>>'
+    if js.count(ini) != 1 or js.count(fin) != 1:
+        raise SystemExit('validacion.js del Cerebro AT no trae las marcas VALIDACION AT')
+    tramo = js[js.index(ini):js.index(fin) + len(fin)]
+    for f in ('atValidarNombre', 'atValidarCorreo', 'atValidarWhatsApp'):
+        if 'function ' + f not in tramo:
+            raise SystemExit('validacion.js no trae ' + f)
+    return tramo
 
 
 def flujo_principal():
@@ -344,21 +369,26 @@ return [{ json: { result: txt } }];
 
 JS_VALIDAR_CITA = r"""
 // Revisa la cita antes de agendar. El sub-workflow de PROD vuelve a revisar el horario en WordPress y en Calendar.
+// Nombre, correo y WhatsApp con la validación común del Cerebro AT (N8N/cerebro-at/validacion.js, la mantiene Eje).
+VALIDACION_AT
 const t = $('Entrada').first().json;
 const fecha = String(t.fecha || '').trim();
 const hora = String(t.hora || '').trim().slice(0, 5);
-const correo = String(t.correo || '').trim().toLowerCase();
-const nombre = String(t.nombre || '').trim().slice(0, 80);
-// WhatsApp para los recordatorios: con código de país (+ y 8 a 15 dígitos). Un celular chileno sin código se completa con +56.
-let tel = String(t.telefono || '').replace(/[^\d+]/g, '');
-if (/^00\d/.test(tel)) tel = '+' + tel.slice(2);
-if (/^9\d{8}$/.test(tel)) tel = '+56' + tel;
-else if (/^569\d{8}$/.test(tel)) tel = '+' + tel;
-const malo = msg => [{ json: { ok: false, result: msg } }];
+const malo = msg => [{ json: { ok: false, result: msg + ' No agendes hasta tenerlo bien.' } }];
+const vn = atValidarNombre(t.nombre);
+if (!vn.ok) return malo(vn.motivo === 'vacio' || vn.motivo === 'falta_apellido'
+  ? 'Falta el nombre y apellido de la persona: pídeselo.'
+  : 'Eso no parece un nombre y apellido: pídeselo de nuevo.');
+const vc = atValidarCorreo(t.correo);
+if (!vc.ok) return malo(vc.motivo === 'tipeo'
+  ? 'El correo parece mal escrito: pregúntale si es ' + vc.sugerencia + '.'
+  : 'El correo no es válido: pídeselo de nuevo.');
 // Obligatorio desde el 28-oct (Luis): sin WhatsApp con código de país no se agenda.
-if (!/^\+[1-9]\d{7,14}$/.test(tel)) return malo('Falta el WhatsApp con código de país (es obligatorio): pídeselo con el ejemplo «en Chile: +56 9 1234 5678». No agendes sin él.');
-if (!nombre) return malo('Falta el nombre de la persona.');
-if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(correo)) return malo('El correo no es válido: pídeselo de nuevo.');
+const vw = atValidarWhatsApp(t.telefono);
+if (!vw.ok) return malo(vw.motivo === 'chile'
+  ? 'El celular de Chile tiene que ser +56 9 y ocho dígitos (por ejemplo +56 9 1234 5678): pídeselo de nuevo.'
+  : 'Falta el WhatsApp con código de país (es obligatorio): pídeselo con el ejemplo «en Chile: +56 9 1234 5678».');
+const nombre = vn.valor, correo = vc.valor, tel = vw.valor;
 if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha) || !/^\d{2}:00$/.test(hora)) return malo('Fecha u hora inválida: fecha AAAA-MM-DD y hora en punto (HH:00).');
 const dt = DateTime.fromISO(fecha + 'T' + hora, { zone: 'ZONA' });
 if (!dt.isValid) return malo('Fecha u hora inválida.');
@@ -383,7 +413,7 @@ def flujo_herramientas():
              {'method': 'POST', 'url': WP + '/check-availability', 'sendBody': True, 'specifyBody': 'json',
               'jsonBody': '={{ JSON.stringify({ date: $json.date }) }}', 'options': {'timeout': 15000}}),
         code('igh-horas', 'Horas libres', [1320, 260], JS_HORAS),
-        code('igh-validar', 'Validar cita', [440, 420], JS_VALIDAR_CITA),
+        code('igh-validar', 'Validar cita', [440, 420], JS_VALIDAR_CITA.replace('VALIDACION_AT', validacion_at())),
         si_booleano('igh-ok', '¿Cita válida?', [660, 420], '$json.ok'),
         si_booleano('igh-prueba', '¿Es prueba?', [880, 380], '$json.prueba'),
         # Igual al mensaje de éxito del sub-workflow de PROD («Set Success Message»), para que el agente se comporte igual.

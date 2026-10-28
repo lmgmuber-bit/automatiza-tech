@@ -197,7 +197,7 @@ def agenda_simulada():
     g, c = nuevo()
     martes = proximo(2)
     r1 = turno(g, c, 'Hola, quiero agendar el diagnóstico gratis para el %s' % martes.isoformat())
-    r2 = turno(g, c, 'A las 11:00. Soy Ana Prueba, mi correo es ana.prueba@ejemplo.cl.')
+    r2 = turno(g, c, 'A las 11:00. Soy Ana Rojas, mi correo es ana.rojas@ejemplo.cl.')
     t2 = (r2 or {}).get('body', {}).get('content', '')
     ok('agendar' not in (r1 or {}).get('herramientas', []) + (r2 or {}).get('herramientas', []) and '+56' in t2,
        'agenda: sin celular no agenda y lo pide con el ejemplo +56', t2[:300])
@@ -209,7 +209,7 @@ def agenda_simulada():
     ok('ver_disponibilidad' in usadas, 'agenda: consulta la disponibilidad', str(usadas))
     ok((r3 or {}).get('herramientas', []).count('agendar') == 1, 'agenda: agenda una vez, después del «sí»', str(usadas))
     t3 = (r3 or {}).get('body', {}).get('content', '')
-    ok('11:00' in t3 and 'ana.prueba@ejemplo.cl' in t3, 'agenda: confirma la hora y el correo de la cita', t3[:300])
+    ok('11:00' in t3 and 'ana.rojas@ejemplo.cl' in t3, 'agenda: confirma la hora y el correo de la cita', t3[:300])
     for i, x in enumerate((r1, r2, r2b, r3), 1):
         print('      %d →' % i, (x or {}).get('body', {}).get('content', '')[:220].replace('\n', ' '))
 
@@ -218,7 +218,7 @@ def agenda_simulada():
 def agenda_whatsapp():
     g, c = nuevo()
     jueves = proximo(4)
-    r1 = turno(g, c, 'Quiero agendar el diagnóstico el %s a las 10:00. Soy Ana Prueba, ana.prueba@ejemplo.cl' % jueves.isoformat())
+    r1 = turno(g, c, 'Quiero agendar el diagnóstico el %s a las 10:00. Soy Ana Rojas, ana.rojas@ejemplo.cl' % jueves.isoformat())
     t1 = (r1 or {}).get('body', {}).get('content', '')
     ok(any(x in t1.lower() for x in ('whatsapp', 'celular', 'teléfono', 'telefono')) and 'agendar' not in (r1 or {}).get('herramientas', []),
        'whatsapp: pide el celular antes de agendar', t1[:300])
@@ -231,6 +231,19 @@ def agenda_whatsapp():
     ok(usadas.count('agendar') == 1, 'whatsapp: con código de país, agenda una vez', str(usadas))
     for i, x in enumerate((r1, r2, r3, r4), 1):
         print('      %d →' % i, (x or {}).get('body', {}).get('content', '')[:200].replace('\n', ' '))
+
+
+@caso
+def datos_malos():
+    # Validación común del Cerebro AT: sin apellido y con un correo «@gmail.con» no agenda y los pide de nuevo.
+    g, c = nuevo()
+    martes = proximo(2)
+    r1 = turno(g, c, 'Quiero agendar el diagnóstico el %s a las 15:00. Soy Ana, ana.rojas@gmail.con, WhatsApp +56 9 1234 5678' % martes.isoformat())
+    r2 = turno(g, c, 'Sí, confirmo')
+    t = ' '.join((x or {}).get('body', {}).get('content', '') for x in (r1, r2)).lower()
+    ok('apellido' in t, 'datos malos: pide el apellido', t[:300])
+    ok('gmail.com' in t, 'datos malos: sugiere gmail.com', t[:300])
+    print('      →', t[:300].replace('\n', ' '))
 
 
 @caso

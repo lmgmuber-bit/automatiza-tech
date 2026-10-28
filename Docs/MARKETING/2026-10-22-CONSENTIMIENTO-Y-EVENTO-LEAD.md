@@ -40,3 +40,7 @@ Punto 9 de la lista de Luis: antes de pagar pauta en Meta, el Pixel tiene que pe
    - la portada muestra un solo aviso;
    - en «Probar eventos» del Administrador de eventos de Meta, `Lead` aparece al agendar una cita de prueba (con permiso).
 6. **Rollback:** borrar el mu-plugin y restaurar los dos archivos del respaldo. La opción AJAX puede quedar activa sin efecto.
+
+## Lead por el servidor (CAPI)
+
+Desde el 28-oct-2026 el Lead también puede ir desde el servidor, con el mismo `eventID` que el píxel: ver [2026-10-28-META-CAPI-LEAD.md](2026-10-28-META-CAPI-LEAD.md).

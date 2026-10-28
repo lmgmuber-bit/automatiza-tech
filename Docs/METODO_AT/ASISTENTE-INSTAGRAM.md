@@ -94,6 +94,12 @@ conversaciones 5 y 7 siguen asignadas.
 - **md5 en PROD tras el 28-oct:** `omnichannel-controller.php` `0811614c`, `omnichannel-derivacion.php` `f4290fd3`, `inc/api-endpoints.php` `41d46fd6`, `inc/lead-origen.php` `7365a039`.
 - **Prompt:** el agente no conoce el Método AT (a «¿En qué consiste su método AT?» respondió que estaba fuera de su área). Lo actualiza Eje en el agente web y lo propaga a Instagram con `aplicar.py`.
 
+## Cerebro AT y agenda (28-oct, tarde)
+
+- La personalidad y la validación de datos vienen del Cerebro AT (`N8N/cerebro-at`, lo mantiene Eje). En Instagram solo esta sesión corre `aplicar.py` y `probar.py`; Eje avisa cuando cambia el cerebro.
+- `agendar` revisa la agenda real del día antes de crear la cita (nodos «Agenda del día» → «Revisar hora»): no agenda en feriados, días sin atención, fuera de horario ni en horas tomadas, y agenda con un solo «sí».
+- **Pendiente de Eje:** el sub-workflow compartido `PejBgr2LZQSAbbBy` solo revisa choques con otras citas, no feriados ni horario. Instagram ya lo cubre con su propia revisión; la web y WhatsApp agendan por ese mismo sub-workflow. Lo natural es revisar `check-availability` dentro del sub-workflow, antes de «Create Event», y así cubrir los tres canales.
+
 ## Después
 
 - Clasificar en frío, tibio, caliente o «no califica» y avisar al instante cuando llega uno caliente.

@@ -7289,19 +7289,26 @@ class AutomatizaTech_CRM_AI {
     // ========== AJAX: GUARDAR NOTA ==========
     public function ajax_guardar_nota() {
         check_ajax_referer('crm_nonce', 'nonce');
-        
+        // Permiso, cliente que exista y fecha válida (mu-plugin at-crm-validar-nota.php). Sin la validación, no se guarda.
+        if (!function_exists('at_crm_validar_nota')) {
+            wp_send_json_error(['message' => 'No se pudo validar la nota.'], 500);
+        }
+        $cliente_id = intval($_POST['cliente_id'] ?? 0);
+        $v = at_crm_validar_nota($cliente_id, (string) wp_unslash($_POST['fecha'] ?? ''));
+        if (!$v['ok']) {
+            wp_send_json_error(['message' => $v['error'] === 'sin_permiso' ? 'No tienes permiso para agregar notas.' : 'Ese cliente no existe.'], 403);
+        }
+
         global $wpdb;
-        $cliente_id = intval($_POST['cliente_id']);
         $nota = sanitize_textarea_field($_POST['nota']);
-        $fecha = !empty($_POST['fecha']) ? sanitize_text_field($_POST['fecha']) : current_time('mysql');
-        
+
         $wpdb->insert($this->tabla_historial, [
             'cliente_id' => $cliente_id,
             'tipo_evento' => 'nota',
             'titulo' => 'Nota agregada',
             'descripcion' => $nota,
             'usuario_id' => get_current_user_id(),
-            'created_at' => $fecha
+            'created_at' => $v['fecha']
         ]);
         
         wp_send_json_success();

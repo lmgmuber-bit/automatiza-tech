@@ -13,12 +13,19 @@ if (!function_exists('automatiza_tech_verify_client_by_phone')) {
 	exit(2);
 }
 $wpdb->show_errors(true);
+// 28-oct-2026: la ruta exige la clave X-AT-Secret de n8n (at_cc_rest_auth). En local se define una de prueba.
+if (!defined('AT_REST_SECRET')) {
+	define('AT_REST_SECRET', 'clave-de-prueba-verify-client');
+}
 
-function vc_pedir(string $tel): array {
+function vc_pedir(string $tel, ?string $clave = AT_REST_SECRET): array {
 	global $wpdb;
 	$wpdb->last_error = '';
 	$r = new WP_REST_Request('GET', '/automatiza-tech/v1/verify-client');
 	$r->set_query_params(['phone' => $tel]);
+	if ($clave !== null) {
+		$r->set_header('X-AT-Secret', $clave);
+	}
 	ob_start();
 	$res = rest_do_request($r);
 	$impreso = (string) ob_get_clean();
@@ -80,6 +87,12 @@ foreach (['56' . $n1, '+56' . $n1, $n1, vc_con_espacios($n1)] as $entrada) {
 // ---------- 2) Sin propuesta, con cita (demo): la consulta de citas ya no pide `company` ----------
 $n2 = vc_numero();
 $l2 = vc_lead($marca, 'b', vc_con_espacios($n2), $leads);
+// 28-oct-2026: sin la clave, o con una equivocada, la ruta no dice nada del número.
+foreach (['sin clave' => null, 'clave vacía' => '', 'clave equivocada' => 'otra-clave'] as $caso => $clave) {
+	$r = vc_pedir('56' . $n2, $clave);
+	ok($r['status'] === 401 && !isset($r['data']['client_name']) && !isset($r['data']['client_email']),
+		"$caso: 401 y sin nombre ni correo");
+}
 $r = vc_pedir('56' . $n2);
 ok($r['impreso'] === '' && $r['error_bd'] === '', 'cita sin propuesta: sin error de la base (antes: Unknown column company)');
 ok(($r['data']['is_client'] ?? null) === true && ($r['data']['client_type'] ?? '') === 'lead' && ($r['data']['company_name'] ?? null) === '',

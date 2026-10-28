@@ -46,10 +46,17 @@ $esBabyShower = false;
 // «¿Vienes con alguien?», así que lo que llega son acompañantes, no niños.
 $esAdulto = false;
 $titulo = 'Confirmaciones';
+// Baby shower con regalo al confirmar (gift_mode = 'rsvp'): cada fila lleva equipo, regalo y si trajo foto de bebé.
+$esRsvp = false;
 if (!$invalido) {
     $lista = cb_rsvp_list((int) $acceso['party_id']);
     $esBabyShower = (string) ($acceso['event_type'] ?? '') === 'baby_shower';
     $esAdulto = (string) ($acceso['event_type'] ?? '') === 'adult_birthday';
+    if ($esBabyShower) {
+        $modoRsvp = cb_pdo()->prepare("SELECT 1 FROM cc_invitations WHERE party_id = ? AND gift_mode = 'rsvp' AND status <> 'revoked' LIMIT 1");
+        $modoRsvp->execute([(int) $acceso['party_id']]);
+        $esRsvp = (bool) $modoRsvp->fetchColumn();
+    }
     $nombre = trim((string) ($acceso['birthday_person_name'] ?? ''));
     $titulo = $esBabyShower
         ? ($nombre !== '' ? "Confirmados al baby shower de $nombre" : 'Confirmados al baby shower')
@@ -74,8 +81,12 @@ usort($lista, static fn($a, $b) => strcmp(
 
 $totalFamilias = count($lista);
 $totalNinos = 0;
+$teamMama = 0;
+$teamPapa = 0;
 foreach ($lista as $fila) {
     $totalNinos += count($ninosDe($fila['guest_names'] ?? ''));
+    $teamMama += ($fila['team'] ?? '') === 'mama' ? 1 : 0;
+    $teamPapa += ($fila['team'] ?? '') === 'papa' ? 1 : 0;
 }
 
 // La pantalla viste los colores y el fondo de la temática de la fiesta
@@ -179,6 +190,8 @@ $cDark2 = $hex($colores['dark2'] ?? '', '#0a1029');
   }
   .ninos--vacio { color: rgba(255,255,255,0.55); font-size: 0.9rem; }
   .fecha { margin-left: 36px !important; }
+  .detalle { margin: 6px 0 0 36px; color: #e6ecff; font-size: 0.95rem; }
+  .detalle b { color: var(--amarillo); font-weight: 700; }
   .fecha { color: rgba(255,255,255,0.55); font-size: 0.82rem; margin: 4px 0 0; }
   .vacio {
     text-align: center; padding: 48px 20px; color: rgba(255,255,255,0.8);
@@ -220,6 +233,9 @@ $cDark2 = $hex($colores['dark2'] ?? '', '#0a1029');
       <?php elseif (!$esBabyShower && !$esAdulto && $totalNinos > 0): ?>
       <span class="cifra">👧🧒 <?= $esc($totalNinos) ?> <?= $totalNinos === 1 ? 'niño' : 'niños' ?></span>
       <?php endif; ?>
+      <?php if ($esRsvp): ?>
+      <span class="cifra">Team Mamá <?= (int) $teamMama ?> · Team Papá <?= (int) $teamPapa ?></span>
+      <?php endif; ?>
     </p>
   </header>
 
@@ -230,7 +246,13 @@ $cDark2 = $hex($colores['dark2'] ?? '', '#0a1029');
   <?php $ninos = $ninosDe($fila['guest_names'] ?? ''); ?>
   <article class="tarjeta">
     <p class="familia"><span class="num"><?= $esc($i + 1) ?></span><?= $esc($fila['family_name']) ?></p>
-    <?php if ($ninos): ?>
+    <?php if ($esRsvp): ?>
+    <p class="detalle">
+      <b><?= ($fila['team'] ?? '') === 'mama' ? 'Team Mamá' : (($fila['team'] ?? '') === 'papa' ? 'Team Papá' : 'Sin equipo') ?></b>
+      · <?= trim((string) ($fila['gift_title'] ?? '')) !== '' ? 'lleva ' . $esc($fila['gift_title']) : 'sin regalo anotado' ?>
+      <?= !empty($fila['has_photo']) ? ' · 📷' : '' ?>
+    </p>
+    <?php elseif ($ninos): ?>
     <?php /* Un nombre por línea y no la frase entera: "Ana y ari" en un renglón se lee como
              un nombre solo, y esta pantalla existe para contar cuántos niños vienen. */ ?>
     <ul class="ninos">

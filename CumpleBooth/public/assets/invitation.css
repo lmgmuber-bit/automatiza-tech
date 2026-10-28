@@ -1746,6 +1746,7 @@ button.inv-scroll-hint.inv-scroll-hint--waiting {
 
 .inv-body[data-theme="baby-nube"] .inv-hero-media,
 .inv-body[data-theme="baby-safari"] .inv-hero-media,
+.inv-body[data-theme="baby-osito"] .inv-hero-media ,
 .inv-body[data-theme="baby-rosas"] .inv-hero-media {
   animation: inv-baby-respira 26s ease-in-out infinite alternate;
 }
@@ -1761,6 +1762,7 @@ button.inv-scroll-hint.inv-scroll-hint--waiting {
    que los múltiplos de 3 y de 4 salen corridos y con otro tamaño. */
 .inv-body[data-theme="baby-nube"] .inv-sparks,
 .inv-body[data-theme="baby-safari"] .inv-sparks,
+.inv-body[data-theme="baby-osito"] .inv-sparks ,
 .inv-body[data-theme="baby-rosas"] .inv-sparks {
   position: absolute;
   z-index: 0;
@@ -1771,6 +1773,7 @@ button.inv-scroll-hint.inv-scroll-hint--waiting {
 
 .inv-body[data-theme="baby-nube"] .inv-spark,
 .inv-body[data-theme="baby-safari"] .inv-spark,
+.inv-body[data-theme="baby-osito"] .inv-spark ,
 .inv-body[data-theme="baby-rosas"] .inv-spark {
   position: absolute;
   bottom: -12%;
@@ -1788,6 +1791,7 @@ button.inv-scroll-hint.inv-scroll-hint--waiting {
 /* Rompe la grilla: sin esto los doce suben en columnas parejas. */
 .inv-body[data-theme="baby-nube"] .inv-spark:nth-child(3n),
 .inv-body[data-theme="baby-safari"] .inv-spark:nth-child(3n),
+.inv-body[data-theme="baby-osito"] .inv-spark:nth-child(3n) ,
 .inv-body[data-theme="baby-rosas"] .inv-spark:nth-child(3n) {
   left: calc(var(--i) * 8.1% + 4.5%);
   width: 4px;
@@ -1796,6 +1800,7 @@ button.inv-scroll-hint.inv-scroll-hint--waiting {
 
 .inv-body[data-theme="baby-nube"] .inv-spark:nth-child(4n),
 .inv-body[data-theme="baby-safari"] .inv-spark:nth-child(4n),
+.inv-body[data-theme="baby-osito"] .inv-spark:nth-child(4n) ,
 .inv-body[data-theme="baby-rosas"] .inv-spark:nth-child(4n) {
   left: calc(var(--i) * 8.1% - 6.5%);
   width: 10px;
@@ -1834,6 +1839,37 @@ button.inv-scroll-hint.inv-scroll-hint--waiting {
   box-shadow: 0 0 13px 2px rgba(223, 162, 182, .48);
   border-radius: 60% 40% 55% 45%;
   animation-duration: calc(24s + var(--i) * 1.7s), calc(8s + var(--i) * .9s);
+}
+
+/* Osito de Bienvenida: globitos verdes y amarillos que suben suave, y de a
+   ratos una huellita café. Es la misma subida de las otras temáticas; solo
+   cambia lo que sube. Se pinta con degradados, sin imágenes ni glifos. */
+.inv-body[data-theme="baby-osito"] .inv-spark {
+  width: 11px;
+  height: 14px;
+  border-radius: 50% 50% 48% 48%;
+  background: radial-gradient(circle at 35% 30%, #fff, #b9d3a0 38%, #6e9b5a 82%);
+  box-shadow: 0 0 10px 1px rgba(185, 211, 160, .45);
+  animation-duration: calc(22s + var(--i) * 1.7s), calc(7s + var(--i) * .8s);
+}
+
+.inv-body[data-theme="baby-osito"] .inv-spark:nth-child(even) {
+  background: radial-gradient(circle at 35% 30%, #fffbe6, #f7dc82 40%, #f2cb55 84%);
+  box-shadow: 0 0 10px 1px rgba(242, 203, 85, .4);
+}
+
+.inv-body[data-theme="baby-osito"] .inv-spark:nth-child(5n) {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 50% 66%, #b98a5e 0 34%, transparent 36%),
+    radial-gradient(circle at 18% 36%, #b98a5e 0 16%, transparent 18%),
+    radial-gradient(circle at 40% 18%, #b98a5e 0 16%, transparent 18%),
+    radial-gradient(circle at 62% 18%, #b98a5e 0 16%, transparent 18%),
+    radial-gradient(circle at 84% 36%, #b98a5e 0 16%, transparent 18%);
+  box-shadow: none;
+  opacity: 0;
 }
 
 /* ---------- 3. Los dos contadores ----------
@@ -1938,6 +1974,7 @@ button.inv-scroll-hint.inv-scroll-hint--waiting {
    justo el marco que la hace bonita. Va tinta sobre el lienzo y nada más. */
 .inv-body[data-theme="baby-nube"] .inv-plate,
 .inv-body[data-theme="baby-safari"] .inv-plate,
+.inv-body[data-theme="baby-osito"] .inv-plate ,
 .inv-body[data-theme="baby-rosas"] .inv-plate {
   box-sizing: border-box;
   justify-content: center;
@@ -1950,6 +1987,7 @@ button.inv-scroll-hint.inv-scroll-hint--waiting {
    pasó con los iconos de las secciones del perfil. Con bordes no puede pasar. */
 .inv-body[data-theme="baby-nube"] .inv-plate-orn,
 .inv-body[data-theme="baby-safari"] .inv-plate-orn,
+.inv-body[data-theme="baby-osito"] .inv-plate-orn ,
 .inv-body[data-theme="baby-rosas"] .inv-plate-orn {
   display: flex;
   width: min(62%, 15em);
@@ -1961,6 +1999,7 @@ button.inv-scroll-hint.inv-scroll-hint--waiting {
 
 .inv-body[data-theme="baby-nube"] .inv-plate-orn span:nth-child(odd),
 .inv-body[data-theme="baby-safari"] .inv-plate-orn span:nth-child(odd),
+.inv-body[data-theme="baby-osito"] .inv-plate-orn span:nth-child(odd) ,
 .inv-body[data-theme="baby-rosas"] .inv-plate-orn span:nth-child(odd) {
   height: 1px;
   flex: 1;
@@ -1970,6 +2009,7 @@ button.inv-scroll-hint.inv-scroll-hint--waiting {
 
 .inv-body[data-theme="baby-nube"] .inv-plate-orn span:nth-child(2),
 .inv-body[data-theme="baby-safari"] .inv-plate-orn span:nth-child(2),
+.inv-body[data-theme="baby-osito"] .inv-plate-orn span:nth-child(2) ,
 .inv-body[data-theme="baby-rosas"] .inv-plate-orn span:nth-child(2) {
   width: clamp(4px, 1.5cqw, 9px);
   height: clamp(4px, 1.5cqw, 9px);
@@ -1981,6 +2021,7 @@ button.inv-scroll-hint.inv-scroll-hint--waiting {
 
 .inv-body[data-theme="baby-nube"] .inv-plate-kicker,
 .inv-body[data-theme="baby-safari"] .inv-plate-kicker,
+.inv-body[data-theme="baby-osito"] .inv-plate-kicker ,
 .inv-body[data-theme="baby-rosas"] .inv-plate-kicker {
   color: color-mix(in srgb, var(--plate-tone) 78%, white);
   /* Mínimo .6rem, no .5: el marco ocupa ~59% del ancho de la foto, así que
@@ -1995,6 +2036,7 @@ button.inv-scroll-hint.inv-scroll-hint--waiting {
 
 .inv-body[data-theme="baby-nube"] .inv-plate-name,
 .inv-body[data-theme="baby-safari"] .inv-plate-name,
+.inv-body[data-theme="baby-osito"] .inv-plate-name ,
 .inv-body[data-theme="baby-rosas"] .inv-plate-name {
   margin: .04em 0 0;
   color: var(--plate-tone);
@@ -2007,6 +2049,7 @@ button.inv-scroll-hint.inv-scroll-hint--waiting {
 
 .inv-body[data-theme="baby-nube"] .inv-plate-details,
 .inv-body[data-theme="baby-safari"] .inv-plate-details,
+.inv-body[data-theme="baby-osito"] .inv-plate-details ,
 .inv-body[data-theme="baby-rosas"] .inv-plate-details {
   display: grid;
   width: 100%;
@@ -2019,6 +2062,7 @@ button.inv-scroll-hint.inv-scroll-hint--waiting {
    pegoteado. Renglón limpio, como escrito a mano en el paspartú. */
 .inv-body[data-theme="baby-nube"] .inv-plate-chip,
 .inv-body[data-theme="baby-safari"] .inv-plate-chip,
+.inv-body[data-theme="baby-osito"] .inv-plate-chip ,
 .inv-body[data-theme="baby-rosas"] .inv-plate-chip {
   display: flex;
   min-width: 0;
@@ -2041,6 +2085,7 @@ button.inv-scroll-hint.inv-scroll-hint--waiting {
    Android se queda sin él. */
 .inv-body[data-theme="baby-nube"] .inv-plate-chip > span:first-child,
 .inv-body[data-theme="baby-safari"] .inv-plate-chip > span:first-child,
+.inv-body[data-theme="baby-osito"] .inv-plate-chip > span:first-child ,
 .inv-body[data-theme="baby-rosas"] .inv-plate-chip > span:first-child {
   flex: 0 0 auto;
   font-size: .9em;
@@ -2050,6 +2095,7 @@ button.inv-scroll-hint.inv-scroll-hint--waiting {
 
 .inv-body[data-theme="baby-nube"] .inv-plate-chip > span:last-child,
 .inv-body[data-theme="baby-safari"] .inv-plate-chip > span:last-child,
+.inv-body[data-theme="baby-osito"] .inv-plate-chip > span:last-child ,
 .inv-body[data-theme="baby-rosas"] .inv-plate-chip > span:last-child {
   min-width: 0;
   overflow-wrap: anywhere;
@@ -2062,6 +2108,7 @@ button.inv-scroll-hint.inv-scroll-hint--waiting {
    límite de lo legible. */
 .inv-body[data-theme="baby-nube"] .inv-plate-chip--place,
 .inv-body[data-theme="baby-safari"] .inv-plate-chip--place,
+.inv-body[data-theme="baby-osito"] .inv-plate-chip--place ,
 .inv-body[data-theme="baby-rosas"] .inv-plate-chip--place {
   max-width: 88%;
   margin-inline: auto;
@@ -2069,6 +2116,7 @@ button.inv-scroll-hint.inv-scroll-hint--waiting {
 
 .inv-body[data-theme="baby-nube"] .inv-plate-chip--place > span:last-child,
 .inv-body[data-theme="baby-safari"] .inv-plate-chip--place > span:last-child,
+.inv-body[data-theme="baby-osito"] .inv-plate-chip--place > span:last-child ,
 .inv-body[data-theme="baby-rosas"] .inv-plate-chip--place > span:last-child {
   text-wrap: balance;
   /* La dirección chilena trae comas: cortar por palabra se lee natural,
@@ -2081,6 +2129,7 @@ button.inv-scroll-hint.inv-scroll-hint--waiting {
    familia va a mirar cada vez que abra el enlace. */
 .inv-body[data-theme="baby-nube"] .inv-plate-countdown,
 .inv-body[data-theme="baby-safari"] .inv-plate-countdown,
+.inv-body[data-theme="baby-osito"] .inv-plate-countdown ,
 .inv-body[data-theme="baby-rosas"] .inv-plate-countdown {
   margin: clamp(4px, 2cqw, 14px) 0 0;
   color: color-mix(in srgb, var(--plate-tone) 62%, white);
@@ -2098,12 +2147,15 @@ button.inv-scroll-hint.inv-scroll-hint--waiting {
 @media (prefers-reduced-motion: reduce) {
   .inv-body[data-theme="baby-nube"] .inv-hero-media,
   .inv-body[data-theme="baby-safari"] .inv-hero-media,
+  .inv-body[data-theme="baby-osito"] .inv-hero-media,
   .inv-body[data-theme="baby-nube"] .inv-spark,
+  .inv-body[data-theme="baby-osito"] .inv-spark,
   .inv-body[data-theme="baby-safari"] .inv-spark {
     animation: none;
   }
 
   .inv-body[data-theme="baby-nube"] .inv-spark,
+  .inv-body[data-theme="baby-osito"] .inv-spark,
   .inv-body[data-theme="baby-safari"] .inv-spark {
     opacity: .5;
   }
@@ -2461,4 +2513,233 @@ button.inv-scroll-hint.inv-scroll-hint--waiting {
 }
 .inv-clip-fundido {
   opacity: 0 !important;
+}
+
+/* ---------- Confirmar con regalo (modo rsvp) y Osito de Bienvenida ----------
+   Equipo con dos botones grandes tipo radio, foto de bebé opcional con vista
+   previa y las reglas de la lista de solo lectura. El radio real queda
+   dentro del botón (visualmente oculto, no `display:none`) para que el
+   teclado y los lectores de pantalla lo sigan viendo. */
+/* La sección va sobre fondo oscuro: el color de tinta de la temática (verde muy oscuro en Osito)
+   no se leía. Mismo blanco suave que la bajada, sobre una franja apenas marcada. */
+.inv-gifts-reglas {
+  max-width: 30rem;
+  margin: 12px auto 14px;
+  padding: 10px 14px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, .07);
+  color: rgba(255, 255, 255, .86);
+  font-size: .88rem;
+  line-height: 1.45;
+}
+
+.inv-rsvp-equipo {
+  margin: 0 0 14px;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+
+.inv-rsvp-equipo legend {
+  margin-bottom: 6px;
+  padding: 0;
+  font-size: .88rem;
+  color: #b9c7f5;
+}
+
+.inv-rsvp-equipos {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.inv-rsvp-team {
+  position: relative;
+  display: block;
+}
+
+.inv-rsvp-team input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.inv-rsvp-team span {
+  display: flex;
+  min-height: 52px;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  padding: 10px;
+  border: 2px solid rgba(255, 255, 255, .28);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, .07);
+  color: inherit;
+  font-size: 1rem;
+  font-weight: 700;
+  text-align: center;
+  transition: background .2s ease, border-color .2s ease, transform .2s ease;
+}
+
+.inv-rsvp-team input:checked + span {
+  border-color: var(--inv-highlight, #f2cb55);
+  background: color-mix(in srgb, var(--inv-highlight, #f2cb55) 28%, transparent);
+  transform: scale(1.03);
+}
+
+.inv-rsvp-team input:focus-visible + span {
+  outline: 3px solid var(--inv-highlight, #f2cb55);
+  outline-offset: 2px;
+}
+
+.inv-rsvp-foto .inv-rsvp-foto-btn {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  margin-top: 4px;
+  cursor: pointer;
+}
+
+.inv-rsvp-foto-prev {
+  display: block;
+  width: 84px;
+  height: 84px;
+  margin-top: 10px;
+  border-radius: 14px;
+  object-fit: cover;
+  border: 2px solid rgba(255, 255, 255, .35);
+}
+
+.inv-rsvp-campo input.is-error,
+.inv-rsvp-equipo.is-error .inv-rsvp-team span {
+  border-color: #ff9d9d;
+}
+
+.inv-rsvp-error {
+  line-height: 1.4;
+}
+
+/* El diálogo de las otras temáticas es azul noche; el Osito es crema y
+   salvia, como su acuarela. */
+.inv-body[data-theme="baby-osito"] .inv-rsvp-dialog {
+  background: #fbf8ee;
+  color: #3d4a2f;
+  border: 2px solid #b9d3a0;
+  max-height: 92dvh;
+  overflow-y: auto;
+}
+
+.inv-body[data-theme="baby-osito"] .inv-rsvp-dialog::backdrop {
+  background: rgba(52, 71, 42, .62);
+}
+
+.inv-body[data-theme="baby-osito"] .inv-rsvp-campo span,
+.inv-body[data-theme="baby-osito"] .inv-rsvp-equipo legend {
+  color: #4f6b3f;
+}
+
+.inv-body[data-theme="baby-osito"] .inv-rsvp-campo input[type="text"] {
+  border-color: #b9d3a0;
+  background: #fff;
+  color: #3d4a2f;
+}
+
+.inv-body[data-theme="baby-osito"] .inv-rsvp-campo input:focus {
+  outline-color: #6e9b5a;
+}
+
+.inv-body[data-theme="baby-osito"] .inv-rsvp-team span {
+  border-color: #b9d3a0;
+  background: #fff;
+}
+
+.inv-body[data-theme="baby-osito"] .inv-rsvp-team input:checked + span {
+  border-color: #6e9b5a;
+  background: #e6f0dc;
+  color: #34472a;
+}
+
+/* Regalos sugeridos: pastillas que se acomodan en filas; un toque escribe el regalo. */
+.inv-rsvp-sugerencias {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: -4px 0 14px;
+}
+
+.inv-rsvp-sug {
+  min-height: 40px;
+  padding: 8px 14px;
+  border: 1.5px solid rgba(255, 255, 255, .3);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .07);
+  color: inherit;
+  font: inherit;
+  font-size: .9rem;
+  font-weight: 600;
+  line-height: 1.1;
+  cursor: pointer;
+  transition: background .15s ease, border-color .15s ease, transform .15s ease;
+}
+
+.inv-rsvp-sug:focus-visible {
+  outline: 3px solid var(--inv-highlight, #f2cb55);
+  outline-offset: 2px;
+}
+
+.inv-rsvp-sug.is-elegida {
+  border-color: var(--inv-highlight, #f2cb55);
+  background: color-mix(in srgb, var(--inv-highlight, #f2cb55) 28%, transparent);
+  transform: scale(1.04);
+}
+
+.inv-rsvp-sug--tomado,
+.inv-rsvp-sug:disabled {
+  opacity: .45;
+  text-decoration: line-through;
+  cursor: not-allowed;
+}
+
+.inv-body[data-theme="baby-osito"] .inv-rsvp-sug {
+  border-color: #b9d3a0;
+  background: #fff;
+  color: #3d4a2f;
+}
+
+.inv-body[data-theme="baby-osito"] .inv-rsvp-sug.is-elegida {
+  border-color: #6e9b5a;
+  background: #e6f0dc;
+  color: #34472a;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .inv-rsvp-sug { transition: none; }
+  .inv-rsvp-sug.is-elegida { transform: none; }
+}
+
+.inv-body[data-theme="baby-osito"] .inv-rsvp-foto-prev {
+  border-color: #b98a5e;
+}
+
+.inv-body[data-theme="baby-osito"] .inv-rsvp-error {
+  color: #a6402f;
+}
+
+.inv-body[data-theme="baby-osito"] .inv-rsvp-dialog .inv-button-ghost {
+  border-color: #6e9b5a;
+  color: #3d4a2f;
+}
+
+.inv-body[data-theme="baby-osito"] .inv-rsvp-dialog .inv-button:not(.inv-button-ghost) {
+  background: #6e9b5a;
+  color: #fff;
+}
+
+.inv-body[data-theme="baby-osito"] .inv-rsvp-campo input[type="text"].is-error,
+.inv-body[data-theme="baby-osito"] .inv-rsvp-equipo.is-error .inv-rsvp-team span {
+  border-color: #a6402f;
 }

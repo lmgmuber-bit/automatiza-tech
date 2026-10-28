@@ -495,7 +495,7 @@ class OmnichannelController {
             // Crear configuración de bot por defecto
             $this->create_default_bot_config($client_id, $channel_id);
 
-            $this->audit_log('create', 'channel', $channel_id, "Canal $channel_type creado para cliente $client_id", null, $insert, $client_id);
+            $this->audit_log('create', 'channel', $channel_id, "Canal $channel_type creado para cliente $client_id", null, $this->channel_for_audit($insert), $client_id);
             return ['id' => $channel_id, 'webhook_secret' => $webhook_secret];
         }
 
@@ -515,9 +515,16 @@ class OmnichannelController {
                 $update[$field] = $field === 'config_json' ? wp_json_encode($data[$field]) : sanitize_text_field($data[$field]);
             }
         }
+        // El navegador ya no recibe el token (mask_channel_tokens): vacío = conservar el actual.
+        if (isset($update['bot_token']) && trim($update['bot_token']) === '') {
+            unset($update['bot_token']);
+        }
+        if (!$update) {
+            return true;
+        }
 
         $result = $this->wpdb->update($this->prefix . 'channels', $update, ['id' => $channel_id]);
-        $this->audit_log('update', 'channel', $channel_id, "Canal actualizado", $old, $update, $old['client_id']);
+        $this->audit_log('update', 'channel', $channel_id, "Canal actualizado", $this->channel_for_audit($old), $this->channel_for_audit($update), $old['client_id']);
         return $result !== false;
     }
 
@@ -531,14 +538,35 @@ class OmnichannelController {
         // Delete related bot configs
         $this->wpdb->delete($this->prefix . 'bot_configs', ['channel_id' => $channel_id]);
         $this->wpdb->delete($this->prefix . 'channels', ['id' => $channel_id]);
-        $this->audit_log('delete', 'channel', $channel_id, "Canal eliminado: {$channel->channel_name}", (array) $channel, null, $channel->client_id);
+        $this->audit_log('delete', 'channel', $channel_id, "Canal eliminado: {$channel->channel_name}", $this->channel_for_audit($channel), null, $channel->client_id);
         return true;
     }
 
     public function get_channels($client_id) {
-        return $this->wpdb->get_results(
+        return $this->mask_channel_tokens($this->wpdb->get_results(
             $this->wpdb->prepare("SELECT * FROM {$this->prefix}channels WHERE client_id = %d ORDER BY channel_type", absint($client_id))
-        );
+        ));
+    }
+
+    /**
+     * El token de Instagram (bot_token) nunca va al navegador: se reemplaza por
+     * has_bot_token. Para cambiarlo se pega uno nuevo en Canales; vacío = se conserva.
+     */
+    private function mask_channel_tokens($rows) {
+        foreach ((array) $rows as $row) {
+            $row->has_bot_token = !empty($row->bot_token);
+            $row->bot_token = '';
+        }
+        return $rows;
+    }
+
+    /** Copia del canal para la auditoría, con el token de Instagram tachado (la auditoría se ve en el portal). */
+    private function channel_for_audit($row) {
+        $row = (array) $row;
+        if (array_key_exists('bot_token', $row)) {
+            $row['bot_token'] = empty($row['bot_token']) ? '' : '[oculto]';
+        }
+        return $row;
     }
 
     // =========================================================
@@ -2366,12 +2394,12 @@ class OmnichannelController {
     }
 
     public function get_all_channels() {
-        return $this->wpdb->get_results(
-            "SELECT ch.*, cl.company_name as client_name 
+        return $this->mask_channel_tokens($this->wpdb->get_results(
+            "SELECT ch.*, cl.company_name as client_name
              FROM {$this->prefix}channels ch
              LEFT JOIN {$this->prefix}clients cl ON ch.client_id = cl.id
              ORDER BY cl.company_name, ch.channel_type"
-        );
+        ));
     }
 
     public function get_all_bot_configs() {
@@ -3080,6 +3108,18 @@ class OmnichannelController {
             "SELECT * FROM {$this->prefix}channels WHERE id = %d",
             absint($channel_id)
         ));
+    }
+
+    /**
+     * GET de solo lectura a la Graph API de Instagram con el token del canal.
+     * Lo usa Métricas IG (omnichannel-ig-insights-controller.php) para insights,
+     * /me/media y /me/stories. Mismo formato de respuesta que ig_api_request;
+     * el token no sale de este servidor.
+     */
+    public function ig_graph_get($channel_id, $path) {
+        $channel = $this->get_instagram_channel_for_api($channel_id);
+        if (!$channel) return ['error' => 'Canal no encontrado'];
+        return $this->ig_api_request('GET', $channel, $path);
     }
 
     /**

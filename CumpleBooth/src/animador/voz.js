@@ -50,6 +50,40 @@ export function crearReproductor(nuevoAudio = () => new Audio()) {
 }
 
 /**
+ * La ruleta del baile revela a quién le toca cuando terminan las DOS cosas: el giro (`minimo` ms) y la frase que se
+ * dice mientras gira (`voz`, la promesa de `decir`). Antes revelaba con un reloj fijo y la voz del resultado cortaba
+ * «¿a quién le tocará bailar?» (la frase dura 4,2 s y el giro 3,7 s; pedido de Luis, 21-oct). Mientras la voz siga,
+ * `onTic` corre cada `cada` ms para que la ruleta siga pasando nombres; nunca espera más de `tope` ms después del
+ * giro. Sin voz (silencio, falla) revela al terminar el giro. Devuelve con qué cancelar (otra persona, salir).
+ */
+export function esperarGiro({ voz, minimo, tope = 6000, cada = 420, onTic = () => {}, onFin, programar = setTimeout, cancelar = clearTimeout }) {
+  let vozLista = false
+  let giroListo = false
+  let hecho = false
+  const relojes = []
+  const parar = () => { hecho = true; relojes.forEach(cancelar) }
+  const fin = () => {
+    if (hecho) return
+    parar()
+    onFin()
+  }
+  const listaLaVoz = () => { vozLista = true; if (giroListo) fin() }
+  Promise.resolve(voz).then(listaLaVoz, listaLaVoz)
+  relojes.push(programar(() => {
+    giroListo = true
+    if (vozLista) { fin(); return }
+    const latir = () => {
+      if (hecho) return
+      onTic()
+      relojes.push(programar(latir, cada))
+    }
+    relojes.push(programar(latir, cada))
+    relojes.push(programar(fin, tope))
+  }, minimo))
+  return parar
+}
+
+/**
  * Voces del animador en el kiosco. Lee el índice de la fiesta (`indice.json`: { clips: { clave: archivo } }) y
  * reproduce claves de a una o en secuencia. Sin índice (fiesta sin voces, archivo caído, sin red) todo sigue igual
  * que antes, solo que mudo: `decir` resuelve al tiro con false. El silencio elegido se recuerda en la pestaña.

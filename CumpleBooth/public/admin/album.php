@@ -952,6 +952,19 @@ main > section#fotos-kiosco { display: none !important; }
           de acá.
         </p>
 
+        <?php /* Todas de una vez en un ZIP (2026-10-21): con 30 o 300 fotos, guardarlas de a una no es una
+                 opción. La página del ZIP vuelve a mirar los permisos: lo del álbum solo va si se tiene. */ ?>
+        <p class="fotos-descargar">
+          <a class="btn btn-primary btn-sm" href="<?= h('descargar-fotos.php?party=' . rawurlencode($publicSlug)) ?>">
+            ⬇️ Descargar todas las fotos (ZIP)
+          </a>
+          <span class="muted small">
+            <?= $verAlbum
+              ? 'Trae las de la cabina que siguen en la galería y las que mandaron los invitados (aprobadas y pendientes). Los videos se bajan de a uno.'
+              : 'Trae las fotos de la cabina que siguen en la galería.' ?>
+          </span>
+        </p>
+
         <nav class="curation-filters">
           <a class="chip <?= $verPapelera ? '' : 'is-active' ?>" href="<?= h($selfUrl) ?>#fotos-kiosco">
             En la galería <span class="chip-count"><?= count($fotosVivas) ?></span>

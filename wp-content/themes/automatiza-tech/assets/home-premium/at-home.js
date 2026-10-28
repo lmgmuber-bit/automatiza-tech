@@ -282,6 +282,8 @@
         })
         .then(function () {
           track('lead_submit', { intent: intent, interest: interest, lead_temperature: leadTemperature });
+          // Cita registrada: avisa a Meta (solo si la persona aceptó cookies; ver mu-plugin at-consentimiento).
+          if (window.atLead) { window.atLead('Agenda diagnóstico (portada)', { email: payload.email, fecha: payload.scheduled_date, hora: payload.scheduled_time }); }
           // Atribución WP-side por session_id (fire-and-forget; no bloquea el éxito).
           if (cfg.attrAjaxUrl && cfg.attrNonce) {
             try {
@@ -885,50 +887,10 @@
     applyScIf();
     fillUtm();
     applyMode();
-    initCookieBanner();
     track('landing_p0_view', { template: 'AT Home Premium' });
   }
 
-  // Banner de cookies (Ley 21.719): el home premium y las landings no cargan
-  // footer.php, así que el banner se inyecta aquí. GA4/Meta Pixel deben chequear
-  // localStorage.at_cookie_consent === 'accepted' antes de cargar.
-  function initCookieBanner() {
-    var consent = null;
-    try {
-      consent = localStorage.getItem('at_cookie_consent');
-      if (!consent && localStorage.getItem('cookies-accepted') === 'true') {
-        consent = 'accepted';
-        localStorage.setItem('at_cookie_consent', 'accepted');
-      }
-    } catch (e) { return; }
-    if (consent) return;
-
-    var bar = document.createElement('div');
-    bar.id = 'at-cookie-banner';
-    bar.setAttribute('role', 'dialog');
-    bar.setAttribute('aria-label', 'Consentimiento de cookies');
-    bar.style.cssText = 'position:fixed;left:16px;right:16px;bottom:16px;z-index:100001;max-width:680px;margin:0 auto;background:#0d2044;border:1px solid rgba(45,212,191,.35);border-radius:14px;padding:16px 18px;box-shadow:0 20px 60px -20px rgba(0,0,0,.85);display:flex;flex-wrap:wrap;align-items:center;gap:12px;font-family:Manrope,sans-serif';
-    bar.innerHTML =
-      '<p style="flex:1 1 300px;margin:0;font-size:13px;line-height:1.5;color:#b9c6d8">Usamos cookies esenciales y, solo con tu permiso, analítica y píxeles publicitarios. <a href="/cookies/" style="color:#2dd4bf;text-decoration:underline">Más información</a>.</p>' +
-      '<div style="display:flex;gap:9px;flex-wrap:wrap">' +
-      '<button type="button" id="at-ck-accept" style="background:#2dd4bf;color:#061018;border:none;border-radius:9px;padding:10px 20px;font-family:\'Space Grotesk\',sans-serif;font-weight:600;font-size:13.5px;cursor:pointer">Aceptar</button>' +
-      '<button type="button" id="at-ck-reject" style="background:transparent;color:#b9c6d8;border:1px solid rgba(255,255,255,.25);border-radius:9px;padding:10px 20px;font-family:\'Space Grotesk\',sans-serif;font-weight:600;font-size:13.5px;cursor:pointer">Rechazar</button>' +
-      '</div>';
-    document.body.appendChild(bar);
-
-    function setConsent(value) {
-      try {
-        localStorage.setItem('at_cookie_consent', value);
-        localStorage.setItem('cookies-accepted', value === 'accepted' ? 'true' : 'false');
-      } catch (e) {}
-      bar.remove();
-      document.dispatchEvent(new CustomEvent('at:cookie-consent', { detail: { consent: value } }));
-    }
-    var acceptBtn = document.getElementById('at-ck-accept');
-    var rejectBtn = document.getElementById('at-ck-reject');
-    if (acceptBtn) acceptBtn.addEventListener('click', function () { setConsent('accepted'); });
-    if (rejectBtn) rejectBtn.addEventListener('click', function () { setConsent('rejected'); });
-  }
+  // El aviso de cookies lo dibuja el mu-plugin at-consentimiento.php (también en la portada y las landings).
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
   else boot();

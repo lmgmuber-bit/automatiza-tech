@@ -109,6 +109,14 @@ def armar_whatsapp(prompt, f):
     p.poner(PERS['whatsapp'], f['whatsapp'])
     p.poner(REGLAS, f['reglas'])
     p.poner(CEREBRO, f['cerebro'])
+    # Demo y diagnóstico son lo mismo (Luis, 28-oct): hacia la persona se dice siempre «diagnóstico gratis».
+    for viejo, nuevo in (
+            ('pregunta: "¿Te gustaría agendar una demo para conocernos o ya eres cliente?"',
+             'pregunta: "¿Te gustaría agendar tu diagnóstico gratis o ya eres cliente y quieres una reunión de seguimiento?"'),
+            ('PREGUNTA: "¿Es una demo que agendaste o una reunión de seguimiento como cliente?"',
+             'PREGUNTA: "¿Es tu diagnóstico gratis o una reunión de seguimiento como cliente?"')):
+        if viejo in p.t:
+            p.cambiar(viejo, nuevo)
     for accion in ('SHOW_CALENDAR', 'FOLLOWUP_MEETING', 'CANCEL_APPOINTMENT', 'RESCHEDULE_APPOINTMENT', 'RESCHEDULE_FOLLOWUP',
                    'ESCALATE_SUPPORT', 'SHOW_PLANS'):
         assert f'<<ACTION:{accion}>>' in p.t, f'whatsapp: se perdió la acción {accion}'

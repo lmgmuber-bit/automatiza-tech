@@ -8,7 +8,7 @@ que parte de `claude/ig-comentarios-palabra-clave`: esa rama es la que está en 
 
 Responde los directos de @automatizatech.cl las 24 horas, con el criterio del agente web («Tech»), en español de Chile y en texto corto.
 
-- **Agenda** el diagnóstico gratis en el mismo chat: consulta la agenda real, pide nombre, correo y (si quiere) WhatsApp, confirma
+- **Agenda** el diagnóstico gratis en el mismo chat: consulta la agenda real, pide nombre, correo y WhatsApp con código de país (obligatorio, para recordatorios y seguimiento; ejemplo «en Chile: +56 9 1234 5678»), confirma
   día, hora y correo, y agenda solo después del «sí». La cita sale por el mismo sub-workflow que la web y WhatsApp: Google Meet,
   lead en el CRM con origen **Instagram** y correo de confirmación.
 - **Deriva a una persona** cuando la piden, hay un reclamo, es un cliente que pide seguimiento o piden algo a medida. Se despide

@@ -184,7 +184,7 @@ def flujo_principal():
     agen = dict(vacios, **fijos, accion='agendar',
                 nombre="={{ $fromAI('nombre', 'Nombre de la persona', 'string') }}",
                 correo="={{ $fromAI('correo', 'Correo de la persona, donde le llega la invitación', 'string') }}",
-                telefono="={{ $fromAI('telefono', 'WhatsApp o teléfono para recordatorios; vacío si no lo dio', 'string') }}",
+                telefono="={{ $fromAI('telefono', 'Celular de WhatsApp con código de país (obligatorio), ej. +56912345678', 'string') }}",
                 fecha="={{ $fromAI('fecha', 'Fecha confirmada, formato AAAA-MM-DD', 'string') }}",
                 hora="={{ $fromAI('hora', 'Hora confirmada, formato HH:MM de 24 horas', 'string') }}")
     sistema = '=PROMPT_AGENTE_WEB\n\n' + prompt_instagram() + '{{ $json.contexto_txt }}'
@@ -349,10 +349,14 @@ const fecha = String(t.fecha || '').trim();
 const hora = String(t.hora || '').trim().slice(0, 5);
 const correo = String(t.correo || '').trim().toLowerCase();
 const nombre = String(t.nombre || '').trim().slice(0, 80);
+// WhatsApp para los recordatorios: con código de país (+ y 8 a 15 dígitos). Un celular chileno sin código se completa con +56.
 let tel = String(t.telefono || '').replace(/[^\d+]/g, '');
+if (/^00\d/.test(tel)) tel = '+' + tel.slice(2);
 if (/^9\d{8}$/.test(tel)) tel = '+56' + tel;
 else if (/^569\d{8}$/.test(tel)) tel = '+' + tel;
 const malo = msg => [{ json: { ok: false, result: msg } }];
+// Obligatorio desde el 28-oct (Luis): sin WhatsApp con código de país no se agenda.
+if (!/^\+[1-9]\d{7,14}$/.test(tel)) return malo('Falta el WhatsApp con código de país (es obligatorio): pídeselo con el ejemplo «en Chile: +56 9 1234 5678». No agendes sin él.');
 if (!nombre) return malo('Falta el nombre de la persona.');
 if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(correo)) return malo('El correo no es válido: pídeselo de nuevo.');
 if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha) || !/^\d{2}:00$/.test(hora)) return malo('Fecha u hora inválida: fecha AAAA-MM-DD y hora en punto (HH:00).');

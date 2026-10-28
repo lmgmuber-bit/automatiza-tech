@@ -17,7 +17,7 @@ Si no es texto, responde una vez cada 10 minutos «Por ahora leo solo texto».
 
 - **Prompt:** el del agente web (`3A5Y1NPBxpTjhHdE`), leído en vivo por `aplicar.py`, sin el formulario `<<SHOW_DEMO_FORM>>`, más `prompt-canal-instagram.md` y, si la persona llegó desde un comentario, el bloque «De dónde viene esta persona» con la palabra y el privado que le enviamos (`contexto` del Portal).
 - **Derivar:** la herramienta `derivar_a_persona` solo deja constancia; «Preparar respuesta» la detecta en los pasos del agente y manda un único callback `action: 'escalate'` con `motivo` y la despedida en `content`.
-- **Agendar:** el agente consulta la agenda real (`/appointments-config` + `/check-availability`, horas en punto con 2 h de anticipación), confirma día, hora y correo, y agenda solo después del «sí». El sub-workflow de PROD vuelve a revisar WordPress y Google Calendar, crea el evento con Meet, guarda el lead (`session_id = ig:<IGSID>`, `source = instagram`) y manda el correo.
+- **Agendar:** el agente consulta la agenda real (`/appointments-config` + `/check-availability`, horas en punto con 2 h de anticipación), pide el WhatsApp con código de país (obligatorio desde el 28-oct, ejemplo «en Chile: +56 9 1234 5678»; sin él no agenda), confirma día, hora, correo y WhatsApp, y agenda solo después del «sí». El sub-workflow de PROD vuelve a revisar WordPress y Google Calendar, crea el evento con Meet, guarda el lead (`session_id = ig:<IGSID>`, `source = instagram`) y manda el correo.
 
 ## Archivos
 

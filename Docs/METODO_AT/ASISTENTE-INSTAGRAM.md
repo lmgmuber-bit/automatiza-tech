@@ -85,6 +85,15 @@ conversaciones 5 y 7 siguen asignadas.
 - **Código:** restaurar `omnichannel-controller.php` y `api-endpoints.php` desde `~/respaldos/asistente-ig-antes-<fecha>/`. Los dos archivos nuevos pueden quedar.
 - **Datos:** la fila de `bot_configs` del canal 2 está en `~/respaldos/asistente-ig-datos-<fecha>/`; el ejecutivo creado se puede desactivar.
 
+## Puesta en marcha (28-oct-2026, con el OK de Luis)
+
+- **09:31:** código del Portal subido (respaldo `~/respaldos/asistente-ig-antes-20261028-0931`). **09:32:** ejecutivo «Luis González» (id 6), `derivacion` y conexión de n8n.
+- **Primera prueba real fallida:** la foto de perfil de una cuenta nueva medía 523 caracteres y `contact_avatar_url` admite 500. WordPress rechazaba la conversación y el mensaje quedaba huérfano (`conversation_id = 0`): no se veía en el Portal y n8n lo descartaba. Era un error anterior al asistente. Se corrigió en `1916a8c` (la foto que no cabe no se guarda; sin conversación no se guarda el mensaje ni se avisa a n8n), subido a las 12:15 (respaldo `asistente-ig-foto-antes-20261028-1215`).
+- **Mensajes perdidos recuperados:** el mismo error había dejado sin conversación los mensajes de 6 personas desde el 21-jun (21 mensajes). Se crearon sus conversaciones en modo humano, asignadas a Luis, con una nota (16 a 21; respaldo `asistente-ig-recuperar-20261028-1628`). Hoy no queda ningún mensaje huérfano.
+- **Cuentas sin bot:** `bot_configs.custom_functions_json.sin_bot` = lista de IGSID (texto o `{igsid, nota}`). Sus mensajes se guardan en el Portal, pero nunca van a n8n. La primera es @luis_miguel33, la cuenta personal de Luis (commit `b6f6cdb`, subido a las 13:32; respaldos `asistente-ig-sinbot-antes-20261028-1332` y `asistente-ig-sinbot-datos-20261028-1632`).
+- **md5 en PROD tras el 28-oct:** `omnichannel-controller.php` `0811614c`, `omnichannel-derivacion.php` `f4290fd3`, `inc/api-endpoints.php` `41d46fd6`, `inc/lead-origen.php` `7365a039`.
+- **Prompt:** el agente no conoce el Método AT (a «¿En qué consiste su método AT?» respondió que estaba fuera de su área). Lo actualiza Eje en el agente web y lo propaga a Instagram con `aplicar.py`.
+
 ## Después
 
 - Clasificar en frío, tibio, caliente o «no califica» y avisar al instante cuando llega uno caliente.

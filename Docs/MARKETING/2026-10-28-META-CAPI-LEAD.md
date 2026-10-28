@@ -22,7 +22,7 @@ Cada vez que alguien **agenda una reunión** (diagnóstico) por la web, el asist
 0. **Antes de encender:** cerrar la auditoría pendiente de la ruta `/leads` (detalle en la bóveda privada, `10-Projects/2026-09-24-AT-Auditoria-Seguridad-REST-Leads.md`). Con CAPI encendido, cada agenda que acepte `/leads` cuenta como Lead en las campañas.
 
 1. **Token (lo hace Luis, nunca por el chat):** Administrador de eventos de Meta → el píxel → Configuración → API de Conversiones → «Generar token de acceso». Pegarlo en WordPress → PixelYourSite → Meta → campo del token de la API de Conversiones y guardar.
-   - Recomendación: dejar **apagado** «Send events directly from your web server» de PixelYourSite. Nuestro módulo solo lee el token; el envío propio del plugin usa un SDK con la Graph API 16.0, que ya venció, y solo manda los eventos del plugin (PageView), no el Lead.
+   - **Decisión de Luis (28-oct-2026):** «Send events directly from your web server» de PixelYourSite queda **apagado**, salvo que llegue a ser indispensable. No afecta al Lead: el módulo lee el token igual (`getApiToken()` no mira ese interruptor). Nuestro módulo solo lee el token; el envío propio del plugin usa un SDK con la Graph API 16.0, que ya venció, y solo manda los eventos del plugin (PageView), no el Lead.
 2. **Privacidad (lo aprueba Luis):** agregar a `/privacidad/` la línea propuesta abajo.
 3. **Prueba en «Probar eventos»:** Administrador de eventos → Probar eventos → copiar el código de prueba y pegarlo en PixelYourSite (código de prueba de la API). Eje enciende el interruptor por SSH:
 

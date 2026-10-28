@@ -101,7 +101,7 @@ export default function ChannelsView() {
       channel_name: ch.channel_name || '',
       phone_number: ch.phone_number || '',
       page_id: ch.page_id || '',
-      bot_token: ch.bot_token || '',
+      bot_token: '', // el servidor ya no envía el token (has_bot_token); vacío = se conserva
       ycloud_api_key: ch.ycloud_api_key || '',
       ycloud_waba_id: ch.ycloud_waba_id || '',
       ycloud_phone_id: ch.ycloud_phone_id || '',
@@ -419,7 +419,7 @@ export default function ChannelsView() {
                         <span className="text-[10px] text-gray-400 dark:text-slate-500">
                           {META_TYPES.includes(ch.channel_type) ? 'Token IG:' : 'API Key:'}
                         </span>
-                        {(META_TYPES.includes(ch.channel_type) ? ch.bot_token : ch.ycloud_api_key) ? (
+                        {(META_TYPES.includes(ch.channel_type) ? ch.has_bot_token : ch.ycloud_api_key) ? (
                           <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">✓ Configurado</span>
                         ) : (
                           <span className="text-[10px] text-rose-500 dark:text-rose-400 font-medium">✗ No configurado</span>
@@ -536,15 +536,18 @@ export default function ChannelsView() {
                         type={showEditApiKey ? 'text' : 'password'}
                         value={editForm.bot_token || ''}
                         onChange={e => setEditForm({ ...editForm, bot_token: e.target.value })}
-                        placeholder="Token de la API de Instagram (graph.instagram.com)"
-                        title="Token de acceso de Instagram (Instagram Login). Se guarda en bot_token. NO es la API Key de YCloud."
+                        placeholder={editChannel.has_bot_token ? 'Token guardado · déjalo vacío para conservarlo o pega uno nuevo' : 'Token de la API de Instagram (graph.instagram.com)'}
+                        title="Token de acceso de Instagram (Instagram Login). Se guarda en bot_token y no se vuelve a mostrar. NO es la API Key de YCloud."
                         className="w-full px-3 py-2 pr-10 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 font-mono"
                       />
                       <button type="button" onClick={() => setShowEditApiKey(!showEditApiKey)} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
                         {showEditApiKey ? <EyeOff size={16} /> : <Eye size={16} />}
                       </button>
                     </div>
-                    <p className="text-[11px] text-gray-400 mt-1">Token de Instagram — se guarda en bot_token (distinto de la API Key de YCloud)</p>
+                    <p className="text-[11px] text-gray-400 mt-1">
+                      {editChannel.has_bot_token ? '✓ Hay un token guardado (por seguridad no se muestra). ' : ''}
+                      Token de Instagram — se guarda en bot_token (distinto de la API Key de YCloud)
+                    </p>
                   </div>
                 )}
                 {/* YCloud fields — solo para canales no-Meta */}

@@ -26,6 +26,24 @@ if (!function_exists('omni_derivacion_config')) {
     }
 }
 
+if (!function_exists('omni_sin_bot')) {
+    /**
+     * Cuentas a las que el bot nunca responde (ej. la cuenta personal de Luis, que le manda reels a la de AT):
+     * bot_configs.custom_functions_json.sin_bot = ["<igsid>", {"igsid": "<igsid>", "nota": "..."}]. Sus mensajes
+     * se guardan y se ven en el Portal; solo no van a n8n.
+     */
+    function omni_sin_bot($custom_functions_json, $external_contact_id) {
+        $id = trim((string) $external_contact_id);
+        $cfg = json_decode((string) $custom_functions_json, true);
+        if ($id === '' || !is_array($cfg) || !isset($cfg['sin_bot']) || !is_array($cfg['sin_bot'])) return false;
+        foreach ($cfg['sin_bot'] as $e) {
+            $v = is_array($e) ? ($e['igsid'] ?? '') : $e;
+            if (is_scalar($v) && trim((string) $v) === $id) return true;
+        }
+        return false;
+    }
+}
+
 if (!function_exists('omni_debe_volver_al_bot')) {
     /**
      * Una conversación de Instagram que derivó el asistente vuelve al bot cuando la persona escribe

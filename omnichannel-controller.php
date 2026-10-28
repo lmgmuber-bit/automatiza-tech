@@ -2817,6 +2817,8 @@ class OmnichannelController {
     private function forward_to_n8n($channel_id, $conversation_id, $message_data, $message_id) {
         $bot_config = $this->get_bot_config($channel_id);
         if (!$bot_config || empty($bot_config->n8n_webhook_url) || !$bot_config->is_active) return;
+        // Cuentas a las que el bot nunca responde (custom_functions_json.sin_bot): el mensaje queda en el Portal.
+        if (omni_sin_bot($bot_config->custom_functions_json ?? null, $message_data['external_contact_id'] ?? '')) return;
 
         // Obtener teléfono del negocio desde el canal
         $channel = $this->wpdb->get_row($this->wpdb->prepare(

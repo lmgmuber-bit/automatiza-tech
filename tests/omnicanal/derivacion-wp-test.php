@@ -205,6 +205,21 @@ $recibir($IG, $fila($c6)->external_contact_id, 'hola');
 ok($fila($c6)->intervention_mode === 'human' && (int) $fila($c6)->assigned_agent_id === $AG2 && count($a_n8n()) === 0,
 	'vuelta: la que tomó un ejecutivo a mano no vuelve sola');
 
+// ============ 4b. Cuentas sin bot (pedido de Luis, 28-oct: su cuenta personal le manda reels a la de AT)
+$igsid_sb = 'igsid-sinbot-' . bin2hex(random_bytes(4));
+$cfg_sb = json_decode($cfg($AG), true);
+$cfg_sb['sin_bot'] = [['igsid' => $igsid_sb, 'nota' => 'cuenta personal']];
+$wpdb->update($P . 'bot_configs', ['custom_functions_json' => wp_json_encode($cfg_sb)], ['id' => $BC]);
+$limpiar();
+$r = $ctl->receive_message($IG, ['external_contact_id' => $igsid_sb, 'contact_name' => 'Luis Personal', 'content' => 'mira este reel', 'type' => 'text']);
+$csb = (int) ($r['conversation_id'] ?? 0);
+ok($csb > 0 && count($msgs($csb)) === 1, 'sin bot: el mensaje se guarda y se ve en el Portal');
+ok(count($a_n8n()) === 0, 'sin bot: conversación nueva en modo bot, pero no va a n8n');
+$limpiar();
+$recibir($IG, 'igsid-otro-' . bin2hex(random_bytes(4)), 'hola');
+ok(count($a_n8n()) === 1, 'sin bot: las demás cuentas sí van a n8n');
+$wpdb->update($P . 'bot_configs', ['custom_functions_json' => $cfg($AG)], ['id' => $BC]);
+
 // ============ 5. Contacto nuevo con foto de perfil larga (caso real del 28-oct: 523 caracteres, la columna acepta 500) ============
 $foto = 'https://scontent.cdninstagram.com/v/t51.2885-19/' . str_repeat('a', 480) . '.jpg?stp=dst-jpg';
 $igsid_f = 'igsid-foto-' . bin2hex(random_bytes(4));

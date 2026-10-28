@@ -13,7 +13,7 @@ function ok($valor, string $mensaje): void {
 	if (!$valor) { $fallas++; }
 	echo ($valor ? 'ok ' : 'FALLA ') . $mensaje . "\n";
 }
-foreach (['omni_derivacion_config', 'omni_debe_volver_al_bot', 'omni_derivacion_correo', 'omni_contexto_comentario', 'automatiza_tech_lead_origen'] as $f) {
+foreach (['omni_derivacion_config', 'omni_debe_volver_al_bot', 'omni_derivacion_correo', 'omni_contexto_comentario', 'automatiza_tech_lead_origen', 'omni_sin_bot'] as $f) {
 	ok(function_exists($f), "interfaz $f");
 }
 if ($fallas) { echo "$total pruebas, $fallas fallas\n"; exit(1); }
@@ -76,6 +76,15 @@ $roto = [['sender_type' => 'system', 'content' => 'x', 'metadata_json' => '{roto
 ok(omni_contexto_comentario($roto, $ahora) === null, 'contexto: metadata ilegible se ignora');
 $largo = [['sender_type' => 'bot', 'content' => str_repeat('a', 2000), 'metadata_json' => $meta, 'created_at' => '2026-10-24 15:57:58']];
 ok(mb_strlen(omni_contexto_comentario($largo, $ahora)['mensaje_privado']) === 1000, 'contexto: privado recortado a 1000');
+
+// --- omni_sin_bot (cuentas a las que el bot nunca responde, por IGSID; ej. la cuenta personal de Luis)
+$cf = '{"palabras_clave":{"activo":true},"sin_bot":[{"igsid":"111","nota":"cuenta personal"},"222"," 333 "]}';
+ok(omni_sin_bot($cf, '111') === true, 'sin bot: IGSID de la lista (con nota)');
+ok(omni_sin_bot($cf, '222') === true && omni_sin_bot($cf, '333') === true, 'sin bot: IGSID como texto, con o sin espacios');
+ok(omni_sin_bot($cf, '444') === false, 'sin bot: otro IGSID sí va al bot');
+ok(omni_sin_bot($cf, '') === false, 'sin bot: IGSID vacío no calza con nada');
+ok(omni_sin_bot(null, '111') === false && omni_sin_bot('{', '111') === false && omni_sin_bot('{"sin_bot":"111"}', '111') === false,
+	'sin bot: config vacía, rota o que no es lista');
 
 // --- automatiza_tech_lead_origen (source, session_id, teléfono)
 ok(automatiza_tech_lead_origen('web', 'ig:178414', '') === 'instagram', 'origen: session ig: es Instagram');

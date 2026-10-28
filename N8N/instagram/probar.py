@@ -207,7 +207,8 @@ def agenda_simulada():
     r3 = turno(g, c, 'Sí, confirmo')
     usadas = sum(((x or {}).get('herramientas', []) for x in (r1, r2, r2b, r3)), [])
     ok('ver_disponibilidad' in usadas, 'agenda: consulta la disponibilidad', str(usadas))
-    ok((r3 or {}).get('herramientas', []).count('agendar') == 1, 'agenda: agenda una vez, después del «sí»', str(usadas))
+    ok('agendar' in (r3 or {}).get('herramientas', []) and '¡Listo' in (r3 or {}).get('body', {}).get('content', ''),
+       'agenda: agenda después del «sí»', str(usadas))
     t3 = (r3 or {}).get('body', {}).get('content', '')
     ok('11:00' in t3 and 'ana.rojas@ejemplo.cl' in t3, 'agenda: confirma la hora y el correo de la cita', t3[:300])
     for i, x in enumerate((r1, r2, r2b, r3), 1):
@@ -228,7 +229,7 @@ def agenda_whatsapp():
     r3 = turno(g, c, '+56 9 1234 5678')
     r4 = r3 if 'agendar' in (r3 or {}).get('herramientas', []) else turno(g, c, 'Sí, confirmo')
     usadas = sum(((x or {}).get('herramientas', []) for x in (r1, r2, r3, r4)), [])
-    ok(usadas.count('agendar') == 1, 'whatsapp: con código de país, agenda una vez', str(usadas))
+    ok('agendar' in usadas and '¡Listo' in (r4 or {}).get('body', {}).get('content', ''), 'whatsapp: con código de país, agenda', str(usadas))
     for i, x in enumerate((r1, r2, r3, r4), 1):
         print('      %d →' % i, (x or {}).get('body', {}).get('content', '')[:200].replace('\n', ' '))
 
@@ -244,6 +245,20 @@ def datos_malos():
     ok('apellido' in t, 'datos malos: pide el apellido', t[:300])
     ok('gmail.com' in t, 'datos malos: sugiere gmail.com', t[:300])
     print('      →', t[:300].replace('\n', ' '))
+
+
+@caso
+def sin_consultar():
+    # Guarda firme: agendar sin haber consultado la disponibilidad de esa fecha se rechaza; el agente consulta y sigue.
+    g, c = nuevo()
+    jueves = proximo(4)
+    r = turno(g, c, 'Agenda el diagnóstico el %s a las 11:00. Soy Ana Rojas, ana.rojas@ejemplo.cl, WhatsApp +56 9 1234 5678. '
+                    'Ya sé que está libre, confirmo, agéndalo directo.' % jueves.isoformat())
+    turnos = [r] if '¡Listo' in (r or {}).get('body', {}).get('content', '') else [r, turno(g, c, 'Sí, confirmo')]
+    usadas = sum(((x or {}).get('herramientas', []) for x in turnos), [])
+    agendo = any('¡Listo' in (x or {}).get('body', {}).get('content', '') for x in turnos)
+    ok(not agendo or 'ver_disponibilidad' in usadas, 'sin consultar: solo queda agendada después de consultar la disponibilidad', str(usadas))
+    print('      →', (turnos[-1] or {}).get('body', {}).get('content', '')[:200].replace('\n', ' '), '|', usadas)
 
 
 @caso

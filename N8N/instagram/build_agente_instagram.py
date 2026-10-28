@@ -208,7 +208,7 @@ def flujo_principal():
     disp = dict(vacios, **fijos, accion='disponibilidad',
                 fecha="={{ $fromAI('fecha', 'Día que pide la persona en formato AAAA-MM-DD, o vacío para los próximos días disponibles', 'string') }}")
     agen = dict(vacios, **fijos, accion='agendar',
-                nombre="={{ $fromAI('nombre', 'Nombre de la persona', 'string') }}",
+                nombre="={{ $fromAI('nombre', 'Nombre y apellido de la persona (los dos obligatorios)', 'string') }}",
                 correo="={{ $fromAI('correo', 'Correo de la persona, donde le llega la invitación', 'string') }}",
                 telefono="={{ $fromAI('telefono', 'Celular de WhatsApp con código de país (obligatorio), ej. +56912345678', 'string') }}",
                 fecha="={{ $fromAI('fecha', 'Fecha confirmada, formato AAAA-MM-DD', 'string') }}",
@@ -376,19 +376,22 @@ const t = $('Entrada').first().json;
 const fecha = String(t.fecha || '').trim();
 const hora = String(t.hora || '').trim().slice(0, 5);
 const malo = msg => [{ json: { ok: false, result: msg + ' No agendes hasta tenerlo bien.' } }];
+// Se juntan todos los datos malos para que el agente los pida en un solo mensaje.
+const errores = [];
 const vn = atValidarNombre(t.nombre);
-if (!vn.ok) return malo(vn.motivo === 'vacio' || vn.motivo === 'falta_apellido'
-  ? 'Falta el nombre y apellido de la persona: pídeselo.'
+if (!vn.ok) errores.push(vn.motivo === 'vacio' || vn.motivo === 'falta_apellido'
+  ? 'Falta el nombre y apellido de la persona: pídeselo (si dio solo el nombre, pide el apellido).'
   : 'Eso no parece un nombre y apellido: pídeselo de nuevo.');
 const vc = atValidarCorreo(t.correo);
-if (!vc.ok) return malo(vc.motivo === 'tipeo'
+if (!vc.ok) errores.push(vc.motivo === 'tipeo'
   ? 'El correo parece mal escrito: pregúntale si es ' + vc.sugerencia + '.'
   : 'El correo no es válido: pídeselo de nuevo.');
 // Obligatorio desde el 28-oct (Luis): sin WhatsApp con código de país no se agenda.
 const vw = atValidarWhatsApp(t.telefono);
-if (!vw.ok) return malo(vw.motivo === 'chile'
+if (!vw.ok) errores.push(vw.motivo === 'chile'
   ? 'El celular de Chile tiene que ser +56 9 y ocho dígitos (por ejemplo +56 9 1234 5678): pídeselo de nuevo.'
   : 'Falta el WhatsApp con código de país (es obligatorio): pídeselo con el ejemplo «en Chile: +56 9 1234 5678».');
+if (errores.length) return malo((errores.length > 1 ? 'Pídele todo esto en un solo mensaje: ' : '') + errores.join(' '));
 const nombre = vn.valor, correo = vc.valor, tel = vw.valor;
 if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha) || !/^\d{2}:00$/.test(hora)) return malo('Fecha u hora inválida: fecha AAAA-MM-DD y hora en punto (HH:00).');
 const dt = DateTime.fromISO(fecha + 'T' + hora, { zone: 'ZONA' });
@@ -397,6 +400,20 @@ if (dt < DateTime.now().setZone('ZONA').plus({ hours: 2 })) return malo('Esa hor
 return [{ json: { ok: true, prueba: t.prueba === 'si', date: fecha, time: hora, email: correo, name: nombre, phone: tel,
   session_id: 'ig:' + String(t.igsid || ''), appointmentType: 'Demo' } }];
 """.replace('ZONA', ZONA)
+
+
+JS_REVISAR_CONSULTA = r"""
+// Guarda firme (propuesta de Eje, 28-oct): solo se agenda una fecha que esta conversación consultó con ver_disponibilidad
+// en las últimas 3 horas (Redis ig:disp:<IGSID>, la anota «Anotar fechas consultadas»).
+const cita = $('Validar cita').first().json;
+let fechas = [];
+try { const v = JSON.parse(String($json.disp || '[]')); if (Array.isArray(v)) fechas = v; } catch (e) {}
+if (!fechas.includes(cita.date)) {
+  return [{ json: { ok: false, result: 'Antes de agendar consulta ver_disponibilidad para ' + cita.date
+    + ' y confirma la hora con la persona. No agendes todavía.' } }];
+}
+return [{ json: cita }];
+"""
 
 
 def flujo_herramientas():
@@ -414,16 +431,27 @@ def flujo_herramientas():
              {'method': 'POST', 'url': WP + '/check-availability', 'sendBody': True, 'specifyBody': 'json',
               'jsonBody': '={{ JSON.stringify({ date: $json.date }) }}', 'options': {'timeout': 15000}}),
         code('igh-horas', 'Horas libres', [1320, 260], JS_HORAS),
+        redis('igh-anotar', 'Anotar fechas consultadas', [1540, 260],
+              {'operation': 'set', 'key': "=ig:disp:{{ $('Entrada').first().json.igsid }}", 'keyType': 'string',
+               'value': "={{ JSON.stringify($('Fechas a revisar').all().map(i => i.json.date)) }}",
+               'expire': True, 'ttl': 10800}),
+        code('igh-resultado-disp', 'Resultado disponibilidad', [1760, 260],
+             "return [{ json: { result: $('Horas libres').first().json.result } }];"),
         code('igh-validar', 'Validar cita', [440, 420], JS_VALIDAR_CITA.replace('VALIDACION_AT', validacion_at())),
         si_booleano('igh-ok', '¿Cita válida?', [660, 420], '$json.ok'),
-        si_booleano('igh-prueba', '¿Es prueba?', [880, 380], '$json.prueba'),
+        redis('igh-leer-disp', 'Leer fechas consultadas', [880, 420],
+              {'operation': 'get', 'propertyName': 'disp', 'key': "=ig:disp:{{ $('Entrada').first().json.igsid }}",
+               'keyType': 'string', 'options': {}}),
+        code('igh-revisar', 'Revisar consulta', [1100, 420], JS_REVISAR_CONSULTA),
+        si_booleano('igh-consulto', '¿Consultó la fecha?', [1320, 420], '$json.ok'),
+        si_booleano('igh-prueba', '¿Es prueba?', [1540, 400], '$json.prueba'),
         # Igual al mensaje de éxito del sub-workflow de PROD («Set Success Message»), para que el agente se comporte igual.
-        code('igh-simulada', 'Cita simulada', [1100, 320],
+        code('igh-simulada', 'Cita simulada', [1760, 340],
              "const c = $json;\nreturn [{ json: { simulada: true, result: '¡Listo ' + c.name + '! He agendado la reunión para el '"
              " + c.date.split('-').reverse().join('-') + ' a las ' + c.time + ' hrs. Te llegará una invitación a tu correo ' + c.email + '.' } }];"),
-        nodo('igh-agendar', 'Agendar en PROD', 'n8n-nodes-base.executeWorkflow', 1, [1100, 460],
+        nodo('igh-agendar', 'Agendar en PROD', 'n8n-nodes-base.executeWorkflow', 1, [1760, 480],
              {'workflowId': AGENDAR_PROD, 'options': {}}),
-        code('igh-resultado', 'Resultado', [1320, 460],
+        code('igh-resultado', 'Resultado', [1980, 480],
              "return [{ json: { result: String($json.result || 'No pudimos agendar esa hora. Ofrece otra o deriva a una persona.') } }];"),
     ]
     con = conectar(
@@ -431,7 +459,10 @@ def flujo_herramientas():
         ('¿Qué herramienta?', 'Agenda', 0), ('¿Qué herramienta?', 'Validar cita', 1),
         ('Agenda', 'Fechas a revisar', 0), ('Fechas a revisar', '¿Ya hay respuesta?', 0),
         ('¿Ya hay respuesta?', 'Horas ocupadas', 1), ('Horas ocupadas', 'Horas libres', 0),
-        ('Validar cita', '¿Cita válida?', 0), ('¿Cita válida?', '¿Es prueba?', 0),
+        ('Horas libres', 'Anotar fechas consultadas', 0), ('Anotar fechas consultadas', 'Resultado disponibilidad', 0),
+        ('Validar cita', '¿Cita válida?', 0), ('¿Cita válida?', 'Leer fechas consultadas', 0),
+        ('Leer fechas consultadas', 'Revisar consulta', 0), ('Revisar consulta', '¿Consultó la fecha?', 0),
+        ('¿Consultó la fecha?', '¿Es prueba?', 0),
         ('¿Es prueba?', 'Cita simulada', 0), ('¿Es prueba?', 'Agendar en PROD', 1),
         ('Agendar en PROD', 'Resultado', 0),
     )

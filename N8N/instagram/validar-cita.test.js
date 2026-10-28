@@ -41,6 +41,18 @@ ok(!r.ok && /hora en punto/.test(r.result), 'hora que no es en punto: se rechaza
 r = correr({ ...base, fecha: '2020-01-01' });
 ok(!r.ok && /ya pasó/.test(r.result), 'fecha pasada: se rechaza', r);
 for (const x of [correr({ ...base, nombre: 'Ana' })]) ok(/No agendes/.test(x.result), 'cada rechazo le dice al agente que no agende', x);
+r = correr({ ...base, nombre: 'Ana', correo: 'ana@gmail.con', telefono: '' });
+ok(!r.ok && /apellido/.test(r.result) && r.result.includes('ana@gmail.com') && r.result.includes('+56 9 1234 5678'),
+  'varios datos malos: los pide todos en un solo mensaje', r);
+
+// Guarda «Revisar consulta»: agendar solo si en esa conversación se consultó la disponibilidad de esa fecha (Redis).
+const guarda = wf.nodes.find(n => n.name === 'Revisar consulta').parameters.jsCode;
+const cita = correr(base);
+const revisar = disp => new Function('$', '$json', guarda)(() => ({ first: () => ({ json: cita }) }), { disp })[0].json;
+ok(revisar(JSON.stringify(['2099-11-30', '2099-12-01'])).ok === true, 'guarda: la fecha se consultó, sigue a agendar');
+r = revisar(JSON.stringify(['2099-11-30']));
+ok(r.ok === false && /ver_disponibilidad/.test(r.result) && r.result.includes('2099-12-01'), 'guarda: otra fecha consultada, pide consultar esta', r);
+ok(revisar(null).ok === false && revisar('basura').ok === false, 'guarda: sin consulta o con dato ilegible, no agenda');
 
 console.log(fallas ? `\n${fallas} FALLAS` : '\nTODO OK');
 process.exit(fallas ? 1 : 0);

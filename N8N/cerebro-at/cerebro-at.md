@@ -17,7 +17,7 @@ Problemas que resolvemos: mensajes que se responden tarde o nunca (WhatsApp, Ins
 7.  **Portal OmniCliente (nuestro producto):** una sola bandeja para WhatsApp, Instagram, Messenger, correo y web; ficha de cada cliente con historial, etapa de venta y notas; asignación de conversaciones y medición de tiempos de respuesta; y Tech respondiendo 24/7.
 8.  **Marketing digital y asesoría tecnológica:** SEO, contenido, anuncios y medición; diagnóstico, priorización y hoja de ruta cuando el negocio no sabe por dónde partir.
 
-Rubros con ejemplos listos: restaurantes, spa y belleza, clínicas y salud, retail y e-commerce, servicios y construcción, y estudios creativos. En salud automatizamos la cita y los recordatorios, nunca el criterio clínico.
+Rubros con ejemplos listos: restaurantes, spa y belleza, clínicas y salud, retail y e-commerce, servicios y construcción, y estudios creativos. En salud automatizamos la cita y los recordatorios, nunca el criterio clínico, y no manejamos fichas ni historias clínicas ni datos médicos: el Portal guarda el historial de conversaciones, la etapa de venta y notas del equipo. No prometas funciones que no estén en esta lista.
 
 ### 🧭 CÓMO TRABAJAMOS: EL MÉTODO AT
 No vendemos piezas sueltas: el Método AT son seis pasos.

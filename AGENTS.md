@@ -120,6 +120,10 @@ Header: X-AT-Secret: <secret>  (wp-config.php del servidor — no exponer)
   Luis):** guía `Docs/METODO_AT/ASISTENTE-INSTAGRAM.md`, flujos en `N8N/instagram/`. Para los archivos del Portal, PROD es
   esta línea, no `main`; `omnichannel-derivacion.php` se sube antes que el controlador.
 
+## Instagram de AT — comentarios con palabra clave (estado vivo)
+
+EN PROD desde el 2026-10-24 y en `main` (PR #115). Guía única: `Docs/OMNICLIENTE-IG-COMENTARIOS.md`; aprendizajes y vía rápida en la bóveda, `10-Projects/2026-10-24-Instagram-Comentarios-Palabra-Clave.md`. Palabras por canal en `bot_configs.custom_functions_json.palabras_clave` (editar con `tools/ig-palabras-clave-config.php`). Lo que sigue en la conversación es el asistente de mensajes directos (PR #107).
+
 ## graphify
 
 This project has a knowledge graph at graphify-out/ with god nodes, community structure, and cross-file relationships.

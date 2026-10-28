@@ -738,18 +738,10 @@ function automatiza_tech_save_lead($request) {
     $invitees_valid = $invitees_parsed['valid'];
     $invitees_names = $invitees_parsed['names'] ?? array();
     
-    // Auto-detectar source como 'whatsapp' si:
-    // 1. session_id contiene "whatsapp" (flujo antiguo)
-    // 2. Tiene teléfono y no tiene session_id (indica que viene de N8N/WhatsApp)
-    // 3. El source no fue especificado explícitamente como algo diferente a 'web'
-    if ($source === 'web') {
-        if (strpos(strtolower($session_id), 'whatsapp') !== false) {
-            $source = 'whatsapp';
-        } elseif (!empty($phone) && empty($session_id)) {
-            // Si tiene teléfono pero no session_id, viene del flujo de WhatsApp/N8N
-            $source = 'whatsapp';
-        }
-    }
+    // Auto-detectar el origen si no vino uno distinto de 'web': «ig:» = asistente de Instagram;
+    // «whatsapp» en session_id, o teléfono sin session_id = WhatsApp (ver inc/lead-origen.php).
+    require_once __DIR__ . '/lead-origen.php';
+    $source = automatiza_tech_lead_origen($source, $session_id, $phone);
     
     $scheduled_date = isset($params['scheduled_date']) ? sanitize_text_field($params['scheduled_date']) : null;
     $scheduled_time = isset($params['scheduled_time']) ? sanitize_text_field($params['scheduled_time']) : null;
@@ -831,6 +823,7 @@ function automatiza_tech_save_lead($request) {
     }
 
     $lead_id = (int) $wpdb->insert_id;
+    do_action('automatiza_tech_lead_guardado', $lead_id, $data); // Lead por CAPI (inc/meta-capi/), 28-oct-2026
     if (function_exists('automatiza_tech_home_premium_store_lead_attribution')) {
         automatiza_tech_home_premium_store_lead_attribution($lead_id, $params);
     }

@@ -286,6 +286,23 @@ if ($loggedIn && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '
                 }
                 $formErrors[] = $resultado['mensaje'];
             }
+        } elseif ($action === 'rsvp_borrar') {
+            // Borra UNA confirmación con su regalo y su foto de bebé (solo superadministrador: la
+            // acción no está en la lista de las que puede hacer un operador). El id viaja en la
+            // query del formAction del botón, porque el formulario compartido `cc-envios` solo
+            // lleva el slug.
+            $slugR = cb_valid_public_slug((string) ($_POST['slug'] ?? '')) ? (string) $_POST['slug'] : '';
+            $rsvpIdR = (int) ($_GET['rsvp_borrar'] ?? 0);
+            $partyIdR = $slugR !== '' ? cb_party_db_id($slugR) : null;
+            if ($partyIdR === null || $rsvpIdR <= 0) {
+                $formErrors[] = 'La fiesta o la confirmación no existe.';
+            } elseif (!cb_rsvp_borrar($partyIdR, $rsvpIdR)) {
+                $formErrors[] = 'Esa confirmación ya no existe.';
+            } else {
+                $_SESSION['envio_flash'] = 'Confirmación borrada, con su regalo y su foto.';
+                header('Location: index.php?ok=envio');
+                exit;
+            }
         } elseif ($action === 'invitados_agregar') {
             // Agregar UN invitado en medio de la fiesta, sin abrir la ficha entera: es lo único
             // de la ficha que un operador puede tocar, y solo en sus fiestas (2026-09-13).
@@ -1327,7 +1344,16 @@ if ($formValues === null && $action === 'editar') {
                       <?php else: ?>
                         <span class="muted small"><?= $rsvpAdulto ? 'sin acompañantes anotados' : 'sin niños anotados' ?></span>
                       <?php endif; ?>
+                      <?php if (($f['equipo'] ?? '') !== '' || ($f['regalo'] ?? '') !== ''): ?>
+                        <span class="muted small">· <?= ($f['equipo'] ?? '') === 'mama' ? 'Team Mamá' : (($f['equipo'] ?? '') === 'papa' ? 'Team Papá' : '') ?>
+                          <?= ($f['regalo'] ?? '') !== '' ? '· ' . h($f['regalo']) : '' ?><?= !empty($f['foto']) ? ' · 📷' : '' ?></span>
+                      <?php endif; ?>
                       <span class="muted small rsvp-lista__cuando"><?= h($f['cuando']) ?></span>
+                      <?php if (!empty($f['id'])): ?>
+                        <button class="btn btn-ghost" type="submit" form="cc-envios" name="action" value="rsvp_borrar"
+                                formaction="index.php?rsvp_borrar=<?= (int) $f['id'] ?>"
+                                data-avisar="¿Borrar la confirmación de <?= h($f['familia']) ?>? Se borra también su regalo y su foto, y el regalo queda libre.">Borrar</button>
+                      <?php endif; ?>
                     </li>
                   <?php endforeach; ?>
                 </ul>

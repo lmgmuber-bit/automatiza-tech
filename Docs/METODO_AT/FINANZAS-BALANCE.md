@@ -170,4 +170,5 @@ Esto prueba el código en local; **no acredita PROD** ni la lectura real de mind
 - **Categorías:** una categoría escrita con mayúsculas distintas («Hosting» y «hosting») sale en dos filas del desglose.
 - **Conteo de pendientes del resumen:** incluye consumos y ajustes en dólares sin tipo de cambio, aunque estos no cambian el total del mes. El aviso de la pestaña «Pagos por mes» sí cuenta solo pagos y recargas.
 - **Segunda etapa:** registro automático del consumo de fotos que generan solos el renderer de propuestas y el de Retomar. Hoy esos consumos los anota Balance o quien los gasta.
+- **Renovación doble en Suscripciones (corregida, EN PROD el 21-oct-2026, PR #99):** antes, recargar la página después de «✅ Sí, lo pagué» renovaba otra vez la suscripción. Ahora la acción se procesa antes de dibujar y la página vuelve sin la acción en la URL, y una fila ya renovada o cerrada responde «Esta suscripción ya fue renovada o cerrada.». Respaldo: `~/respaldos/finanzas-renovacion-doble-antes-20261021.tar.gz`.
 - **Fuera de alcance:** no hay importación de extractos bancarios ni pagos o recargas automáticos.

@@ -2043,6 +2043,45 @@
       "musicaHint": "Cuna suave",
       "transition": "none"
     },
+    "baby-osito": {
+      "nombre": "Osito de Bienvenida",
+      "vozPropia": true,
+      "franquicia": null,
+      "publico": "mixto",
+      "modalidad": "baby_shower",
+      "diploma": "Invitado de honor del Osito de Bienvenida",
+      "colors": {
+        "accent": "#6E9B5A",
+        "accentSoft": "#E6F0DC",
+        "yellow": "#F2CB55",
+        "ink": "#3D4A2F",
+        "bgLight1": "#FBF8EE",
+        "bgLight2": "#EEF3E2",
+        "dark1": "#4F6B3F",
+        "dark2": "#34472A",
+        "dark3": "#B9D3A0"
+      },
+      "confetti": [
+        "#6E9B5A",
+        "#F2CB55",
+        "#B9D3A0",
+        "#FBF8EE",
+        "#B98A5E",
+        "#E6F0DC"
+      ],
+      "videos": {
+        "despedida": "despedida-baby-osito.mp4"
+      },
+      "personajes": [],
+      "frameBox": {
+        "x": 0.2,
+        "y": 0.28,
+        "w": 0.62,
+        "h": 0.4
+      },
+      "musicaHint": "Cuna suave",
+      "transition": "none"
+    },
     "baby-safari": {
       "nombre": "Bebé Safari",
       "franquicia": null,

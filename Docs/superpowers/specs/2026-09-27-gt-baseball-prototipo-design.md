@@ -487,3 +487,26 @@ cabeceras y un navegador real contra el dominio).
 El PR #61 (rama `claude/gt-baseball-planes`, que contiene a `claude/gt-baseball-prototipo`) se mergeó a `main` el
 13-oct-2026 (commit `37a5a40`). Desde ahí `main` tiene el mismo sitio y los mismos flujos que corren en gtbaseball.com.
 Cambios nuevos: rama desde `main`, despliegue con `deploy_dominio.py` y el ok de Luis.
+
+## Inscripción a 20 $ y WhatsApp nuevo de la academia (28-oct, EN PROD)
+
+La academia bajó la inscripción de 25 $ a 20 $ y cambió su WhatsApp a un número venezolano. Los dos datos viven en
+`gt-config.json` (fuera del repo, que es público): `pago.monto`, el `monto` de cada forma de pago y `whatsapp`.
+Antes de cambiarlo se respaldó ese archivo.
+
+- **Sitio:** subido con `deploy_dominio.py`. Desde afuera la página muestra 20 $ en los cuatro montos, no queda
+  ningún «25 $» y el atributo `data-whatsapp` lleva el número nuevo.
+- **Correos (flujo `jsqxDfoWvJbDVAUa`):** se republicó con `build.py --publicar`. Antes se comprobó que lo que
+  corría en n8n era igual a lo que genera `build.py` con la configuración anterior (20 nodos, mismas conexiones),
+  y se guardó una copia del flujo vivo.
+- **Video guía:** se corrigió sin volver a grabar el recorrido, cuyos cuadros originales ya no existían.
+  - **Voz:** solo la línea del pago se regeneró con Alice (`05g-pago`, «veinte dólares», 199 caracteres) y se
+    puso donde estaba la anterior.
+  - **Imagen:** en los cuadros donde se leía «25 $» se pegó «20 $»:
+    - en la portada y en el título del paso de pago, desde capturas nuevas del formulario al mismo tamaño;
+    - en la tarjeta de pago móvil y en el correo, cambiando el «5» por un «0» del mismo cuadro, para conservar
+      el fondo.
+    Una búsqueda cuadro a cuadro del «25» viejo da 0 coincidencias en el video nuevo.
+  - **Página:** subtítulos corregidos y el video pedido con `?v=3`. El video anterior quedó respaldado en
+    `Videos/gt-baseball/v2/antes-20usd-2026-10-28/`.
+  - **Scripts:** `pago/capturas-20usd.cjs` y `pago/parche-video-20usd.py`, junto a los de despliegue.

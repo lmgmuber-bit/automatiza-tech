@@ -10,6 +10,8 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
+require_once __DIR__ . '/omnichannel-derivacion.php';
+
 class OmnichannelController {
 
     private $wpdb;
@@ -1071,6 +1073,11 @@ class OmnichannelController {
             }
         }
 
+        // La foto de perfil de Instagram es una dirección firmada que puede pasar los 500 caracteres de la columna:
+        // con ella WordPress rechaza la fila entera (28-oct: 523). Cortarla la rompería, así que no se guarda.
+        $avatar = esc_url_raw($message_data['contact_avatar_url'] ?? '');
+        $message_data['contact_avatar_url'] = strlen($avatar) <= 500 ? $avatar : '';
+
         if (!$conversation) {
             $this->wpdb->insert($this->prefix . 'conversations', [
                 'client_id'           => $channel->client_id,
@@ -1087,6 +1094,11 @@ class OmnichannelController {
                 'unread_count'        => 1,
             ]);
             $conversation_id = $this->wpdb->insert_id;
+            // Sin conversación no se guarda el mensaje (quedaría huérfano, invisible en el Portal) ni se avisa a n8n.
+            if (!$conversation_id) {
+                error_log('[omnicanal] no se pudo crear la conversación del canal ' . $channel_id . ': ' . $this->wpdb->last_error);
+                return ['error' => 'No se pudo crear la conversación'];
+            }
         } else {
             $conversation_id = $conversation->id;
             $update_data = [
@@ -1135,6 +1147,15 @@ class OmnichannelController {
         // Reenviar a N8N si la conversación está en modo bot
         $conv_status = $conversation ? ($conversation->status ?? 'bot') : 'bot';
         $intervention = $conversation ? ($conversation->intervention_mode ?? '') : '';
+
+        // Instagram: una conversación que derivó el asistente vuelve al bot si la persona escribe
+        // después de 24 h. Se compara con la actividad ANTERIOR a este mensaje ($conversation se leyó antes).
+        if ($conversation && omni_debe_volver_al_bot((string) $conversation->channel_type, (string) $intervention,
+                $conversation->last_message_at ?? null, time(), $this->derivada_por_bot($conversation))) {
+            $this->volver_al_bot($conversation);
+            $conv_status = 'bot';
+            $intervention = '';
+        }
         if ($conv_status === 'bot' && $intervention !== 'human') {
             $this->forward_to_n8n($channel_id, $conversation_id, $message_data, $message_id);
         }
@@ -1189,7 +1210,7 @@ class OmnichannelController {
     /**
      * Un ejecutivo toma el control de una conversación
      */
-    public function takeover_conversation($conversation_id, $agent_id, $reason = '') {
+    public function takeover_conversation($conversation_id, $agent_id, $reason = '', $notify = true) {
         $conversation_id = absint($conversation_id);
         $agent_id = absint($agent_id);
 
@@ -1260,8 +1281,10 @@ class OmnichannelController {
             $conversation->client_id
         );
 
-        // Send email notification to assigned agent
-        $this->notify_agent_assignment($conversation_id, $agent, $conversation, 'assigned');
+        // Send email notification to assigned agent (la derivación del bot manda su propio correo)
+        if ($notify) {
+            $this->notify_agent_assignment($conversation_id, $agent, $conversation, 'assigned');
+        }
 
         return ['success' => true, 'takeover_id' => $this->wpdb->insert_id];
     }
@@ -2794,6 +2817,8 @@ class OmnichannelController {
     private function forward_to_n8n($channel_id, $conversation_id, $message_data, $message_id) {
         $bot_config = $this->get_bot_config($channel_id);
         if (!$bot_config || empty($bot_config->n8n_webhook_url) || !$bot_config->is_active) return;
+        // Cuentas a las que el bot nunca responde (custom_functions_json.sin_bot): el mensaje queda en el Portal.
+        if (omni_sin_bot($bot_config->custom_functions_json ?? null, $message_data['external_contact_id'] ?? '')) return;
 
         // Obtener teléfono del negocio desde el canal
         $channel = $this->wpdb->get_row($this->wpdb->prepare(
@@ -2823,6 +2848,12 @@ class OmnichannelController {
             'callback_token'  => $callback_token,
             'timestamp'       => current_time('c'),
         ];
+
+        // Quien llega desde un comentario con palabra clave: qué comentó y qué privado le enviamos.
+        $contexto = $this->contexto_comentario($conversation_id);
+        if ($contexto) {
+            $payload['contexto'] = $contexto;
+        }
 
         // Incluir prompt_config si existe para este canal
         $prompt_config = $this->get_active_prompt_config_for_channel($channel_id);
@@ -2869,6 +2900,18 @@ class OmnichannelController {
         ));
         if (!$conversation) return ['error' => 'Conversación no encontrada'];
 
+        // El asistente pide derivar a una persona (con su despedida en 'content', opcional).
+        if (($body['action'] ?? '') === 'escalate') {
+            return $this->escalar_desde_bot($conversation_id, $channel_id,
+                mb_substr(sanitize_textarea_field((string) ($body['motivo'] ?? '')), 0, 300),
+                sanitize_textarea_field((string) ($body['content'] ?? '')));
+        }
+
+        // Instagram: una respuesta del bot que llega con la conversación ya en manos de una persona no se envía.
+        if ($conversation->channel_type === 'instagram' && ($conversation->intervention_mode ?? '') === 'human') {
+            return ['ignorada' => 'conversacion_humana'];
+        }
+
         // Detectar si el payload es formato YCloud crudo (tiene 'type' + 'from' + 'to')
         $is_raw_ycloud = isset($body['type']) && isset($body['from']) && isset($body['to']);
 
@@ -2895,6 +2938,13 @@ class OmnichannelController {
         ]);
         if (isset($local['error'])) return $local;
 
+        return $this->entregar_mensaje_bot($conversation, $channel_id, $local, $content, $msg_type);
+    }
+
+    /**
+     * Envía por el canal (WhatsApp o Instagram) un mensaje del bot ya guardado en $local['message_id'].
+     */
+    private function entregar_mensaje_bot($conversation, $channel_id, $local, $content, $msg_type = 'text') {
         if ($conversation->channel_type === 'whatsapp' && !empty($conversation->contact_phone)) {
             $ycloud = $this->send_ycloud_message($channel_id, $conversation->contact_phone, $content, $msg_type);
             if (isset($ycloud['success'])) {
@@ -2923,6 +2973,120 @@ class OmnichannelController {
         }
 
         return $local;
+    }
+
+    // =========================================================
+    // ASISTENTE: DERIVACIÓN A UNA PERSONA Y VUELTA AL BOT
+    // =========================================================
+
+    /**
+     * El asistente de n8n pide derivar a una persona (callback con action = 'escalate').
+     * Envía la despedida si viene, deja la conversación en modo humano (asignada al ejecutivo de
+     * bot_configs.custom_functions_json.derivacion, o abierta sin asignar) y avisa por correo.
+     * Si ya estaba en modo humano no hace nada: no repite el correo.
+     */
+    public function escalar_desde_bot($conversation_id, $channel_id, $motivo, $despedida = '') {
+        $conversation_id = absint($conversation_id);
+        $channel_id = absint($channel_id);
+        $conv = $this->wpdb->get_row($this->wpdb->prepare(
+            "SELECT * FROM {$this->prefix}conversations WHERE id = %d AND channel_id = %d", $conversation_id, $channel_id
+        ));
+        if (!$conv) return ['error' => 'Conversación no encontrada'];
+        if (($conv->intervention_mode ?? '') === 'human') return ['ya_derivada' => true];
+
+        if ($despedida !== '') {
+            $local = $this->send_message($conversation_id, [
+                'sender_type' => 'bot', 'sender_id' => 'n8n', 'sender_name' => 'Bot N8N', 'content' => $despedida,
+            ]);
+            if (!isset($local['error'])) $this->entregar_mensaje_bot($conv, $channel_id, $local, $despedida);
+        }
+
+        $bot = $this->get_bot_config($channel_id);
+        $cfg = omni_derivacion_config($bot ? ($bot->custom_functions_json ?? null) : null);
+        $asignado = 0;
+        if ($cfg['agente_id'] > 0) {
+            $t = $this->takeover_conversation($conversation_id, $cfg['agente_id'], 'Derivado por el asistente: ' . $motivo, false);
+            if (empty($t['error'])) $asignado = $cfg['agente_id'];
+        }
+        if (!$asignado) {
+            $this->wpdb->update($this->prefix . 'conversations',
+                ['status' => 'open', 'intervention_mode' => 'human', 'assigned_agent_id' => null], ['id' => $conversation_id]);
+        }
+
+        $this->wpdb->insert($this->prefix . 'messages', [
+            'conversation_id' => $conversation_id, 'channel_type' => $conv->channel_type, 'direction' => 'outbound',
+            'sender_type' => 'system', 'sender_name' => 'Sistema', 'message_type' => 'text',
+            'content' => '🙋 El asistente derivó: ' . ($motivo !== '' ? $motivo : 'la persona pidió hablar con alguien'),
+            'delivery_status' => 'delivered',
+            'metadata_json' => wp_json_encode(['origen' => 'derivacion_bot', 'motivo' => $motivo], JSON_UNESCAPED_UNICODE),
+            'created_at' => current_time('mysql', 1),
+        ]);
+
+        $filas = array_reverse($this->wpdb->get_results($this->wpdb->prepare(
+            "SELECT direction, content FROM {$this->prefix}messages
+             WHERE conversation_id = %d AND sender_type != 'system' AND content != '' ORDER BY id DESC LIMIT 6",
+            $conversation_id
+        )));
+        $ultimos = array_map(static function ($m) {
+            return ['dir' => $m->direction === 'inbound' ? 'in' : 'out', 'texto' => (string) $m->content];
+        }, $filas);
+        $correo = omni_derivacion_correo(['contact_name' => $conv->contact_name, 'external_contact_id' => $conv->external_contact_id],
+            $motivo, $ultimos, home_url('/omnicliente/'));
+        $headers = ['Content-Type: text/html; charset=UTF-8', 'From: AutomatizaTech OmniCliente <' . get_option('admin_email') . '>'];
+        $enviados = 0;
+        foreach ($cfg['correos'] as $to) {
+            if (wp_mail($to, $correo['asunto'], $correo['html'], $headers)) $enviados++;
+        }
+
+        $this->audit_log('bot_escalate', 'conversation', $conversation_id,
+            'El asistente derivó a una persona' . ($asignado ? " (agente $asignado)" : ' (sin asignar)'),
+            ['status' => $conv->status], ['intervention_mode' => 'human', 'agent_id' => $asignado], $conv->client_id);
+
+        return ['derivada' => true, 'agente_id' => $asignado, 'correos' => $enviados];
+    }
+
+    /** La conversación está en manos de una persona porque la derivó el asistente (no porque la tomó un ejecutivo). */
+    private function derivada_por_bot($conv) {
+        $reason = $this->wpdb->get_var($this->wpdb->prepare(
+            "SELECT reason FROM {$this->prefix}takeovers WHERE conversation_id = %d AND status = 'active' ORDER BY id DESC LIMIT 1",
+            $conv->id
+        ));
+        if ($reason !== null) return strpos((string) $reason, 'Derivado por el asistente') === 0;
+        if (!empty($conv->assigned_agent_id)) return false;
+        return (bool) $this->wpdb->get_var($this->wpdb->prepare(
+            "SELECT id FROM {$this->prefix}messages WHERE conversation_id = %d AND sender_type = 'system' AND metadata_json LIKE %s LIMIT 1",
+            $conv->id, '%"origen":"derivacion_bot"%'
+        ));
+    }
+
+    /** Devuelve al bot una conversación derivada cuando la persona vuelve a escribir después de 24 h. */
+    private function volver_al_bot($conv) {
+        $this->wpdb->update($this->prefix . 'takeovers',
+            ['status' => 'released', 'released_at' => current_time('mysql')],
+            ['conversation_id' => $conv->id, 'status' => 'active']);
+        $this->wpdb->update($this->prefix . 'conversations',
+            ['status' => 'bot', 'intervention_mode' => '', 'assigned_agent_id' => null], ['id' => $conv->id]);
+        if (!empty($conv->assigned_agent_id)) {
+            $this->wpdb->query($this->wpdb->prepare(
+                "UPDATE {$this->prefix}agents SET active_chats = GREATEST(active_chats - 1, 0) WHERE id = %d", $conv->assigned_agent_id
+            ));
+        }
+        $this->send_message($conv->id, [
+            'sender_type' => 'system', 'sender_name' => 'Sistema',
+            'content'     => '🤖 La persona volvió a escribir después de 24 horas: la conversación vuelve al asistente.',
+        ]);
+        $this->audit_log('bot_return', 'conversation', $conv->id, 'Vuelve al asistente tras 24 h sin actividad',
+            ['status' => $conv->status], ['status' => 'bot'], $conv->client_id);
+    }
+
+    /** Contexto para n8n si la persona llegó desde un comentario con palabra clave (últimos 7 días), o null. */
+    private function contexto_comentario($conversation_id) {
+        $filas = $this->wpdb->get_results($this->wpdb->prepare(
+            "SELECT sender_type, content, metadata_json, created_at FROM {$this->prefix}messages
+             WHERE conversation_id = %d AND metadata_json LIKE %s ORDER BY id DESC LIMIT 10",
+            absint($conversation_id), '%comentario_palabra_clave%'
+        ), ARRAY_A);
+        return omni_contexto_comentario($filas ?: [], time());
     }
 
     /**

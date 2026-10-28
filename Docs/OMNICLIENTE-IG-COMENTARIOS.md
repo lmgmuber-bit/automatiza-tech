@@ -115,7 +115,7 @@ directos. Se verifica con `GET <IG_ID>/subscribed_apps`.
 - **Prueba real** con @chachi_morales y la palabra MÉTODO: llegó por el **webhook** (sin acceso avanzado), con la pública y la privada `sent` en el primer intento. Su respuesta por mensaje directo entró a la misma conversación (12) y el eco no se duplicó. **El plan B no hizo falta.**
 
 **Pendiente:**
-- Nadie responde automáticamente después del mensaje privado: el canal 2 no tiene flujo de n8n. Es el asistente de mensajes directos, que va en su propia sesión.
+- Nadie responde automáticamente después del mensaje privado: el canal 2 no tiene flujo de n8n. Lo resuelve el asistente de mensajes directos ([`METODO_AT/ASISTENTE-INSTAGRAM.md`](METODO_AT/ASISTENTE-INSTAGRAM.md), rama `claude/asistente-ig-directos`), que además recibe la palabra comentada y el privado enviado.
 - El contador `active_chats` del ejecutivo 2 sigue contando la conversación 6 archivada.
 
 La tabla queda como procedimiento y para la vuelta atrás:

@@ -15,7 +15,7 @@ Cada vez que alguien **agenda una reunión** (diagnóstico) por la web, el asist
 - Si el navegador no recuerda que ya avisó (otro equipo, memoria borrada) o el servidor ya había contado ese correo por WhatsApp o Instagram, el píxel puede mandar un Lead de más que Meta no logra juntar con uno del servidor. Se acepta: es raro y se ve en la comparación píxel/servidor del Administrador de eventos.
 - Versión de la Graph API: `v25.0` (`AT_CAPI_GRAPH_VERSION` en `inc/meta-capi/envio.php`; la v24.0 venció el 6-oct-2026). Revisar el changelog de Meta cada año.
 
-**Está apagado hasta que se cumplan las dos cosas:** la opción `at_capi_activo` vale `1` y PixelYourSite tiene píxel y token.
+**EN PROD y apagado desde el 28-oct-2026 19:09** (commit `0fd02fa`, 9 archivos por SSH; respaldo de los 4 reemplazados en `~/respaldos/capi-antes-20261028-190902.tar.gz`; verificado: módulo cargado, interruptor apagado, sin token, portada 200 con la huella). **Está apagado hasta que se cumplan las dos cosas:** la opción `at_capi_activo` vale `1` y PixelYourSite tiene píxel y token.
 
 ## Cómo se enciende (con Luis)
 

@@ -1,0 +1,44 @@
+<?php
+// Historial y datos del cliente que ve el colaborador. Uso: bash tests/colaboradores/correr.sh datos
+require __DIR__ . '/wp-bootstrap.php';
+exigir('at_colab_historial', 'at_colab_cliente');
+global $wpdb;
+
+$admin = col_admin_id();
+$c = col_crear_cliente('Cliente Historial', 'Funeraria Prueba');
+$wpdb->insert($wpdb->prefix . 'crm_historial', ['cliente_id' => $c, 'tipo_evento' => 'nota', 'titulo' => 'Nota del equipo', 'descripcion' => 'Llamamos al cliente', 'usuario_id' => $admin, 'created_at' => '2026-10-20 10:00:00']);
+$ficha = col_crear_ficha($c);
+$wpdb->insert($wpdb->prefix . 'automatiza_clients_details', ['client_id' => $ficha, 'detail_type' => 'reunion', 'title' => 'Reunión de avance', 'description' => 'Revisamos el sitio', 'amount' => 0, 'created_by' => $admin, 'created_at' => '2026-10-21 10:00:00']);
+$wpdb->insert($wpdb->prefix . 'automatiza_clients_details', ['client_id' => $ficha, 'detail_type' => 'factura', 'title' => 'Factura 99', 'description' => 'Pago', 'amount' => 777777, 'created_by' => $admin, 'created_at' => '2026-10-22 10:00:00']);
+
+// Un detalle guardado con client_id = id del CRM (y no de su ficha) es de OTRA ficha operativa: nunca debe salir.
+$wpdb->insert($wpdb->prefix . 'automatiza_clients_details', ['client_id' => $c, 'detail_type' => 'nota', 'title' => 'Detalle de otra ficha', 'description' => 'no', 'created_at' => '2026-10-23 10:00:00']);
+$GLOBALS['col_basura']['detalles_sueltos'][] = (int) $wpdb->insert_id;
+
+// Tipos reales que traen precios o la llave pública de una propuesta, o que el CRM marca como internos.
+$wpdb->insert($wpdb->prefix . 'crm_historial', ['cliente_id' => $c, 'tipo_evento' => 'conversion', 'titulo' => 'Convertido a cliente', 'descripcion' => 'Propuesta LlavePublica99 aceptada', 'usuario_id' => $admin, 'created_at' => '2026-10-24 10:00:00']);
+$wpdb->insert($wpdb->prefix . 'automatiza_clients_details', ['client_id' => $ficha, 'detail_type' => 'respuesta_cliente', 'title' => 'Respuesta del cliente', 'description' => 'Acepta: Sitio web · $500 USD', 'created_at' => '2026-10-24 11:00:00']);
+$wpdb->insert($wpdb->prefix . 'automatiza_clients_details', ['client_id' => $ficha, 'detail_type' => 'aviso_operativo', 'title' => 'Aviso interno', 'description' => 'Escribió por WhatsApp', 'created_at' => '2026-10-24 12:00:00']);
+
+$h = at_colab_historial($c);
+$titulos = array_column($h, 'title');
+ok(in_array('Nota del equipo', $titulos, true), 'historial: trae la nota de crm_historial');
+ok(in_array('Reunión de avance', $titulos, true), 'historial: trae el detalle reunión');
+ok(!in_array('Factura 99', $titulos, true), 'historial: no trae la factura');
+ok(strpos(wp_json_encode($h), '777777') === false, 'historial: el monto no aparece en ninguna parte');
+ok(!in_array('Detalle de otra ficha', $titulos, true), 'historial: un detalle con client_id = id del CRM no se cuela (va por la ficha operativa)');
+$json = wp_json_encode($h);
+ok(strpos($json, 'LlavePublica99') === false && strpos($json, 'Acepta:') === false && strpos($json, '$500') === false, 'historial: ni conversión, ni respuesta con precio, ni llave de propuesta');
+ok(!in_array('Aviso interno', $titulos, true), 'historial: los tipos internos del CRM no salen');
+ok($titulos[0] === 'Reunión de avance', 'historial: lo más nuevo primero');
+ok(isset($h[0]['origen_html'], $h[0]['autor']), 'historial: cada fila trae origen_html y autor');
+ok($h[0]['autor'] === get_userdata($admin)->display_name, 'historial: autor = nombre de quien lo creó');
+
+$cli = at_colab_cliente($c);
+ok($cli === ['id' => $c, 'nombre' => 'Cliente Historial', 'empresa' => 'Funeraria Prueba'], 'cliente: solo id, nombre y empresa');
+ok(at_colab_cliente(999999999) === null, 'cliente inexistente: null');
+
+$vacio = col_crear_cliente('Cliente Vacío');
+ok(at_colab_historial($vacio) === [], 'cliente sin movimientos: historial vacío');
+
+fin();

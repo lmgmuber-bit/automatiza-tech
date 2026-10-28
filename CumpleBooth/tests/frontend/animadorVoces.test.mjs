@@ -225,3 +225,76 @@ test('la ruleta: una canción jocosa para hombres gira solo entre hombres (y par
   assert.equal(ruleta.cartas.find((c) => /Es mentiroso/.test(c.texto)).para, 'f')
   assert.ok(ruleta.cartas.filter((c) => !c.para).length >= 30, 'la mayoría le sale a cualquiera')
 })
+
+import { esperarGiro } from '../../src/animador/voz.js'
+
+// Reloj virtual: programar/cancelar como setTimeout/clearTimeout, y avanzar(ms) corre lo que vence en orden.
+function relojFalso() {
+  let ahora = 0; let sig = 1; const tareas = new Map()
+  return {
+    programar: (fn, ms) => { const id = sig++; tareas.set(id, { fn, en: ahora + ms }); return id },
+    cancelar: (id) => tareas.delete(id),
+    async avanzar(ms) {
+      const hasta = ahora + ms
+      for (;;) {
+        await Promise.resolve(); await Promise.resolve()
+        const prox = [...tareas.entries()].filter(([, t]) => t.en <= hasta).sort((a, b) => a[1].en - b[1].en)[0]
+        if (!prox) break
+        tareas.delete(prox[0]); ahora = prox[1].en; prox[1].fn()
+      }
+      ahora = hasta
+      await Promise.resolve(); await Promise.resolve()
+    },
+    get ahora() { return ahora },
+  }
+}
+const promesaManual = () => { let fin; const p = new Promise((r) => { fin = r }); return { p, fin } }
+
+test('ruleta: si la frase dura menos que el giro, el resultado sale al terminar el giro', async () => {
+  const r = relojFalso(); const voz = promesaManual(); let fin = null; let tics = 0
+  esperarGiro({ voz: voz.p, minimo: 3600, cada: 400, tope: 6000, onTic: () => tics++, onFin: () => { fin = r.ahora }, programar: r.programar, cancelar: r.cancelar })
+  await r.avanzar(2000); voz.fin(true)
+  await r.avanzar(3000)
+  assert.equal(fin, 3600)
+  assert.equal(tics, 0)
+})
+
+test('ruleta: si la frase dura más que el giro, sigue pasando nombres y revela cuando la voz termina (antes la cortaba)', async () => {
+  const r = relojFalso(); const voz = promesaManual(); let fin = null; let veces = 0; let tics = 0
+  esperarGiro({ voz: voz.p, minimo: 3600, cada: 400, tope: 6000, onTic: () => tics++, onFin: () => { fin = r.ahora; veces++ }, programar: r.programar, cancelar: r.cancelar })
+  await r.avanzar(4250)
+  assert.equal(fin, null, 'no revela mientras la voz sigue')
+  assert.ok(tics >= 1, 'la ruleta sigue moviéndose')
+  voz.fin(true)
+  await r.avanzar(10)
+  assert.equal(fin, 4250)
+  await r.avanzar(8000)
+  assert.equal(veces, 1, 'revela una sola vez')
+})
+
+test('ruleta: sin voz (silencio o falla) o con una voz que nunca termina, no se queda pegada', async () => {
+  const r = relojFalso(); let fin = null
+  esperarGiro({ voz: Promise.resolve(false), minimo: 3600, onFin: () => { fin = r.ahora }, programar: r.programar, cancelar: r.cancelar })
+  await r.avanzar(4000)
+  assert.equal(fin, 3600)
+  const r2 = relojFalso(); let fin2 = null
+  esperarGiro({ voz: new Promise(() => {}), minimo: 3600, tope: 6000, onFin: () => { fin2 = r2.ahora }, programar: r2.programar, cancelar: r2.cancelar })
+  await r2.avanzar(20000)
+  assert.equal(fin2, 9600)
+})
+
+test('ruleta: cancelar (otra persona, salir del juego) no revela el giro viejo', async () => {
+  const r = relojFalso(); const voz = promesaManual(); let fin = null
+  const cancelar = esperarGiro({ voz: voz.p, minimo: 3600, onFin: () => { fin = r.ahora }, programar: r.programar, cancelar: r.cancelar })
+  await r.avanzar(1000); cancelar(); voz.fin(true)
+  await r.avanzar(10000)
+  assert.equal(fin, null)
+})
+
+test('ruleta: el componente espera la voz con esperarGiro y al girar de nuevo dice solo «giramos otra vez»', () => {
+  const src = readFileSync(new URL('../../src/animador/Animador.jsx', import.meta.url), 'utf8')
+  const ruleta = src.slice(src.indexOf('function RuletaBaile'), src.indexOf('const REDUCE_MOVIMIENTO'))
+  assert.match(ruleta, /esperarGiro\(\{/)
+  assert.match(ruleta, /voz\.decir\(otra \? claveRuleta\('otra'\) : claveRuleta\('gira', n\)\)/)
+  assert.doesNotMatch(ruleta, /setTimeout\(\(\) => \{\s*setVisor\(\{ nombre: persona/, 'el resultado ya no sale con un reloj fijo')
+})

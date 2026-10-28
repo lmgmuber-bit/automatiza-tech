@@ -920,6 +920,11 @@ html:has(.profile-savebar) { scroll-padding-bottom:110px; }
 .rsvp-lista__ninos { color: var(--text-muted); overflow-wrap: anywhere; }
 .rsvp-lista__cuando { margin-left: auto; font-variant-numeric: tabular-nums; white-space: nowrap; }
 
+/* Descargar todas las fotos en un ZIP (2026-10-21): el boton y su explicacion en una linea; en el
+   celular la explicacion baja sola. */
+.fotos-descargar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 0 0 14px; }
+.fotos-descargar .muted { flex: 1 1 260px; }
+
 /* Fotos del kiosco: seleccion multiple. Reusa .tile y .tile-media del album para que se
    vean iguales; lo unico propio es la casilla encima y el encuadre. */
 .fotos-barra {

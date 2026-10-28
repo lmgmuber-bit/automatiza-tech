@@ -91,3 +91,9 @@ Las marcadas *Eje* las puede corregir Luis.
 - La versión exacta de la Graph API (la que use el SDK de PYS 11.4.4) y el formato final del log.
 - Verificar en la documentación de Meta qué campos exige cada `action_source` (en particular si `website` exige `client_user_agent` y `event_source_url`, que el servidor no tiene porque la agenda llega desde n8n). Si los exige, mandar las agendas web por el servidor con el `action_source` que Meta acepte sin esos campos, o pasar el navegador por n8n, y anotar la decisión.
 - Dónde guardar la marca de 30 días (transient u opción) y su nombre.
+
+## 11. Resuelto al escribir el plan (28-oct, Eje)
+
+- **`action_source` de la web = `other`**, con `event_source_url` = portada del sitio. Meta exige `client_user_agent` y `event_source_url` en los eventos `website`, y `/leads` no recibe el navegador (la agenda llega desde n8n). La deduplicación con el píxel depende solo de `event_id`, `event_name` y el mismo píxel en 48 h, así que no se pierde. Instagram y WhatsApp siguen como `chat`. *(Eje; Luis lo puede corregir.)*
+- **Sin fecha u hora válidas** en `/leads`, el Lead se manda igual con un `event_id` de respaldo por `lead_id` (sin deduplicar con el píxel).
+- Plan: `Docs/superpowers/plans/2026-10-28-meta-capi-lead.md`.

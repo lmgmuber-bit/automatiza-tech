@@ -76,7 +76,17 @@ Contar compras o clientes cerrados (evento `Purchase` u otros), audiencias perso
 - El envío real empieza recién cuando Luis pega el token en PYS: hasta entonces, todo queda inerte.
 - **Vuelta atrás:** borrar el mu-plugin `at-meta-capi.php` (el `do_action` sin oyentes no hace nada) y apagar «Conversion API» en PYS.
 
-## 9. Lo que queda al constructor
+## 9. Decisiones tras la revisión del constructor (28-oct, Eje)
+
+Las marcadas *Eje* las puede corregir Luis.
+
+- **Interruptor propio** *(Eje)*: el módulo solo envía si la opción `at_capi_activo` vale `1` **y** hay token en PYS. Nace en `0`. Se enciende después de que Luis apruebe la línea de privacidad y pruebe en «Probar eventos». No depende del interruptor `use_server_api` de PYS, que solo gobierna los eventos del plugin.
+- **Correo siempre presente**: `/leads` exige nombre y correo (400 `missing_params` si faltan), así que toda agenda guardada trae correo. La clave de «primera agenda» y el `external_id` son el correo normalizado; dos correos distintos de la misma persona cuentan como dos leads *(Eje: caso raro, se acepta)*.
+- **Reagendamientos y segundas agendas en la web** *(Eje)*: además de la marca de 30 días del servidor, el navegador guarda en `localStorage` el hash del correo con su fecha y no vuelve a disparar `atLead` para ese correo en 30 días. Así el píxel y el servidor cuentan la misma «primera agenda». Si el navegador borró su memoria, puede quedar un Lead de más del píxel; se acepta. Los reagendamientos de hoy ocurren por WhatsApp, donde no hay píxel.
+- **Formato de fecha y hora para el `event_id`** *(Eje)*: los dos lados normalizan antes del hash a `AAAA-MM-DD` y `HH:MM` (24 h, sin segundos). El constructor verifica en el código qué formato manda el formulario y qué recibe `/leads`; si no coinciden, ajusta la normalización y no toca n8n.
+- **Chat web** *(Eje)*: si el chat agenda sin pasar por el formulario que llama `atLead`, esa agenda la cuenta solo el servidor (una vez, sin duplicado). No se agrega `atLead` al chat en esta etapa.
+
+## 10. Lo que queda al constructor
 
 - La versión exacta de la Graph API (la que use el SDK de PYS 11.4.4) y el formato final del log.
 - Verificar en la documentación de Meta qué campos exige cada `action_source` (en particular si `website` exige `client_user_agent` y `event_source_url`, que el servidor no tiene porque la agenda llega desde n8n). Si los exige, mandar las agendas web por el servidor con el `action_source` que Meta acepte sin esos campos, o pasar el navegador por n8n, y anotar la decisión.

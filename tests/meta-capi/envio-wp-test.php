@@ -39,7 +39,8 @@ ok($url === 'https://graph.facebook.com/' . AT_CAPI_GRAPH_VERSION . '/123456/eve
 ok(strpos($url, 'token') === false && strpos($url, 'access_token') === false, 'el token no va en la URL');
 $cuerpo = json_decode((string) ($ll[0]['args']['body'] ?? ''), true) ?: [];
 ok(($cuerpo['access_token'] ?? '') === 'token-de-prueba-capi', 'el token va en el cuerpo');
-ok(($ll[0]['args']['blocking'] ?? true) === false, 'envío no bloqueante');
+// Revisión final: con blocking=false WordPress igual espera curl_exec y no ve errores; se espera la respuesta, con tope.
+ok(($ll[0]['args']['blocking'] ?? false) === true && ($ll[0]['args']['timeout'] ?? 99) <= 3, 'espera la respuesta de Meta, con tope de 3 s');
 $e = $cuerpo['data'][0] ?? [];
 ok(($e['event_name'] ?? '') === 'Lead' && ($e['action_source'] ?? '') === 'other', 'Lead con action_source other');
 ok(($e['event_id'] ?? '') === at_capi_event_id($web['email'], '2026-11-03', '10:00'), 'event_id igual al del navegador');
@@ -78,8 +79,16 @@ $ll = $guardar(909, ['email' => $correo('f')] + $web);
 ok(count($ll) === 1, 'con la red caída igual intenta una vez');
 $GLOBALS['capi_respuesta'] = ['response' => ['code' => 200, 'message' => 'OK'], 'body' => '{}', 'headers' => [], 'cookies' => []];
 ok(count($guardar(910, ['email' => $correo('f')] + $web)) === 1, 'tras una falla el correo no quedó marcado: vuelve a intentar');
+// Meta responde con error (token inválido, evento rechazado): no se marca y el log lleva el código HTTP
+$GLOBALS['capi_respuesta'] = ['response' => ['code' => 400, 'message' => 'Bad Request'], 'body' => '{"error":{"message":"Invalid OAuth access token"}}', 'headers' => [], 'cookies' => []];
+ok(count($guardar(911, ['email' => $correo('g')] + $web)) === 1, 'Meta responde 400: intentó una vez');
+$GLOBALS['capi_respuesta'] = ['response' => ['code' => 200, 'message' => 'OK'], 'body' => '{}', 'headers' => [], 'cookies' => []];
+ok(count($guardar(912, ['email' => $correo('g')] + $web)) === 1, 'tras un 400 el correo no quedó marcado: vuelve a intentar');
+ok(count($guardar(913, ['email' => $correo('g')] + $web)) === 0, 'tras un 200 el correo sí quedó marcado');
 $texto_log = (string) @file_get_contents($log);
 ok(strpos($texto_log, '[at-capi] lead=909') !== false, 'la falla queda en el log con el id del lead');
+ok(strpos($texto_log, '[at-capi] lead=911 origen=web http=400') !== false, 'el rechazo de Meta queda en el log con su código HTTP');
+ok(strpos($texto_log, 'Invalid OAuth') === false, 'el log no copia la respuesta de Meta');
 ok(stripos($texto_log, $correo('f')) === false && strpos($texto_log, 'token-de-prueba') === false, 'el log no lleva correo ni token');
 
 // 7) El interruptor nace apagado y la configuración real se lee sin romper
@@ -93,6 +102,12 @@ $fuente = (string) file_get_contents($raiz . '/wp-content/themes/automatiza-tech
 ok(preg_match('/\$lead_id = \(int\) \$wpdb->insert_id;\s*\n\s*do_action\(\'automatiza_tech_lead_guardado\', \$lead_id, \$data\);/', $fuente) === 1,
 	'api-endpoints.php: do_action justo después del insert de /leads');
 ok(substr_count($fuente, 'automatiza_tech_lead_guardado') === 1, 'la acción se dispara en un solo lugar');
+// Revisión final: todo archivo que api-endpoints.php carga con require_once __DIR__ debe estar en git (si no, main queda roto)
+preg_match_all("/require_once __DIR__ \. '\/([a-z0-9_-]+\.php)'/", $fuente, $req);
+$en_git = (string) shell_exec('git -C ' . escapeshellarg($raiz) . ' ls-files wp-content/themes/automatiza-tech/inc');
+foreach (array_unique($req[1]) as $archivo) {
+	ok(strpos($en_git, 'inc/' . $archivo) !== false, "api-endpoints.php requiere $archivo y está en git");
+}
 $seg = (string) file_get_contents($raiz . '/wp-content/themes/automatiza-tech/inc/admin-followup-meetings.php');
 ok(strpos($seg, 'automatiza_tech_lead_guardado') === false, 'las reuniones de seguimiento no disparan el Lead');
 

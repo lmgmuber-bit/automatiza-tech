@@ -44,16 +44,20 @@ function at_capi_marcar_contado(string $correo): void {
 	set_transient(at_capi_clave_contado($correo), 1, AT_CAPI_DIAS_PRIMERA_AGENDA * DAY_IN_SECONDS);
 }
 
-/** POST no bloqueante a la Graph API; el token va en el cuerpo, nunca en la URL. true si la llamada salió. */
-function at_capi_enviar(array $payload, array $cfg): bool {
+/**
+ * POST a la Graph API; el token va en el cuerpo, nunca en la URL. Devuelve el código HTTP (0 si no hubo respuesta).
+ * Espera la respuesta con tope de 3 s: con blocking=false WordPress igual ejecuta curl_exec y no ve errores ni el
+ * código, así que un rechazo de Meta marcaría el correo como contado sin serlo.
+ */
+function at_capi_enviar(array $payload, array $cfg): int {
 	$cuerpo = $payload + ['access_token' => (string) $cfg['token']];
 	$r = wp_remote_post('https://graph.facebook.com/' . AT_CAPI_GRAPH_VERSION . '/' . rawurlencode((string) $cfg['pixel']) . '/events', [
-		'timeout'  => 5,
-		'blocking' => false,
+		'timeout'  => 3,
+		'blocking' => true,
 		'headers'  => ['Content-Type' => 'application/json'],
 		'body'     => wp_json_encode($cuerpo),
 	]);
-	return !is_wp_error($r);
+	return is_wp_error($r) ? 0 : (int) wp_remote_retrieve_response_code($r);
 }
 
 /** Oyente de automatiza_tech_lead_guardado (la dispara POST /leads después de guardar la fila). */
@@ -69,10 +73,12 @@ function at_capi_al_guardar_lead($lead_id, $data): void {
 			return;
 		}
 		$lead = ['id' => (int) $lead_id] + $data;
-		if (at_capi_enviar(at_capi_payload($lead, (string) $cfg['pixel'], (string) $cfg['test'], time()), $cfg)) {
+		$codigo = at_capi_enviar(at_capi_payload($lead, (string) $cfg['pixel'], (string) $cfg['test'], time()), $cfg);
+		if ($codigo >= 200 && $codigo < 300) {
 			at_capi_marcar_contado($correo);
 		} else {
-			error_log('[at-capi] lead=' . (int) $lead_id . ' origen=' . preg_replace('/[^a-z_]/', '', (string) ($data['source'] ?? '')) . ' http=error');
+			error_log('[at-capi] lead=' . (int) $lead_id . ' origen=' . preg_replace('/[^a-z_]/', '', (string) ($data['source'] ?? ''))
+				. ' http=' . ($codigo ?: 'error'));
 		}
 	} catch (\Throwable $e) {
 		error_log('[at-capi] lead=' . (int) $lead_id . ' excepción');

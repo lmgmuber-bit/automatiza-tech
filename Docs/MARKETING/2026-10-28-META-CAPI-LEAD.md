@@ -11,12 +11,15 @@ Cada vez que alguien **agenda una reunión** (diagnóstico) por la web, el asist
 - Correo y teléfono van **solo cifrados** (SHA-256), con `external_id` y país `cl` cuando el teléfono es chileno. Nunca nombre ni texto de la conversación.
 - Las reuniones de seguimiento de clientes (`/followup-meetings`) no cuentan.
 - En la web, el píxel (solo si la persona aceptó cookies) manda el mismo `eventID` y Meta junta los dos: no se cuenta doble. Quien rechazó cookies igual queda contado por el servidor (decisión de Luis).
-- El envío es no bloqueante: la agenda nunca espera ni falla por Meta. Una falla de red queda en el log como `[at-capi] lead=<id> origen=<o> http=error`, sin datos personales.
+- La agenda nunca falla por Meta: el envío espera la respuesta con un tope de 3 s (con `blocking=false` WordPress igual espera y no ve errores) y el correo se marca como contado solo si Meta responde 2xx. Un rechazo o una falla quedan en el log como `[at-capi] lead=<id> origen=<o> http=<código>` (o `http=error` sin respuesta), sin datos personales ni la respuesta de Meta.
+- Si el navegador no recuerda que ya avisó (otro equipo, memoria borrada) o el servidor ya había contado ese correo por WhatsApp o Instagram, el píxel puede mandar un Lead de más que Meta no logra juntar con uno del servidor. Se acepta: es raro y se ve en la comparación píxel/servidor del Administrador de eventos.
 - Versión de la Graph API: `v25.0` (`AT_CAPI_GRAPH_VERSION` en `inc/meta-capi/envio.php`; la v24.0 venció el 6-oct-2026). Revisar el changelog de Meta cada año.
 
 **Está apagado hasta que se cumplan las dos cosas:** la opción `at_capi_activo` vale `1` y PixelYourSite tiene píxel y token.
 
 ## Cómo se enciende (con Luis)
+
+0. **Antes de encender:** cerrar la auditoría pendiente de la ruta `/leads` (detalle en la bóveda privada, `10-Projects/2026-09-24-AT-Auditoria-Seguridad-REST-Leads.md`). Con CAPI encendido, cada agenda que acepte `/leads` cuenta como Lead en las campañas.
 
 1. **Token (lo hace Luis, nunca por el chat):** Administrador de eventos de Meta → el píxel → Configuración → API de Conversiones → «Generar token de acceso». Pegarlo en WordPress → PixelYourSite → Meta → campo del token de la API de Conversiones y guardar.
    - Recomendación: dejar **apagado** «Send events directly from your web server» de PixelYourSite. Nuestro módulo solo lee el token; el envío propio del plugin usa un SDK con la Graph API 16.0, que ya venció, y solo manda los eventos del plugin (PageView), no el Lead.

@@ -697,7 +697,7 @@
                 }
 
                 // Cita confirmada: avisa a Meta (solo si la persona aceptó cookies; ver mu-plugin at-consentimiento).
-                if (window.atLead) { window.atLead('Agenda de demo'); }
+                if (window.atLead) { window.atLead('Agenda de demo', { email: email, fecha: date, hora: time }); }
 
                 return sendCorporateDemoNotification()
                     .catch(function(notificationError){
@@ -732,7 +732,6 @@
         .then(function(r){ return r.json(); })
         .then(function(res){
             if(res.success){
-                if (window.atLead) { window.atLead('Agenda del sitio'); }
                 showMsg(true, '✅ ' + (res.data || '¡Solicitud enviada! Te contactaremos en menos de 24 horas.'));
                 form.reset();
                 resetAgendaTimeSelect('-- Selecciona fecha primero --', true);

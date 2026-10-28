@@ -283,7 +283,7 @@
         .then(function () {
           track('lead_submit', { intent: intent, interest: interest, lead_temperature: leadTemperature });
           // Cita registrada: avisa a Meta (solo si la persona aceptó cookies; ver mu-plugin at-consentimiento).
-          if (window.atLead) { window.atLead('Agenda diagnóstico (portada)'); }
+          if (window.atLead) { window.atLead('Agenda diagnóstico (portada)', { email: payload.email, fecha: payload.scheduled_date, hora: payload.scheduled_time }); }
           // Atribución WP-side por session_id (fire-and-forget; no bloquea el éxito).
           if (cfg.attrAjaxUrl && cfg.attrNonce) {
             try {

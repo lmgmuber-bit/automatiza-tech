@@ -25,6 +25,7 @@ ok(L.normHora('10:00:00') === '10:00' && L.normHora('9:05') === '09:05' && L.nor
 ok(await L.eventId(' Ana@Correo.CL ', '2026-11-03', '10:00:00') === VECTOR, 'eventId = vector de PHP (mayúsculas, espacios y segundos)');
 ok(await L.eventId('ana@correo.cl', '2026-11-03', '10:00') === VECTOR, 'eventId = vector ya normalizado');
 ok(await L.eventId('', '2026-11-03', '10:00') === '' && await L.eventId('a@b.cl', '', '10:00') === '', 'eventId vacío si falta un dato');
+ok(await L.huellaCorreo(' Ana@Correo.CL ') === '0dabba14b16c0be9bf84cf08e788beec0087711b4298e48a4a1463bbb050fd1f', 'huellaCorreo = sha256 del correo normalizado (igual que at_capi_hash en PHP)');
 const sin = cargar(null);
 ok(await sin.eventId('ana@correo.cl', '2026-11-03', '10:00') === '', 'sin crypto.subtle: eventId vacío, sin error');
 

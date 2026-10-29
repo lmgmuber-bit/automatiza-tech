@@ -89,3 +89,41 @@ El detalle está en `.superpowers/sdd/2026-10-28-whatsapp-reconoce-cliente/progr
    - El camino del diagnóstico de `PejBgr2LZQSAbbBy` (que usa Instagram) queda idéntico.
    - Las envolturas de «Sumar Contexto» y «Elegir Seguimiento» usan `$('…').isExecuted` correctamente en los dos caminos (texto y botón).
 8. **Rendimiento.** `at_wa_fichas_por_telefono` hace búsquedas con `RIGHT(REPLACE(...))` sobre cuatro tablas en cada mensaje. Hoy son tablas chicas; ¿vale para el volumen esperado?
+
+## Ronda 2: correcciones de la revisión B de Codex (28-oct)
+
+Informe de Codex: `Shared-Tools/revisiones/2026-10-28-wa-reconoce-B-codex.md`, con dictamen CHANGES_REQUIRED.
+
+**Revisión exacta a revisar:** los commits `26d9e5a..90ccbd2`, sobre `3fc924e`. Se ve con:
+
+```bash
+git diff 3fc924e..90ccbd2
+```
+
+Las correcciones se hicieron en una sola pasada, cada una con una prueba que primero falló:
+
+| Hallazgo | Corrección | Prueba (antes → después) |
+|---|---|---|
+| **B-01** | «Contexto Cliente», «Contexto Elegido» y «Verify Client» van con `onError=continueRegularOutput` (además de `neverError`). Un timeout o error de red llega como un ítem con `error`, sin línea de contexto. Termina en un seguimiento general, nunca en una oferta de diagnóstico. | La vista previa de `aplicar.py` falla con 3 ✗ y después queda OK. Además simula la consulta caída sobre «Sumar Contexto» y «Elegir Seguimiento», y `contexto.test.js` prueba la forma `{error}` y `no_disponible`. |
+| **B-02** | Toda lectura pasa por `at_wa_q`/`at_wa_ext`: si MySQL deja `last_error`, el número queda `situacion: no_disponible` (nunca `nuevo` ni datos a medias). La ruta responde 503 sin SQL ni el error. El vínculo de la reunión se guarda en 0, y el texto de la lista queda vacío. | `tests/wa-contexto/fallos-wp-test.php` pasa de 8 fallas a 11 ok. Hace fallar cada una de las seis tablas con un `$wpdb` intermediario. |
+| **B-03** | Un botón `seg_*` que ya no es opción nunca agenda otra cosa. Con 1 o más opciones vigentes avisa «Esa opción ya no está disponible.» y vuelve a preguntar (con 1 opción pide confirmarla); con 0, solo avisa. | `contexto.test.js`: 3 pruebas nuevas, primero rojas y después verdes. |
+| **B-04** | «Save Reschedule Client» guarda `contrato_id` y `propuesta_id`, y GET `/followup-meetings/{id}` los devuelve. | La vista previa evalúa la cadena «Save Reschedule Client» → «Prepare Seguimiento Direct/Custom» con datos sintéticos (contrato 17, propuesta 5): primero falló, después pasa. `followup-vinculo-wp-test.php` pasa de 10/11 a 11/11. |
+| **B-05** | `verificar_publicacion` exige: `activate` 200, relectura 200, mismo estado activo y `activeVersionId == versionId`. Además, en la `activeVersion`, los parámetros, el `onError` y las conexiones de cada nodo tocado tienen que ser los subidos (`contiene()` admite claves que agregue n8n, no valores distintos). Si algo no calza, se detiene y nombra el respaldo para volver atrás. | `N8N/wa-reconoce/aplicar_test.py` pasa de 8 errores a 8/8, con casos de `activate` rechazado, relectura fallida, `activeVersion` vieja con los mismos nombres, parámetros y conexiones viejos y flujo inactivo. |
+| **B-06** | Cada título final queda reservado: un sufijo nunca choca con otro título. | `contexto.test.js`: el caso de Codex, en botones y en lista. |
+
+**Decisión M:** el plan (Tarea 6) decía tratar un botón viejo como si no hubiera botón, y su foco 2 pedía volver a preguntar. Manda el foco.
+
+**Suite después de la pasada:**
+- `tests/wa-contexto`: 6/6 TODO OK;
+- `contexto.test.js`: 24/24;
+- `aplicar_test.py`: 8/8;
+- vista previa: agenda 3 nodos y WhatsApp 17 (se sumó «Save Reschedule Client»), comprobaciones OK e idempotente.
+
+Nada subido a n8n ni a PROD.
+
+**Sigue NOT_RUN** (Eje no puede cerrarlo en esta máquina):
+- El POST real y el GET de la reunión con el pegamento de `admin-followup-meetings.php` cargado. El WordPress local ejecuta la copia de PROD de ese archivo. Se verifica en el despliegue (Tarea 9, prueba real con Luis).
+- `verify-client-wp-test.php` y `limite-demos-wp-test.php` contra los archivos de la rama.
+- La vista en el navegador.
+- La documentación vigente de Meta: se intentó y respondió 429.
+- El rendimiento con volumen real.

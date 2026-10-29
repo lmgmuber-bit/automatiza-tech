@@ -13,6 +13,7 @@ Uso:  python aplicar.py            (genera con build_agente_instagram.py y sube)
 - PUT con {name, nodes, connections, settings} y settings filtrado (timeSavedMode, availableInMCP y binaryMode rebotan).
 """
 import json
+import re
 import os
 import secrets
 import sys
@@ -68,21 +69,44 @@ def prompt_web_adaptado():
         sys.exit('no se pudo leer el agente web: HTTP %s' % c)
     nodo = next(n for n in wf['nodes'] if n['name'] == 'Agente IA - Tech')
     p = nodo['parameters']['options']['systemMessage']
-    p = p[1:] if p.startswith('=') else p
-    ini, fin = p.find('### 📅 AGENDAMIENTO DE REUNIONES'), p.find('### 💰 REGLAS CRÍTICAS DE PRECIOS')
+    try:
+        return adaptar_prompt(p[1:] if p.startswith('=') else p)
+    except ValueError as e:
+        sys.exit(str(e))
+
+
+PLANES_SIN_PRECIO = ('### 📦 PLANES DEL PORTAL OMNICLIENTE\n'
+                     'Hay planes mensuales del Portal OmniCliente (Básico, Profesional y Enterprise) según la cantidad de '
+                     'conversaciones, canales y agentes. Por Instagram no damos precios: el plan y el valor se ven en el '
+                     'diagnóstico gratis.\n')
+MONTO = re.compile(r'(US)?\$\s?\d|\$\{\{|\d[\d.,]*\s*(USD|CLP|UF)\b|\b(USD|CLP)\b|\$json\.rate')
+
+
+def adaptar_prompt(p):
+    """Prompt web → Instagram: sin el formulario de la web (se agenda en el chat) y SIN PRECIOS (Luis, 29-oct: el precio
+    se define en el diagnóstico gratis y en la propuesta). Si el texto web cambió y una marca no calza, ValueError."""
+    ini, fin = p.find('### 📅 AGENDAMIENTO DE REUNIONES'), p.find('### 💬 REGLAS DE COMUNICACIÓN')
+    planes, fin_cerebro = p.find('### 📦 PLANES DEL PORTAL OMNICLIENTE'), p.find('### 🧠 CEREBRO AT (fin)')
     cambios = [
         ('4.  Guiar al usuario para agendar citas mediante el formulario.',
          '4.  Agendar el diagnóstico gratis aquí mismo, en el chat de Instagram, y derivar a una persona cuando haga falta.'),
         ('Si piden hablar con un humano o datos de contacto, entrega SOLO estos:',
          'Si piden datos de contacto, entrega SOLO estos (si piden hablar con una persona, usa derivar_a_persona):'),
+        ('2.  Calcular precios en tiempo real (USD a CLP).',
+         '2.  Explicar que el valor depende de lo que necesita cada negocio y ofrecer el diagnóstico gratis para definirlo.'),
     ]
-    if ini < 0 or fin < ini or any(p.count(a) != 1 for a, _ in cambios):
-        sys.exit('el prompt del agente web cambió: revisar las marcas de prompt_web_adaptado() antes de subir')
-    p = p[:ini] + p[fin:]
+    if ini < 0 or fin < ini or planes < 0 or fin_cerebro < planes or fin_cerebro > ini \
+            or any(p.count(a) != 1 for a, _ in cambios):
+        raise ValueError('el prompt del agente web cambió: revisar las marcas de adaptar_prompt() antes de subir')
+    # Orden en el prompt web: … PLANES … CEREBRO AT (fin) … CAPACIDADES … AGENDAMIENTO … PRECIOS … COMUNICACIÓN
+    p = p[:planes] + PLANES_SIN_PRECIO + p[fin_cerebro:ini] + p[fin:]
     for a, b in cambios:
         p = p.replace(a, b)
     if 'SHOW_DEMO_FORM' in p or 'formulario' in p:
-        sys.exit('el prompt adaptado todavía menciona el formulario')
+        raise ValueError('el prompt adaptado todavía menciona el formulario')
+    quedan = [m.group(0) for m in MONTO.finditer(p)]
+    if quedan:
+        raise ValueError('el prompt adaptado todavía trae precios o el tipo de cambio: %s' % quedan[:5])
     return p
 
 

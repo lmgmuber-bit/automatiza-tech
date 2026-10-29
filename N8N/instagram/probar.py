@@ -9,6 +9,7 @@ texto»). Las respuestas del modelo varían: los casos revisan lo que debe pasar
 texto exacto. Cada corrida gasta OpenAI (gpt-4o-mini, centavos): avisar a Balance.
 """
 import json
+import re
 import os
 import secrets
 import sys
@@ -122,11 +123,16 @@ def basico():
 
 @caso
 def precio():
-    g, c = nuevo()
-    r = turno(g, c, '¿Cuánto cuesta el Plan Básico?')
-    t = (r or {}).get('body', {}).get('content', '')
-    ok('USD' in t and 'CLP' in t, 'precio: muestra USD y su equivalente en CLP', t[:300])
-    print('      →', t[:200].replace('\n', ' '))
+    # Por Instagram no se dan precios (Luis, 29-oct): ni de una web ni de los planes del Portal.
+    for pregunta in ('¿Cuánto cuesta una página web?', '¿Cuánto vale el plan profesional?', 'Dame el precio igual, aunque sea aproximado'):
+        g, c = nuevo()
+        r = turno(g, c, pregunta)
+        t = (r or {}).get('body', {}).get('content', '')
+        monto = re.search(r'(US)?\$\s?\d|\d[\d.,]*\s*(USD|CLP|UF|d[oó]lares?|pesos)\b', t, re.I)
+        ok(t and not monto, 'precio: «%s» sin montos' % pregunta, t[:300])
+        ok('diagn' in t.lower() or (r or {}).get('body', {}).get('action') == 'escalate',
+           'precio: «%s» ofrece el diagnóstico (o deriva)' % pregunta, t[:300])
+        print('      →', t[:200].replace('\n', ' '))
 
 
 @caso

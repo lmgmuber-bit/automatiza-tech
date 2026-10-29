@@ -97,12 +97,10 @@ return [{ json: { texto: textos.join('\n').slice(0, 3000), mensajes: textos.leng
 """
 
 JS_ENTRADA = r"""
-// Entrada del agente: el texto, el tipo de cambio (el prompt web usa $json.rate), la fecha de hoy en Chile y,
-// si la persona llegó desde un comentario, qué comentó y qué le enviamos por privado.
+// Entrada del agente: el texto, la fecha de hoy en Chile y, si la persona llegó desde un comentario, qué comentó y qué
+// le enviamos por privado. Sin tipo de cambio: por Instagram no se dan precios (Luis, 29-oct).
 const v = $('Validar').first().json;
 const texto = $('Unir textos').first().json.texto;
-// Si el tipo de cambio no llegó (WordPress tardó o falló, 29-oct), rate = null y el agente da los precios solo en USD.
-const rate = Number(($json || {}).rate) > 0 ? Number($json.rate) : null;
 const ahora = DateTime.now().setZone('ZONA').setLocale('es');
 const dias = [];
 for (let i = 0; i < 8; i++) {
@@ -116,12 +114,8 @@ if (v.contexto && v.contexto.palabra) {
     + ' Lo que escribe ahora es la respuesta a eso: si dice algo como «quiero agendar», «sí» o «me interesa», ofrécele agendar'
     + ' el diagnóstico gratis aquí mismo. No le repitas el mensaje que ya le enviamos.';
 }
-if (rate === null) {
-  ctx += '\n\n#### Precios sin tipo de cambio\nHoy no tenemos el tipo de cambio: da los precios solo en USD, sin calcular pesos chilenos'
-    + ' (nunca digas «$0 CLP»), y di que el valor en pesos lo confirmamos en el diagnóstico gratis.';
-}
 return [{ json: {
-  chatInput: texto, rate, igsid: v.igsid, prueba: v.prueba,
+  chatInput: texto, igsid: v.igsid, prueba: v.prueba,
   ahora_txt: ahora.toFormat("cccc d 'de' LLLL 'de' yyyy, HH:mm"), dias_txt: dias.join('; '), contexto_txt: ctx,
 } }];
 """.replace('ZONA', ZONA)
@@ -135,6 +129,13 @@ if (txt.length > 990) {
   const corte = txt.slice(0, 990);
   const p = Math.max(corte.lastIndexOf('. '), corte.lastIndexOf('\n'));
   txt = (p > 500 ? corte.slice(0, p + 1) : corte).trim();
+}
+// Por Instagram no se dan precios (Luis, 29-oct): si igual sale un monto, se reemplaza por la invitación al diagnóstico.
+const MONTO = /(US)?\$\s?\d|\d[\d.,]*\s*(USD|CLP|UF|d[oó]lares?|pesos|lucas)\b|\b(USD|CLP|UF)\s?\d/i;
+if (MONTO.test(txt)) {
+  txt = 'El valor depende de lo que necesites: no es lo mismo una página web que un sistema a medida o una app. '
+    + 'Lo vemos juntos en el diagnóstico gratis, una videollamada corta por Google Meet donde definimos el alcance y el precio. '
+    + '¿Te gustaría agendarlo?';
 }
 let motivo = null;
 for (const s of ($json.intermediateSteps || [])) {
@@ -241,10 +242,6 @@ def flujo_principal():
               {'operation': 'get', 'propertyName': 'rafaga', 'key': '=ig:rafaga:{{ ' + k + ' }}', 'keyType': 'list', 'options': {}}),
         redis('ig-vaciar', 'Vaciar la ráfaga', [1980, 120], {'operation': 'delete', 'key': '=ig:rafaga:{{ ' + k + ' }}'}),
         code('ig-unir', 'Unir textos', [2200, 120], JS_UNIR),
-        # El endpoint consulta al Banco Central en vivo y a veces pasa los 10 s (29-oct): más espera y reintentos.
-        nodo('ig-cambio', 'Tipo de cambio', 'n8n-nodes-base.httpRequest', 4.1, [2420, 120],
-             {'url': WP + '/exchange-rate', 'options': {'timeout': 20000}}, onError='continueRegularOutput',
-             retryOnFail=True, maxTries=3, waitBetweenTries=1000),
         code('ig-entrada', 'Preparar entrada', [2640, 120], JS_ENTRADA),
         nodo('ig-agente', 'Agente IA - Tech Instagram', '@n8n/n8n-nodes-langchain.agent', 1.8, [2880, 120],
              {'promptType': 'define', 'text': '={{ $json.chatInput }}',
@@ -294,8 +291,8 @@ def flujo_principal():
         ('Anotar en la ráfaga', 'Marcar el último', 0), ('Marcar el último', 'Esperar 6 s', 0),
         ('Esperar 6 s', 'Leer el último', 0), ('Leer el último', '¿Es el último?', 0),
         ('¿Es el último?', 'Leer la ráfaga', 0), ('Leer la ráfaga', 'Vaciar la ráfaga', 0),
-        ('Vaciar la ráfaga', 'Unir textos', 0), ('Unir textos', 'Tipo de cambio', 0),
-        ('Tipo de cambio', 'Preparar entrada', 0), ('Preparar entrada', 'Agente IA - Tech Instagram', 0),
+        ('Vaciar la ráfaga', 'Unir textos', 0), ('Unir textos', 'Preparar entrada', 0),
+        ('Preparar entrada', 'Agente IA - Tech Instagram', 0),
         ('Agente IA - Tech Instagram', 'Preparar respuesta', 0), ('Preparar respuesta', '¿Es prueba?', 0),
         ('¿Es prueba?', 'Responder al Portal', 1),
         ('¿Ya avisamos?', '¿Sin aviso reciente?', 0), ('¿Sin aviso reciente?', 'Recordar el aviso', 0),

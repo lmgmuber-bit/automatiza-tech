@@ -95,9 +95,14 @@ function waElegirSeguimiento(ctx, entrada) {
   if (!opcion && opciones.length >= 2) {
     return { modo: 'elegir', datos, guardar: null, mensaje: waMensajeOpciones(ctx, opciones, e.phoneNumber || ''), opcion: null };
   }
-  if ((sit === 'cliente' || sit === 'prospecto') && !correo) {
-    return { modo: 'sin_correo', motivo: 'sin_correo', datos, guardar: null, mensaje: null, opcion,
-      aviso: 'Para agendar tu seguimiento necesitamos un correo registrado y no lo encontramos. Ya le avisamos a Luis para que te escriba y lo coordinen.' };
+  // Revisión R3-01: ningún seguimiento abre el calendario sin un correo (la reunión no se podría guardar). Un número sin
+  // ficha que dice ser seguimiento (botón «Es un seguimiento» del freno) también va a coordinación con Luis.
+  if (!correo) {
+    const sinFicha = sit !== 'cliente' && sit !== 'prospecto';
+    return { modo: 'sin_correo', motivo: sinFicha ? 'sin_ficha' : 'sin_correo', datos, guardar: null, mensaje: null, opcion,
+      aviso: sinFicha
+        ? 'No encontré una propuesta ni un proyecto con este número para agendar el seguimiento. Ya le avisamos a Luis para que te escriba y lo coordinen.'
+        : 'Para agendar tu seguimiento necesitamos un correo registrado y no lo encontramos. Ya le avisamos a Luis para que te escriba y lo coordinen.' };
   }
   let subject = 'Reunión de Seguimiento';
   let notes = 'Agendada desde whatsapp';

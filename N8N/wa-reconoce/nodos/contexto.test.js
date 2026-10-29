@@ -194,6 +194,34 @@ test('elegir: sin correo avisa en vez de agendar', () => {
   assert.strictEqual(r.opcion.id, 5);
 });
 
+test('revisión R3-01: «Es un seguimiento» de un número sin ficha nunca abre un calendario sin correo', () => {
+  const nuevoSin = { situacion: 'nuevo', nombre: '', opciones: [], elegida: null, diagnostico_proximo: '', agenda: { nombre_completo: '', correo: '', empresa: '' } };
+  const r = waElegirSeguimiento(nuevoSin, entrada({ buttonId: 'seg_general' }));
+  assert.strictEqual(r.modo, 'sin_correo');
+  assert.strictEqual(r.motivo, 'sin_ficha');
+  assert.strictEqual(r.guardar, null);
+  assert.strictEqual(r.aviso, 'No encontré una propuesta ni un proyecto con este número para agendar el seguimiento. Ya le avisamos a Luis para que te escriba y lo coordinen.');
+});
+
+test('revisión R3-01: ningún seguimiento directo sale sin correo, en ninguna situación', () => {
+  const sinCorreo = { nombre_completo: 'X', correo: '', empresa: '' };
+  const casos = [
+    ctx('nuevo', [], { nombre: '', agenda: sinCorreo }),
+    ctx('prospecto', [], { agenda: sinCorreo }),
+    ctx('cliente', [{ tipo: 'proyecto', id: 5, nombre: 'A', plan_codigo: '', agenda: sinCorreo }], { agenda: sinCorreo }),
+  ];
+  for (const c of casos) {
+    for (const buttonId of ['', 'seg_general']) {
+      const r = waElegirSeguimiento(c, entrada({ buttonId }));
+      assert.notStrictEqual(r.modo, 'directo', `${c.situacion} ${buttonId}: abrió el calendario sin correo`);
+    }
+  }
+  // Con correo, una persona nueva que dice que es un seguimiento sí puede agendarlo.
+  const conCorreo = waElegirSeguimiento(ctx('nuevo', [], { nombre: '' }), entrada({ buttonId: 'seg_general' }));
+  assert.strictEqual(conCorreo.modo, 'directo');
+  assert.strictEqual(conCorreo.guardar.email, 'julio@prueba.cl');
+});
+
 test('elegir: el botón «Es un seguimiento» del freno del calendario sigue la elección normal', () => {
   const r = waElegirSeguimiento(ctx('cliente', [proyecto(7, 'Configurador')]), entrada({ buttonId: 'seg_general' }));
   assert.strictEqual(r.modo, 'directo');

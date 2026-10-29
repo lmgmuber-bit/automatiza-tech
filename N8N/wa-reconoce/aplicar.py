@@ -176,9 +176,10 @@ def cambiar_whatsapp(w, b, registro):
     aviso = copy.deepcopy(p('Notify Admin Followup Action Error'))
     aviso['subject'] = 'WhatsApp: seguimiento para coordinar a mano'
     aviso['html'] = ("=<p>Un número de WhatsApp quiso agendar un seguimiento y el bot no pudo agendarlo solo: "
-                     "{{ $json.motivo === 'no_disponible' ? 'no pudimos revisar sus datos (WordPress no respondió)' : 'su ficha no tiene un correo registrado' }}.</p>"
+                     "{{ $json.motivo === 'no_disponible' ? 'no pudimos revisar sus datos (WordPress no respondió)' : $json.motivo === 'sin_ficha' "
+                     "? 'dice que es un seguimiento, pero el número no está en ninguna ficha (quizá escribe desde otro número)' : 'su ficha no tiene un correo registrado' }}.</p>"
                      "<p>Número: {{ $json.datos.phoneNumber }}<br>Opción: {{ ($json.opcion && $json.opcion.nombre) || 'sin opción' }}</p>"
-                     "<p>Escríbele para coordinar la reunión{{ $json.motivo === 'no_disponible' ? '' : ' y completa el correo en su ficha del CRM' }}.</p>")
+                     "<p>Escríbele para coordinar la reunión{{ $json.motivo === 'sin_correo' ? ' y completa el correo en su ficha del CRM' : '' }}.</p>")
     registro.append(('Notify Admin Seguimiento Sin Correo', nodo_nuevo(w, 'Notify Admin Seguimiento Sin Correo', 'Notify Admin Followup Action Error', aviso, dx=0, dy=420)))
     conectar(w, 'Is Client?', [['Elegir Seguimiento'], [d['node'] for d in w['connections']['Is Client?']['main'][1]]])
     conectar(w, 'Elegir Seguimiento', [['Modo Seguimiento']])
@@ -339,6 +340,16 @@ def evaluar(expresion, actual, stubs):
     return correr_js(js)
 
 
+def evaluar_plantilla(texto, actual, stubs):
+    """Evalúa un texto de n8n «=…{{ expr }}…» (varias expresiones dentro de texto) con $json y $ simulados."""
+    assert texto.startswith('='), 'no es un texto con expresiones de n8n'
+    partes = re.split(r'\{\{(.*?)\}\}', texto[1:], flags=re.S)
+    piezas = [json.dumps(p, ensure_ascii=False) if i % 2 == 0 else '(' + p + ')' for i, p in enumerate(partes)]
+    js = STUB_N8N % json.dumps(stubs, ensure_ascii=False) + 'const $json = %s;\n' % json.dumps(actual, ensure_ascii=False)
+    js += 'console.log(JSON.stringify([' + ', '.join(piezas) + "].join('')));\n"
+    return correr_js(js)
+
+
 def comprobar_fallos_y_reagendar(nodos, conexiones):
     """Revisión B de Codex: B-01 (una consulta caída no detiene el flujo ni ofrece diagnóstico) y B-04 (reagendar no pierde el vínculo)."""
     fallas = []
@@ -375,6 +386,21 @@ def comprobar_fallos_y_reagendar(nodos, conexiones):
     e = simular_nodo(nodos['Elegir Seguimiento']['parameters']['jsCode'], {'Extract Message Data': em, 'Route Action': {'output': 'x'}}, caida)
     if not isinstance(e, dict) or e.get('modo') != 'sin_correo' or e.get('motivo') != 'no_disponible':
         fallas.append(f'Elegir Seguimiento con la consulta caída promete una agenda que no se puede guardar: {e}')
+    # R3-01: consulta caída → freno → «Es un seguimiento» (seg_general) → la consulta se recupera y dice «nuevo» sin correo:
+    # nada de calendario; sale por la coordinación con Luis, con un correo que explica el motivo.
+    nuevo_sin = dict(no_disp, situacion='nuevo')
+    e = simular_nodo(nodos['Elegir Seguimiento']['parameters']['jsCode'], {'Extract Message Data': em, 'Process Interactive': {'buttonId': 'seg_general'}}, nuevo_sin)
+    salida_modo = None
+    if isinstance(e, dict):
+        reglas_modo = nodos['Modo Seguimiento']['parameters']['rules']['values']
+        i_modo = next((i for i, r in enumerate(reglas_modo) if r['conditions']['conditions'][0].get('rightValue') == e.get('modo')), None)
+        salida_modo = [d['node'] for d in conexiones['Modo Seguimiento']['main'][i_modo]] if i_modo is not None else None
+    if not isinstance(e, dict) or e.get('modo') != 'sin_correo' or e.get('motivo') != 'sin_ficha' or 'Send Seguimiento Sin Correo' not in (salida_modo or []):
+        fallas.append(f'«Es un seguimiento» de un número sin ficha no termina en la coordinación con Luis: {e} → {salida_modo}')
+    for motivo, debe in (('no_disponible', 'no pudimos revisar sus datos'), ('sin_ficha', 'no está en ninguna ficha'), ('sin_correo', 'no tiene un correo registrado')):
+        html = evaluar_plantilla(nodos['Notify Admin Seguimiento Sin Correo']['parameters']['html'], {'motivo': motivo, 'datos': {'phoneNumber': '56911112222'}, 'opcion': None}, {})
+        if not isinstance(html, str) or debe not in html:
+            fallas.append(f'Notify Admin Seguimiento Sin Correo no explica el motivo {motivo}: {html}')
     aviso = evaluar(nodos['Send Seguimiento Sin Correo']['parameters']['jsonBody'], {'datos': {'phoneNumber': '56911112222'}, 'aviso': 'AVISO DE PRUEBA'}, {})
     if not isinstance(aviso, str) or json.loads(aviso).get('text', {}).get('body') != 'AVISO DE PRUEBA':
         fallas.append(f'Send Seguimiento Sin Correo no usa el aviso de Elegir Seguimiento: {aviso}')

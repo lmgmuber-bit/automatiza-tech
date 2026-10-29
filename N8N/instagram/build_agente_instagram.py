@@ -179,9 +179,13 @@ def prompt_instagram():
     """Bloque del canal con la personalidad común de Tech Instagram (N8N/cerebro-at/personalidad-instagram.md)."""
     bloque = leer(AQUI, 'prompt-canal-instagram.md').strip()
     personalidad = leer(CEREBRO, 'personalidad-instagram.md').strip()
-    if bloque.count('{{PERSONALIDAD_INSTAGRAM}}') != 1 or not personalidad.startswith('### '):
-        raise SystemExit('falta la marca {{PERSONALIDAD_INSTAGRAM}} o la personalidad de Instagram del Cerebro AT')
-    return bloque.replace('{{PERSONALIDAD_INSTAGRAM}}', personalidad)
+    if bloque.count('{{PERSONALIDAD_INSTAGRAM}}') != 1 or bloque.count('{{REGLA_PRECIOS}}') != 1 \
+            or not personalidad.startswith('### '):
+        raise SystemExit('falta una marca del bloque del canal o la personalidad de Instagram del Cerebro AT')
+    # La regla «sin precios» vive en personalidad-instagram.md (Eje, 29-oct). La del canal es solo de respaldo, por si se
+    # aplica con una copia del cerebro que todavía no la trae; así nunca queda duplicada ni ausente.
+    respaldo = '' if 'nunca das precios' in personalidad else leer(AQUI, 'regla-precios-respaldo.md')
+    return bloque.replace('{{PERSONALIDAD_INSTAGRAM}}', personalidad).replace('{{REGLA_PRECIOS}}', respaldo)
 
 
 def validacion_at():

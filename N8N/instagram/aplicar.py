@@ -86,21 +86,26 @@ def adaptar_prompt(p):
     """Prompt web → Instagram: sin el formulario de la web (se agenda en el chat) y SIN PRECIOS (Luis, 29-oct: el precio
     se define en el diagnóstico gratis y en la propuesta). Si el texto web cambió y una marca no calza, ValueError."""
     ini, fin = p.find('### 📅 AGENDAMIENTO DE REUNIONES'), p.find('### 💬 REGLAS DE COMUNICACIÓN')
-    planes, fin_cerebro = p.find('### 📦 PLANES DEL PORTAL OMNICLIENTE'), p.find('### 🧠 CEREBRO AT (fin)')
     cambios = [
         ('4.  Guiar al usuario para agendar citas mediante el formulario.',
          '4.  Agendar el diagnóstico gratis aquí mismo, en el chat de Instagram, y derivar a una persona cuando haga falta.'),
         ('Si piden hablar con un humano o datos de contacto, entrega SOLO estos:',
          'Si piden datos de contacto, entrega SOLO estos (si piden hablar con una persona, usa derivar_a_persona):'),
+    ]
+    # Opcional (Eje, 29-oct): con el Cerebro AT nuevo los planes con precio y la capacidad 2 pueden no estar.
+    opcionales = [
         ('2.  Calcular precios en tiempo real (USD a CLP).',
          '2.  Explicar que el valor depende de lo que necesita cada negocio y ofrecer el diagnóstico gratis para definirlo.'),
     ]
-    if ini < 0 or fin < ini or planes < 0 or fin_cerebro < planes or fin_cerebro > ini \
-            or any(p.count(a) != 1 for a, _ in cambios):
+    if ini < 0 or fin < ini or any(p.count(a) != 1 for a, _ in cambios):
         raise ValueError('el prompt del agente web cambió: revisar las marcas de adaptar_prompt() antes de subir')
-    # Orden en el prompt web: … PLANES … CEREBRO AT (fin) … CAPACIDADES … AGENDAMIENTO … PRECIOS … COMUNICACIÓN
-    p = p[:planes] + PLANES_SIN_PRECIO + p[fin_cerebro:ini] + p[fin:]
-    for a, b in cambios:
+    # Orden en el prompt web: … CEREBRO AT (fin) … CAPACIDADES … AGENDAMIENTO … PRECIOS … COMUNICACIÓN
+    p = p[:ini] + p[fin:]
+    planes = p.find('### 📦 PLANES DEL PORTAL OMNICLIENTE')
+    if planes >= 0:  # solo esa sección, hasta el título siguiente
+        sig = p.find('\n### ', planes + 1)
+        p = p[:planes] + PLANES_SIN_PRECIO + (p[sig + 1:] if sig >= 0 else '')
+    for a, b in cambios + [x for x in opcionales if x[0] in p]:
         p = p.replace(a, b)
     if 'SHOW_DEMO_FORM' in p or 'formulario' in p:
         raise ValueError('el prompt adaptado todavía menciona el formulario')

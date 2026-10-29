@@ -20,6 +20,11 @@ add_action('rest_api_init', function () {
 		'permission_callback' => $permiso,
 		'args'                => ['phone' => ['required' => true, 'sanitize_callback' => 'sanitize_text_field']],
 	]);
+	register_rest_route('automatiza-tech/v1', '/wa-citas/cancelar', [
+		'methods'             => 'POST',
+		'callback'            => 'at_wa_rest_cancelar_cita',
+		'permission_callback' => $permiso,
+	]);
 });
 
 /**
@@ -87,4 +92,81 @@ function at_wa_rest_citas(WP_REST_Request $r): WP_REST_Response {
 		error_log('[wa-citas] una lectura de la base falló; las citas del número quedan no_disponible');
 		return new WP_REST_Response(['estado' => 'no_disponible', 'citas' => []], 503);
 	}
+}
+
+/**
+ * Cancela una cita del número con todos los efectos: estado cancelado (nunca se borra la fila), evento de Google Calendar,
+ * correo a la persona y aviso a Luis. $motivo: 'cancelada' o 'reprogramada'. Devuelve {ok, motivo, cita}; ok es true solo si
+ * el estado quedó cancelado. Lanza AtWaConsultaNoDisponible si la base falla al revisar la cita.
+ */
+function at_wa_cita_cancelar(string $tel, string $tipo, int $id, string $motivo): array {
+	$cita = at_wa_cita_del_numero($tel, $tipo, $id);
+	if (!$cita) {
+		return ['ok' => false, 'motivo' => 'no_vigente', 'cita' => null];
+	}
+	global $wpdb;
+	$ahora = current_time('mysql');
+	if ($tipo === 'diagnostico') {
+		$tabla = $wpdb->prefix . 'automatiza_leads';
+		$cambios = ['status' => 'cancelled', 'cancelled_at' => $ahora, 'updated_at' => $ahora];
+	} else {
+		$tabla = $wpdb->prefix . 'automatiza_followup_meetings';
+		$cambios = ['status' => 'cancelled', 'updated_at' => $ahora];
+	}
+	$fila = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$tabla} WHERE id = %d", $id));
+	$hecho = $wpdb->update($tabla, $cambios, ['id' => $id]);
+	if ($hecho === false || !$fila) {
+		error_log("[wa-citas] no se pudo cancelar la cita {$tipo} {$id}");
+		return ['ok' => false, 'motivo' => 'error', 'cita' => $cita];
+	}
+	$evento = (string) ($fila->google_event_id ?? '');
+	if ($evento === '' && $tipo === 'diagnostico') {
+		$evento = (string) ($fila->event_id ?? '');
+	}
+	if ($evento !== '' && function_exists('automatiza_tech_delete_google_calendar_event')
+		&& !automatiza_tech_delete_google_calendar_event($evento)) {
+		error_log("[wa-citas] la cita {$tipo} {$id} quedó cancelada, pero no se pudo quitar su evento de Google Calendar");
+	}
+	at_wa_cita_avisar($cita, $motivo, $tel);
+	return ['ok' => true, 'motivo' => '', 'cita' => $cita];
+}
+
+/** Correo a la persona y aviso a Luis de una cita cancelada o reprogramada por WhatsApp. */
+function at_wa_cita_avisar(array $cita, string $motivo, string $tel): void {
+	$reprogramada = $motivo === 'reprogramada';
+	$etiqueta = esc_html($cita['etiqueta']);
+	$nombre = esc_html(function_exists('at_wa_primer_nombre') ? at_wa_primer_nombre((string) $cita['nombre']) : (string) $cita['nombre']);
+	$cabeceras = ['Content-Type: text/html; charset=UTF-8'];
+	if (is_email((string) $cita['correo'])) {
+		$asunto = $reprogramada ? 'Tu cita se reprogramó' : 'Tu cita fue cancelada';
+		$cuerpo = '<p>Hola' . ($nombre !== '' ? ' ' . $nombre : '') . ',</p>'
+			. ($reprogramada
+				? "<p>Tu cita <strong>{$etiqueta}</strong> se reprogramó. Te llegó aparte la confirmación de la nueva fecha.</p>"
+				: "<p>Tu cita <strong>{$etiqueta}</strong> fue cancelada, como nos pediste por WhatsApp. Si quieres agendar otra, escríbenos cuando quieras.</p>")
+			. '<p>Equipo AutomatizaTech</p>';
+		if (!wp_mail((string) $cita['correo'], $asunto, $cuerpo, $cabeceras)) {
+			error_log("[wa-citas] no salió el correo a la persona de la cita {$cita['tipo']} {$cita['id']}");
+		}
+	}
+	$asunto_luis = '[WhatsApp] Cita ' . ($reprogramada ? 'reprogramada' : 'cancelada') . ': ' . $cita['etiqueta'];
+	$cuerpo_luis = "<p>Por WhatsApp, desde el número " . esc_html($tel) . ", se " . ($reprogramada ? 'reprogramó' : 'canceló') . " la cita <strong>{$etiqueta}</strong>"
+		. ' (' . esc_html($cita['tipo']) . ' ' . (int) $cita['id'] . ').</p>';
+	if (!wp_mail((string) get_option('admin_email'), $asunto_luis, $cuerpo_luis, $cabeceras)) {
+		error_log("[wa-citas] no salió el aviso a Luis de la cita {$cita['tipo']} {$cita['id']}");
+	}
+}
+
+function at_wa_rest_cancelar_cita(WP_REST_Request $r): WP_REST_Response {
+	$tipo = (string) $r->get_param('tipo');
+	$motivo = $r->get_param('motivo') === 'reprogramada' ? 'reprogramada' : 'cancelada';
+	if (!in_array($tipo, ['diagnostico', 'seguimiento'], true)) {
+		return new WP_REST_Response(['ok' => false, 'motivo' => 'no_vigente', 'cita' => null], 409);
+	}
+	try {
+		$x = at_wa_cita_cancelar(sanitize_text_field((string) $r->get_param('phone')), $tipo, (int) $r->get_param('id'), $motivo);
+	} catch (AtWaConsultaNoDisponible $e) {
+		error_log('[wa-citas] una lectura de la base falló al cancelar; no se canceló nada');
+		return new WP_REST_Response(['ok' => false, 'motivo' => 'no_disponible', 'cita' => null], 503);
+	}
+	return new WP_REST_Response($x, $x['ok'] ? 200 : ($x['motivo'] === 'no_vigente' ? 409 : 500));
 }

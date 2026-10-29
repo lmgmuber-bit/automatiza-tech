@@ -9,10 +9,21 @@ function waTituloCorto(texto, max) {
   return c.length <= max ? c.join('') : c.slice(0, max - 1).join('').trimEnd() + '…';
 }
 
+// Revisión R2-01: una consulta caída (timeout, 503, respuesta vacía o rara) nunca se confunde con una persona nueva.
+function waReconocimiento(ctx) {
+  const sit = ctx && !ctx.error ? ctx.situacion : '';
+  return sit === 'nuevo' || sit === 'prospecto' || sit === 'cliente' ? sit : 'no_disponible';
+}
+
 function waLineaContexto(ctx, prop) {
-  ctx = ctx || {};
   prop = prop || {};
   const partes = [];
+  if (waReconocimiento(ctx) === 'no_disponible') {
+    partes.push('No pudimos revisar si quien escribe ya es cliente o prospecto: no asumas que es nuevo. Si quiere agendar, '
+      + 'pregúntale primero si es su primera reunión con nosotros (diagnóstico gratis) o un seguimiento de su proyecto o propuesta.');
+    ctx = {};
+  }
+  ctx = ctx || {};
   const sit = ctx.situacion;
   const opciones = Array.isArray(ctx.opciones) ? ctx.opciones : [];
   const nombres = (tipo) => opciones.filter((o) => o.tipo === tipo).map((o) => '«' + String(o.nombre || '').replace(/\s+/g, ' ').trim() + '»');
@@ -69,6 +80,11 @@ function waElegirSeguimiento(ctx, entrada) {
     clientType: sit,
     companyName: ag.empresa || '',
   };
+  // Revisión R2-01: sin saber quién escribe no hay correo ni vínculo; no se promete una agenda que no se puede guardar.
+  if (waReconocimiento(ctx) === 'no_disponible') {
+    return { modo: 'sin_correo', motivo: 'no_disponible', datos, guardar: null, mensaje: null, opcion: null,
+      aviso: 'En este momento no pude revisar tus datos para agendar el seguimiento. Ya le avisamos a Luis para que te escriba y lo coordinen.' };
+  }
   if (caducada) {
     const mensaje = opciones.length
       ? waMensajeOpciones(ctx, opciones, e.phoneNumber || '', 'Esa opción ya no está disponible.')
@@ -80,7 +96,8 @@ function waElegirSeguimiento(ctx, entrada) {
     return { modo: 'elegir', datos, guardar: null, mensaje: waMensajeOpciones(ctx, opciones, e.phoneNumber || ''), opcion: null };
   }
   if ((sit === 'cliente' || sit === 'prospecto') && !correo) {
-    return { modo: 'sin_correo', datos, guardar: null, mensaje: null, opcion };
+    return { modo: 'sin_correo', motivo: 'sin_correo', datos, guardar: null, mensaje: null, opcion,
+      aviso: 'Para agendar tu seguimiento necesitamos un correo registrado y no lo encontramos. Ya le avisamos a Luis para que te escriba y lo coordinen.' };
   }
   let subject = 'Reunión de Seguimiento';
   let notes = 'Agendada desde whatsapp';
@@ -131,5 +148,5 @@ function waMensajeOpciones(ctx, opciones, to, aviso) {
 // <<WA RECONOCE: fin>>
 
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { waTituloCorto, waLineaContexto, waElegirSeguimiento, waMensajeOpciones };
+  module.exports = { waTituloCorto, waReconocimiento, waLineaContexto, waElegirSeguimiento, waMensajeOpciones };
 }

@@ -1,7 +1,7 @@
 // Pruebas de contexto.js. Correr: node --test N8N/wa-reconoce/nodos/
 const test = require('node:test');
 const assert = require('node:assert');
-const { waTituloCorto, waLineaContexto, waElegirSeguimiento } = require('./contexto.js');
+const { waTituloCorto, waLineaContexto, waElegirSeguimiento, waReconocimiento } = require('./contexto.js');
 
 const agenda = (correo) => ({ nombre_completo: 'Julio Prueba', correo, empresa: 'Empresa Prueba' });
 const proyecto = (id, nombre, codigo = '') => ({ tipo: 'proyecto', id, nombre, plan_codigo: codigo, agenda: agenda('julio@prueba.cl') });
@@ -43,11 +43,22 @@ test('línea: número en dos fichas no saluda por nombre; código del plan nombr
   assert.match(waLineaContexto(ctx('cliente', [p], { elegida: p }), {}), /Escribe desde el plan del proyecto «Configurador»\./);
 });
 
-test('línea: si la ruta falló queda el aviso de propuesta de hoy, tal cual', () => {
-  assert.strictEqual(waLineaContexto({}, PROP),
-    '[Contexto interno, no la repitas: este número tiene la propuesta de AutomatizaTech para Spa Prueba esperando respuesta. Lo propuesto para partir: Sitio web, US$ 100. Enlace para responder: https://automatizatech.cl/x]');
-  assert.strictEqual(waLineaContexto({}, {}), '');
-  assert.strictEqual(waLineaContexto(null, null), '');
+const NO_PUDIMOS = 'No pudimos revisar si quien escribe ya es cliente o prospecto: no asumas que es nuevo. Si quiere agendar, pregúntale primero si es su primera reunión con nosotros (diagnóstico gratis) o un seguimiento de su proyecto o propuesta.';
+
+test('revisión R2-01: si la consulta falló (timeout, 503 o vacío), la línea lo dice y pide preguntar antes de agendar', () => {
+  for (const caida of [{ error: { message: 'timeout of 5000ms exceeded' } }, { situacion: 'no_disponible', opciones: [] }, {}, null]) {
+    assert.strictEqual(waLineaContexto(caida, {}), '[Contexto interno, no la repitas: ' + NO_PUDIMOS + ']');
+    assert.strictEqual(waLineaContexto(caida, PROP), '[Contexto interno, no la repitas: ' + NO_PUDIMOS
+      + ' Además, tiene la propuesta de AutomatizaTech para Spa Prueba esperando respuesta. Lo propuesto para partir: Sitio web, US$ 100. Enlace para responder: https://automatizatech.cl/x]');
+  }
+});
+
+test('revisión R2-01: el estado de reconocimiento distingue una persona nueva de una consulta caída', () => {
+  assert.strictEqual(waReconocimiento(ctx('nuevo', [], { nombre: '' })), 'nuevo');
+  assert.strictEqual(waReconocimiento(ctx('cliente', [proyecto(5, 'A')])), 'cliente');
+  for (const caida of [{ error: { message: 'x' } }, { situacion: 'no_disponible' }, {}, null, { situacion: 'raro' }]) {
+    assert.strictEqual(waReconocimiento(caida), 'no_disponible');
+  }
 });
 
 test('línea: nunca lleva correos ni la palabra demo', () => {
@@ -149,16 +160,15 @@ test('revisión B-06: un título con número no choca con el de otra opción', (
   }
 });
 
-test('revisión B-01: la forma que deja n8n cuando una consulta falla no inventa contexto ni ofrece diagnóstico', () => {
-  const falla = { error: { message: 'timeout of 5000ms exceeded' } };
-  assert.strictEqual(waLineaContexto(falla, {}), '');
-  assert.match(waLineaContexto(falla, PROP), /^\[Contexto interno, no la repitas: este número tiene la propuesta/);
-  assert.strictEqual(waLineaContexto({ situacion: 'no_disponible', opciones: [] }, {}), '');
-  for (const c of [falla, { situacion: 'no_disponible', opciones: [], agenda: { nombre_completo: '', correo: '', empresa: '' } }]) {
-    const r = waElegirSeguimiento(c, entrada());
-    assert.strictEqual(r.modo, 'directo');
-    assert.strictEqual(r.guardar.subject, 'Reunión de Seguimiento');
-    assert.strictEqual(r.datos.appointmentType, 'Seguimiento');
+test('revisión R2-01: con la consulta caída, el seguimiento no promete una agenda imposible: avisa a la persona y a Luis', () => {
+  for (const c of [{ error: { message: 'timeout of 5000ms exceeded' } }, { situacion: 'no_disponible', opciones: [], agenda: { nombre_completo: '', correo: '', empresa: '' } }, {}, null]) {
+    for (const buttonId of ['', 'seg_c_5', 'seg_general']) {
+      const r = waElegirSeguimiento(c, entrada({ buttonId }));
+      assert.strictEqual(r.modo, 'sin_correo');
+      assert.strictEqual(r.motivo, 'no_disponible');
+      assert.strictEqual(r.guardar, null);
+      assert.strictEqual(r.aviso, 'En este momento no pude revisar tus datos para agendar el seguimiento. Ya le avisamos a Luis para que te escriba y lo coordinen.');
+    }
   }
 });
 
@@ -178,17 +188,16 @@ test('elegir: sin correo avisa en vez de agendar', () => {
   const sin = { tipo: 'proyecto', id: 5, nombre: 'A', plan_codigo: '', agenda: { nombre_completo: 'X', correo: '', empresa: '' } };
   const r = waElegirSeguimiento(ctx('cliente', [sin], { agenda: { nombre_completo: '', correo: '', empresa: '' } }), entrada());
   assert.strictEqual(r.modo, 'sin_correo');
+  assert.strictEqual(r.motivo, 'sin_correo');
+  assert.strictEqual(r.aviso, 'Para agendar tu seguimiento necesitamos un correo registrado y no lo encontramos. Ya le avisamos a Luis para que te escriba y lo coordinen.');
   assert.strictEqual(r.guardar, null);
   assert.strictEqual(r.opcion.id, 5);
 });
 
-test('elegir: si la ruta falló, seguimiento general como hoy', () => {
-  const r = waElegirSeguimiento({}, entrada());
+test('elegir: el botón «Es un seguimiento» del freno del calendario sigue la elección normal', () => {
+  const r = waElegirSeguimiento(ctx('cliente', [proyecto(7, 'Configurador')]), entrada({ buttonId: 'seg_general' }));
   assert.strictEqual(r.modo, 'directo');
-  assert.deepStrictEqual(r.guardar, { name: 'Julio WhatsApp', email: '', company: '', subject: 'Reunión de Seguimiento', notes: 'Agendada desde whatsapp', contrato_id: 0, propuesta_id: 0 });
-  assert.strictEqual(r.datos.contactName, 'Julio WhatsApp');
-  assert.strictEqual(r.datos.clientType, '');
-  assert.strictEqual(waElegirSeguimiento(null, entrada()).modo, 'directo');
+  assert.strictEqual(r.guardar.contrato_id, 7);
 });
 
 test('elegir: prospecto sin propuestas abiertas, seguimiento general con su agenda', () => {

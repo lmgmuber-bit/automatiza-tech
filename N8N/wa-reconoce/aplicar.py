@@ -16,7 +16,6 @@ import os
 import re
 import subprocess
 import sys
-import tempfile
 import urllib.error
 import urllib.request
 import uuid
@@ -55,7 +54,7 @@ try { prop = $('Contexto Propuesta').first().json || {}; } catch (e) {}
 const ctx = $input.first().json || {};
 const original = String(base.chatInput ?? '');
 const linea = waLineaContexto(ctx, prop);
-return [{ json: { ...base, chatInput: linea ? linea + '\\n\\n' + original : original, chatInputOriginal: original }, pairedItem: 0 }];
+return [{ json: { ...base, chatInput: linea ? linea + '\\n\\n' + original : original, chatInputOriginal: original, reconocimiento: waReconocimiento(ctx) }, pairedItem: 0 }];
 """
 
 
@@ -171,18 +170,43 @@ def cambiar_whatsapp(w, b, registro):
     envio['jsonBody'] = '={{ JSON.stringify($json.mensaje) }}'
     registro.append(('Send Seguimiento Opciones', nodo_nuevo(w, 'Send Seguimiento Opciones', 'Send Not Client Message', envio, dx=0, dy=420)))
     sin = copy.deepcopy(envio)
-    sin['jsonBody'] = "={{ JSON.stringify({ messaging_product: 'whatsapp', to: $json.datos.phoneNumber, type: 'text', text: { body: " + json.dumps(TEXTO_SIN_CORREO, ensure_ascii=False).replace('"', "'") + " } }) }}"
+    # El texto lo decide «Elegir Seguimiento» según el motivo: sin correo registrado o sin poder revisar los datos (R2-01).
+    sin['jsonBody'] = "={{ JSON.stringify({ messaging_product: 'whatsapp', to: $json.datos.phoneNumber, type: 'text', text: { body: $json.aviso } }) }}"
     registro.append(('Send Seguimiento Sin Correo', nodo_nuevo(w, 'Send Seguimiento Sin Correo', 'Send Not Client Message', sin, dx=0, dy=560)))
     aviso = copy.deepcopy(p('Notify Admin Followup Action Error'))
-    aviso['subject'] = 'WhatsApp: seguimiento sin correo registrado'
-    aviso['html'] = ("=<p>Un número de WhatsApp quiso agendar un seguimiento y su ficha no tiene un correo registrado.</p>"
+    aviso['subject'] = 'WhatsApp: seguimiento para coordinar a mano'
+    aviso['html'] = ("=<p>Un número de WhatsApp quiso agendar un seguimiento y el bot no pudo agendarlo solo: "
+                     "{{ $json.motivo === 'no_disponible' ? 'no pudimos revisar sus datos (WordPress no respondió)' : 'su ficha no tiene un correo registrado' }}.</p>"
                      "<p>Número: {{ $json.datos.phoneNumber }}<br>Opción: {{ ($json.opcion && $json.opcion.nombre) || 'sin opción' }}</p>"
-                     "<p>Completa el correo en su ficha del CRM y escríbele para coordinar la reunión.</p>")
+                     "<p>Escríbele para coordinar la reunión{{ $json.motivo === 'no_disponible' ? '' : ' y completa el correo en su ficha del CRM' }}.</p>")
     registro.append(('Notify Admin Seguimiento Sin Correo', nodo_nuevo(w, 'Notify Admin Seguimiento Sin Correo', 'Notify Admin Followup Action Error', aviso, dx=0, dy=420)))
     conectar(w, 'Is Client?', [['Elegir Seguimiento'], [d['node'] for d in w['connections']['Is Client?']['main'][1]]])
     conectar(w, 'Elegir Seguimiento', [['Modo Seguimiento']])
     conectar(w, 'Modo Seguimiento', [['Guardar Elección Seguimiento'], ['Send Seguimiento Opciones'], ['Send Seguimiento Sin Correo', 'Notify Admin Seguimiento Sin Correo']])
     conectar(w, 'Guardar Elección Seguimiento', [['Prepare Followup Data']])
+
+    # 6b) Revisión R2-01: freno antes del calendario del diagnóstico. Si la consulta de quién escribe se cayó en este mensaje
+    # («Sumar Contexto» dejó reconocimiento=no_disponible), se pregunta primero si es la primera reunión o un seguimiento.
+    # «Primera reunión» (btn_agendar_demo) vuelve al agente por «Button to Text», que no pasa por «Sumar Contexto»: no hay ciclo.
+    # «Es un seguimiento» (seg_general) entra por la regla seg_ de «Button Action».
+    freno = copy.deepcopy(p('Is Client?'))
+    freno['conditions']['boolean'][0]['value1'] = "={{ $('Sumar Contexto').isExecuted && $('Sumar Contexto').first().json.reconocimiento === 'no_disponible' }}"
+    freno['conditions']['boolean'][0]['value2'] = True
+    registro.append(('¿Reconocimiento caído?', nodo_nuevo(w, '¿Reconocimiento caído?', 'Is Client?', freno, dx=-220, dy=-420)))
+    confirmar = copy.deepcopy(p('Send Not Client Message'))
+    confirmar['url'] = "=https://graph.facebook.com/v22.0/{{ $('Route Action').first().json.phoneNumberId }}/messages"
+    confirmar['jsonBody'] = ("={{ JSON.stringify({ messaging_product: 'whatsapp', recipient_type: 'individual', to: $('Route Action').first().json.phoneNumber, "
+                             "type: 'interactive', interactive: { type: 'button', body: { text: 'Antes de mostrarte el calendario: ¿es tu primera reunión con nosotros "
+                             "o un seguimiento de tu proyecto o propuesta?' }, action: { buttons: [ { type: 'reply', reply: { id: 'btn_agendar_demo', title: 'Primera reunión' } }, "
+                             "{ type: 'reply', reply: { id: 'seg_general', title: 'Es un seguimiento' } } ] } } }) }}")
+    registro.append(('Send Confirmar Tipo Reunión', nodo_nuevo(w, 'Send Confirmar Tipo Reunión', 'Send Not Client Message', confirmar, dx=-220, dy=-560)))
+    ra = w['connections']['Route Action']['main']
+    i_cal = next(i for i, r in enumerate(p('Route Action')['rules']['values']) if r['conditions']['conditions'][0].get('rightValue') == 'show_calendar')
+    if [d['node'] for d in ra[i_cal]] != ['¿Reconocimiento caído?']:
+        destino_viejo = [d['node'] for d in ra[i_cal]]
+        assert destino_viejo == ['Get Appointments Config'], f'Route Action (calendario) iba a {destino_viejo}, no al calendario'
+        ra[i_cal] = [{'node': '¿Reconocimiento caído?', 'type': 'main', 'index': 0}]
+    conectar(w, '¿Reconocimiento caído?', [['Send Confirmar Tipo Reunión'], ['Get Appointments Config']])
 
     # 7) «Prepare Followup Data» toma los datos de «Elegir Seguimiento» («Generate Days» lo lee por nombre)
     if p('Prepare Followup Data').get('jsonOutput') != "={{ $('Elegir Seguimiento').first().json.datos }}":
@@ -260,11 +284,9 @@ def cambiar_agenda(w, registro):
 
 
 def comprobar_js(nombre, codigo):
-    """node --check del código del nodo, envuelto en una función como lo corre n8n."""
-    with tempfile.NamedTemporaryFile('w', suffix='.js', delete=False, encoding='utf-8') as f:
-        f.write('(async function () {\n' + codigo + '\n})();\n')
-    r = subprocess.run(['node', '--check', f.name], capture_output=True, text=True)
-    os.unlink(f.name)
+    """Revisa la sintaxis del código del nodo como cuerpo de función (así lo corre n8n), por la entrada estándar y sin temporales."""
+    revisor = "const c = require('fs').readFileSync(0, 'utf8'); new Function('$', '$input', '$json', c);"
+    r = subprocess.run(['node', '-e', revisor], input=codigo, capture_output=True, text=True, encoding='utf-8')
     return r.returncode == 0, (r.stderr or '').strip()[:200]
 
 
@@ -285,8 +307,27 @@ const $ = (n) => { const s = STUBS[n]; return { isExecuted: s !== undefined, fir
 def simular_nodo(codigo, stubs, entrada):
     """Corre el código de un nodo Code con $ y $input simulados (sin n8n) y devuelve el json del primer ítem."""
     js = STUB_N8N % json.dumps(stubs, ensure_ascii=False) + 'const $input = { first: () => ({ json: %s }) };\n' % json.dumps(entrada, ensure_ascii=False)
-    js += 'const salida = (function () {\n' + codigo + '\n})();\nconsole.log(JSON.stringify(salida[0].json));\n'
+    js += 'const $json = $input.first().json;\n'
+    js += 'const salida = (function () {\n' + codigo + '\n})();\nconst item = Array.isArray(salida) ? salida[0] : salida;\nconsole.log(JSON.stringify(item && item.json !== undefined ? item.json : item));\n'
     return correr_js(js)
+
+
+def simular_calendario(w, stubs):
+    """Revisión R2-01: desde una respuesta de diagnóstico del agente (<<ACTION:SHOW_CALENDAR>>) hasta el nodo que se ejecuta
+    después del freno, con el código real de «Parse Response Actions», las reglas de «Route Action» y la condición del freno."""
+    nodos = {n['name']: n for n in w['nodes']}
+    con = w['connections']
+    pr = simular_nodo(nodos['Parse Response Actions']['parameters']['jsCode'], stubs, {'output': 'Te muestro el calendario. <<ACTION:SHOW_CALENDAR>>'})
+    accion = (pr or {}).get('action')
+    reglas = nodos['Route Action']['parameters']['rules']['values']
+    idx = next((i for i, r in enumerate(reglas) if r['conditions']['conditions'][0].get('rightValue') == accion), None)
+    if idx is None:
+        return f'sin regla para {accion}'
+    destino = [d['node'] for d in con['Route Action']['main'][idx]]
+    if destino != ['¿Reconocimiento caído?']:
+        return f'Route Action va a {destino}, no al freno'
+    frena = evaluar(nodos['¿Reconocimiento caído?']['parameters']['conditions']['boolean'][0]['value1'], {}, stubs)
+    return [d['node'] for d in con['¿Reconocimiento caído?']['main'][0 if frena is True else 1]]
 
 
 def evaluar(expresion, actual, stubs):
@@ -298,7 +339,7 @@ def evaluar(expresion, actual, stubs):
     return correr_js(js)
 
 
-def comprobar_fallos_y_reagendar(nodos):
+def comprobar_fallos_y_reagendar(nodos, conexiones):
     """Revisión B de Codex: B-01 (una consulta caída no detiene el flujo ni ofrece diagnóstico) y B-04 (reagendar no pierde el vínculo)."""
     fallas = []
     for n in ('Contexto Cliente', 'Contexto Elegido', 'Verify Client'):
@@ -306,12 +347,37 @@ def comprobar_fallos_y_reagendar(nodos):
             fallas.append(f'{n}: un timeout o error de red detendría el flujo (falta onError=continueRegularOutput)')
     em = {'phoneNumber': '56911112222', 'phoneNumberId': '123', 'contactName': 'Persona Prueba'}
     caida = {'error': {'message': 'timeout of 5000ms exceeded'}}
-    s = simular_nodo(nodos['Sumar Contexto']['parameters']['jsCode'], {'Merge Data': {'chatInput': 'Hola', 'phoneNumber': '56911112222'}, 'Contexto Propuesta': {}}, caida)
-    if not isinstance(s, dict) or s.get('chatInput') != 'Hola' or s.get('chatInputOriginal') != 'Hola':
-        fallas.append(f'Sumar Contexto con la consulta caída no deja pasar el mensaje tal cual: {s}')
+    no_disp = {'situacion': 'no_disponible', 'nombre': '', 'opciones': [], 'diagnostico_proximo': '', 'elegida': None, 'agenda': {'nombre_completo': '', 'correo': '', 'empresa': ''}}
+    nuevo = dict(no_disp, situacion='nuevo')
+    base = {'Merge Data': {'chatInput': 'quiero agendar', 'phoneNumber': '56911112222'}, 'Contexto Propuesta': {}}
+    # R2-01: la consulta caída (timeout o 503) llega al agente como tal y queda marcada; una persona nueva de verdad, no.
+    for nombre, ctx, espera in (('timeout', caida, 'no_disponible'), ('503', no_disp, 'no_disponible'), ('persona nueva', nuevo, 'nuevo')):
+        s = simular_nodo(nodos['Sumar Contexto']['parameters']['jsCode'], base, ctx)
+        avisa = isinstance(s, dict) and 'No pudimos revisar' in str(s.get('chatInput'))
+        if not isinstance(s, dict) or s.get('reconocimiento') != espera or s.get('chatInputOriginal') != 'quiero agendar' or avisa != (espera == 'no_disponible') \
+                or not str(s.get('chatInput')).endswith('quiero agendar'):
+            fallas.append(f'Sumar Contexto ({nombre}) no deja reconocimiento={espera} y la línea correcta: {s}')
+    # R2-01: si el agente igual responde con el calendario del diagnóstico, el freno pregunta antes; con persona nueva o desde un botón, no.
+    for nombre, stubs, espera in (('consulta caída', {'Sumar Contexto': {'reconocimiento': 'no_disponible'}}, ['Send Confirmar Tipo Reunión']),
+                                  ('persona nueva', {'Sumar Contexto': {'reconocimiento': 'nuevo'}}, ['Get Appointments Config']),
+                                  ('cliente', {'Sumar Contexto': {'reconocimiento': 'cliente'}}, ['Get Appointments Config']),
+                                  ('después de tocar «Primera reunión»', {}, ['Get Appointments Config'])):
+        r = simular_calendario({'nodes': list(nodos.values()), 'connections': conexiones}, stubs)
+        if r != espera:
+            fallas.append(f'calendario del diagnóstico ({nombre}): termina en {r}, se esperaba {espera}')
+    msg = evaluar(nodos['Send Confirmar Tipo Reunión']['parameters']['jsonBody'], {}, {'Route Action': {'phoneNumber': '56911112222', 'phoneNumberId': '123'}})
+    try:
+        botones = json.loads(msg)['interactive']['action']['buttons']
+        if [b['reply']['id'] for b in botones] != ['btn_agendar_demo', 'seg_general'] or any(len(b['reply']['title']) > 20 or 'demo' in b['reply']['title'].lower() for b in botones):
+            fallas.append(f'Send Confirmar Tipo Reunión: botones inesperados {botones}')
+    except Exception:
+        fallas.append(f'Send Confirmar Tipo Reunión: el cuerpo no es un mensaje válido: {msg}')
     e = simular_nodo(nodos['Elegir Seguimiento']['parameters']['jsCode'], {'Extract Message Data': em, 'Route Action': {'output': 'x'}}, caida)
-    if not isinstance(e, dict) or e.get('modo') != 'directo' or (e.get('guardar') or {}).get('subject') != 'Reunión de Seguimiento':
-        fallas.append(f'Elegir Seguimiento con la consulta caída no sigue con un seguimiento general: {e}')
+    if not isinstance(e, dict) or e.get('modo') != 'sin_correo' or e.get('motivo') != 'no_disponible':
+        fallas.append(f'Elegir Seguimiento con la consulta caída promete una agenda que no se puede guardar: {e}')
+    aviso = evaluar(nodos['Send Seguimiento Sin Correo']['parameters']['jsonBody'], {'datos': {'phoneNumber': '56911112222'}, 'aviso': 'AVISO DE PRUEBA'}, {})
+    if not isinstance(aviso, str) or json.loads(aviso).get('text', {}).get('body') != 'AVISO DE PRUEBA':
+        fallas.append(f'Send Seguimiento Sin Correo no usa el aviso de Elegir Seguimiento: {aviso}')
     ctx = {'situacion': 'cliente', 'nombre': 'Persona', 'opciones': [{'tipo': 'proyecto', 'id': 7, 'nombre': 'Proyecto', 'plan_codigo': '', 'agenda': {'nombre_completo': 'P', 'correo': 'p@prueba.cl', 'empresa': ''}}], 'agenda': {'nombre_completo': 'P', 'correo': 'p@prueba.cl', 'empresa': ''}}
     e = simular_nodo(nodos['Elegir Seguimiento']['parameters']['jsCode'], {'Extract Message Data': em, 'Process Interactive': {'buttonId': 'seg_c_99'}}, ctx)
     if not isinstance(e, dict) or e.get('modo') != 'elegir':
@@ -330,6 +396,19 @@ def comprobar_fallos_y_reagendar(nodos):
     return fallas
 
 
+def nodos_tocados(antes, despues):
+    """Nodos nuevos o con algún cambio que hay que subir y verificar: parámetros, onError o sus conexiones de salida (R2-05)."""
+    previos = {n['name']: n for n in antes['nodes']}
+    huella = lambda x: json.dumps(x, sort_keys=True, ensure_ascii=False)
+    tocados = []
+    for n in despues['nodes']:
+        a = previos.get(n['name'])
+        if (a is None or huella(n.get('parameters')) != huella(a.get('parameters')) or n.get('onError') != a.get('onError')
+                or huella(despues['connections'].get(n['name'])) != huella(antes['connections'].get(n['name']))):
+            tocados.append(n['name'])
+    return tocados
+
+
 def comprobar(flujo, w, antes, b):
     nodos = {n['name']: n for n in w['nodes']}
     fallas = []
@@ -340,8 +419,7 @@ def comprobar(flujo, w, antes, b):
             for d in rama or []:
                 if d['node'] not in nodos:
                     fallas.append(f'{o} conecta a un nodo que no existe: {d["node"]}')
-    tocados = [n for n in nodos if n not in {x['name'] for x in antes['nodes']} or
-               json.dumps(nodos[n]['parameters'], sort_keys=True) != json.dumps(next(x for x in antes['nodes'] if x['name'] == n)['parameters'], sort_keys=True)]
+    tocados = nodos_tocados(antes, w)
     for n in tocados:
         for ref in re.findall(r"\$\('([^']+)'\)", json.dumps(nodos[n]['parameters'], ensure_ascii=False)):
             if ref not in nodos:
@@ -365,7 +443,7 @@ def comprobar(flujo, w, antes, b):
         for n in ('Send Not Client Message',):
             if re.search(r'demo', json.dumps(nodos[n]['parameters']['jsonBody'], ensure_ascii=False).replace('btn_agendar_demo', ''), re.I):
                 fallas.append(f'{n}: todavía dice «demo» al cliente')
-        fallas += comprobar_fallos_y_reagendar(nodos)
+        fallas += comprobar_fallos_y_reagendar(nodos, w['connections'])
     else:
         corte = lambda s: s.split(' : {', 1)[1] if ' : {' in s else ''
         a = next(x for x in antes['nodes'] if x['name'] == 'Prepare Payload')['parameters']['assignments']['assignments'][0]['value']

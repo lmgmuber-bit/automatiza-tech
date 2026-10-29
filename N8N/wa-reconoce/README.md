@@ -31,6 +31,9 @@ El asistente de WhatsApp sabe, por el número, si le escribe una **persona nueva
 - **«Send Not Client Message»** ofrece el diagnóstico gratis, ya no la «demo».
 - **Si una consulta se cae,** el flujo sigue (revisión B de Codex). Los tres nodos de consulta van con `onError=continueRegularOutput` y `neverError`. Un timeout o un error de la base llega como `error` o como `situacion: no_disponible` (la ruta responde 503). En ese caso el mensaje pasa sin línea de contexto y el seguimiento sigue como uno general; nunca se ofrece el diagnóstico por un error.
 - **Un botón viejo** (la opción ya no existe) avisa y vuelve a preguntar; nunca agenda otra opción.
+- **Si la consulta de quién escribe se cae** (ronda 2 de Codex, R2-01), «Sumar Contexto» deja `reconocimiento: no_disponible` y la línea interna le avisa al agente que no asuma que es una persona nueva.
+  - **Freno antes del calendario del diagnóstico:** si en ese mismo mensaje el agente igual responde con el calendario, «¿Reconocimiento caído?» lo frena y «Send Confirmar Tipo Reunión» pregunta con dos botones: «Primera reunión» (`btn_agendar_demo`, que vuelve al agente por «Button to Text» sin pasar otra vez por el freno) o «Es un seguimiento» (`seg_general`).
+  - **En el seguimiento,** sin datos no se promete una agenda imposible: se avisa a la persona y a Luis.
 - **Al reagendar,** «Save Reschedule Client» guarda también `contrato_id` y `propuesta_id`. GET `/followup-meetings/{id}` ahora los devuelve, y la reunión nueva queda con el mismo vínculo.
 
 **Agenda** (`PejBgr2LZQSAbbBy`):

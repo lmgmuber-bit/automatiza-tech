@@ -245,14 +245,14 @@ function at_wa_contexto(string $tel, string $texto = ''): array {
 		return at_wa_contexto_no_disponible();
 	}
 	$r = at_wa_clasificar($fichas, current_time('Y-m-d H:i'));
+	$r['elegida'] = at_wa_elegida($r['opciones'], at_wa_codigo_de_texto($texto));
+	$r['agenda'] = count($fichas) === 1 ? $fichas[0]['agenda'] : ['nombre_completo' => '', 'correo' => '', 'empresa' => ''];
 	try {
 		$r['portales'] = $r['situacion'] === 'cliente' ? at_wa_portales($tel, $fichas) : [];
 	} catch (AtWaConsultaNoDisponible $e) {
 		error_log('[wa-contexto] una lectura de la base falló al armar el portal; el número queda no_disponible');
 		return at_wa_contexto_no_disponible();
 	}
-	$r['elegida'] = at_wa_elegida($r['opciones'], at_wa_codigo_de_texto($texto));
-	$r['agenda'] = count($fichas) === 1 ? $fichas[0]['agenda'] : ['nombre_completo' => '', 'correo' => '', 'empresa' => ''];
 	return $r;
 }
 

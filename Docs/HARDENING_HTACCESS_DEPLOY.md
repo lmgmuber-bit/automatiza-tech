@@ -4,6 +4,16 @@
 al servidor de producción (Hostinger). Este archivo es la fuente versionada del bloque
 `AT_HARDENING` que **debe** existir en el `.htaccess` raíz del sitio.
 
+## Estado en PROD (28-oct-2026)
+
+- Este bloque **nunca se aplicó** en PROD (no aparece en ninguna copia del `.htaccess` raíz, la de diciembre de 2025 incluida) y ya no hace falta pegarlo entero:
+  - los scripts de mantenimiento de la raíz cargan `at-maintenance-guard.php` (sesión de administrador o consola);
+  - las cabeceras de seguridad ya llegan por otro lado (HSTS, CSP, `X-Frame-Options`, `nosniff`, `Permissions-Policy`);
+  - `xmlrpc.php` está bloqueado desde el 28-oct con su propio bloque (`# BEGIN AT bloqueo xmlrpc`);
+  - respaldos, logs y copias de código los bloquea `# BEGIN AT bloqueo de archivos sensibles` (03/04-oct).
+- El `.htaccess` que hay hoy en PROD está copiado tal cual en [`Docs/PROD/htaccess-raiz-automatizatech.txt`](PROD/htaccess-raiz-automatizatech.txt). El `.htaccess` de la raíz del repo es el de WAMP local (`RewriteBase /automatiza-tech/`): **no se sube a PROD**.
+- Ojo si algún día se aplica: la regla 2 bloquea `purge-*.php`, que usa el flujo «Purge Cache Cron» de n8n (apagado desde el 26-sep).
+
 ## Cómo aplicar en producción
 
 1. Conéctate por File Manager o SFTP a `public_html/`.

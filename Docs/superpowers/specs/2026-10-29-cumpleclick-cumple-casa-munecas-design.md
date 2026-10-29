@@ -140,7 +140,8 @@ despedida).
   - La API no tiene endpoint de saldo. Lo último medido es del 24-oct: la cuenta `n8n` rechazó un video por saldo, y en
     `api-n8n` el clip de 10 s se rechazó y el de 5 s salió.
   - El saldo se comprueba con el primer video real: un rechazo por saldo (`403 not_enough_credits`) no se cobra
-    (`api-rest.md`). Se intenta en `api-n8n`, después en `n8n`, y si las dos rechazan se pasa al MCP.
+    (`api-rest.md`). Se intenta en `api-n8n` y después en `n8n`. **Si las dos rechazan, se le avisa a Luis para que recargue** (Luis,
+    29-oct); el MCP se usa solo si él lo indica.
   - En la API, Wan 3.0 cuesta US$0,05 por segundo de lista y acepta imágenes de referencia de identidad. Falta comprobar si
     la API acepta audio de referencia; si no lo acepta, el lipsync va por el MCP.
   - **El MCP tiene 160,06 créditos (plan starter, consultado el 29-oct con `balance`)**. Allí, a 720p, Seedance 2.0 mini

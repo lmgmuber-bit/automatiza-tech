@@ -9,6 +9,8 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
+require_once __DIR__ . '/tipo-cambio-cache.php';
+
 /**
  * Desactivar caché para endpoints de recordatorios
  */
@@ -844,7 +846,10 @@ function automatiza_tech_get_exchange_rate() {
     }
 
     $updater = automatiza_tech_init_currency_updater();
-    $rate = $updater->get_current_exchange_rate();
+    // Guardado 6 h (tipo-cambio-cache.php): los bots ya no esperan al Banco Central en cada mensaje.
+    $rate = function_exists('at_tipo_cambio_guardado')
+        ? at_tipo_cambio_guardado(function () use ($updater) { return $updater->get_current_exchange_rate(); })
+        : $updater->get_current_exchange_rate();
 
     if (!$rate) {
         // Intentar obtener el último guardado si falla la API en tiempo real

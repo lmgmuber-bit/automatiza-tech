@@ -263,6 +263,21 @@ def fuera_de_horario():
 
 
 @caso
+def web_sin_saber():
+    # Cerebro AT «palabras simples» (29-oct): ante quien pide una web sin saber qué necesita, preguntas simples y
+    # diagnóstico gratis, sin tecnicismos sin explicar.
+    g, c = nuevo()
+    r = turno(g, c, 'Quiero una página web pero no sé bien qué necesito')
+    t = (r or {}).get('body', {}).get('content', '')
+    tl = t.lower()
+    ok(r and '?' in t and 'action' not in r['body'], 'web sin saber: responde con una pregunta simple', t[:300])
+    ok('diagn' in tl, 'web sin saber: ofrece el diagnóstico gratis', t[:300])
+    jerga = [w for w in ('landing', 'one page', 'e-commerce', 'ecommerce', 'seo', 'hosting', 'cms') if w in tl]
+    ok(not jerga or '(' in t, 'web sin saber: sin términos técnicos sin explicar', str(jerga))
+    print('      →', t[:300].replace('\n', ' '))
+
+
+@caso
 def comentario():
     g, c = nuevo()
     ctx = {'origen': 'comentario_palabra_clave', 'palabra': 'MÉTODO', 'fecha': '2026-10-24 15:57:58',

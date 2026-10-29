@@ -68,5 +68,21 @@ intentar('día sin atención', () => { r = revisar({ isFullDay: true, reason: 'D
   ok(r.ok === false && /no atendemos/.test(r.result), 'día sin atención: no agenda', r); });
 intentar('vacía', () => ok(revisar({}).ok === false, 'respuesta vacía de la agenda: no agenda'));
 
+// «Preparar entrada» del flujo principal: si el tipo de cambio no llegó (timeout de WordPress, 29-oct), nunca «$0 CLP».
+const principal = JSON.parse(fs.readFileSync(path.join(__dirname, 'agente-tech-instagram.json'), 'utf8'));
+const entradaJs = principal.nodes.find(n => n.name === 'Preparar entrada').parameters.jsCode;
+const tipoCambio = principal.nodes.find(n => n.name === 'Tipo de cambio');
+const Lux = { now: () => { const d = { setZone: () => d, setLocale: () => d, plus: () => d, toFormat: () => 'hoy', toISODate: () => '2099-12-01' }; return d; } };
+const nodos = { Validar: { igsid: '1', prueba: true, contexto: null }, 'Unir textos': { texto: '¿cuánto cuesta?' } };
+const prep = tc => new Function('$', '$json', 'DateTime', entradaJs)(n => ({ first: () => ({ json: nodos[n] }) }), tc, Lux)[0].json;
+r = prep({ rate: 981.08 });
+ok(r.rate === 981.08 && !/tipo de cambio/.test(r.contexto_txt), 'tipo de cambio presente: se usa tal cual', r);
+for (const tc of [{ error: { message: 'timeout of 10000ms exceeded' } }, { rate: 0 }, {}]) {
+  r = prep(tc);
+  ok(r.rate === null && /solo en USD/.test(r.contexto_txt), 'sin tipo de cambio: precios solo en USD, nunca $0 CLP (' + JSON.stringify(tc).slice(0, 30) + ')', r);
+}
+ok(tipoCambio.retryOnFail === true && tipoCambio.maxTries >= 3 && tipoCambio.parameters.options.timeout >= 20000,
+  'Tipo de cambio: reintenta y espera 20 s', { retryOnFail: tipoCambio.retryOnFail, maxTries: tipoCambio.maxTries, options: tipoCambio.parameters.options });
+
 console.log(fallas ? `\n${fallas} FALLAS` : '\nTODO OK');
 process.exit(fallas ? 1 : 0);

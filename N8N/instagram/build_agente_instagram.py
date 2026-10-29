@@ -101,7 +101,8 @@ JS_ENTRADA = r"""
 // si la persona llegó desde un comentario, qué comentó y qué le enviamos por privado.
 const v = $('Validar').first().json;
 const texto = $('Unir textos').first().json.texto;
-const rate = Number(($json || {}).rate) || 0;
+// Si el tipo de cambio no llegó (WordPress tardó o falló, 29-oct), rate = null y el agente da los precios solo en USD.
+const rate = Number(($json || {}).rate) > 0 ? Number($json.rate) : null;
 const ahora = DateTime.now().setZone('ZONA').setLocale('es');
 const dias = [];
 for (let i = 0; i < 8; i++) {
@@ -114,6 +115,10 @@ if (v.contexto && v.contexto.palabra) {
     + (v.contexto.mensaje_privado ? ' y le enviamos este mensaje privado: «' + v.contexto.mensaje_privado + '».' : '.')
     + ' Lo que escribe ahora es la respuesta a eso: si dice algo como «quiero agendar», «sí» o «me interesa», ofrécele agendar'
     + ' el diagnóstico gratis aquí mismo. No le repitas el mensaje que ya le enviamos.';
+}
+if (rate === null) {
+  ctx += '\n\n#### Precios sin tipo de cambio\nHoy no tenemos el tipo de cambio: da los precios solo en USD, sin calcular pesos chilenos'
+    + ' (nunca digas «$0 CLP»), y di que el valor en pesos lo confirmamos en el diagnóstico gratis.';
 }
 return [{ json: {
   chatInput: texto, rate, igsid: v.igsid, prueba: v.prueba,
@@ -236,8 +241,10 @@ def flujo_principal():
               {'operation': 'get', 'propertyName': 'rafaga', 'key': '=ig:rafaga:{{ ' + k + ' }}', 'keyType': 'list', 'options': {}}),
         redis('ig-vaciar', 'Vaciar la ráfaga', [1980, 120], {'operation': 'delete', 'key': '=ig:rafaga:{{ ' + k + ' }}'}),
         code('ig-unir', 'Unir textos', [2200, 120], JS_UNIR),
+        # El endpoint consulta al Banco Central en vivo y a veces pasa los 10 s (29-oct): más espera y reintentos.
         nodo('ig-cambio', 'Tipo de cambio', 'n8n-nodes-base.httpRequest', 4.1, [2420, 120],
-             {'url': WP + '/exchange-rate', 'options': {'timeout': 10000}}, onError='continueRegularOutput'),
+             {'url': WP + '/exchange-rate', 'options': {'timeout': 20000}}, onError='continueRegularOutput',
+             retryOnFail=True, maxTries=3, waitBetweenTries=1000),
         code('ig-entrada', 'Preparar entrada', [2640, 120], JS_ENTRADA),
         nodo('ig-agente', 'Agente IA - Tech Instagram', '@n8n/n8n-nodes-langchain.agent', 1.8, [2880, 120],
              {'promptType': 'define', 'text': '={{ $json.chatInput }}',

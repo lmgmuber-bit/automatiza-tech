@@ -222,10 +222,13 @@
    "parameters": {
     "url": "https://automatizatech.cl/wp-json/automatiza-tech/v1/exchange-rate",
     "options": {
-     "timeout": 10000
+     "timeout": 20000
     }
    },
-   "onError": "continueRegularOutput"
+   "onError": "continueRegularOutput",
+   "retryOnFail": true,
+   "maxTries": 3,
+   "waitBetweenTries": 1000
   },
   {
    "id": "ig-entrada",
@@ -237,7 +240,7 @@
     120
    ],
    "parameters": {
-    "jsCode": "// Entrada del agente: el texto, el tipo de cambio (el prompt web usa $json.rate), la fecha de hoy en Chile y,\n// si la persona llegó desde un comentario, qué comentó y qué le enviamos por privado.\nconst v = $('Validar').first().json;\nconst texto = $('Unir textos').first().json.texto;\nconst rate = Number(($json || {}).rate) || 0;\nconst ahora = DateTime.now().setZone('America/Santiago').setLocale('es');\nconst dias = [];\nfor (let i = 0; i < 8; i++) {\n  const d = ahora.plus({ days: i });\n  dias.push((i === 0 ? 'hoy ' : i === 1 ? 'mañana ' : '') + d.toFormat(\"cccc d 'de' LLLL\") + ' (' + d.toISODate() + ')');\n}\nlet ctx = '';\nif (v.contexto && v.contexto.palabra) {\n  ctx = '\\n\\n#### De dónde viene esta persona\\nComentó «' + v.contexto.palabra + '» en una publicación de @automatizatech.cl'\n    + (v.contexto.mensaje_privado ? ' y le enviamos este mensaje privado: «' + v.contexto.mensaje_privado + '».' : '.')\n    + ' Lo que escribe ahora es la respuesta a eso: si dice algo como «quiero agendar», «sí» o «me interesa», ofrécele agendar'\n    + ' el diagnóstico gratis aquí mismo. No le repitas el mensaje que ya le enviamos.';\n}\nreturn [{ json: {\n  chatInput: texto, rate, igsid: v.igsid, prueba: v.prueba,\n  ahora_txt: ahora.toFormat(\"cccc d 'de' LLLL 'de' yyyy, HH:mm\"), dias_txt: dias.join('; '), contexto_txt: ctx,\n} }];\n"
+    "jsCode": "// Entrada del agente: el texto, el tipo de cambio (el prompt web usa $json.rate), la fecha de hoy en Chile y,\n// si la persona llegó desde un comentario, qué comentó y qué le enviamos por privado.\nconst v = $('Validar').first().json;\nconst texto = $('Unir textos').first().json.texto;\n// Si el tipo de cambio no llegó (WordPress tardó o falló, 29-oct), rate = null y el agente da los precios solo en USD.\nconst rate = Number(($json || {}).rate) > 0 ? Number($json.rate) : null;\nconst ahora = DateTime.now().setZone('America/Santiago').setLocale('es');\nconst dias = [];\nfor (let i = 0; i < 8; i++) {\n  const d = ahora.plus({ days: i });\n  dias.push((i === 0 ? 'hoy ' : i === 1 ? 'mañana ' : '') + d.toFormat(\"cccc d 'de' LLLL\") + ' (' + d.toISODate() + ')');\n}\nlet ctx = '';\nif (v.contexto && v.contexto.palabra) {\n  ctx = '\\n\\n#### De dónde viene esta persona\\nComentó «' + v.contexto.palabra + '» en una publicación de @automatizatech.cl'\n    + (v.contexto.mensaje_privado ? ' y le enviamos este mensaje privado: «' + v.contexto.mensaje_privado + '».' : '.')\n    + ' Lo que escribe ahora es la respuesta a eso: si dice algo como «quiero agendar», «sí» o «me interesa», ofrécele agendar'\n    + ' el diagnóstico gratis aquí mismo. No le repitas el mensaje que ya le enviamos.';\n}\nif (rate === null) {\n  ctx += '\\n\\n#### Precios sin tipo de cambio\\nHoy no tenemos el tipo de cambio: da los precios solo en USD, sin calcular pesos chilenos'\n    + ' (nunca digas «$0 CLP»), y di que el valor en pesos lo confirmamos en el diagnóstico gratis.';\n}\nreturn [{ json: {\n  chatInput: texto, rate, igsid: v.igsid, prueba: v.prueba,\n  ahora_txt: ahora.toFormat(\"cccc d 'de' LLLL 'de' yyyy, HH:mm\"), dias_txt: dias.join('; '), contexto_txt: ctx,\n} }];\n"
    }
   },
   {

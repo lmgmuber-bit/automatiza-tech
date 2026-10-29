@@ -40,6 +40,13 @@ function waLineaContexto(ctx, prop) {
     if (props.length) partes.push('Sus propuestas abiertas: ' + props.join(', ') + '.');
     else if (sit === 'prospecto') partes.push('No tiene propuestas abiertas.');
     if (ctx.elegida && ctx.elegida.nombre) partes.push('Escribe desde el plan del proyecto «' + ctx.elegida.nombre + '».');
+    // Diseño 2026-10-29: el cliente ve el avance en su portal (línea de tiempo y MAXTECH); el enlace es de la ficha de este número.
+    const portales = sit === 'cliente' && Array.isArray(ctx.portales) ? ctx.portales.filter((x) => x && x.url) : [];
+    if (portales.length) {
+      const enlaces = portales.length === 1 ? portales[0].url
+        : portales.map((x) => String(x.nombre || 'Portal').replace(/\s+/g, ' ').trim() + ': ' + x.url).join(' | ');
+      partes.push('Si pregunta por el avance o cualquier detalle de su proyecto, mándale el enlace a su portal, donde ve la línea de tiempo y puede preguntarle a MAXTECH: ' + enlaces + '.');
+    }
     const m = /^(\d{4})-(\d{2})-(\d{2}) (\d{2}:\d{2})/.exec(diag);
     if (m) partes.push('Tiene un diagnóstico gratis agendado para el ' + m[3] + '-' + m[2] + ' a las ' + m[4] + '.');
   }

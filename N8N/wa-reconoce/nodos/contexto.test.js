@@ -234,3 +234,21 @@ test('elegir: prospecto sin propuestas abiertas, seguimiento general con su agen
   assert.strictEqual(r.guardar.email, 'julio@prueba.cl');
   assert.strictEqual(r.guardar.subject, 'Reunión de Seguimiento');
 });
+
+test('cliente con un portal → la línea trae la url', () => {
+  const l = waLineaContexto(ctx('cliente', [proyecto(5, 'Proyecto Prueba')], { portales: [{ nombre: 'Empresa Prueba', url: 'https://automatizatech.cl/?crm_view=timeline&cid=5&token=abc' }] }), {});
+  assert.ok(l.includes('Si pregunta por el avance o cualquier detalle de su proyecto, mándale el enlace a su portal, donde ve la línea de tiempo y puede preguntarle a MAXTECH: https://automatizatech.cl/?crm_view=timeline&cid=5&token=abc'));
+  assert.ok(l.startsWith('[Contexto interno, no la repitas:') && l.endsWith(']'));
+});
+
+test('cliente con dos portales → los dos enlaces con su nombre', () => {
+  const l = waLineaContexto(ctx('cliente', [proyecto(5, 'A'), proyecto(6, 'B')], { nombre: '', portales: [{ nombre: 'Empresa A', url: 'https://x/a' }, { nombre: 'Empresa B', url: 'https://x/b' }] }), {});
+  assert.ok(l.includes('Empresa A: https://x/a') && l.includes('Empresa B: https://x/b'));
+});
+
+test('prospecto con portales vacío → sin línea de portal', () => {
+  const l = waLineaContexto(ctx('prospecto', [propuesta(2, 'Sitio web')], { portales: [] }), {});
+  assert.ok(!l.includes('portal'));
+  const n = waLineaContexto(ctx('prospecto', [propuesta(2, 'Sitio web')], { portales: [{ nombre: 'X', url: 'https://x' }] }), {});
+  assert.ok(!n.includes('https://x'), 'un portal solo se nombra si quien escribe es cliente');
+});

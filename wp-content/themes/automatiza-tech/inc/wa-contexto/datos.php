@@ -208,7 +208,32 @@ function at_wa_fichas_por_telefono(string $tel): array {
 /** Respuesta cuando una lectura falló: ni nuevo ni datos a medias (n8n sigue con un seguimiento general). */
 function at_wa_contexto_no_disponible(): array {
 	return ['situacion' => 'no_disponible', 'nombre' => '', 'opciones' => [], 'diagnostico_proximo' => '', 'elegida' => null,
-		'agenda' => ['nombre_completo' => '', 'correo' => '', 'empresa' => '']];
+		'agenda' => ['nombre_completo' => '', 'correo' => '', 'empresa' => ''], 'portales' => []];
+}
+
+/**
+ * Enlaces firmados al portal del cliente (línea de tiempo y MAXTECH), uno por ficha del CRM cuyo propio teléfono es el que
+ * escribe: el enlace abre la ficha, así que nunca sale para un número que solo calza por una propuesta o una cita.
+ * Devuelve [['nombre' => empresa o nombre de la ficha, 'url' => string]]. Lanza AtWaConsultaNoDisponible si la base falla.
+ */
+function at_wa_portales(string $tel, array $fichas): array {
+	global $wpdb;
+	$u9 = at_wa_ultimos9($tel);
+	$portales = [];
+	foreach ($fichas as $f) {
+		if ($u9 === '' || !preg_match('/^crm:(\d+)$/', (string) ($f['clave'] ?? ''), $m)) {
+			continue;
+		}
+		$crm = at_wa_q('get_row', $wpdb->prepare("SELECT id, nombre, empresa, telefono FROM {$wpdb->prefix}crm_clientes WHERE id = %d", (int) $m[1]));
+		if (!$crm || at_wa_ultimos9((string) $crm->telefono) !== $u9 || !function_exists('at_crm_url_portal')) {
+			continue;
+		}
+		$url = (string) at_wa_ext('at_crm_url_portal', (int) $crm->id);
+		if ($url !== '') {
+			$portales[] = ['nombre' => trim((string) $crm->empresa) !== '' ? trim((string) $crm->empresa) : trim((string) $crm->nombre), 'url' => $url];
+		}
+	}
+	return $portales;
 }
 
 /** Lo que responde la ruta wa-contexto: la situación, las opciones, la elegida por el código del plan y la agenda. */
@@ -220,6 +245,12 @@ function at_wa_contexto(string $tel, string $texto = ''): array {
 		return at_wa_contexto_no_disponible();
 	}
 	$r = at_wa_clasificar($fichas, current_time('Y-m-d H:i'));
+	try {
+		$r['portales'] = $r['situacion'] === 'cliente' ? at_wa_portales($tel, $fichas) : [];
+	} catch (AtWaConsultaNoDisponible $e) {
+		error_log('[wa-contexto] una lectura de la base falló al armar el portal; el número queda no_disponible');
+		return at_wa_contexto_no_disponible();
+	}
 	$r['elegida'] = at_wa_elegida($r['opciones'], at_wa_codigo_de_texto($texto));
 	$r['agenda'] = count($fichas) === 1 ? $fichas[0]['agenda'] : ['nombre_completo' => '', 'correo' => '', 'empresa' => ''];
 	return $r;

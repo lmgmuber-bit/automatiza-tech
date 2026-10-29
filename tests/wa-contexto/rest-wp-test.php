@@ -22,7 +22,7 @@ function wa_fugas($v, string $digitos, string $ruta = ''): array {
 	$f = [];
 	if (is_array($v)) {
 		foreach ($v as $k => $x) {
-			if ($k === 'agenda') {
+			if ($k === 'agenda' || $k === 'portales') { // portales: el enlace firmado a la ficha de este mismo número (diseño 2026-10-29)
 				continue;
 			}
 			if (in_array((string) $k, ['url', 'monto', 'telefono', 'phone'], true)) {
@@ -46,7 +46,7 @@ ok(wa_pedir('56' . $n, 'una-clave-equivocada')->get_status() === 401, 'con una c
 $res = wa_pedir('56' . $n, AT_REST_SECRET);
 $d = (array) $res->get_data();
 ok($res->get_status() === 200 && ($d['situacion'] ?? '') === 'cliente', 'con la clave: 200 y la situación');
-ok(array_keys($d) === ['situacion', 'nombre', 'opciones', 'diagnostico_proximo', 'elegida', 'agenda'], 'la respuesta trae exactamente las claves del diseño');
+ok(array_keys($d) === ['situacion', 'nombre', 'opciones', 'diagnostico_proximo', 'elegida', 'agenda', 'portales'], 'la respuesta trae exactamente las claves del diseño');
 ok(count($d['opciones'] ?? []) === 2 && array_keys($d['opciones'][0]) === ['tipo', 'id', 'nombre', 'plan_codigo', 'agenda'], 'cada opción trae tipo, id, nombre, código del plan y agenda');
 $fugas = wa_fugas(json_decode(wp_json_encode($d), true), $n);
 ok($fugas === [], 'fuera de la agenda no salen correos, el número, enlaces ni montos' . ($fugas ? ': ' . implode(', ', $fugas) : ''));

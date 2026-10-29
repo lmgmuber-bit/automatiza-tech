@@ -127,3 +127,41 @@ Nada subido a n8n ni a PROD.
 - La vista en el navegador.
 - La documentación vigente de Meta: se intentó y respondió 429.
 - El rendimiento con volumen real.
+
+## Ronda 3: correcciones de R2-01 y R2-05 (29-oct)
+
+Informe de Codex: `Shared-Tools/revisiones/2026-10-28-wa-reconoce-B-codex-r2.md`. Quedaron cerrados B-02, B-03, B-04 y B-06; R2-01 y R2-05 seguían abiertos.
+
+**Revisión exacta a revisar:** el commit `e5a8294`, sobre `5f37d9a`. Se ve con:
+
+```bash
+git diff 5f37d9a..e5a8294
+```
+
+No cambió ningún PHP.
+
+| Hallazgo | Corrección | Prueba (antes → después) |
+|---|---|---|
+| **R2-01** | Ver el detalle debajo de la tabla. | `contexto.test.js` pasa de 4 fallas a 25/25. La vista previa pasa de no correr (faltaban los nodos) a OK, con el camino desde «Sumar Contexto», pasando por «Parse Response Actions» (código real) y «Route Action», hasta el freno: consulta caída → «Send Confirmar Tipo Reunión»; persona nueva, cliente o después de tocar «Primera reunión» → calendario. Se rompió a propósito el freno, la conexión del calendario, el aviso y la marca de «Sumar Contexto»: cada mutación se detecta (1, 4, 1 y 3 fallas). |
+| **R2-05** | `nodos_tocados()` suma a los nodos nuevos y a los de parámetros cambiados los que cambian su `onError` o sus conexiones de salida. Con eso «Contexto Propuesta» y «Route Action» entran en la verificación de lo publicado y en la decisión de subir: WhatsApp pasa de 17 a 21 nodos. | `aplicar_test.py` pasa de 5 errores a 13/13. Cubre un cambio solo de conexión, uno solo de `onError` y el caso de Codex: una conexión vieja con los mismos parámetros ya no se acepta. |
+
+**Detalle de R2-01.** La consulta caída ya no se confunde con una persona nueva:
+- **`waReconocimiento()`** trata un timeout, un 503, una respuesta vacía o rara como `no_disponible`.
+- **«Sumar Contexto»** guarda `reconocimiento`. La línea interna le dice al agente que no asuma que es nuevo y que pregunte si es la primera reunión o un seguimiento. Lo mismo dice la personalidad de WhatsApp.
+- **El freno «¿Reconocimiento caído?»** se pone entre «Route Action» (calendario del diagnóstico) y «Get Appointments Config».
+  - Si en ese mensaje la consulta se cayó, «Send Confirmar Tipo Reunión» pregunta con dos botones: «Primera reunión» (`btn_agendar_demo`) o «Es un seguimiento» (`seg_general`).
+  - «Primera reunión» vuelve al agente por «Button to Text», que no pasa por «Sumar Contexto». Por eso el freno no se repite y no hay ciclo.
+- **En el seguimiento,** sin datos no se promete una agenda: `sin_correo` con `motivo: no_disponible` avisa a la persona y a Luis.
+
+**Decisión N:** reemplaza a la H, que con la ruta caída dejaba la línea igual que hoy. Costo si está mal: una pregunta de más cuando WordPress no responde.
+
+**Suite:**
+- `contexto.test.js`: 25/25;
+- `aplicar_test.py`: 13/13;
+- `validacion.test.js`: 49;
+- vista previa: agenda 3 nodos y WhatsApp 21, comprobaciones OK;
+- `sincronizar.py` (vista previa): solo la personalidad de WhatsApp.
+
+Las `*-wp-test.php` no se repitieron porque el MySQL de WAMP local está detenido (iniciarlo pide permisos de administrador). Ningún PHP cambió desde `90ccbd2`, donde dieron 6/6.
+
+Nada subido a n8n ni a PROD.

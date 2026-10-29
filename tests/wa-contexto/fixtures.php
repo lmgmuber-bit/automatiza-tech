@@ -70,3 +70,22 @@ function wa_propuesta(string $email, string $tel, string $estado, string $empres
 		'client_name' => 'María Prueba', 'company_name' => $empresa, 'phone' => $tel, 'status' => $estado, 'flujo' => 'v3', 'gamma_prompt_text' => '{}',
 		'transcript_text' => '', 'system_prompt_text' => '', 'created_at' => current_time('mysql')]);
 }
+
+/** Diagnóstico gratis (automatiza_leads) de prueba; devuelve el id. */
+function wa_lead(string $correo, string $tel, string $fecha, string $hora, string $estado = 'active'): int {
+	return wa_crear('automatiza_leads', ['name' => 'Ana Prueba', 'email' => $correo, 'phone' => $tel, 'scheduled_date' => $fecha,
+		'scheduled_time' => $hora . ':00', 'status' => $estado, 'source' => 'prueba', 'created_at' => current_time('mysql'),
+		'google_event_id' => 'evento-prueba-' . $GLOBALS['wa_marca']]);
+}
+
+/** Reunión de seguimiento de prueba; devuelve el id. */
+function wa_seguimiento(string $correo, string $tel, string $fecha, string $hora, string $estado = 'scheduled'): int {
+	return wa_crear('automatiza_followup_meetings', ['client_name' => 'Ana Prueba', 'client_email' => $correo, 'phone' => $tel,
+		'company_name' => '[PRUEBA] Empresa', 'meeting_date' => $fecha, 'meeting_time' => $hora . ':00', 'status' => $estado,
+		'meeting_subject' => 'Seguimiento de prueba', 'google_event_id' => 'evento-seg-' . $GLOBALS['wa_marca'], 'created_at' => current_time('mysql')]);
+}
+
+/** Una fecha futura 'Y-m-d' a $dias días de hoy. */
+function wa_dia(int $dias): string {
+	return wp_date('Y-m-d', time() + $dias * DAY_IN_SECONDS);
+}

@@ -140,7 +140,8 @@ function at_wa_armar_ficha(string $clave, string $nombre, array $agenda, array $
 			$diagnosticos[] = ['cuando' => (string) $l->scheduled_date . ' ' . substr((string) $l->scheduled_time, 0, 5), 'estado' => (string) $l->status, 'asistencia' => (string) $l->asistencia];
 		}
 	}
-	return ['clave' => $clave, 'nombre' => $nombre, 'agenda' => $agenda, 'contratos' => $contratos, 'propuestas' => $propuestas, 'diagnosticos' => $diagnosticos];
+	return ['clave' => $clave, 'nombre' => $nombre, 'agenda' => $agenda, 'contratos' => $contratos, 'propuestas' => $propuestas, 'diagnosticos' => $diagnosticos,
+		'correos' => $correos];
 }
 
 function at_wa_leads_tiene_asistencia(): bool {

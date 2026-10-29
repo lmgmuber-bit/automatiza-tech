@@ -2458,7 +2458,10 @@ function automatiza_tech_verify_client_by_phone($request) {
  * (automatiza_tech_create_followup_meeting_api) y la agenda web del plan (at_pt_agendar_seguimiento).
  * Devuelve ['alcanzado' => bool, 'seguimientos' => int, 'demos' => int, 'mensaje' => string].
  */
-function automatiza_tech_limite_reuniones_activas($email) {
+function automatiza_tech_limite_reuniones_activas($email, array $excluir = []) {
+    if ($excluir && function_exists('at_wa_limite_con_excluir')) {
+        return at_wa_limite_con_excluir((string) $email, $excluir); // la cita que se reprograma por WhatsApp no cuenta
+    }
     global $wpdb;
     $table_name = $wpdb->prefix . 'automatiza_followup_meetings';
     $leads_table = $wpdb->prefix . 'automatiza_leads';
@@ -2538,7 +2541,7 @@ function automatiza_tech_create_followup_meeting_api($request) {
     }
     
     // Verificar límite de agendamientos por email (máximo 2 activos en total: DEMOs + Seguimientos)
-    $limite = automatiza_tech_limite_reuniones_activas($email);
+    $limite = automatiza_tech_limite_reuniones_activas($email, function_exists('at_wa_excluir_de_request') ? at_wa_excluir_de_request($request) : []);
     if ($limite['alcanzado']) {
         return new WP_Error('limit_reached', $limite['mensaje'], array('status' => 400));
     }

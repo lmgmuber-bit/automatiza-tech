@@ -170,3 +170,37 @@ function at_wa_rest_cancelar_cita(WP_REST_Request $r): WP_REST_Response {
 	}
 	return new WP_REST_Response($x, $x['ok'] ? 200 : ($x['motivo'] === 'no_vigente' ? 409 : 500));
 }
+
+/**
+ * El límite de 2 reuniones activas (automatiza_tech_limite_reuniones_activas) sin contar la cita que se está reprogramando.
+ * $excluir = ['tipo' => 'diagnostico'|'seguimiento', 'id' => int]; otro tipo no excluye nada. Misma respuesta que el original.
+ */
+function at_wa_limite_con_excluir(string $email, array $excluir): array {
+	global $wpdb;
+	$p = $wpdb->prefix;
+	$ahora = current_time('mysql');
+	$sin_seg = ($excluir['tipo'] ?? '') === 'seguimiento' ? (int) ($excluir['id'] ?? 0) : 0;
+	$sin_diag = ($excluir['tipo'] ?? '') === 'diagnostico' ? (int) ($excluir['id'] ?? 0) : 0;
+	$seguimientos = (int) $wpdb->get_var($wpdb->prepare(
+		"SELECT COUNT(*) FROM {$p}automatiza_followup_meetings WHERE client_email = %s AND CONCAT(meeting_date, ' ', meeting_time) >= %s
+		 AND status NOT IN ('cancelled', 'completed') AND id <> %d", $email, $ahora, $sin_seg));
+	$demos = (int) $wpdb->get_var($wpdb->prepare(
+		"SELECT COUNT(*) FROM {$p}automatiza_leads WHERE email = %s AND CONCAT(scheduled_date, ' ', scheduled_time) >= %s
+		 AND (status IS NULL OR status NOT IN ('cancelled', 'no_show')) AND id <> %d", $email, $ahora, $sin_diag));
+	return [
+		'alcanzado'    => ($seguimientos + $demos) >= 2,
+		'seguimientos' => $seguimientos,
+		'demos'        => $demos,
+		'mensaje'      => 'Ya tienes 2 reuniones activas (' . $demos . ' demo(s) y ' . $seguimientos . ' seguimiento(s)). Cancela o espera a que pase alguna para agendar otra.',
+	];
+}
+
+/** El excluir de un pedido a /leads o /followup-meetings: solo vale con la clave de n8n (si no, saltarse el límite sería público). */
+function at_wa_excluir_de_request(WP_REST_Request $r): array {
+	if (!function_exists('at_cc_rest_auth') || at_cc_rest_auth($r) !== true) {
+		return [];
+	}
+	$tipo = (string) $r->get_param('excluir_tipo');
+	$id = (int) $r->get_param('excluir_id');
+	return in_array($tipo, ['diagnostico', 'seguimiento'], true) && $id > 0 ? ['tipo' => $tipo, 'id' => $id] : [];
+}

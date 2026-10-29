@@ -753,7 +753,7 @@ function automatiza_tech_save_lead($request) {
     // Es la misma regla de la reunión de seguimiento y de la agenda del plan (automatiza_tech_limite_reuniones_activas).
     $test_email = 'lmgm.uber@gmail.com';
     if (strtolower($email) !== strtolower($test_email)) {
-        $limite = automatiza_tech_limite_reuniones_activas($email);
+        $limite = automatiza_tech_limite_reuniones_activas($email, function_exists('at_wa_excluir_de_request') ? at_wa_excluir_de_request($request) : []);
         if ($limite['alcanzado']) {
             return new WP_Error('email_limit_reached', $limite['mensaje'], array('status' => 400));
         }

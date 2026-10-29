@@ -168,8 +168,8 @@ el 29-sep 08:13 son de `57800e3` (rama `claude/wa-fallos-recordatorios`, PR #54)
   Archivadas al desplegar (decisión de Luis): 11, 12, 14, 16, 21, 22 y 26; la 42 y la 43 siguen `sent`.
 - **Contrato de servicio:** plantilla `CONTRATO_SERVICIO_DESARROLLO.md`, que en PROD vive en
   `domains/automatizatech.cl/Docs/` (fuera de `public_html`; `ContractService::load_template()` la busca ahí). La de
-  soporte (`CONTRATO_SOPORTE_POSTPROYECTO.md`) PROD la lee de `public_html/Docs/` y difiere del repositorio en 4.1 y 19.4:
-  al cambiarla, partir de la copia de PROD. La
+  soporte (`CONTRATO_SOPORTE_POSTPROYECTO.md`) PROD la lee de `public_html/Docs/` y es igual a la del repositorio
+  desde el 28-oct-2026: la de `main` es la buena (4.1 vigencia desde la firma del cliente, 19.4 PDF en el backoffice). La
   comparecencia sale según el tipo de cliente y el documento. Luis la ajusta en la revisión de AT
   (`contracts/at-sign-contract.php`) y no se puede firmar con datos esenciales en blanco. Los PDF se bajan por
   `admin-ajax.php?action=at_download_contract` con token o sesión. Las carpetas privadas de contratos y evidencias

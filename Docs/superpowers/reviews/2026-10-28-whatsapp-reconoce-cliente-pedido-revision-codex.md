@@ -165,3 +165,34 @@ No cambió ningún PHP.
 Las `*-wp-test.php` no se repitieron porque el MySQL de WAMP local está detenido (iniciarlo pide permisos de administrador). Ningún PHP cambió desde `90ccbd2`, donde dieron 6/6.
 
 Nada subido a n8n ni a PROD.
+
+## Ronda 4: correcciones de R3-01 y R3-02 (29-oct)
+
+Informe de Codex: `Shared-Tools/revisiones/2026-10-28-wa-reconoce-B-codex-r3.md`. R2-01 y R2-05 quedaron verificados.
+
+**Revisión exacta a revisar:** el commit `cb9c7f5`, sobre `1f062c0`. Se ve con:
+
+```bash
+git diff 1f062c0..cb9c7f5
+```
+
+No cambió ningún PHP.
+
+- **R3-01.** «Elegir Seguimiento» ya no devuelve `directo` sin un correo, en ninguna situación.
+  - Un número que no está en ninguna ficha y toca «Es un seguimiento» sale por la coordinación con Luis (`sin_correo` con `motivo: sin_ficha`). A la persona se le dice «No encontré una propuesta ni un proyecto con este número para agendar el seguimiento. Ya le avisamos a Luis…».
+  - El correo a Luis explica los tres motivos: `no_disponible`, `sin_ficha` y `sin_correo`.
+  - Una persona nueva que tiene correo y dice ser seguimiento sí lo agenda.
+  - Pruebas:
+    - `contexto.test.js`: 2 pruebas nuevas, primero rojas y después verdes; queda en 27/27.
+    - La vista previa simula el recorrido completo: consulta caída → «Es un seguimiento» → la consulta se recupera con `nuevo` sin correo → «Modo Seguimiento» → «Send Seguimiento Sin Correo».
+    - La vista previa también evalúa el correo a Luis con los tres motivos: `sin_ficha` estaba rojo y ahora pasa.
+    - Para evaluar textos con varias expresiones se agregó `evaluar_plantilla()`.
+- **R3-02.** El README describe el comportamiento actual: si la consulta se cae, no se da por hecho que la persona es nueva, el calendario del diagnóstico se frena y el seguimiento sin correo nunca se abre. Se quitó la frase del seguimiento general automático.
+
+**Suite:**
+- `contexto.test.js`: 27/27;
+- `aplicar_test.py`: 13/13;
+- `validacion.test.js`: 49;
+- vista previa: agenda 3 nodos y WhatsApp 21, comprobaciones OK.
+
+Nada subido a n8n ni a PROD. Las `*-wp-test.php` siguen sin repetirse porque el MySQL de WAMP está detenido; ningún PHP cambió desde `90ccbd2`.

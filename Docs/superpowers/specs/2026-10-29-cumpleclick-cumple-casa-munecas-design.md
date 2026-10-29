@@ -136,9 +136,16 @@ despedida).
   videos.
 - **El salón es el del condominio** y la mayoría de los invitados son vecinos: basta la dirección. *Decisión mía:* el texto
   del lugar dice «Salón del condominio».
-- **Higgsfield:** usar la cuenta que tenga saldo y, si no, el MCP. La API no tiene endpoint de saldo y las dos cuentas
-  quedaron sin saldo para video el 24-oct. **El MCP tiene 160,06 créditos (plan starter, consultado el 29-oct con
-  `balance`)**, así que se genera por el **MCP**. Eso cambia dos restricciones de la sección 5:
+- **Higgsfield: primero la API, en la cuenta que tenga saldo, y si no hay, el MCP** (Luis, 29-oct, dos veces).
+  - La API no tiene endpoint de saldo. Lo último medido es del 24-oct: la cuenta `n8n` rechazó un video por saldo, y en
+    `api-n8n` el clip de 10 s se rechazó y el de 5 s salió.
+  - El saldo se comprueba con el primer video real: un rechazo por saldo (`403 not_enough_credits`) no se cobra
+    (`api-rest.md`). Se intenta en `api-n8n`, después en `n8n`, y si las dos rechazan se pasa al MCP.
+  - En la API, Wan 3.0 cuesta US$0,05 por segundo de lista y acepta imágenes de referencia de identidad. Falta comprobar si
+    la API acepta audio de referencia; si no lo acepta, el lipsync va por el MCP.
+  - **El MCP tiene 160,06 créditos (plan starter, consultado el 29-oct con `balance`)**. Allí, a 720p, Seedance 2.0 mini
+    cuesta 1,0 crédito por segundo, Seedance 1.5 cuesta 1,2 y Wan 3.0 cuesta 1,75 (`get_cost`, 29-oct).
+  - Si el trabajo pasa al MCP, cambian dos restricciones de la sección 5:
   - Hay **Nano Banana con imagen de referencia**, para sacar el cuadro inicial de Gabby fiel y en 9:16.
   - Hay **lipsync**, así que Gabby puede hablar con los labios sincronizados con la voz. El costo de cada paso se mide antes
     con `get_cost`, que es gratis, y se presenta a Luis antes de generar.

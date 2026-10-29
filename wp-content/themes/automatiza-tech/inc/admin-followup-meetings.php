@@ -1139,6 +1139,9 @@ function automatiza_tech_followup_page() {
                                         <td>
                                             <strong><?php echo esc_html($m->client_name); ?></strong><br>
                                             <small style="color:#666;"><?php echo esc_html($m->client_email); ?></small>
+                                            <?php if (function_exists('at_wa_vinculo_texto') && ($at_wa_vinc = at_wa_vinculo_texto($m)) !== ''): ?>
+                                                <br><small style="color:#0f766e;">🔗 <?php echo esc_html($at_wa_vinc); ?></small>
+                                            <?php endif; ?>
                                         </td>
                                         <td><?php echo esc_html($m->company_name ?: '-'); ?></td>
                                         <td>

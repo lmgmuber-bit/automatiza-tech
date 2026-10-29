@@ -214,3 +214,28 @@ function at_wa_vinculo_valido(int $contrato_id, int $propuesta_id, string $tel, 
 	}
 	return $res;
 }
+
+/** «Proyecto: …» o «Propuesta: …» de una reunión de seguimiento (objeto o arreglo); '' si no tiene vínculo. */
+function at_wa_vinculo_texto($reunion): string {
+	$r = (array) $reunion;
+	global $wpdb;
+	$p = $wpdb->prefix;
+	$contrato = (int) ($r['contrato_id'] ?? 0);
+	if ($contrato > 0) {
+		$k = $wpdb->get_row($wpdb->prepare("SELECT type, placeholders, contract_number FROM {$p}automatiza_contracts WHERE id = %d", $contrato));
+		if ($k) {
+			$plan = function_exists('at_pt_plan_de_contrato') ? at_pt_plan_de_contrato($contrato) : null;
+			$payload = $plan ? (json_decode((string) $plan->payload, true) ?: []) : [];
+			return 'Proyecto: ' . at_wa_nombre_contrato((string) $k->type, json_decode((string) $k->placeholders, true) ?: [], (string) ($payload['proyecto'] ?? ''), (string) $k->contract_number);
+		}
+	}
+	$propuesta = (int) ($r['propuesta_id'] ?? 0);
+	if ($propuesta > 0) {
+		$pr = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$p}automatiza_propuestas WHERE id = %d", $propuesta));
+		if ($pr) {
+			$servicio = function_exists('at_cc_filas_de_propuesta') ? (string) ((at_cc_filas_de_propuesta($pr)[0]['service'] ?? '')) : '';
+			return 'Propuesta: ' . at_wa_nombre_propuesta($servicio, (string) $pr->company_name, (string) $pr->created_at);
+		}
+	}
+	return '';
+}

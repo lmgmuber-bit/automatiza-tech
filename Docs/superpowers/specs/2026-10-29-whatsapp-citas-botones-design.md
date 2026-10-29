@@ -26,7 +26,7 @@ Diseño del 29-oct-2026, a pedido de Luis. Va en la rama `claude/wa-citas-botone
 
 - La memoria de MAXTECH: que lea contrato, plan, avance, entregables y reuniones. Va en un diseño aparte, inmediatamente después de este.
 - Reconocer clientes o prospectos en Instagram y en la web.
-- Cambiar los recordatorios con plantilla de Meta o los botones que ya traen (`btn_cancelar_lead_`, `btn_followup_cancel_`, etc.). Siguen funcionando igual.
+- Cambiar las plantillas de los recordatorios de Meta o los ids de los botones que ya traen (`btn_cancelar_lead_`, `btn_followup_cancel_`, etc.). Lo que hay detrás de los botones de reprogramar sí cambia: ver «Reprogramar».
 - Cerrar las rutas REST públicas de citas y seguimientos. Es un pendiente aparte, que espera la decisión de Luis y está anotado en la bóveda privada.
 
 ## Antimetas (sería un fracaso aunque funcione)
@@ -43,7 +43,7 @@ Diseño del 29-oct-2026, a pedido de Luis. Va en la rama `claude/wa-citas-botone
 
 - **Solo citas futuras y activas** del número que escribe, ordenadas de la más próxima a la más lejana, con un máximo de 10 (el tope de una lista de WhatsApp).
 - **Diagnósticos:** filas de `automatiza_leads`
-  - cuyo `phone` termina en los mismos 9 dígitos que el número (`at_wa_sql_ultimos9`, como hoy en `datos.php`);
+  - cuyo `phone` termina en los mismos 9 dígitos que el número (`at_wa_sql_ultimos9`, como hoy en `datos.php`), o cuyo `email` es uno de los correos de las fichas del número (en `/leads` el teléfono es opcional);
   - que no están canceladas ni completadas;
   - cuya `scheduled_date` + `scheduled_time` es posterior a ahora.
 - **Seguimientos:** filas de `automatiza_followup_meetings`
@@ -62,29 +62,41 @@ Se activa con la acción `cancel_appointment` del agente (`<<ACTION:CANCEL_APPOI
 - **0 citas:** «No encontramos citas agendadas con este número.»
   - Si la persona es nueva, se ofrece el botón «Agendar diagnóstico» (`btn_agendar_demo`).
   - Si es prospecto o cliente, se ofrece el de seguimiento que ya existe (`seg_general`).
+  - Siempre va además un botón «Tengo una cita». Si lo toca, se le dice que Luis le va a escribir y a Luis le llega un correo con el número (pudo haber agendado con otro número o correo). Nunca se le piden los datos.
 - **1 cita:** «Tienes esta cita: <etiqueta>. ¿La cancelamos?», con los botones «Sí, cancelar» y «No, mantenerla». El de mantenerla reusa `btn_mantener_cita`.
 - **2 o 3 citas:** «Tienes estas citas. ¿Cuál quieres cancelar?», con un botón por cita. Al elegir, se pide la misma confirmación que con una sola.
 - **4 citas o más:** la misma pregunta, como lista.
 - **Al confirmar, se revisa de nuevo en WordPress** que la cita siga activa, sea futura y sea de ese número.
   - Si ya no lo es: «Esa cita ya no está disponible», y se vuelve a mostrar lo vigente (mismo criterio que el botón viejo de `waElegirSeguimiento`).
-- **Efectos de cancelar:** los mismos que hoy.
-  - El estado pasa a cancelado (soft delete). Nunca se borra la fila: `DELETE /appointments/{id}` sin `hard_delete` ya marca `cancelled`.
-  - Se quita el evento de Google Calendar.
-  - Le llega un correo a la persona y un aviso a Luis.
-  - Hoy hay tres cadenas que cancelan: la de texto («Delete Cancelled Appointment → Send Cancel Success → Send Cancel Email»), la del botón de recordatorio de un diagnóstico («Delete Lead Direct → Send Cancel Success Direct») y la de seguimiento («Cancel Followup Meeting → Send Followup Cancel Success → correo → Notify Admin Cancel Followup»). El constructor revisa cuál deja todos los efectos completos para cada tipo y la reusa. Si a alguna le falta un efecto, lo dice en su informe en vez de inventarlo.
+- **Efectos de cancelar (decisión nuestra, tras la revisión del constructor):**
+  - Se cancela con una **ruta nueva de WordPress protegida con `X-AT-Secret`** que cancela el diagnóstico o el seguimiento y deja todos los efectos:
+    - estado cancelado (soft delete, nunca `hard_delete`);
+    - evento de Google Calendar quitado (`automatiza_tech_delete_google_calendar_event` en el diagnóstico; en el seguimiento, lo que ya hace `/followup-meetings/{id}/cancel`);
+    - correo a la persona y aviso a Luis.
+  - La ruta responde si todo salió bien. El bot dice «cancelada» solo si la ruta lo confirma. Si falló, dice «No pude cancelarla en este momento, ya le avisamos a Luis», y a Luis le llega el aviso.
+  - **Por qué una ruta nueva:**
+    - la cadena de texto de hoy llama a `POST /appointments/{id}/cancel`, que no está en el código del repositorio, y tiene `onError=continueRegularOutput`, así que puede decir «cancelada» sin haber cancelado (verificarlo en PROD antes de reemplazarla);
+    - «Delete Lead Direct» solo cambia el estado: no quita el evento ni avisa.
+  - **Orden de despliegue:** WordPress va antes que n8n.
+  - **Ningún camino** de cancelar ni de reprogramar puede usar `hard_delete=true`.
 
 ### Reprogramar
 
 Se activa con las acciones `reschedule_appointment` y `reschedule_followup`. Hoy van a «Ask Reschedule Data» y a «Ask Reschedule Followup Data», que piden datos escritos; esos caminos se reemplazan.
 
 - **Elegir y confirmar** funciona igual que en cancelar: «¿La cambiamos de día?», con «Sí, cambiar» y «No, mantenerla».
+- **Nombre y correo de la cita nueva:** se copian de la cita vieja (la fila del diagnóstico o del seguimiento), no se piden. El límite de reuniones se cuenta con ese correo.
 - **Al confirmar, la cita vieja no se cancela.**
   - Se guarda en Redis cuál cita se está moviendo (tipo e id), con el vínculo `contrato_id`/`propuesta_id` si es un seguimiento.
   - Se abre el calendario del tipo que corresponde: diagnóstico o seguimiento. El seguimiento conserva el vínculo, como hoy hace «Save Reschedule Client».
 - **Cuando la cita nueva queda creada con éxito,** se cancela la vieja con los mismos efectos de cancelar y el aviso de reprogramación de hoy, y se borra la marca de Redis.
 - **Si la persona abandona o la cita nueva falla,** la vieja queda como estaba.
-- **Ojo con el límite de reuniones activas** (`automatiza_tech_limite_reuniones_activas` y la revisión de agendamiento del flujo): mientras se reprograma, la cita vieja sigue activa y cuenta. La cita que se está moviendo no debe contar para el límite.
+- **Límite de reuniones activas** (`automatiza_tech_limite_reuniones_activas`, que usan `/leads`, la creación de seguimientos, la agenda del plan, `/check-limit` y el sub-workflow `PejBgr2LZQSAbbBy`): mientras se reprograma, la cita vieja sigue activa y contaría.
+  - **Decisión nuestra:** un parámetro nuevo, `excluir` (tipo e id de la cita que se mueve), que **solo vale con `X-AT-Secret`**. Las rutas públicas lo ignoran, para que no sirva para saltarse el límite.
+  - Si se agrega a `PejBgr2LZQSAbbBy` (lo usa Instagram), es un campo opcional que Instagram no manda, y se avisa a la sesión de Instagram antes de subir.
+  - El correo de Luis está eximido del límite, así que la prueba real no lo ejercita: se prueba con una prueba automática y un correo sintético.
 - **Cambio respecto de hoy:** hoy «Delete Lead For Reschedule» y «Cancel Followup For Reschedule» cancelan primero. Con este diseño ya no.
+- **Los botones de reprogramar de los recordatorios** (`btn_reprogramar_lead_`, `btn_followup_reschedule_`) pasan también a cancelar después de crear. No se pide otra confirmación, porque tocar el botón ya lo es.
 
 ### Si la consulta de citas se cae
 
@@ -108,7 +120,8 @@ Se activa con las acciones `reschedule_appointment` y `reschedule_followup`. Hoy
   - Una entrada por ficha del CRM (`crm_clientes`) cuyo propio `telefono` termina en los mismos 9 dígitos que el número (decisión de Luis: «debe coincidir el número de WhatsApp»).
   - La `url` sale de `url_portal($cliente_id)` de `crm-ai-completo.php`, que ya firma el enlace.
   - Si falta la clave de las fichas, la lista va vacía.
-  - El `nombre` es el del proyecto o contrato de esa ficha.
+  - El enlace es **por ficha**, no por proyecto: el portal de una ficha muestra todos sus proyectos. Una ficha con varios proyectos lleva un solo enlace; «todos los enlaces» aplica cuando el número está en varias fichas.
+  - El `nombre` es la empresa de la ficha, o su nombre si no tiene empresa («Tu portal de <empresa>»).
 - **La línea interna** de «Sumar Contexto» (`waLineaContexto`) agrega:
   - con un portal: «Si pregunta por el avance o cualquier detalle de su proyecto, mándale el enlace a su portal, donde ve la línea de tiempo y puede preguntarle a MAXTECH: <url>»;
   - con varios: los enlaces con el nombre de cada uno. Decisión de Luis: si tiene más de un proyecto, mandarle todos los enlaces, que es más fácil.
@@ -155,6 +168,14 @@ Se activa con las acciones `reschedule_appointment` y `reschedule_followup`. Hoy
 - Al reprogramar, la cita vieja se cancela cuando la nueva queda creada. Luis vio la propuesta y dijo «sí, me parece».
 - Solo citas futuras, con un máximo de 10.
 - Para el enlace, el teléfono que tiene que coincidir es el de la propia ficha del CRM (`crm_clientes.telefono`), no el de una propuesta o una cita.
+- Revisión del constructor (29-oct), resuelta por nosotros:
+  - ruta nueva protegida para cancelar con todos los efectos;
+  - `excluir` solo con clave;
+  - diagnósticos también por los correos de la ficha;
+  - botón «Tengo una cita» → aviso a Luis;
+  - la cita nueva copia nombre y correo de la vieja;
+  - los botones de reprogramar de los recordatorios también cancelan después de crear;
+  - un enlace por ficha.
 - El enlace al portal va en este mismo trabajo, porque toca la misma ruta y el mismo flujo. La memoria de MAXTECH va aparte.
 
 ## Lo que queda al constructor

@@ -115,6 +115,53 @@ test('elegir: el botón elegido va directo con su propuesta; un botón viejo vue
   assert.strictEqual(waElegirSeguimiento(c, entrada({ buttonId: 'seg_c_4' })).modo, 'elegir');
 });
 
+test('revisión B-03: un botón viejo con una sola opción vigente pide confirmarla, no agenda otra', () => {
+  const r = waElegirSeguimiento(ctx('cliente', [proyecto(7, 'Configurador')]), entrada({ buttonId: 'seg_c_99' }));
+  assert.strictEqual(r.modo, 'elegir');
+  assert.strictEqual(r.guardar, null);
+  assert.strictEqual(r.mensaje.interactive.type, 'button');
+  assert.strictEqual(r.mensaje.interactive.body.text, 'Hola Julio 👋 Esa opción ya no está disponible. ¿Agendamos el seguimiento de «Configurador»?');
+  assert.deepStrictEqual(r.mensaje.interactive.action.buttons.map((x) => x.reply.id), ['seg_c_7']);
+});
+
+test('revisión B-03: un botón viejo sin opciones vigentes avisa y no abre el calendario', () => {
+  const r = waElegirSeguimiento(ctx('cliente', []), entrada({ buttonId: 'seg_c_99' }));
+  assert.strictEqual(r.modo, 'elegir');
+  assert.strictEqual(r.guardar, null);
+  assert.deepStrictEqual(r.mensaje, { messaging_product: 'whatsapp', recipient_type: 'individual', to: '56911112222', type: 'text',
+    text: { body: 'Esa opción ya no está disponible para agendar. Si quieres, cuéntame sobre qué quieres conversar y lo coordinamos.' } });
+});
+
+test('revisión B-03: un botón viejo con varias opciones avisa y vuelve a preguntar', () => {
+  const r = waElegirSeguimiento(ctx('prospecto', [propuesta(4, 'Sitio web'), propuesta(3, 'Agenda')]), entrada({ buttonId: 'seg_p_99' }));
+  assert.strictEqual(r.modo, 'elegir');
+  assert.strictEqual(r.mensaje.interactive.body.text, 'Hola Julio 👋 Esa opción ya no está disponible. ¿Sobre cuál propuesta quieres conversar?');
+});
+
+test('revisión B-06: un título con número no choca con el de otra opción', () => {
+  const nombres = ['123456789012345678901', '123456789012345678902', '12345678901234567… 2'];
+  for (const n of [3, 5]) {
+    const ops = nombres.concat(['otra uno', 'otra dos']).slice(0, n).map((x, i) => propuesta(i + 1, x));
+    const m = waElegirSeguimiento(ctx('prospecto', ops), entrada()).mensaje.interactive;
+    const t = m.type === 'button' ? m.action.buttons.map((x) => x.reply.title) : m.action.sections[0].rows.map((x) => x.title);
+    assert.strictEqual(new Set(t).size, t.length, `títulos repetidos: ${t.join(' | ')}`);
+    assert.ok(t.every((x) => Array.from(x).length <= (m.type === 'button' ? 20 : 24)));
+  }
+});
+
+test('revisión B-01: la forma que deja n8n cuando una consulta falla no inventa contexto ni ofrece diagnóstico', () => {
+  const falla = { error: { message: 'timeout of 5000ms exceeded' } };
+  assert.strictEqual(waLineaContexto(falla, {}), '');
+  assert.match(waLineaContexto(falla, PROP), /^\[Contexto interno, no la repitas: este número tiene la propuesta/);
+  assert.strictEqual(waLineaContexto({ situacion: 'no_disponible', opciones: [] }, {}), '');
+  for (const c of [falla, { situacion: 'no_disponible', opciones: [], agenda: { nombre_completo: '', correo: '', empresa: '' } }]) {
+    const r = waElegirSeguimiento(c, entrada());
+    assert.strictEqual(r.modo, 'directo');
+    assert.strictEqual(r.guardar.subject, 'Reunión de Seguimiento');
+    assert.strictEqual(r.datos.appointmentType, 'Seguimiento');
+  }
+});
+
 test('elegir: el proyecto del código del plan va directo sin preguntar', () => {
   const p = proyecto(5, 'Configurador', 'Ab3dE6gH9jK1');
   const r = waElegirSeguimiento(ctx('cliente', [p, propuesta(3, 'Agenda')], { elegida: p }), entrada());

@@ -52,8 +52,10 @@ function waElegirSeguimiento(ctx, entrada) {
     const tipo = b[1] === 'c' ? 'proyecto' : 'propuesta';
     opcion = opciones.find((o) => o.tipo === tipo && Number(o.id) === Number(b[2])) || null;
   }
-  if (!opcion && ctx.elegida) opcion = ctx.elegida;
-  if (!opcion && opciones.length === 1) opcion = opciones[0];
+  // Un botón que ya no es opción (se aceptó, archivó o canceló) nunca agenda otra cosa: avisa y vuelve a preguntar.
+  const caducada = Boolean(b) && !opcion;
+  if (!opcion && !caducada && ctx.elegida) opcion = ctx.elegida;
+  if (!opcion && !caducada && opciones.length === 1) opcion = opciones[0];
   const top = ctx.agenda || {};
   const ag = (opcion && opcion.agenda) || top;
   const correo = String((opcion && opcion.agenda && opcion.agenda.correo) || top.correo || '');
@@ -67,6 +69,13 @@ function waElegirSeguimiento(ctx, entrada) {
     clientType: sit,
     companyName: ag.empresa || '',
   };
+  if (caducada) {
+    const mensaje = opciones.length
+      ? waMensajeOpciones(ctx, opciones, e.phoneNumber || '', 'Esa opción ya no está disponible.')
+      : { messaging_product: 'whatsapp', recipient_type: 'individual', to: e.phoneNumber || '', type: 'text',
+        text: { body: 'Esa opción ya no está disponible para agendar. Si quieres, cuéntame sobre qué quieres conversar y lo coordinamos.' } };
+    return { modo: 'elegir', datos, guardar: null, mensaje, opcion: null };
+  }
   if (!opcion && opciones.length >= 2) {
     return { modo: 'elegir', datos, guardar: null, mensaje: waMensajeOpciones(ctx, opciones, e.phoneNumber || ''), opcion: null };
   }
@@ -95,23 +104,23 @@ function waElegirSeguimiento(ctx, entrada) {
   return { modo: 'directo', datos, guardar, mensaje: null, opcion };
 }
 
-function waMensajeOpciones(ctx, opciones, to) {
+function waMensajeOpciones(ctx, opciones, to, aviso) {
   const hayProy = opciones.some((o) => o.tipo === 'proyecto');
   const hayProp = opciones.some((o) => o.tipo === 'propuesta');
-  const pregunta = hayProy && hayProp ? '¿Sobre cuál quieres agendar el seguimiento?'
+  const pregunta = opciones.length === 1 ? '¿Agendamos el seguimiento de «' + opciones[0].nombre + '»?'
+    : hayProy && hayProp ? '¿Sobre cuál quieres agendar el seguimiento?'
     : hayProy ? '¿De cuál proyecto quieres agendar el seguimiento?' : '¿Sobre cuál propuesta quieres conversar?';
-  const text = (ctx.nombre ? 'Hola ' + ctx.nombre + ' 👋 ' : 'Hola 👋 ') + pregunta;
+  const text = (ctx.nombre ? 'Hola ' + ctx.nombre + ' 👋 ' : 'Hola 👋 ') + (aviso ? aviso + ' ' : '') + pregunta;
   const lista = opciones.length > 3;
   const max = lista ? 24 : 20;
-  const vistos = {};
+  // Cada título final queda reservado: un número agregado nunca choca con el título de otra opción.
+  const usados = new Set();
   const items = opciones.slice(0, 10).map((o) => {
     let t = waTituloCorto(o.nombre, max);
-    if (vistos[t]) {
-      const n = ++vistos[t];
+    for (let n = 2; usados.has(t); n++) {
       t = waTituloCorto(o.nombre, max - String(n).length - 1) + ' ' + n;
-    } else {
-      vistos[t] = 1;
     }
+    usados.add(t);
     return { id: (o.tipo === 'proyecto' ? 'seg_c_' : 'seg_p_') + Number(o.id), title: t, tipo: o.tipo };
   });
   const interactive = lista

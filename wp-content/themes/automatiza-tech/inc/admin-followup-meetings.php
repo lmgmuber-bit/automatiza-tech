@@ -12,6 +12,9 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
+// Quién escribe por WhatsApp (ruta wa-contexto y vínculo de la reunión con su contrato o propuesta), 28-oct-2026.
+require_once __DIR__ . '/wa-contexto/cargar.php';
+
 /**
  * Crear tabla en la base de datos al activar
  */

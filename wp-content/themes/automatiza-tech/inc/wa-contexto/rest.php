@@ -3,6 +3,7 @@
  * GET /wp-json/automatiza-tech/v1/wa-contexto?phone=…&texto=… — solo para n8n (clave X-AT-Secret, como las rutas del
  * cierre de cliente). Dice si el número es de una persona nueva, un prospecto o un cliente, con sus opciones.
  * La agenda (nombre completo, correo y empresa) es para que n8n agende; nunca va a la conversación.
+ * Si una lectura de la base falla, responde 503 con situacion «no_disponible» (nunca «nuevo»).
  */
 if (!defined('ABSPATH')) {
 	exit;
@@ -24,7 +25,8 @@ add_action('rest_api_init', function () {
 	]);
 });
 
-function at_wa_rest_contexto(WP_REST_Request $r): array {
+function at_wa_rest_contexto(WP_REST_Request $r): WP_REST_Response {
 	$texto = mb_substr((string) $r->get_param('texto'), 0, 500);
-	return at_wa_contexto((string) $r->get_param('phone'), $texto);
+	$c = at_wa_contexto((string) $r->get_param('phone'), $texto);
+	return new WP_REST_Response($c, $c['situacion'] === 'no_disponible' ? 503 : 200);
 }

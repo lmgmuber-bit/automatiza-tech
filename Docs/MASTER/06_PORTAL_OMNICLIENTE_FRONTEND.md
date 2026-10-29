@@ -8,7 +8,7 @@
 
 ## 🟢 Estado UI (2026-06-01) — Rediseño visual EN PROD
 
-El portal corre un **rediseño visual completo** (estilo audaz): cada sección tiene un **hero full-bleed de color** (banda edge-to-edge, color por módulo) + **sidebar con chips de icono gradiente** por módulo. Vista nueva **Marketing IG** (`MarketingIgView.jsx`, datos mock). Dashboard con hero "Centro de Control".
+El portal corre un **rediseño visual completo** (estilo audaz): cada sección tiene un **hero full-bleed de color** (banda edge-to-edge, color por módulo) + **sidebar con chips de icono gradiente** por módulo. Vista nueva **Marketing IG** (`MarketingIgView.jsx`; desde el 21-oct con datos reales, ver sección «Marketing IG con métricas reales»). Dashboard con hero "Centro de Control".
 
 - **Rama:** `feat/inbox-premium-ui` (pusheada a origin; PR sin mergear).
 - **Solo cambios visuales** — cero cambios de lógica/datos/bindings.
@@ -17,6 +17,16 @@ El portal corre un **rediseño visual completo** (estilo audaz): cada sección t
 - 🔴 **Deploy:** `npm run build` → sync `dist/`→`omnicliente/` → FTP a `public_html/omnicliente/` (borrar bundle viejo; hash cambia cada build). Dev requiere proxy en `vite.config.js`.
 - 🔴 **Regla de oro PROD:** antes de subir PHP del theme/inc, subir SIEMPRE los helpers `at-*.php` (raíz) + `lib/at-auth-middleware.php`, o el sitio da fatal `Failed opening required at-path-safe.php`.
 - **Doc completo:** vault `10-Projects/Portal-OmniCliente-Redseno.md`.
+
+---
+
+## 📈 Marketing IG con métricas reales (2026-10-21, LOCAL)
+
+`MarketingIgView.jsx` ya no usa datos de ejemplo: lee `admin/ig-insights` (tomas guardadas por
+`omnichannel-ig-insights-controller.php`, que el cron de n8n dispara cada hora) y, si falta el permiso de Meta o no hay
+tomas, lo dice en pantalla. Los agentes (Claqueta) leen lo mismo en `ig-metrics/*` con la cabecera `X-IG-Metrics-Secret`.
+Ruta, formato JSON, estados, pasos manuales de Luis y lista para PROD: **`Docs/OMNICLIENTE-METRICAS-IG.md`**.
+`ChannelsView.jsx` muestra el estado del token con `has_bot_token`.
 
 ---
 

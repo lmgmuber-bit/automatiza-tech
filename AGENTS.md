@@ -116,6 +116,15 @@ Header: X-AT-Secret: <secret>  (wp-config.php del servidor — no exponer)
   `deploy_dominio.py` y con el ok de Luis.
 - **Relevo completo:** bóveda privada `10-Projects/GT-Baseball/README.md`. Diseño e historial en
   `Docs/superpowers/specs/2026-09-27-gt-baseball-prototipo-design.md`.
+- **Asistente de mensajes directos de Instagram, EN PROD desde el 28-oct-2026 y en `main` (PR #107, `d336780`; `main` =
+  PROD):** guía `Docs/METODO_AT/ASISTENTE-INSTAGRAM.md`, flujos en `N8N/instagram/` (principal `nDOSJhtVUPEGYrv3` y
+  herramientas `9qMlHNKITu0OWUfU`, activos). Solo la línea de Instagram corre `aplicar.py` y `probar.py` sobre esos flujos;
+  el Cerebro AT lo mantiene Eje. `omnichannel-derivacion.php` se sube antes que el controlador. Revisión B de Vigía-Codex
+  pendiente (encargo en la bóveda, `10-Projects/2026-10-28-Asistente-Instagram-Revision-B-Vigia.md`).
+
+## Instagram de AT — comentarios con palabra clave (estado vivo)
+
+EN PROD desde el 2026-10-24 y en `main` (PR #115). Guía única: `Docs/OMNICLIENTE-IG-COMENTARIOS.md`; aprendizajes y vía rápida en la bóveda, `10-Projects/2026-10-24-Instagram-Comentarios-Palabra-Clave.md`. Palabras por canal en `bot_configs.custom_functions_json.palabras_clave` (editar con `tools/ig-palabras-clave-config.php`). Lo que sigue en la conversación es el asistente de mensajes directos (PR #107).
 
 ## graphify
 

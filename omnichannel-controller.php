@@ -10,6 +10,8 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
+require_once __DIR__ . '/omnichannel-derivacion.php';
+
 class OmnichannelController {
 
     private $wpdb;
@@ -21,6 +23,17 @@ class OmnichannelController {
     // Instagram Messaging API (Instagram Login flow)
     const IG_GRAPH_VERSION = 'v23.0';
     const IG_GRAPH_BASE    = 'https://graph.instagram.com';
+
+    /**
+     * Campos que nunca se guardan en claro en la auditoría (la ven el admin, los
+     * supervisores y los clientes): tokens de canal, API keys, la sesión y los
+     * códigos de reseteo de los agentes y sus hashes de contraseña.
+     */
+    const AUDIT_SECRET_KEYS = [
+        'api_key', 'password', 'password_hash', 'password_reset_code', 'access_token',
+        'reset_token', 'bot_token', 'ycloud_api_key', 'webhook_secret', 'credentials_json',
+    ];
+    const AUDIT_REDACTED = '[oculto]';
 
     public function __construct() {
         global $wpdb;
@@ -69,7 +82,9 @@ class OmnichannelController {
         $user_id    = $user->ID ?: null;
         $user_email = $user->user_email ?: ($this->actor_email ?: null);
         $user_role  = $user->ID ? implode(',', $user->roles) : ($this->actor_role ?: null);
-        
+        $old_values = self::redact_audit_values($old_values);
+        $new_values = self::redact_audit_values($new_values);
+
         $this->wpdb->insert(
             $this->prefix . 'audit_log',
             [
@@ -90,6 +105,100 @@ class OmnichannelController {
         );
 
         return $this->wpdb->insert_id;
+    }
+
+    /**
+     * Copia de los valores para la auditoría con los secretos tachados (AUDIT_SECRET_KEYS,
+     * a cualquier profundidad). Un secreto vacío queda vacío: así se sigue viendo si había uno.
+     *
+     * @param array|object|null $values
+     * @return array|null
+     */
+    public static function redact_audit_values($values) {
+        if ($values === null || $values === '' || $values === false) return $values ?: null;
+        if (is_object($values)) $values = get_object_vars($values);
+        if (!is_array($values)) return $values;
+        foreach ($values as $k => $v) {
+            if (is_string($k) && in_array(strtolower($k), self::AUDIT_SECRET_KEYS, true)) {
+                $values[$k] = ($v === null || $v === '' || $v === self::AUDIT_REDACTED) ? $v : self::AUDIT_REDACTED;
+            } elseif (is_array($v) || is_object($v)) {
+                $values[$k] = self::redact_audit_values($v);
+            }
+        }
+        return $values;
+    }
+
+    /**
+     * Tacha los secretos que ya quedaron guardados en la auditoría antes de que
+     * audit_log() los tachara (fix-omni-audit-secretos.php). Sin $apply solo cuenta.
+     *
+     * @param bool          $apply   true = escribe; false = solo cuenta.
+     * @param callable|null $backup  recibe cada fila original antes de escribirla (respaldo).
+     * @param int[]|null    $only_ids limita el barrido a esas filas (pruebas o corrección puntual).
+     * @return array conteos: rows_seen, rows_changed, unreadable, by_entity, by_key (sin valores)
+     */
+    public function redact_audit_history($apply = false, $backup = null, $only_ids = null) {
+        $table = $this->prefix . 'audit_log';
+        $likes = [];
+        foreach (self::AUDIT_SECRET_KEYS as $key) {
+            $pattern = '%' . $this->wpdb->esc_like('"' . $key . '"') . '%';
+            $likes[] = $this->wpdb->prepare('old_values_json LIKE %s OR new_values_json LIKE %s', $pattern, $pattern);
+        }
+        $where = '(' . implode(' OR ', $likes) . ')';
+        if ($only_ids !== null) {
+            $ids = array_values(array_filter(array_map('absint', (array) $only_ids)));
+            $where .= $ids ? ' AND id IN (' . implode(',', $ids) . ')' : ' AND 1 = 0';
+        }
+        $out = ['rows_seen' => 0, 'rows_changed' => 0, 'unreadable' => 0, 'by_entity' => [], 'by_key' => []];
+        $last_id = 0;
+        do {
+            $rows = $this->wpdb->get_results($this->wpdb->prepare(
+                "SELECT id, entity_type, old_values_json, new_values_json FROM {$table} WHERE id > %d AND {$where} ORDER BY id ASC LIMIT 500",
+                $last_id
+            ));
+            foreach ((array) $rows as $row) {
+                $last_id = (int) $row->id;
+                $out['rows_seen']++;
+                $update = [];
+                foreach (['old_values_json', 'new_values_json'] as $col) {
+                    if ($row->$col === null || $row->$col === '') continue;
+                    $decoded = json_decode($row->$col, true);
+                    if (!is_array($decoded)) {
+                        $out['unreadable']++;
+                        continue;
+                    }
+                    $redacted = self::redact_audit_values($decoded);
+                    if ($redacted !== $decoded) {
+                        $update[$col] = wp_json_encode($redacted);
+                        foreach (self::audit_secret_keys_found($decoded) as $key) {
+                            $out['by_key'][$key] = ($out['by_key'][$key] ?? 0) + 1;
+                        }
+                    }
+                }
+                if (!$update) continue;
+                $out['rows_changed']++;
+                $entity = (string) $row->entity_type;
+                $out['by_entity'][$entity] = ($out['by_entity'][$entity] ?? 0) + 1;
+                if ($apply) {
+                    if ($backup) $backup($row);
+                    $this->wpdb->update($table, $update, ['id' => (int) $row->id]);
+                }
+            }
+        } while ($rows && count($rows) === 500);
+        return $out;
+    }
+
+    /** Nombres (nunca valores) de los secretos no vacíos que trae un arreglo. */
+    private static function audit_secret_keys_found(array $values) {
+        $found = [];
+        foreach ($values as $k => $v) {
+            if (is_string($k) && in_array(strtolower($k), self::AUDIT_SECRET_KEYS, true)) {
+                if ($v !== null && $v !== '' && $v !== self::AUDIT_REDACTED) $found[] = strtolower($k);
+            } elseif (is_array($v)) {
+                $found = array_merge($found, self::audit_secret_keys_found($v));
+            }
+        }
+        return array_values(array_unique($found));
     }
 
     private function get_client_ip() {
@@ -515,6 +624,15 @@ class OmnichannelController {
                 $update[$field] = $field === 'config_json' ? wp_json_encode($data[$field]) : sanitize_text_field($data[$field]);
             }
         }
+        // El navegador ya no recibe estos secretos (mask_channel_secrets): vacío = conservar el actual.
+        foreach (['bot_token', 'ycloud_api_key'] as $secret) {
+            if (isset($update[$secret]) && trim($update[$secret]) === '') {
+                unset($update[$secret]);
+            }
+        }
+        if (!$update) {
+            return true;
+        }
 
         $result = $this->wpdb->update($this->prefix . 'channels', $update, ['id' => $channel_id]);
         $this->audit_log('update', 'channel', $channel_id, "Canal actualizado", $old, $update, $old['client_id']);
@@ -536,9 +654,32 @@ class OmnichannelController {
     }
 
     public function get_channels($client_id) {
-        return $this->wpdb->get_results(
+        return $this->mask_channel_secrets($this->wpdb->get_results(
             $this->wpdb->prepare("SELECT * FROM {$this->prefix}channels WHERE client_id = %d ORDER BY channel_type", absint($client_id))
-        );
+        ));
+    }
+
+    /**
+     * Los secretos de un canal nunca van al navegador: bot_token (Instagram) y
+     * ycloud_api_key (WhatsApp) se reemplazan por has_bot_token / has_ycloud_api_key
+     * (para cambiarlos se pega uno nuevo en Canales; vacío = se conserva) y
+     * credentials_json se vacía. webhook_secret solo lo recibe el admin, que arma con
+     * él la URL del webhook; agentes y clientes no lo usan.
+     */
+    private function mask_channel_secrets($rows, $keep_webhook_secret = false) {
+        foreach ((array) $rows as $row) {
+            $row->has_bot_token = !empty($row->bot_token);
+            $row->bot_token = '';
+            $row->has_ycloud_api_key = !empty($row->ycloud_api_key);
+            $row->ycloud_api_key = '';
+            if (property_exists($row, 'credentials_json')) {
+                $row->credentials_json = null;
+            }
+            if (!$keep_webhook_secret) {
+                $row->webhook_secret = '';
+            }
+        }
+        return $rows;
     }
 
     // =========================================================
@@ -932,6 +1073,11 @@ class OmnichannelController {
             }
         }
 
+        // La foto de perfil de Instagram es una dirección firmada que puede pasar los 500 caracteres de la columna:
+        // con ella WordPress rechaza la fila entera (28-oct: 523). Cortarla la rompería, así que no se guarda.
+        $avatar = esc_url_raw($message_data['contact_avatar_url'] ?? '');
+        $message_data['contact_avatar_url'] = strlen($avatar) <= 500 ? $avatar : '';
+
         if (!$conversation) {
             $this->wpdb->insert($this->prefix . 'conversations', [
                 'client_id'           => $channel->client_id,
@@ -948,6 +1094,11 @@ class OmnichannelController {
                 'unread_count'        => 1,
             ]);
             $conversation_id = $this->wpdb->insert_id;
+            // Sin conversación no se guarda el mensaje (quedaría huérfano, invisible en el Portal) ni se avisa a n8n.
+            if (!$conversation_id) {
+                error_log('[omnicanal] no se pudo crear la conversación del canal ' . $channel_id . ': ' . $this->wpdb->last_error);
+                return ['error' => 'No se pudo crear la conversación'];
+            }
         } else {
             $conversation_id = $conversation->id;
             $update_data = [
@@ -996,6 +1147,15 @@ class OmnichannelController {
         // Reenviar a N8N si la conversación está en modo bot
         $conv_status = $conversation ? ($conversation->status ?? 'bot') : 'bot';
         $intervention = $conversation ? ($conversation->intervention_mode ?? '') : '';
+
+        // Instagram: una conversación que derivó el asistente vuelve al bot si la persona escribe
+        // después de 24 h. Se compara con la actividad ANTERIOR a este mensaje ($conversation se leyó antes).
+        if ($conversation && omni_debe_volver_al_bot((string) $conversation->channel_type, (string) $intervention,
+                $conversation->last_message_at ?? null, time(), $this->derivada_por_bot($conversation))) {
+            $this->volver_al_bot($conversation);
+            $conv_status = 'bot';
+            $intervention = '';
+        }
         if ($conv_status === 'bot' && $intervention !== 'human') {
             $this->forward_to_n8n($channel_id, $conversation_id, $message_data, $message_id);
         }
@@ -1050,7 +1210,7 @@ class OmnichannelController {
     /**
      * Un ejecutivo toma el control de una conversación
      */
-    public function takeover_conversation($conversation_id, $agent_id, $reason = '') {
+    public function takeover_conversation($conversation_id, $agent_id, $reason = '', $notify = true) {
         $conversation_id = absint($conversation_id);
         $agent_id = absint($agent_id);
 
@@ -1121,8 +1281,10 @@ class OmnichannelController {
             $conversation->client_id
         );
 
-        // Send email notification to assigned agent
-        $this->notify_agent_assignment($conversation_id, $agent, $conversation, 'assigned');
+        // Send email notification to assigned agent (la derivación del bot manda su propio correo)
+        if ($notify) {
+            $this->notify_agent_assignment($conversation_id, $agent, $conversation, 'assigned');
+        }
 
         return ['success' => true, 'takeover_id' => $this->wpdb->insert_id];
     }
@@ -2366,12 +2528,13 @@ class OmnichannelController {
     }
 
     public function get_all_channels() {
-        return $this->wpdb->get_results(
-            "SELECT ch.*, cl.company_name as client_name 
+        // Solo el admin ve todos los canales: conserva webhook_secret para armar la URL del webhook.
+        return $this->mask_channel_secrets($this->wpdb->get_results(
+            "SELECT ch.*, cl.company_name as client_name
              FROM {$this->prefix}channels ch
              LEFT JOIN {$this->prefix}clients cl ON ch.client_id = cl.id
              ORDER BY cl.company_name, ch.channel_type"
-        );
+        ), true);
     }
 
     public function get_all_bot_configs() {
@@ -2654,6 +2817,8 @@ class OmnichannelController {
     private function forward_to_n8n($channel_id, $conversation_id, $message_data, $message_id) {
         $bot_config = $this->get_bot_config($channel_id);
         if (!$bot_config || empty($bot_config->n8n_webhook_url) || !$bot_config->is_active) return;
+        // Cuentas a las que el bot nunca responde (custom_functions_json.sin_bot): el mensaje queda en el Portal.
+        if (omni_sin_bot($bot_config->custom_functions_json ?? null, $message_data['external_contact_id'] ?? '')) return;
 
         // Obtener teléfono del negocio desde el canal
         $channel = $this->wpdb->get_row($this->wpdb->prepare(
@@ -2683,6 +2848,12 @@ class OmnichannelController {
             'callback_token'  => $callback_token,
             'timestamp'       => current_time('c'),
         ];
+
+        // Quien llega desde un comentario con palabra clave: qué comentó y qué privado le enviamos.
+        $contexto = $this->contexto_comentario($conversation_id);
+        if ($contexto) {
+            $payload['contexto'] = $contexto;
+        }
 
         // Incluir prompt_config si existe para este canal
         $prompt_config = $this->get_active_prompt_config_for_channel($channel_id);
@@ -2729,6 +2900,18 @@ class OmnichannelController {
         ));
         if (!$conversation) return ['error' => 'Conversación no encontrada'];
 
+        // El asistente pide derivar a una persona (con su despedida en 'content', opcional).
+        if (($body['action'] ?? '') === 'escalate') {
+            return $this->escalar_desde_bot($conversation_id, $channel_id,
+                mb_substr(sanitize_textarea_field((string) ($body['motivo'] ?? '')), 0, 300),
+                sanitize_textarea_field((string) ($body['content'] ?? '')));
+        }
+
+        // Instagram: una respuesta del bot que llega con la conversación ya en manos de una persona no se envía.
+        if ($conversation->channel_type === 'instagram' && ($conversation->intervention_mode ?? '') === 'human') {
+            return ['ignorada' => 'conversacion_humana'];
+        }
+
         // Detectar si el payload es formato YCloud crudo (tiene 'type' + 'from' + 'to')
         $is_raw_ycloud = isset($body['type']) && isset($body['from']) && isset($body['to']);
 
@@ -2755,6 +2938,13 @@ class OmnichannelController {
         ]);
         if (isset($local['error'])) return $local;
 
+        return $this->entregar_mensaje_bot($conversation, $channel_id, $local, $content, $msg_type);
+    }
+
+    /**
+     * Envía por el canal (WhatsApp o Instagram) un mensaje del bot ya guardado en $local['message_id'].
+     */
+    private function entregar_mensaje_bot($conversation, $channel_id, $local, $content, $msg_type = 'text') {
         if ($conversation->channel_type === 'whatsapp' && !empty($conversation->contact_phone)) {
             $ycloud = $this->send_ycloud_message($channel_id, $conversation->contact_phone, $content, $msg_type);
             if (isset($ycloud['success'])) {
@@ -2783,6 +2973,120 @@ class OmnichannelController {
         }
 
         return $local;
+    }
+
+    // =========================================================
+    // ASISTENTE: DERIVACIÓN A UNA PERSONA Y VUELTA AL BOT
+    // =========================================================
+
+    /**
+     * El asistente de n8n pide derivar a una persona (callback con action = 'escalate').
+     * Envía la despedida si viene, deja la conversación en modo humano (asignada al ejecutivo de
+     * bot_configs.custom_functions_json.derivacion, o abierta sin asignar) y avisa por correo.
+     * Si ya estaba en modo humano no hace nada: no repite el correo.
+     */
+    public function escalar_desde_bot($conversation_id, $channel_id, $motivo, $despedida = '') {
+        $conversation_id = absint($conversation_id);
+        $channel_id = absint($channel_id);
+        $conv = $this->wpdb->get_row($this->wpdb->prepare(
+            "SELECT * FROM {$this->prefix}conversations WHERE id = %d AND channel_id = %d", $conversation_id, $channel_id
+        ));
+        if (!$conv) return ['error' => 'Conversación no encontrada'];
+        if (($conv->intervention_mode ?? '') === 'human') return ['ya_derivada' => true];
+
+        if ($despedida !== '') {
+            $local = $this->send_message($conversation_id, [
+                'sender_type' => 'bot', 'sender_id' => 'n8n', 'sender_name' => 'Bot N8N', 'content' => $despedida,
+            ]);
+            if (!isset($local['error'])) $this->entregar_mensaje_bot($conv, $channel_id, $local, $despedida);
+        }
+
+        $bot = $this->get_bot_config($channel_id);
+        $cfg = omni_derivacion_config($bot ? ($bot->custom_functions_json ?? null) : null);
+        $asignado = 0;
+        if ($cfg['agente_id'] > 0) {
+            $t = $this->takeover_conversation($conversation_id, $cfg['agente_id'], 'Derivado por el asistente: ' . $motivo, false);
+            if (empty($t['error'])) $asignado = $cfg['agente_id'];
+        }
+        if (!$asignado) {
+            $this->wpdb->update($this->prefix . 'conversations',
+                ['status' => 'open', 'intervention_mode' => 'human', 'assigned_agent_id' => null], ['id' => $conversation_id]);
+        }
+
+        $this->wpdb->insert($this->prefix . 'messages', [
+            'conversation_id' => $conversation_id, 'channel_type' => $conv->channel_type, 'direction' => 'outbound',
+            'sender_type' => 'system', 'sender_name' => 'Sistema', 'message_type' => 'text',
+            'content' => '🙋 El asistente derivó: ' . ($motivo !== '' ? $motivo : 'la persona pidió hablar con alguien'),
+            'delivery_status' => 'delivered',
+            'metadata_json' => wp_json_encode(['origen' => 'derivacion_bot', 'motivo' => $motivo], JSON_UNESCAPED_UNICODE),
+            'created_at' => current_time('mysql', 1),
+        ]);
+
+        $filas = array_reverse($this->wpdb->get_results($this->wpdb->prepare(
+            "SELECT direction, content FROM {$this->prefix}messages
+             WHERE conversation_id = %d AND sender_type != 'system' AND content != '' ORDER BY id DESC LIMIT 6",
+            $conversation_id
+        )));
+        $ultimos = array_map(static function ($m) {
+            return ['dir' => $m->direction === 'inbound' ? 'in' : 'out', 'texto' => (string) $m->content];
+        }, $filas);
+        $correo = omni_derivacion_correo(['contact_name' => $conv->contact_name, 'external_contact_id' => $conv->external_contact_id],
+            $motivo, $ultimos, home_url('/omnicliente/'));
+        $headers = ['Content-Type: text/html; charset=UTF-8', 'From: AutomatizaTech OmniCliente <' . get_option('admin_email') . '>'];
+        $enviados = 0;
+        foreach ($cfg['correos'] as $to) {
+            if (wp_mail($to, $correo['asunto'], $correo['html'], $headers)) $enviados++;
+        }
+
+        $this->audit_log('bot_escalate', 'conversation', $conversation_id,
+            'El asistente derivó a una persona' . ($asignado ? " (agente $asignado)" : ' (sin asignar)'),
+            ['status' => $conv->status], ['intervention_mode' => 'human', 'agent_id' => $asignado], $conv->client_id);
+
+        return ['derivada' => true, 'agente_id' => $asignado, 'correos' => $enviados];
+    }
+
+    /** La conversación está en manos de una persona porque la derivó el asistente (no porque la tomó un ejecutivo). */
+    private function derivada_por_bot($conv) {
+        $reason = $this->wpdb->get_var($this->wpdb->prepare(
+            "SELECT reason FROM {$this->prefix}takeovers WHERE conversation_id = %d AND status = 'active' ORDER BY id DESC LIMIT 1",
+            $conv->id
+        ));
+        if ($reason !== null) return strpos((string) $reason, 'Derivado por el asistente') === 0;
+        if (!empty($conv->assigned_agent_id)) return false;
+        return (bool) $this->wpdb->get_var($this->wpdb->prepare(
+            "SELECT id FROM {$this->prefix}messages WHERE conversation_id = %d AND sender_type = 'system' AND metadata_json LIKE %s LIMIT 1",
+            $conv->id, '%"origen":"derivacion_bot"%'
+        ));
+    }
+
+    /** Devuelve al bot una conversación derivada cuando la persona vuelve a escribir después de 24 h. */
+    private function volver_al_bot($conv) {
+        $this->wpdb->update($this->prefix . 'takeovers',
+            ['status' => 'released', 'released_at' => current_time('mysql')],
+            ['conversation_id' => $conv->id, 'status' => 'active']);
+        $this->wpdb->update($this->prefix . 'conversations',
+            ['status' => 'bot', 'intervention_mode' => '', 'assigned_agent_id' => null], ['id' => $conv->id]);
+        if (!empty($conv->assigned_agent_id)) {
+            $this->wpdb->query($this->wpdb->prepare(
+                "UPDATE {$this->prefix}agents SET active_chats = GREATEST(active_chats - 1, 0) WHERE id = %d", $conv->assigned_agent_id
+            ));
+        }
+        $this->send_message($conv->id, [
+            'sender_type' => 'system', 'sender_name' => 'Sistema',
+            'content'     => '🤖 La persona volvió a escribir después de 24 horas: la conversación vuelve al asistente.',
+        ]);
+        $this->audit_log('bot_return', 'conversation', $conv->id, 'Vuelve al asistente tras 24 h sin actividad',
+            ['status' => $conv->status], ['status' => 'bot'], $conv->client_id);
+    }
+
+    /** Contexto para n8n si la persona llegó desde un comentario con palabra clave (últimos 7 días), o null. */
+    private function contexto_comentario($conversation_id) {
+        $filas = $this->wpdb->get_results($this->wpdb->prepare(
+            "SELECT sender_type, content, metadata_json, created_at FROM {$this->prefix}messages
+             WHERE conversation_id = %d AND metadata_json LIKE %s ORDER BY id DESC LIMIT 10",
+            absint($conversation_id), '%comentario_palabra_clave%'
+        ), ARRAY_A);
+        return omni_contexto_comentario($filas ?: [], time());
     }
 
     /**
@@ -3083,6 +3387,18 @@ class OmnichannelController {
     }
 
     /**
+     * GET de solo lectura a la Graph API de Instagram con el token del canal.
+     * Lo usa Métricas IG (omnichannel-ig-insights-controller.php) para insights,
+     * /me/media y /me/stories. Mismo formato de respuesta que ig_api_request;
+     * el token no sale de este servidor.
+     */
+    public function ig_graph_get($channel_id, $path) {
+        $channel = $this->get_instagram_channel_for_api($channel_id);
+        if (!$channel) return ['error' => 'Canal no encontrado'];
+        return $this->ig_api_request('GET', $channel, $path);
+    }
+
+    /**
      * Send a text DM to an Instagram user (IGSID = recipient).
      * Returns ['success'=>true,'message_id'=>..,'recipient_id'=>..] or ['error'=>..].
      */
@@ -3105,6 +3421,53 @@ class OmnichannelController {
             ];
         }
         return ['error' => $res['error'] ?? 'Error desconocido al enviar a Instagram'];
+    }
+
+    /**
+     * Respuesta pública bajo un comentario (POST /<COMMENT_ID>/replies).
+     * Returns ['success'=>true,'id'=>..] or ['error'=>..].
+     */
+    public function reply_instagram_comment($channel_id, $comment_id, $content) {
+        // local: el error es de este lado y nada llegó a Meta (seguro que no se publicó).
+        $channel = $this->get_instagram_channel_for_api($channel_id);
+        if (!$channel) return ['error' => 'Canal no encontrado', 'local' => true];
+        if (empty($channel->bot_token)) return ['error' => 'Canal sin token de Instagram configurado', 'local' => true];
+        $comment_id = preg_replace('/[^0-9A-Za-z_\-]/', '', (string) $comment_id);
+        if ($comment_id === '') return ['error' => 'Falta el id del comentario', 'local' => true];
+        if ($content === '' || $content === null) return ['error' => 'Contenido vacío', 'local' => true];
+
+        $res = $this->ig_api_request('POST', $channel, $comment_id . '/replies', ['message' => $content]);
+        if (!empty($res['success']) && !empty($res['data']['id'])) {
+            return ['success' => true, 'id' => (string) $res['data']['id']];
+        }
+        // code: el HTTP de Meta (0 si no hubo respuesta, p. ej. por tiempo: la respuesta pudo haber salido).
+        return ['error' => $res['error'] ?? 'Error desconocido al responder el comentario', 'code' => (int) ($res['code'] ?? 0)];
+    }
+
+    /**
+     * Respuesta privada ligada a un comentario: recipient.comment_id, nunca un IGSID, así Meta
+     * la entrega solo a quien escribió ese comentario. Una por comentario, dentro de 7 días.
+     * Returns ['success'=>true,'message_id'=>..,'recipient_id'=>..] or ['error'=>..].
+     */
+    public function send_instagram_private_reply($channel_id, $comment_id, $content) {
+        $channel = $this->get_instagram_channel_for_api($channel_id);
+        if (!$channel) return ['error' => 'Canal no encontrado'];
+        $comment_id = preg_replace('/[^0-9A-Za-z_\-]/', '', (string) $comment_id);
+        if ($comment_id === '') return ['error' => 'Falta el id del comentario'];
+        if ($content === '' || $content === null) return ['error' => 'Contenido vacío'];
+
+        $res = $this->ig_api_request('POST', $channel, 'me/messages', [
+            'recipient' => ['comment_id' => $comment_id],
+            'message'   => ['text' => $content],
+        ]);
+        if (!empty($res['success'])) {
+            return [
+                'success'      => true,
+                'message_id'   => $res['data']['message_id']   ?? '',
+                'recipient_id' => $res['data']['recipient_id'] ?? '',
+            ];
+        }
+        return ['error' => $res['error'] ?? 'Error desconocido al enviar la respuesta privada'];
     }
 
     /**
@@ -3137,6 +3500,80 @@ class OmnichannelController {
             'success'     => true,
             'creation_id' => (string) $create['data']['id'],
             'media_type'  => $media_type,
+            'status_code' => 'CREATED',
+        ];
+    }
+
+    /**
+     * Crea el contenedor de una imagen: post del feed (IMAGE), historia (STORIES) o pieza de un
+     * carrusel (CAROUSEL_ITEM). Instagram solo acepta JPEG por la API de publicacion.
+     */
+    public function create_instagram_image_container($channel_id, $image_url, $caption = '', $kind = 'IMAGE') {
+        $channel = $this->get_instagram_channel_for_api($channel_id);
+        if (!$channel) return ['error' => 'Canal no encontrado'];
+        if (trim((string) $image_url) === '') return ['error' => 'Falta image_url'];
+
+        $kind = in_array($kind, ['IMAGE', 'STORIES', 'CAROUSEL_ITEM'], true) ? $kind : 'IMAGE';
+        $container_body = ['image_url' => $image_url];
+        if ($kind === 'STORIES') {
+            $container_body['media_type'] = 'STORIES';
+        } elseif ($kind === 'CAROUSEL_ITEM') {
+            $container_body['is_carousel_item'] = true; // las piezas no llevan caption: va en el carrusel
+        } elseif ($caption !== '') {
+            $container_body['caption'] = $caption;
+        }
+
+        $create = $this->ig_api_request('POST', $channel, 'me/media', $container_body);
+        if (empty($create['success']) || empty($create['data']['id'])) {
+            return [
+                'error'    => $create['error'] ?? 'No se pudo crear el contenedor de la imagen',
+                'fb_error' => $create['fb_error'] ?? null,
+            ];
+        }
+
+        return [
+            'success'     => true,
+            'creation_id' => (string) $create['data']['id'],
+            'media_type'  => $kind,
+            'status_code' => 'CREATED',
+        ];
+    }
+
+    /**
+     * Crea el contenedor de un carrusel con 2 a 10 contenedores CAROUSEL_ITEM ya creados,
+     * en el orden en que deben verse. Se publica despues con publish_instagram_media_container.
+     */
+    public function create_instagram_carousel_container($channel_id, array $children, $caption = '') {
+        $channel = $this->get_instagram_channel_for_api($channel_id);
+        if (!$channel) return ['error' => 'Canal no encontrado'];
+
+        $ids = [];
+        foreach ($children as $child) {
+            $id = preg_replace('/[^0-9]/', '', (string) $child);
+            if ($id !== '') $ids[] = $id;
+        }
+        if (count($ids) < 2 || count($ids) > 10) {
+            return ['error' => 'Un carrusel necesita entre 2 y 10 imagenes; llegaron ' . count($ids)];
+        }
+
+        $container_body = ['media_type' => 'CAROUSEL', 'children' => implode(',', $ids)];
+        if ($caption !== '') {
+            $container_body['caption'] = $caption;
+        }
+
+        $create = $this->ig_api_request('POST', $channel, 'me/media', $container_body);
+        if (empty($create['success']) || empty($create['data']['id'])) {
+            return [
+                'error'    => $create['error'] ?? 'No se pudo crear el contenedor del carrusel',
+                'fb_error' => $create['fb_error'] ?? null,
+            ];
+        }
+
+        return [
+            'success'     => true,
+            'creation_id' => (string) $create['data']['id'],
+            'media_type'  => 'CAROUSEL',
+            'children'    => count($ids),
             'status_code' => 'CREATED',
         ];
     }
@@ -3305,6 +3742,76 @@ class OmnichannelController {
                 'error_message'   => $ig['error'] ?? 'Error desconocido',
             ], ['id' => $message_id]);
         }
+    }
+
+    /**
+     * Eco de Instagram (message.is_echo): un mensaje que envió la propia cuenta, desde el portal,
+     * la app de Instagram o la respuesta privada a un comentario. Antes se guardaba como entrante
+     * en una conversación a nombre de la cuenta; ahora:
+     *   - si ya está registrado (mismo mid), no se repite;
+     *   - si coincide con un saliente reciente sin mid de esa conversación, se le pone el mid;
+     *   - si no, queda como saliente del ejecutivo en la conversación del destinatario.
+     * Si no hay conversación con ese destinatario, se ignora: la abre el primer mensaje de la
+     * persona, y así un eco que llega antes de que se registre la respuesta privada no la duplica.
+     * Nunca se reenvía al bot ni cambia el estado de la conversación.
+     */
+    public function record_instagram_echo($channel_id, $data) {
+        $channel_id = absint($channel_id);
+        $mid = sanitize_text_field($data['external_message_id'] ?? '');
+        $recipient = sanitize_text_field($data['external_contact_id'] ?? '');
+        if ($mid === '' || $recipient === '') return ['status' => 'echo_ignored'];
+
+        $known = $this->wpdb->get_var($this->wpdb->prepare(
+            "SELECT m.id FROM {$this->prefix}messages m
+             JOIN {$this->prefix}conversations c ON c.id = m.conversation_id
+             WHERE c.channel_id = %d AND m.external_message_id = %s LIMIT 1",
+            $channel_id, $mid
+        ));
+        if ($known) return ['status' => 'echo_duplicate', 'message_id' => (int) $known];
+
+        $conv = $this->wpdb->get_row($this->wpdb->prepare(
+            "SELECT id FROM {$this->prefix}conversations
+             WHERE channel_id = %d AND external_contact_id = %s AND status != 'archived' ORDER BY id DESC LIMIT 1",
+            $channel_id, $recipient
+        ));
+        if (!$conv) return ['status' => 'echo_no_conversation'];
+
+        $content = sanitize_textarea_field($data['content'] ?? '');
+        // El eco puede llegar antes de que el envío del portal guarde su mid: se le asigna a ese mensaje.
+        $pending = $this->wpdb->get_var($this->wpdb->prepare(
+            "SELECT id FROM {$this->prefix}messages
+             WHERE conversation_id = %d AND direction = 'outbound' AND sender_type IN ('agent','bot')
+               AND (external_message_id IS NULL OR external_message_id = '') AND content = %s AND created_at >= %s
+             ORDER BY id DESC LIMIT 1",
+            $conv->id, $content, gmdate('Y-m-d H:i:s', time() - 120)
+        ));
+        if ($pending) {
+            $this->wpdb->update($this->prefix . 'messages', ['external_message_id' => $mid, 'delivery_status' => 'sent'], ['id' => $pending]);
+            return ['status' => 'echo_matched', 'message_id' => (int) $pending, 'conversation_id' => (int) $conv->id];
+        }
+
+        $now = current_time('mysql', 1);
+        $type = $data['type'] ?? 'text';
+        $this->wpdb->insert($this->prefix . 'messages', [
+            'conversation_id'     => $conv->id,
+            'channel_type'        => 'instagram',
+            'direction'           => 'outbound',
+            'sender_type'         => 'agent',
+            'sender_name'         => 'Instagram (app)',
+            'message_type'        => in_array($type, ['text','image','video','audio','document','location','sticker'], true) ? $type : 'text',
+            'content'             => $content,
+            'media_url'           => esc_url_raw($data['media_url'] ?? ''),
+            'external_message_id' => $mid,
+            'delivery_status'     => 'sent',
+            'metadata_json'       => wp_json_encode(['origen' => 'eco_instagram']),
+            'created_at'          => $now,
+        ]);
+        $message_id = (int) $this->wpdb->insert_id;
+        $this->wpdb->update($this->prefix . 'conversations', [
+            'last_message_at'      => $now,
+            'last_message_preview' => mb_substr(sanitize_text_field($content), 0, 500),
+        ], ['id' => $conv->id]);
+        return ['status' => 'echo_recorded', 'message_id' => $message_id, 'conversation_id' => (int) $conv->id];
     }
 
     /**

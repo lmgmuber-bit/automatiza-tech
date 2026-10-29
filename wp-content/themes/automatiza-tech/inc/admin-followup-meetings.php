@@ -2304,7 +2304,12 @@ function automatiza_tech_register_followup_api_routes() {
     register_rest_route('automatiza-tech/v1', '/verify-client', array(
         'methods' => 'GET',
         'callback' => 'automatiza_tech_verify_client_by_phone',
-        'permission_callback' => '__return_true', // N8N/WhatsApp llama sin autenticación
+        // Solo n8n (28-oct-2026): misma clave X-AT-Secret que las rutas del cierre de cliente; sin ella, 401.
+        'permission_callback' => function (WP_REST_Request $r) {
+            return function_exists('at_cc_rest_auth')
+                ? at_cc_rest_auth($r)
+                : new WP_Error('no_autorizado', 'Clave inválida.', array('status' => 401));
+        },
         'args' => array(
             'phone' => array(
                 'required' => true,

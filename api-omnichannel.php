@@ -17,6 +17,8 @@ ob_end_clean();
 
 require_once __DIR__ . '/omnichannel-controller.php';
 require_once __DIR__ . '/omnichannel-atfinance-controller.php';
+require_once __DIR__ . '/omnichannel-ig-insights-controller.php';
+require_once __DIR__ . '/omnichannel-ig-comments-controller.php';
 require_once __DIR__ . '/at-rate-limit.php';
 require_once __DIR__ . '/at-mime-check.php';
 
@@ -33,6 +35,10 @@ at_cors_apply([
 $controller = new OmnichannelController();
 $atfinance = new OmniATFinanceController();
 $atfinance->maybe_create_tables(); // no-op salvo primera vez / upgrade (option-gated)
+$iginsights = new OmniIgInsightsController($controller);
+$iginsights->maybe_create_tables(); // ídem: tablas de Métricas IG
+$igcomments = new OmniIgCommentsController($controller);
+$igcomments->maybe_create_tables(); // ídem: registro de respuestas a comentarios
 
 // Parse request
 $method = $_SERVER['REQUEST_METHOD'];
@@ -431,9 +437,67 @@ try {
             send_json(['url' => $rd_upload['url'], 'file' => basename($rd_upload['file'])], 201);
         }
 
+        // POST reel-diario/upload-image — multipart, campo "image" (JPEG: es lo único que Instagram
+        // acepta por API). Misma carpeta que los videos, así reel-diario/delete también la limpia.
+        if (($segments[1] ?? '') === 'upload-image' && $method === 'POST') {
+            if (empty($_FILES['image']) || $_FILES['image']['error'] !== UPLOAD_ERR_OK) {
+                send_json(['error' => 'Falta el archivo "image" o hubo un error de subida'], 400);
+            }
+            $rd_mime = at_verify_upload_mime($_FILES['image']['tmp_name'], ['image/jpeg']);
+            if (!$rd_mime) {
+                send_json(['error' => 'La imagen debe ser JPEG'], 400);
+            }
+            if ($_FILES['image']['size'] > 8 * 1024 * 1024) { // límite de Instagram para imágenes
+                send_json(['error' => 'Imagen demasiado grande (máximo 8 MB)'], 400);
+            }
+            require_once ABSPATH . 'wp-admin/includes/file.php';
+            $rd_subdir_filter = function ($dirs) {
+                $dirs['subdir'] = '/reel-diario';
+                $dirs['path']   = $dirs['basedir'] . $dirs['subdir'];
+                $dirs['url']    = $dirs['baseurl'] . $dirs['subdir'];
+                return $dirs;
+            };
+            add_filter('upload_dir', $rd_subdir_filter);
+            $rd_file = [
+                'name'     => 'reel-diario-img-' . gmdate('Ymd-His') . '-' . wp_generate_password(6, false) . '.jpg',
+                'type'     => $rd_mime,
+                'tmp_name' => $_FILES['image']['tmp_name'],
+                'error'    => $_FILES['image']['error'],
+                'size'     => $_FILES['image']['size'],
+            ];
+            $rd_upload = wp_handle_upload($rd_file, ['test_form' => false]);
+            remove_filter('upload_dir', $rd_subdir_filter);
+            if (isset($rd_upload['error'])) {
+                send_json(['error' => $rd_upload['error']], 500);
+            }
+            send_json(['url' => $rd_upload['url'], 'file' => basename($rd_upload['file'])], 201);
+        }
+
         // POST reel-diario/media-create — body {video_url, caption?, media_type?, channel_id?}.
         // Crea el contenedor de Instagram y devuelve creation_id sin hacer polling bloqueante.
+        // Imágenes (23-oct): {image_url, media_type: IMAGE|STORIES|CAROUSEL_ITEM, caption?}.
+        // Carrusel: {media_type: CAROUSEL, children: [creation_id, ...] o "id,id", caption?}.
         if (($segments[1] ?? '') === 'media-create' && $method === 'POST') {
+            $rd_tipo = strtoupper((string) ($body['media_type'] ?? 'REELS'));
+            if ($rd_tipo === 'CAROUSEL' || !empty($body['image_url'])) {
+                $rd_caption = sanitize_textarea_field($body['caption'] ?? '');
+                $rd_channel_id = absint($body['channel_id'] ?? (defined('REEL_DIARIO_CHANNEL_ID') ? REEL_DIARIO_CHANNEL_ID : 0));
+                if (!$rd_channel_id) {
+                    send_json(['error' => 'Falta channel_id (o define REEL_DIARIO_CHANNEL_ID en wp-config-secrets.php)'], 400);
+                }
+                if ($rd_tipo === 'CAROUSEL') {
+                    $rd_children = $body['children'] ?? [];
+                    if (is_string($rd_children)) {
+                        $rd_children = explode(',', $rd_children);
+                    }
+                    $result = $controller->create_instagram_carousel_container($rd_channel_id, (array) $rd_children, $rd_caption);
+                } else {
+                    $rd_image_url = esc_url_raw($body['image_url']);
+                    $rd_kind = in_array($rd_tipo, ['STORIES', 'CAROUSEL_ITEM'], true) ? $rd_tipo : 'IMAGE';
+                    $result = $controller->create_instagram_image_container($rd_channel_id, $rd_image_url, $rd_caption, $rd_kind);
+                }
+                send_json($result, isset($result['error']) ? 502 : 201);
+            }
             $rd_video_url = esc_url_raw($body['video_url'] ?? '');
             if ($rd_video_url === '') {
                 send_json(['error' => 'Falta video_url'], 400);
@@ -527,6 +591,86 @@ try {
         }
 
         send_json(['error' => 'Ruta reel-diario no encontrada'], 404);
+    }
+
+    // ---- MÉTRICAS IG: lectura para agentes (Claqueta) y toma periódica (cron de n8n) ----
+    // Secret propio (AT_IG_METRICS_SECRET, header X-IG-Metrics-Secret) que solo sirve para
+    // LEER métricas y pedir una toma. A propósito no usa REEL_DIARIO_SECRET (ese publica y
+    // borra en Instagram: un agente que solo mira no debe poder publicar) ni
+    // OMNICHANNEL_CRON_SECRET (viaja en la URL y queda en los logs). Siempre el canal IG de
+    // AutomatizaTech: con este secret no se leen canales de clientes.
+    // Formato de respuesta: Docs/MASTER/06_PORTAL_OMNICLIENTE_FRONTEND.md, «Métricas IG».
+    if (isset($segments[0]) && $segments[0] === 'ig-metrics') {
+        // El límite va antes del secret: así también cuentan los intentos con un secret malo.
+        if (!at_rate_limit_check('omni_ig_metrics', 240, 3600)) {
+            at_rate_limit_reject(3600, 'omni_ig_metrics');
+        }
+        $igm_provided = $_SERVER['HTTP_X_IG_METRICS_SECRET'] ?? '';
+        if (!defined('AT_IG_METRICS_SECRET') || AT_IG_METRICS_SECRET === '') {
+            send_json(['error' => 'Métricas IG sin configurar: falta AT_IG_METRICS_SECRET en wp-config.php'], 503);
+        }
+        if (!hash_equals((string) AT_IG_METRICS_SECRET, (string) $igm_provided)) {
+            send_json(['error' => 'Secret inválido'], 403);
+        }
+        $igm_channel_id = OmniIgInsightsController::default_channel_id();
+        if (!$igm_channel_id) {
+            send_json(['error' => 'Falta REEL_DIARIO_CHANNEL_ID (o AT_IG_METRICS_CHANNEL_ID) en wp-config.php'], 500);
+        }
+
+        // GET ig-metrics?days=30&posts_limit=30 — cuenta, días y publicaciones con sus tomas.
+        if (!isset($segments[1]) && $method === 'GET') {
+            send_json($iginsights->get_overview($igm_channel_id, $_GET['days'] ?? 30, $_GET['posts_limit'] ?? 30));
+        }
+
+        // GET ig-metrics/posts?limit=30 · GET ig-metrics/posts/{media_id}
+        if (($segments[1] ?? '') === 'posts' && $method === 'GET') {
+            if (!empty($segments[2])) {
+                $igm_post = $iginsights->get_post($igm_channel_id, $segments[2]);
+                if (!$igm_post) {
+                    send_json(['error' => 'Publicación no registrada (puede no haberse tomado aún: POST ig-metrics/sync)'], 404);
+                }
+                send_json(['ok' => true, 'insights_status' => $iginsights->get_status($igm_channel_id), 'post' => $igm_post]);
+            }
+            send_json(['ok' => true, 'insights_status' => $iginsights->get_status($igm_channel_id), 'posts' => $iginsights->get_posts($igm_channel_id, $_GET['limit'] ?? 30)]);
+        }
+
+        // POST ig-metrics/sync — toma ahora (n8n la llama cada hora). 502 si falló, para que n8n avise.
+        // Sin force: un agente no puede obligar a releer todo (la cuota de Meta es la del publicador).
+        if (($segments[1] ?? '') === 'sync' && $method === 'POST') {
+            $igm_result = $iginsights->sync($igm_channel_id, false);
+            send_json($igm_result, empty($igm_result['ok']) ? 502 : 200);
+        }
+
+        send_json(['error' => 'Ruta ig-metrics no encontrada'], 404);
+    }
+
+    // ---- COMENTARIOS IG CON PALABRA CLAVE: plan B por consulta periódica (cron de n8n) ----
+    // El camino normal es el webhook de Meta (campo comments, en webhook-omnichannel.php). Si Meta
+    // no lo entrega (exige Advanced Access), n8n llama a esta ruta cada pocos minutos. Secret propio
+    // (AT_IG_COMMENTS_SECRET, header X-IG-Comments-Secret): responde en Instagram, así que no se
+    // comparte con Métricas IG (solo lee). Siempre el canal IG de AutomatizaTech.
+    if (isset($segments[0]) && $segments[0] === 'ig-comments') {
+        if (!at_rate_limit_check('omni_ig_comments', 120, 3600)) {
+            at_rate_limit_reject(3600, 'omni_ig_comments');
+        }
+        $igc_provided = $_SERVER['HTTP_X_IG_COMMENTS_SECRET'] ?? '';
+        if (!defined('AT_IG_COMMENTS_SECRET') || AT_IG_COMMENTS_SECRET === '') {
+            send_json(['error' => 'Comentarios IG sin configurar: falta AT_IG_COMMENTS_SECRET en wp-config.php'], 503);
+        }
+        if (!hash_equals((string) AT_IG_COMMENTS_SECRET, (string) $igc_provided)) {
+            send_json(['error' => 'Secret inválido'], 403);
+        }
+        $igc_channel_id = OmniIgInsightsController::default_channel_id();
+        if (!$igc_channel_id) {
+            send_json(['error' => 'Falta REEL_DIARIO_CHANNEL_ID (o AT_IG_METRICS_CHANNEL_ID) en wp-config.php'], 500);
+        }
+        // POST ig-comments/poll — lee los comentarios nuevos y responde los que traen palabra clave.
+        // 502 si no pudo leer de Meta, para que n8n avise.
+        if (($segments[1] ?? '') === 'poll' && $method === 'POST') {
+            $igc_result = $igcomments->poll($igc_channel_id);
+            send_json($igc_result, empty($igc_result['ok']) ? 502 : 200);
+        }
+        send_json(['error' => 'Ruta ig-comments no encontrada'], 404);
     }
 
     // ---- N8N CALLBACK (respuesta del bot) ----
@@ -1161,6 +1305,36 @@ try {
                         $has_filter ? absint($_GET['client_id']) : -1,
                         absint($_GET['days'] ?? 30)
                     ));
+                }
+                break;
+
+            // Admin: Métricas IG (vista Marketing IG). Mismo formato que ig-metrics para agentes.
+            case 'ig-insights':
+                $igi_channel_id = absint($_GET['channel_id'] ?? 0) ?: OmniIgInsightsController::default_channel_id();
+                if (!$igi_channel_id) {
+                    send_json(['error' => 'Falta REEL_DIARIO_CHANNEL_ID en wp-config.php'], 500);
+                }
+                if (($segments[2] ?? '') === 'sync' && $method === 'POST') {
+                    // 200 aunque la toma falle: el portal muestra el estado que quedó guardado.
+                    send_json($iginsights->sync($igi_channel_id, true));
+                }
+                if (($segments[2] ?? '') === 'posts' && !empty($segments[3]) && $method === 'GET') {
+                    $igi_post = $iginsights->get_post($igi_channel_id, $segments[3]);
+                    send_json($igi_post ? ['ok' => true, 'post' => $igi_post] : ['error' => 'Publicación no registrada'], $igi_post ? 200 : 404);
+                }
+                if (!isset($segments[2]) && $method === 'GET') {
+                    send_json($iginsights->get_overview($igi_channel_id, $_GET['days'] ?? 30, $_GET['posts_limit'] ?? 50));
+                }
+                break;
+
+            // Admin: registro de respuestas automáticas a comentarios con palabra clave.
+            case 'ig-comments':
+                $igc_admin_channel = absint($_GET['channel_id'] ?? 0) ?: OmniIgInsightsController::default_channel_id();
+                if (!$igc_admin_channel) {
+                    send_json(['error' => 'Falta REEL_DIARIO_CHANNEL_ID en wp-config.php'], 500);
+                }
+                if (!isset($segments[2]) && $method === 'GET') {
+                    send_json(['ok' => true, 'replies' => $igcomments->get_log($igc_admin_channel, $_GET['limit'] ?? 50)]);
                 }
                 break;
 

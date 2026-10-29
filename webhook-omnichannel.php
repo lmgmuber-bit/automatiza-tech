@@ -19,6 +19,7 @@ require_once __DIR__ . '/wp-load.php';
 ob_end_clean();
 
 require_once __DIR__ . '/omnichannel-controller.php';
+require_once __DIR__ . '/omnichannel-ig-comments-controller.php';
 
 header('Content-Type: application/json; charset=utf-8');
 
@@ -105,12 +106,49 @@ if (empty($payload)) {
     exit;
 }
 
+// Instagram: comentarios en los posts (campo comments) → respuestas automáticas con palabra clave.
+// Los mensajes directos siguen por normalize_instagram() como siempre.
+if ($channel->channel_type === 'instagram' && OmniIgCommentsController::payload_has_comments($payload)) {
+    $wpdb->update(
+        $wpdb->prefix . 'omnichannel_channels',
+        ['last_synced_at' => current_time('mysql')],
+        ['id' => $channel_id]
+    );
+    // Meta pide responder rápido: si el servidor lo permite, se contesta 200 y se sigue trabajando.
+    // Los reintentos de Meta no duplican nada (el comment_id es único en el registro).
+    ignore_user_abort(true);
+    @set_time_limit(180); // tope del aviso: 20 comentarios × (relectura + pública + privada)
+    $igc_early = function_exists('litespeed_finish_request') || function_exists('fastcgi_finish_request');
+    if ($igc_early) {
+        http_response_code(200);
+        echo wp_json_encode(['status' => 'accepted']);
+        function_exists('litespeed_finish_request') ? litespeed_finish_request() : fastcgi_finish_request();
+    }
+    $igc = new OmniIgCommentsController($controller);
+    $igc_result = $igc->handle_webhook($channel_id, $payload);
+    if (!$igc_early) {
+        http_response_code(200);
+        echo wp_json_encode(['status' => 'ok', 'results' => array_map(static function ($r) {
+            return ['comment_id' => $r['comment_id'] ?? '', 'status' => $r['status'] ?? ''];
+        }, $igc_result['results'] ?? [])]);
+    }
+    exit;
+}
+
 // Normalizar según tipo de canal
 $normalized = normalize_message($channel->channel_type, $payload);
 
 if (!$normalized) {
     http_response_code(200); // Respond 200 to avoid retries for status updates, etc.
     echo wp_json_encode(['status' => 'ignored']);
+    exit;
+}
+
+// Eco de Instagram: queda como saliente en la conversación del destinatario y nunca va al bot.
+if (!empty($normalized['echo'])) {
+    $echo_result = $controller->record_instagram_echo($channel_id, $normalized);
+    http_response_code(200);
+    echo wp_json_encode($echo_result);
     exit;
 }
 
@@ -224,16 +262,19 @@ function normalize_instagram($payload) {
     
     $msg = $messaging['message'];
     $sender_id = $messaging['sender']['id'] ?? '';
-    
+    // Eco: un mensaje que envió la propia cuenta (portal, app de Instagram o respuesta privada a un
+    // comentario). El contacto es el destinatario, no la cuenta; lo registra record_instagram_echo().
+    $is_echo = !empty($msg['is_echo']);
+
     $content = $msg['text'] ?? '';
     $type = 'text';
     $media_url = '';
-    
+
     if (!empty($msg['attachments'])) {
         $attachment = $msg['attachments'][0];
         $att_type = $attachment['type'] ?? 'fallback';
         $media_url = $attachment['payload']['url'] ?? '';
-        
+
         switch ($att_type) {
             case 'image': $type = 'image'; $content = $content ?: '[Imagen]'; break;
             case 'video': $type = 'video'; $content = '[Video]'; break;
@@ -241,9 +282,10 @@ function normalize_instagram($payload) {
             default: $content = $content ?: '[Archivo adjunto]';
         }
     }
-    
+
     return [
-        'external_contact_id' => $sender_id,
+        'echo'                => $is_echo,
+        'external_contact_id' => $is_echo ? ($messaging['recipient']['id'] ?? '') : $sender_id,
         'contact_name'        => '',
         'content'             => $content,
         'type'                => $type,

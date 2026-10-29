@@ -58,6 +58,13 @@ function at_consent_dibujar() {
 /* En pantallas anchas va abajo a la izquierda y más angosto: no tapa el botón del chat («Háblale a Tech») de la derecha. */
 @media (min-width:900px){.at-consent{left:24px;right:auto;bottom:24px;width:520px;justify-content:flex-start}.at-consent__btn{min-width:110px}}
 </style>
+<?php
+    // Huella del Lead (la misma que manda el servidor por CAPI): si el archivo no está, atLead avisa sin eventID.
+    $at_lead_id = __DIR__ . '/../themes/automatiza-tech/assets/js/at-lead-id.js';
+    if (is_readable($at_lead_id)) {
+        echo '<script>' . file_get_contents($at_lead_id) . "</script>\n";
+    }
+    ?>
 <script>
 (function () {
   var NOMBRE = 'at_consentimiento', SEIS_MESES = 15552000;
@@ -99,9 +106,25 @@ function at_consent_dibujar() {
   });
   window.atConsentimiento = { abrir: abrir, estado: leer };
   // Avisa a Meta que llegó un contacto. Sin permiso o sin Pixel cargado, no hace nada.
-  window.atLead = function (origen) {
+  // Con datos = {email, fecha, hora} manda el mismo eventID que el servidor (CAPI) y avisa una sola vez por correo
+  // en 30 días; la marca se guarda con la huella del correo, nunca con el correo.
+  var TREINTA_DIAS = 2592000000;
+  window.atLead = function (origen, datos) {
     if (leer() !== 'si' || typeof window.fbq !== 'function') { return false; }
-    try { window.fbq('track', 'Lead', { content_name: String(origen || 'sitio') }); return true; } catch (e) { return false; }
+    var params = { content_name: String(origen || 'sitio') };
+    function enviar(id) {
+      try { if (id) { window.fbq('track', 'Lead', params, { eventID: id }); } else { window.fbq('track', 'Lead', params); } } catch (e) {}
+    }
+    var L = window.AtLeadId;
+    if (!datos || !L) { enviar(''); return true; }
+    Promise.all([L.eventId(datos.email, datos.fecha, datos.hora), L.huellaCorreo(datos.email)]).then(function (r) {
+      var clave = r[1] ? 'at_lead_' + r[1].slice(0, 32) : '', hasta = 0;
+      try { hasta = clave ? Number(localStorage.getItem(clave)) || 0 : 0; } catch (e) {}
+      if (hasta > Date.now()) { return; }
+      enviar(r[0]);
+      try { if (clave) { localStorage.setItem(clave, String(Date.now() + TREINTA_DIAS)); } } catch (e) {}
+    }, function () { enviar(''); });
+    return true;
   };
 })();
 </script>

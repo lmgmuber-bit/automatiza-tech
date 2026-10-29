@@ -11,7 +11,7 @@ import {
   RULETA, RULETA_EMOJIS, RULETA_SIN_LISTA, candidatosRuleta, claveCarta, claveRespuesta, claveRuleta, claveTiempo, claveTransicion, presentacion, seLee,
   tieneRespuesta, vozDelJuego,
 } from './vocesGuion.js'
-import { useVoz } from './voz.js'
+import { esperarGiro, useVoz } from './voz.js'
 
 /**
  * Lee la partida guardada en esta pestaña. Si no calza con la forma esperada (versión, nivel,
@@ -512,8 +512,12 @@ function RuletaBaile({ carta, t, voz, invitados, recientes }) {
   const [visor, setVisor] = useState(null)
   const [res, setRes] = useState(null)
   const relojes = useRef([])
+  const espera = useRef(null) // cancela la espera de la voz de un giro anterior
   const vueltas = useRef(0)
-  const limpiar = () => { relojes.current.forEach(clearTimeout); relojes.current = [] }
+  const limpiar = () => {
+    relojes.current.forEach(clearTimeout); relojes.current = []
+    if (espera.current) { espera.current(); espera.current = null }
+  }
   useEffect(() => limpiar, [])
   const azar = (lista) => lista[Math.floor(Math.random() * lista.length)]
   const emoji = () => (lista.length ? azar(RULETA_EMOJIS) : '')
@@ -522,7 +526,8 @@ function RuletaBaile({ carta, t, voz, invitados, recientes }) {
     const n = vueltas.current++
     setFase('girando')
     setRes(null)
-    voz.decir(otra ? [claveRuleta('otra'), claveRuleta('gira', n)] : claveRuleta('gira', n))
+    // Al girar de nuevo basta con «¿No quiere? ¡Tranquilos, giramos otra vez!»: sumarle la frase del giro duraba 7,7 s.
+    const hablando = voz.decir(otra ? claveRuleta('otra') : claveRuleta('gira', n))
     const libres = nombres.filter((x) => !recientes.current.includes(x))
     const persona = azar(libres.length ? libres : nombres)
     const otros = todosLosNombres.filter((x) => x !== persona)
@@ -534,12 +539,20 @@ function RuletaBaile({ carta, t, voz, invitados, recientes }) {
       tiempo += 60 + i * i * 0.6 // cada vez más lento, como una ruleta que frena (unos 3,5 s en total)
       relojes.current.push(setTimeout(() => setVisor({ nombre: azar(nombres), emoji: emoji(), k: i }), tiempo))
     }
-    relojes.current.push(setTimeout(() => {
-      setVisor({ nombre: persona, emoji: emoji() || '💃', k: 'fin' })
-      setRes({ persona, pareja })
-      setFase('resultado')
-      voz.decir([claveRuleta(pareja ? 'pareja' : 'solo'), claveCarta(carta)])
-    }, tiempo + 350))
+    // El resultado espera a que la voz termine su frase: si la ruleta ya frenó, sigue pasando nombres despacio.
+    let tic = 0
+    espera.current = esperarGiro({
+      voz: hablando,
+      minimo: tiempo + 350,
+      onTic: () => setVisor({ nombre: azar(nombres), emoji: emoji(), k: `mas${tic++}` }),
+      onFin: () => {
+        espera.current = null
+        setVisor({ nombre: persona, emoji: emoji() || '💃', k: 'fin' })
+        setRes({ persona, pareja })
+        setFase('resultado')
+        voz.decir([claveRuleta(pareja ? 'pareja' : 'solo'), claveCarta(carta)])
+      },
+    })
   }
   return (
     <div className={`anim-ruleta${fase === 'resultado' ? ' is-listo' : ''}`}>

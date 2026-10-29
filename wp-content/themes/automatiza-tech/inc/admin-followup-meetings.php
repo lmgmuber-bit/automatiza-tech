@@ -2565,7 +2565,11 @@ function automatiza_tech_create_followup_meeting_api($request) {
     if (!empty($google_event_id_param)) {
         $data['google_event_id'] = $google_event_id_param;
     }
-    
+    // 28-oct-2026: el contrato o la propuesta de la reunión, solo si son del mismo cliente (inc/wa-contexto/followup.php).
+    if (function_exists('at_wa_followup_datos_con_vinculo')) {
+        $data = at_wa_followup_datos_con_vinculo($data, $request);
+    }
+
     $result = $wpdb->insert($table_name, $data);
     
     if ($result === false) {

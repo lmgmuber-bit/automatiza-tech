@@ -66,4 +66,9 @@ $fin = strpos($api, "\nfunction ", $ini + 10);
 $cuerpo = substr($api, $ini, $fin - $ini);
 $llamada = strpos($cuerpo, "function_exists('at_wa_followup_datos_con_vinculo')");
 ok($llamada !== false && $llamada < strpos($cuerpo, '$wpdb->insert($table_name, $data)'), 'la API de la rama aplica el vínculo antes del insert, con function_exists');
+
+// 7) Revisión B-04 de Codex: la reunión que lee el reagendamiento (GET /followup-meetings/{id}) trae su vínculo
+$ini2 = strpos($api, 'function automatiza_tech_get_followup_meeting(');
+$get = substr($api, $ini2, strpos($api, "\nfunction ", $ini2 + 10) - $ini2);
+ok(strpos($get, "'contrato_id' =>") !== false && strpos($get, "'propuesta_id' =>") !== false, 'GET de la reunión devuelve contrato_id y propuesta_id para el reagendamiento');
 fin();

@@ -2707,7 +2707,10 @@ function automatiza_tech_get_followup_meeting($request) {
         'meet_link' => $meeting->meet_link,
         'meeting_subject' => $meeting->meeting_subject,
         'notes' => $meeting->notes,
-        'status' => $meeting->status
+        'status' => $meeting->status,
+        // 28-oct-2026: el reagendamiento por WhatsApp conserva el vínculo de la reunión (inc/wa-contexto/followup.php).
+        'contrato_id' => isset($meeting->contrato_id) ? (int) $meeting->contrato_id : 0,
+        'propuesta_id' => isset($meeting->propuesta_id) ? (int) $meeting->propuesta_id : 0
     ), 200);
 }
 

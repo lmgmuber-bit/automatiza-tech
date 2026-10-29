@@ -29,6 +29,9 @@ El asistente de WhatsApp sabe, por el número, si le escribe una **persona nueva
 - **La elección se guarda** en Redis `followup_resched_client_<teléfono>`, la misma clave que ya leen «Prepare Seguimiento Data Direct» y «Custom». Así el nombre, el correo, la nota «Plan de trabajo <código>» y el `contrato_id` o la `propuesta_id` llegan a la agenda.
 - **Un botón `seg_c_<id>` o `seg_p_<id>`** entra por «Button Action» → «Contexto Elegido» → «Elegir Seguimiento».
 - **«Send Not Client Message»** ofrece el diagnóstico gratis, ya no la «demo».
+- **Si una consulta se cae,** el flujo sigue (revisión B de Codex). Los tres nodos de consulta van con `onError=continueRegularOutput` y `neverError`. Un timeout o un error de la base llega como `error` o como `situacion: no_disponible` (la ruta responde 503). En ese caso el mensaje pasa sin línea de contexto y el seguimiento sigue como uno general; nunca se ofrece el diagnóstico por un error.
+- **Un botón viejo** (la opción ya no existe) avisa y vuelve a preguntar; nunca agenda otra opción.
+- **Al reagendar,** «Save Reschedule Client» guarda también `contrato_id` y `propuesta_id`. GET `/followup-meetings/{id}` ahora los devuelve, y la reunión nueva queda con el mismo vínculo.
 
 **Agenda** (`PejBgr2LZQSAbbBy`):
 - **«Get Client Data»** consulta la ruta nueva.
@@ -49,7 +52,10 @@ Ese comando es la vista previa: hace el GET de los dos flujos, aplica los cambio
 - «Prepare Followup Data» ya no lea «Route Action»;
 - el bloque de los nodos sea idéntico al de `contexto.js` y pase `node --check`;
 - el diagnóstico de la agenda no cambie;
-- los cambios sean idempotentes.
+- los cambios sean idempotentes;
+- los nodos de consulta sigan ante un error, simulando una consulta caída sobre «Sumar Contexto» y «Elegir Seguimiento»;
+- un botón viejo vuelva a preguntar;
+- el reagendamiento conserve el vínculo, evaluando las expresiones de «Save Reschedule Client» y «Prepare Seguimiento …» con datos sintéticos.
 
 ```bash
 python -I -X utf8 N8N/wa-reconoce/aplicar.py --subir
@@ -59,7 +65,7 @@ Esta orden sube de verdad, y solo se corre con el OK de Luis:
 1. respalda los dos flujos en `~/respaldos/n8n/wa-reconoce/<fecha>/`;
 2. sube la agenda y después WhatsApp;
 3. republica solo si estaban activos;
-4. comprueba en la `activeVersion` que cada nodo tocado quedó publicado.
+4. exige que `activate` y la relectura respondan 200, que `activeVersionId` sea la versión subida y que los parámetros, el `onError` y las conexiones de cada nodo tocado en la `activeVersion` sean los subidos. Si algo no calza, se detiene y dice qué respaldo subir para volver atrás (`verificar_publicacion`, probada sin n8n con `aplicar_test.py`).
 
 Antes de `--subir`, avisar a la sesión de Instagram, que también usa la agenda.
 
@@ -67,6 +73,10 @@ Pruebas:
 
 ```bash
 node --test N8N/wa-reconoce/nodos/contexto.test.js
+```
+
+```bash
+python -I -B -X utf8 N8N/wa-reconoce/aplicar_test.py
 ```
 
 Las de WordPress están en `tests/wa-contexto/`. Las `*-wp-test.php` necesitan WAMP y `AT_WP_LOAD`.

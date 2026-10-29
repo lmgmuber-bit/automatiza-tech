@@ -87,15 +87,20 @@ def api_con(key):
     return api
 
 
-def nodo_nuevo(w, nombre, plantilla, params, dx=0, dy=0, sin_credenciales=False):
-    """Agrega (o actualiza, si ya existe) un nodo con el tipo y la versión de la plantilla; las credenciales se copian sin leerlas."""
+def nodo_nuevo(w, nombre, plantilla, params, dx=0, dy=0, sin_credenciales=False, on_error=None):
+    """Agrega (o actualiza, si ya existe) un nodo con el tipo y la versión de la plantilla; las credenciales se copian sin leerlas.
+    on_error='continueRegularOutput' hace que un timeout o error de red pase como un ítem con «error» (revisión B-01)."""
     nodos = {n['name']: n for n in w['nodes']}
     base = nodos[plantilla]
     if nombre in nodos:
         nodos[nombre]['parameters'] = params
+        if on_error:
+            nodos[nombre]['onError'] = on_error
         return 'actualizado'
     n = {'parameters': params, 'id': str(uuid.uuid4()), 'name': nombre, 'type': base['type'], 'typeVersion': base['typeVersion'],
          'position': [base['position'][0] + dx, base['position'][1] + dy]}
+    if on_error:
+        n['onError'] = on_error
     if base.get('credentials') and not sin_credenciales:
         n['credentials'] = copy.deepcopy(base['credentials'])
     w['nodes'].append(n)
@@ -121,7 +126,7 @@ def cambiar_whatsapp(w, b, registro):
     p = lambda nombre: nodos[nombre]['parameters']
 
     # 1-2) «Contexto Cliente» entre «Contexto Propuesta» y «Sumar Contexto», que arma una sola línea
-    registro.append(('Contexto Cliente', nodo_nuevo(w, 'Contexto Cliente', 'Contexto Propuesta', http_contexto(True), dx=220, dy=-160)))
+    registro.append(('Contexto Cliente', nodo_nuevo(w, 'Contexto Cliente', 'Contexto Propuesta', http_contexto(True), dx=220, dy=-160, on_error='continueRegularOutput')))
     conectar(w, 'Contexto Propuesta', [['Contexto Cliente']])
     conectar(w, 'Contexto Cliente', [['Sumar Contexto']])
     if p('Sumar Contexto').get('jsCode') != codigo_sumar(b):
@@ -135,6 +140,9 @@ def cambiar_whatsapp(w, b, registro):
         vc['url'] = url
         vc.setdefault('options', {}).setdefault('response', {}).setdefault('response', {})['neverError'] = True
         registro.append(('Verify Client', 'ruta wa-contexto'))
+    if nodos['Verify Client'].get('onError') != 'continueRegularOutput':
+        nodos['Verify Client']['onError'] = 'continueRegularOutput'
+        registro.append(('Verify Client', 'sigue si la consulta se cae'))
 
     # 4) «Is Client?»: sigue al seguimiento salvo una persona nueva (si la ruta falló, seguimiento general)
     cond = p('Is Client?')['conditions']['boolean'][0]
@@ -182,7 +190,7 @@ def cambiar_whatsapp(w, b, registro):
         registro.append(('Prepare Followup Data', 'datos de Elegir Seguimiento'))
 
     # 8) «Button Action»: regla «Seguimiento Elegido» (seg_) → «Contexto Elegido» → «Elegir Seguimiento»
-    registro.append(('Contexto Elegido', nodo_nuevo(w, 'Contexto Elegido', 'Contexto Propuesta', http_contexto(False), dx=220, dy=260)))
+    registro.append(('Contexto Elegido', nodo_nuevo(w, 'Contexto Elegido', 'Contexto Propuesta', http_contexto(False), dx=220, dy=260, on_error='continueRegularOutput')))
     conectar(w, 'Contexto Elegido', [['Elegir Seguimiento']])
     ba = p('Button Action')
     valores = ba['rules']['values']
@@ -210,6 +218,14 @@ def cambiar_whatsapp(w, b, registro):
         assert cuerpo.count('"title": "📅 Agendar Demo"') == 1, 'Send Not Client Message: el botón viejo no calza una sola vez'
         nc['jsonBody'] = cuerpo.replace('"title": "📅 Agendar Demo"', '"title": "Agendar diagnóstico"')
         registro.append(('Send Not Client Message', 'diagnóstico gratis'))
+
+    # 10b) Revisión B-04: al reagendar, «Save Reschedule Client» guarda también el vínculo de la reunión que se reagenda
+    src = p('Save Reschedule Client')
+    if 'contrato_id' not in src['value']:
+        ancla = "company: $json.company_name || '', "
+        assert src['value'].count(ancla) == 1, 'Save Reschedule Client: el ancla no calza una sola vez'
+        src['value'] = src['value'].replace(ancla, ancla + "contrato_id: Number($json.contrato_id) || 0, propuesta_id: Number($json.propuesta_id) || 0, ")
+        registro.append(('Save Reschedule Client', 'guarda contrato_id y propuesta_id al reagendar'))
 
     # 10) Los dos «Prepare Seguimiento …» pasan el vínculo al sub-workflow
     for nombre in ('Prepare Seguimiento Data Direct', 'Prepare Seguimiento Custom'):
@@ -252,6 +268,68 @@ def comprobar_js(nombre, codigo):
     return r.returncode == 0, (r.stderr or '').strip()[:200]
 
 
+def correr_js(codigo):
+    """Corre JS con node por la entrada estándar (sin archivos temporales) y devuelve lo que imprime, como JSON."""
+    r = subprocess.run(['node'], input=codigo, capture_output=True, text=True, encoding='utf-8')
+    if r.returncode != 0:
+        return {'_error': (r.stderr or '').strip().splitlines()[-1:] }
+    return json.loads(r.stdout or 'null')
+
+
+STUB_N8N = """
+const STUBS = %s;
+const $ = (n) => { const s = STUBS[n]; return { isExecuted: s !== undefined, first: () => { if (s === undefined) throw new Error('no ejecutado: ' + n); return { json: s }; } }; };
+"""
+
+
+def simular_nodo(codigo, stubs, entrada):
+    """Corre el código de un nodo Code con $ y $input simulados (sin n8n) y devuelve el json del primer ítem."""
+    js = STUB_N8N % json.dumps(stubs, ensure_ascii=False) + 'const $input = { first: () => ({ json: %s }) };\n' % json.dumps(entrada, ensure_ascii=False)
+    js += 'const salida = (function () {\n' + codigo + '\n})();\nconsole.log(JSON.stringify(salida[0].json));\n'
+    return correr_js(js)
+
+
+def evaluar(expresion, actual, stubs):
+    """Evalúa una expresión «={{ … }}» de n8n con $json y $ simulados."""
+    cuerpo = expresion.strip()
+    assert cuerpo.startswith('={{') and cuerpo.endswith('}}'), 'no es una expresión de n8n'
+    js = STUB_N8N % json.dumps(stubs, ensure_ascii=False) + 'const $json = %s;\n' % json.dumps(actual, ensure_ascii=False)
+    js += 'console.log(JSON.stringify(' + cuerpo[3:-2] + '));\n'
+    return correr_js(js)
+
+
+def comprobar_fallos_y_reagendar(nodos):
+    """Revisión B de Codex: B-01 (una consulta caída no detiene el flujo ni ofrece diagnóstico) y B-04 (reagendar no pierde el vínculo)."""
+    fallas = []
+    for n in ('Contexto Cliente', 'Contexto Elegido', 'Verify Client'):
+        if nodos[n].get('onError') != 'continueRegularOutput':
+            fallas.append(f'{n}: un timeout o error de red detendría el flujo (falta onError=continueRegularOutput)')
+    em = {'phoneNumber': '56911112222', 'phoneNumberId': '123', 'contactName': 'Persona Prueba'}
+    caida = {'error': {'message': 'timeout of 5000ms exceeded'}}
+    s = simular_nodo(nodos['Sumar Contexto']['parameters']['jsCode'], {'Merge Data': {'chatInput': 'Hola', 'phoneNumber': '56911112222'}, 'Contexto Propuesta': {}}, caida)
+    if not isinstance(s, dict) or s.get('chatInput') != 'Hola' or s.get('chatInputOriginal') != 'Hola':
+        fallas.append(f'Sumar Contexto con la consulta caída no deja pasar el mensaje tal cual: {s}')
+    e = simular_nodo(nodos['Elegir Seguimiento']['parameters']['jsCode'], {'Extract Message Data': em, 'Route Action': {'output': 'x'}}, caida)
+    if not isinstance(e, dict) or e.get('modo') != 'directo' or (e.get('guardar') or {}).get('subject') != 'Reunión de Seguimiento':
+        fallas.append(f'Elegir Seguimiento con la consulta caída no sigue con un seguimiento general: {e}')
+    ctx = {'situacion': 'cliente', 'nombre': 'Persona', 'opciones': [{'tipo': 'proyecto', 'id': 7, 'nombre': 'Proyecto', 'plan_codigo': '', 'agenda': {'nombre_completo': 'P', 'correo': 'p@prueba.cl', 'empresa': ''}}], 'agenda': {'nombre_completo': 'P', 'correo': 'p@prueba.cl', 'empresa': ''}}
+    e = simular_nodo(nodos['Elegir Seguimiento']['parameters']['jsCode'], {'Extract Message Data': em, 'Process Interactive': {'buttonId': 'seg_c_99'}}, ctx)
+    if not isinstance(e, dict) or e.get('modo') != 'elegir':
+        fallas.append(f'Elegir Seguimiento: un botón viejo no vuelve a preguntar: {e}')
+    for contrato, propuesta in ((17, 0), (0, 5)):
+        reunion = {'client_name': 'Persona Prueba', 'client_email': 'p@prueba.cl', 'company_name': '', 'meeting_subject': 'Seguimiento: X',
+                   'notes': 'Plan de trabajo Ab3dE6gH9jK1. Agendada por el cliente por WhatsApp.', 'contrato_id': contrato, 'propuesta_id': propuesta}
+        guardado = evaluar(nodos['Save Reschedule Client']['parameters']['value'], reunion, {'Extract Followup Reschedule ID': {'phoneNumber': '56911112222'}})
+        if not isinstance(guardado, str) or json.loads(guardado).get('contrato_id', 0) != contrato or json.loads(guardado).get('propuesta_id', 0) != propuesta:
+            fallas.append(f'Save Reschedule Client no guarda el vínculo de la reunión ({contrato}, {propuesta}): {guardado}')
+            continue
+        for nodo, origen in (('Prepare Seguimiento Data Direct', 'Extract Time'), ('Prepare Seguimiento Custom', 'Parse Custom Date')):
+            r = evaluar(nodos[nodo]['parameters']['jsonOutput'], {'reschedClient': guardado}, {origen: {'selectedDay': '2026-11-20', 'selectedTime': '10:00', 'phoneNumber': '56911112222'}})
+            if not isinstance(r, dict) or r.get('contrato_id') != contrato or r.get('propuesta_id') != propuesta or 'Plan de trabajo' not in str(r.get('notes')):
+                fallas.append(f'{nodo}: el reagendamiento pierde el vínculo o la nota ({contrato}, {propuesta}): {r}')
+    return fallas
+
+
 def comprobar(flujo, w, antes, b):
     nodos = {n['name']: n for n in w['nodes']}
     fallas = []
@@ -287,6 +365,7 @@ def comprobar(flujo, w, antes, b):
         for n in ('Send Not Client Message',):
             if re.search(r'demo', json.dumps(nodos[n]['parameters']['jsonBody'], ensure_ascii=False).replace('btn_agendar_demo', ''), re.I):
                 fallas.append(f'{n}: todavía dice «demo» al cliente')
+        fallas += comprobar_fallos_y_reagendar(nodos)
     else:
         corte = lambda s: s.split(' : {', 1)[1] if ' : {' in s else ''
         a = next(x for x in antes['nodes'] if x['name'] == 'Prepare Payload')['parameters']['assignments']['assignments'][0]['value']
@@ -294,6 +373,47 @@ def comprobar(flujo, w, antes, b):
         if corte(a) != corte(d):
             fallas.append('Prepare Payload: el objeto del diagnóstico cambió')
     return tocados, fallas
+
+
+def contiene(publicado, esperado):
+    """¿Lo publicado trae todo lo esperado? Admite claves que n8n agregue por su cuenta; no admite valores distintos."""
+    if isinstance(esperado, dict):
+        return isinstance(publicado, dict) and all(k in publicado and contiene(publicado[k], v) for k, v in esperado.items())
+    if isinstance(esperado, list):
+        return isinstance(publicado, list) and len(publicado) == len(esperado) and all(contiene(a, b) for a, b in zip(publicado, esperado))
+    return publicado == esperado
+
+
+def verificar_publicacion(esperado, releido, tocados, estaba_activo, cod_activate, cod_get):
+    """Revisión B-05: lo que quedó corriendo es exactamente lo que se subió. Devuelve la lista de fallas ([] si está bien).
+    Un flujo activo se compara contra su activeVersion (lo publicado), no contra el borrador."""
+    fallas = []
+    if estaba_activo and cod_activate != 200:
+        fallas.append(f'activate respondió {cod_activate}')
+    if cod_get != 200:
+        return fallas + [f'la relectura respondió {cod_get}']
+    if releido.get('active') != estaba_activo:
+        fallas.append(f'el flujo quedó active={releido.get("active")} y estaba {estaba_activo}')
+    if estaba_activo:
+        if releido.get('activeVersionId') != releido.get('versionId'):
+            fallas.append('la versión activa no es la que se subió')
+        av = releido.get('activeVersion') or {}
+        nodos, conexiones = av.get('nodes') or [], av.get('connections') or {}
+    else:
+        nodos, conexiones = releido.get('nodes') or [], releido.get('connections') or {}
+    pub = {n['name']: n for n in nodos}
+    esp = {n['name']: n for n in esperado['nodes']}
+    for t in tocados:
+        if t not in pub:
+            fallas.append(f'{t}: no está en lo publicado')
+            continue
+        if not contiene(pub[t].get('parameters'), esp[t].get('parameters')):
+            fallas.append(f'{t}: los parámetros publicados no son los subidos')
+        if esp[t].get('onError') and pub[t].get('onError') != esp[t].get('onError'):
+            fallas.append(f'{t}: onError publicado distinto')
+        if t in esperado['connections'] and not contiene(conexiones.get(t), esperado['connections'][t]):
+            fallas.append(f'{t}: sus conexiones publicadas no son las subidas')
+    return fallas
 
 
 def main():
@@ -340,14 +460,16 @@ def main():
                   'settings': {k: v for k, v in (w.get('settings') or {}).items() if k in SETTINGS_OK}}
         c, r = api('PUT', '/workflows/' + wid, cuerpo)
         assert c == 200, f'{flujo}: PUT {c} {r}; el flujo quedó como estaba (respaldo en {carpeta})'
+        c2 = None
         if antes.get('active'):
             c2, _ = api('POST', f'/workflows/{wid}/activate')
             print(f'{flujo}: subido y republicado ({c2})')
         c3, w3 = api('GET', '/workflows/' + wid)
-        publicados = {n['name'] for n in ((w3.get('activeVersion') or {}).get('nodes') or [])} if antes.get('active') else {n['name'] for n in w3['nodes']}
-        faltan = [n for n in tocados if n not in publicados]
-        print(f'{flujo}: releído activo={w3.get("active")} (antes {antes.get("active")}) | nodos tocados en la versión publicada: {len(tocados) - len(faltan)}/{len(tocados)}')
-        assert w3.get('active') == antes.get('active') and not faltan, f'{flujo}: lo publicado no coincide (respaldo en {carpeta})'
+        fallas = verificar_publicacion(w, w3, tocados, bool(antes.get('active')), c2, c3)
+        print(f'{flujo}: releído activo={w3.get("active")} (antes {antes.get("active")}) | {len(tocados)} nodo(s) tocados verificados en lo publicado: {"OK" if not fallas else "FALLAN"}')
+        for f in fallas:
+            print('   ✗', f)
+        assert not fallas, f'{flujo}: lo publicado no coincide con lo subido. Detenido; para volver atrás, subir {flujo}-{wid}.antes.json de {carpeta}'
     print('respaldos en', carpeta)
 
 

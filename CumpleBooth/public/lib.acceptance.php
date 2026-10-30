@@ -392,6 +392,20 @@ function cb_acceptance_token_calculado(int $id, string $expiresAt): string
 }
 
 /**
+ * El mensaje para pedir la firma por WhatsApp. Uno solo para Aceptaciones y para los correos de la ficha
+ * (cb_envio_texto_whatsapp), así los dos dicen lo mismo.
+ */
+function cb_acceptance_texto_whatsapp(array $row, string $festejado, string $url): string
+{
+    $pila = explode(' ', trim((string) ($row['client_name'] ?? '')))[0];
+    return ($pila !== '' ? 'Hola ' . $pila . '!' : '¡Hola!')
+        . ' Antes de la fiesta de ' . $festejado . ' necesitamos que firmes los Términos y '
+        . "Condiciones. Son dos minutos: revisas el resumen del plan, marcas tres casillas y firmas con el dedo.\n\n"
+        . $url . "\n\n"
+        . 'El enlace es personal y de un solo uso. — CumpleClick';
+}
+
+/**
  * El enlace de firma vigente de una aceptación, para volver a mostrarlo en el admin; null si no corresponde
  * (firmada, revocada, vencida) o si se emitió antes del 30-oct-2026 con un token al azar, que no se puede reconstruir.
  */

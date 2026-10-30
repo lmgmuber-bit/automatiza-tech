@@ -402,14 +402,7 @@ $relationships = ['madre' => 'Madre', 'padre' => 'Padre', 'tutor' => 'Tutor/a le
         // El mensaje de WhatsApp para pedir la firma. Hasta el 30-oct-2026 existía solo junto al enlace recién
         // generado; ahora el historial también lo ofrece mientras el enlace esté pendiente (cb_acceptance_enlace_vigente).
         $festejadoWa = (string) (($party['birthday_person_name'] ?? '') ?: ($party['nombre'] ?? ''));
-        $mensajeFirmaWa = static function (array $fila, string $url) use ($festejadoWa): string {
-            $pila = explode(' ', trim((string) ($fila['client_name'] ?? '')))[0];
-            return ($pila !== '' ? 'Hola ' . $pila . '!' : '¡Hola!')
-                . ' Antes de la fiesta de ' . $festejadoWa . ' necesitamos que firmes los Términos y '
-                . "Condiciones. Son dos minutos: revisas el resumen del plan, marcas tres casillas y firmas con el dedo.\n\n"
-                . $url . "\n\n"
-                . 'El enlace es personal y de un solo uso. — CumpleClick';
-        };
+        $mensajeFirmaWa = static fn(array $fila, string $url): string => cb_acceptance_texto_whatsapp($fila, $festejadoWa, $url);
         // Con el teléfono del cliente, WhatsApp abre su chat directo; sin él, deja elegir a quién mandarlo.
         $hrefWa = static function (array $fila, string $texto): string {
             $digitos = preg_replace('/\D+/', '', (string) ($fila['client_phone'] ?? '')) ?? '';

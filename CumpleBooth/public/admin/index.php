@@ -1269,9 +1269,9 @@ if ($formValues === null && $action === 'editar') {
                     <p class="muted small envio__aviso">Emite un enlace nuevo y anula el anterior.</p>
                   <?php endif; ?>
                   <?php
-                    // Mensaje listo para pegar en WhatsApp. Solo lo tienen el manual y el
-                    // comprobante: sus enlaces van firmados con HMAC y son siempre los mismos.
-                    // Los de Términos existen en claro una sola vez y no se pueden copiar acá.
+                    // Mensaje listo para pegar en WhatsApp: el manual y el comprobante (enlaces
+                    // firmados con HMAC) y, desde el 30-oct-2026, la firma de Términos pendiente,
+                    // cuyo enlace también se calcula. El de Términos firmados existe en claro una vez.
                     $textoWa = cb_envio_texto_whatsapp($slugFicha, $tipo);
                   ?>
                   <?php if ($textoWa !== ''): ?>
@@ -1285,6 +1285,11 @@ if ($formValues === null && $action === 'editar') {
                            href="https://wa.me/?text=<?= h(rawurlencode($textoWa)) ?>">Compartir por WhatsApp</a>
                       </div>
                     </details>
+                  <?php elseif ($tipo === 'firma' && $motivo === ''): ?>
+                    <p class="muted small envio__aviso">
+                      Sin mensaje para copiar: este enlace se emitió antes de que se pudiera volver a
+                      mostrar. En Aceptaciones puedes emitir uno nuevo y desde ahí copiarlo cuando quieras.
+                    </p>
                   <?php elseif ($e['rota_enlace']): ?>
                     <p class="muted small envio__aviso">
                       Sin mensaje para copiar: su enlace es de un solo uso y existe en claro una

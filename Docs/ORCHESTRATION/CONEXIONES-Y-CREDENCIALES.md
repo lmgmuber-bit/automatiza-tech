@@ -65,6 +65,7 @@ API key de n8n (ya configurada, ver abajo).
 | **context7 / metricool** | Docs de librerías / métricas sociales | ❌ | ✅ | ❌ |
 | **Playwright / Chrome DevTools** | QA de frontend, capturas | ✅ plugin | ✅ `browser-use` | ❌ |
 | **Hostinger PROD (SSH/SFTP)** | Desplegar CumpleClick y el juego 3D, correr migraciones, leer logs | ✅ `paramiko` (2026-09-06) | ❌ | ❌ |
+| **ElevenLabs (voces)** | Narrar reels, videos y demos (voz de Josh y otras) | ✅ script `voces.py` (2026-10-30) | ✅ mismo script (Python) | ✅ mismo script (Python) |
 
 **Pendientes de autorizar en Claude:** Notion y Stripe (OAuth), GitHub (header mal formado)
 y `magic` de 21st.dev (API key reseteada). Se arreglan con `/mcp` en sesión interactiva.
@@ -158,6 +159,26 @@ vive en el scratchpad de esa sesión; rehacerlo es trivial y no debe guardarse e
 **OpenCode no tiene ningún MCP configurado.** Si un handoff le pide a OpenCode tocar n8n,
 Higgsfield o Drive, ese handoff está mal planteado: o se le configura el MCP primero, o la
 tarea va a otro agente.
+
+### 3.4 ElevenLabs: voces para narrar (actualizado 2026-10-30)
+
+Cualquier agente (Claude, Codex u OpenCode) narra con el script común, sin tocar la clave:
+
+```bash
+python "C:/Users/luis_/Documents/Codex/Shared-Tools/elevenlabs-voces/voces.py" linea josh "<texto>" salida.wav
+```
+
+Genera la voz, la nivela a −16 LUFS y al final imprime una transcripción local para verificar que se entiende.
+Guía completa (modelo, ajustes de voz, consejos y costo): `C:\Users\luis_\Documents\Codex\Shared-Tools\elevenlabs-voces\GUIA.md`.
+
+- **Clave:** la línea **«Alice AT Api Key»** del archivo de claves (§2), con formato `etiqueta = valor`. El script
+  la lee sola, la mantiene en memoria y nunca la imprime. Es la clave completa de la cabecera `xi-api-key`, no un ID.
+- ⚠️ **No uses la variable de entorno `ELEVENLABS_API_KEY`:** en esta máquina guarda el **ID** de la clave y
+  ElevenLabs responde `400 api_key_id_used_as_api_key` (le pasó a una sesión el 30-oct).
+- **Modelo y voz:** `eleven_multilingual_v2`; Josh = `TxGEqnHWrfWFTfGW9XjX` (cierre de los reels AT).
+- **Costo:** cerca de 1 crédito por carácter. Pide el visto bueno de Luis antes de textos largos o de muchas pruebas.
+- **Permisos de la clave:** TTS y STT sí; listar voces y consultar la cuota no (un 401 ahí no significa que la clave
+  esté mala).
 
 ---
 

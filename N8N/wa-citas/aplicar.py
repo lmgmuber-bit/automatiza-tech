@@ -180,7 +180,7 @@ def cambiar_whatsapp_citas(w, b, registro):
     nuevo('¿Cita cancelada?', 'Is Client?', si(nodos, '={{ $json.ok === true }}'), 1100, 1100)
     numero = "$('Decidir Botón Cita').first().json.phoneNumberId"
     nuevo('Send Cita Cancelada', 'Send Not Client Message', envio_whatsapp(nodos, texto_decidir(
-        "'Listo, cancelamos tu cita: ' + $('Decidir Botón Cita').first().json.cita.etiqueta + '. Te mandamos la confirmación a tu correo. Si quieres agendar otra, escríbeme cuando quieras.'"), numero), 1320, 1040)
+        "'Listo, cancelamos tu cita: ' + $('Decidir Botón Cita').first().json.cita.etiqueta + '.' + ($json.efectos && $json.efectos.correo ? ' Te mandamos la confirmación a tu correo.' : '') + ' Si quieres agendar otra, escríbeme cuando quieras.'"), numero), 1320, 1040)
     nuevo('Send Cita No Cancelada', 'Send Not Client Message', envio_whatsapp(nodos, texto_decidir("'No pude cancelarla en este momento, ya le avisamos a Luis.'"), numero), 1320, 1180)
     nuevo('Notify Admin Cita No Cancelada', 'Notify Admin Followup Action Error', aviso_luis(nodos, 'WhatsApp: no se pudo cancelar una cita',
           "=<p>Por WhatsApp pidieron cancelar la cita {{ $('Decidir Botón Cita').first().json.cita.etiqueta }} y no se pudo "
@@ -217,23 +217,72 @@ def cambiar_whatsapp_citas(w, b, registro):
 MARCA = "=reagendar_cita_{{ %s }}"
 TEL_DECIDIR = "$('Decidir Botón Cita').first().json.phoneNumber"
 TEL_HORA = "$('Extract Time').first().json.phoneNumber"
-MARCA_SEG = "(() => { try { const m = JSON.parse($('Leer Marca (seguimiento)').first().json.marca || 'null'); return m && m.tipo === 'seguimiento' ? m : null; } catch (e) { return null; } })()"
 GD_ANCLA = 'let phoneNumber, phoneNumberId, contactName, appointmentType, output, companyName;\n'
 GD_BLOQUE = ("// Reprogramar desde los botones de citas (diseño 2026-10-29-whatsapp-citas-botones): el tipo sale de la cita elegida.\n"
              "try { const rc = $('Prepare Reagendar Cita').first().json; if (rc && rc.phoneNumber) { phoneNumber = rc.phoneNumber; "
              "phoneNumberId = rc.phoneNumberId; contactName = rc.contactName || ''; appointmentType = rc.appointmentType; output = ''; companyName = ''; } } catch (e) {}\n")
-CODIGO_DATOS_VIEJA = """// «Datos Cita Vieja»: si este número está reprogramando un diagnóstico (marca en Redis), la cita nueva se agenda con el
-// nombre y el correo de la vieja, sin pedirlos; la cita se vuelve a buscar entre las del número (una marca vieja no vale).
-const et = $('Extract Time').first().json || {};
+JS_TEXTO = "const texto = (to, body) => ({ messaging_product: 'whatsapp', recipient_type: 'individual', to, type: 'text', text: { body } });\n"
+TXT_CAIDA = 'En este momento no pude revisar tus citas, así que tu cita no se cambió. Ya le avisamos a Luis para que te escriba y lo coordinen.'
+TXT_YA_NO = 'Esa cita ya no está disponible para cambiarla. Si quieres, escríbeme «reprogramar» y te muestro tus citas vigentes.'
+
+# Revisión B-CITAS-01/02/03/06: después de elegir la hora, solo una marca del mismo tipo, con la cita propia y vigente releída de
+# /wa-citas, convierte la agenda en reprogramación; los datos salen de esa cita (nunca de una caché). Marca sin cita vigente o
+# consulta caída: aviso (nunca se piden nombre ni correo). Sin marca: el camino de hoy.
+CODIGO_DATOS_VIEJA = JS_TEXTO + """const et = $('Extract Time').first().json || {};
 let marca = null;
 try { marca = JSON.parse($('Leer Marca Reagendar').first().json.marca || 'null'); } catch (e) {}
+if (!marca || marca.tipo !== 'diagnostico') return [{ json: { ...et, modo: 'nuevo' }, pairedItem: 0 }];
 const r = $input.first().json || {};
-const cita = marca && marca.tipo === 'diagnostico' && r.estado === 'ok'
-  ? (r.citas || []).find((c) => c.tipo === 'diagnostico' && Number(c.id) === Number(marca.id)) || null : null;
-if (!cita || !cita.correo) return [{ json: { ...et, reagendar: false }, pairedItem: 0 }];
-return [{ json: { reagendar: true, date: et.selectedDay, time: et.selectedTime, phone: et.phoneNumber, phoneNumberId: et.phoneNumberId,
+const base = { phoneNumber: et.phoneNumber, phoneNumberId: et.phoneNumberId, modo: 'aviso' };
+if (r.estado !== 'ok') return [{ json: { ...base, avisarLuis: true, motivoLuis: 'quiso reprogramar su diagnóstico y no pudimos revisar sus citas (WordPress no respondió)',
+  mensaje: texto(et.phoneNumber, %(caida)s) }, pairedItem: 0 }];
+const cita = (r.citas || []).find((c) => c.tipo === 'diagnostico' && Number(c.id) === Number(marca.id)) || null;
+if (!cita || !cita.correo) return [{ json: { ...base, avisarLuis: false, motivoLuis: '', mensaje: texto(et.phoneNumber, %(ya_no)s) }, pairedItem: 0 }];
+return [{ json: { modo: 'reagendar', date: et.selectedDay, time: et.selectedTime, phone: et.phoneNumber, phoneNumberId: et.phoneNumberId,
   appointmentType: 'Demo', name: cita.nombre || '', email: cita.correo, company_name: cita.empresa || '',
   excluir_tipo: 'diagnostico', excluir_id: Number(cita.id), etiqueta_vieja: cita.etiqueta || '' }, pairedItem: 0 }];
+""" % {'caida': repr(TXT_CAIDA), 'ya_no': repr(TXT_YA_NO)}
+
+CODIGO_DATOS_SEG = JS_TEXTO + """const et = $('Extract Time').first().json || {};
+let marca = null;
+try { marca = JSON.parse($('Leer Marca (seguimiento)').first().json.marca || 'null'); } catch (e) {}
+let cache = {};
+try { cache = $('Get Reschedule Client (botón)').first().json || {}; } catch (e) {}
+if (!marca || marca.tipo !== 'seguimiento') return [{ json: { ...cache, modo: 'nuevo' }, pairedItem: 0 }];
+const r = $input.first().json || {};
+const base = { phoneNumber: et.phoneNumber, phoneNumberId: et.phoneNumberId, modo: 'aviso' };
+if (r.estado !== 'ok') return [{ json: { ...base, avisarLuis: true, motivoLuis: 'quiso reprogramar un seguimiento y no pudimos revisar sus citas (WordPress no respondió)',
+  mensaje: texto(et.phoneNumber, %(caida)s) }, pairedItem: 0 }];
+const cita = (r.citas || []).find((c) => c.tipo === 'seguimiento' && Number(c.id) === Number(marca.id)) || null;
+if (!cita || !cita.correo) return [{ json: { ...base, avisarLuis: false, motivoLuis: '', mensaje: texto(et.phoneNumber, %(ya_no)s) }, pairedItem: 0 }];
+return [{ json: { modo: 'reagendar', date: et.selectedDay, time: et.selectedTime, phone: et.phoneNumber, appointmentType: 'Seguimiento',
+  name: cita.nombre || '', email: cita.correo, company_name: cita.empresa || '',
+  subject: cita.asunto || String(cita.etiqueta || '').split(' · ')[0] || 'Reunión de Seguimiento',
+  notes: cita.notas || 'Reprogramada por el cliente por WhatsApp.', contrato_id: Number(cita.contrato_id) || 0, propuesta_id: Number(cita.propuesta_id) || 0,
+  excluir_tipo: 'seguimiento', excluir_id: Number(cita.id) }, pairedItem: 0 }];
+""" % {'caida': repr(TXT_CAIDA), 'ya_no': repr(TXT_YA_NO)}
+
+# Revisión B-CITAS-01: un botón de reprogramar de un recordatorio solo abre el calendario si la cita es de este número y sigue vigente.
+CODIGO_VALIDAR_RECORDATORIO = JS_TEXTO + """const r = $input.first().json || {};
+let tipo = '', id = 0, x = {};
+try { if ($('Extract Reprogramar Lead ID').isExecuted) { x = $('Extract Reprogramar Lead ID').first().json; tipo = 'diagnostico'; id = Number(x.leadId); } } catch (e) {}
+try { if (!tipo && $('Extract Followup Reschedule ID').isExecuted) { x = $('Extract Followup Reschedule ID').first().json; tipo = 'seguimiento'; id = Number(x.meetingId); } } catch (e) {}
+const base = { phoneNumber: x.phoneNumber, phoneNumberId: x.phoneNumberId, tipo, id };
+if (r.estado !== 'ok') return [{ json: { ...base, ruta: 'aviso', avisarLuis: true, motivoLuis: 'quiso reprogramar desde un recordatorio y no pudimos revisar sus citas (WordPress no respondió)',
+  mensaje: texto(x.phoneNumber, %(caida)s) }, pairedItem: 0 }];
+const vigente = (r.citas || []).some((c) => c.tipo === tipo && Number(c.id) === id);
+if (!vigente) return [{ json: { ...base, ruta: 'aviso', avisarLuis: false, motivoLuis: '', mensaje: texto(x.phoneNumber, %(ya_no)s) }, pairedItem: 0 }];
+return [{ json: { ...base, ruta: tipo }, pairedItem: 0 }];
+""" % {'caida': repr(TXT_CAIDA), 'ya_no': repr(TXT_YA_NO)}
+
+# Revisión B-CITAS-07: durante un reprogramado no se abre la fecha libre («otra fecha»), que no cancela la vieja.
+CODIGO_OTRA_FECHA = JS_TEXTO + """const pi = $('Process Interactive').first().json || {};
+let marca = null;
+try { marca = JSON.parse($('Leer Marca (otra fecha)').first().json.marca || 'null'); } catch (e) {}
+if (!marca) return [{ json: { ...pi, reagendar: false }, pairedItem: 0 }];
+return [{ json: { reagendar: true, phoneNumber: pi.phoneNumber, phoneNumberId: pi.phoneNumberId, avisarLuis: true,
+  motivoLuis: 'está reprogramando una cita y pidió una fecha fuera de la lista',
+  mensaje: texto(pi.phoneNumber, 'Para cambiar tu cita, elige uno de los días de la lista que te mandé. Si ninguno te sirve, ya le avisamos a Luis para que te proponga otro horario. Tu cita actual sigue en pie.') }, pairedItem: 0 }];
 """
 
 
@@ -272,8 +321,11 @@ def reconectar(w, origen, salida, nuevo, viejo):
     return True
 
 
+AVISO = ['Send Citas', '¿Avisar a Luis (citas)?']
+
+
 def cambiar_reagendar(w, registro):
-    """Tarea 8: reprogramar sin perder la cita vieja. Se marca cuál se mueve; se cancela recién cuando la nueva quedó agendada."""
+    """Tarea 8 + revisión B: reprogramar sin perder la cita vieja, solo con una cita propia y vigente del número."""
     nodos = {n['name']: n for n in w['nodes']}
     p = lambda nombre: nodos[nombre]['parameters']
     nuevo = lambda nombre, plantilla, params, dx, dy, **k: (registro.append((nombre, reconoce.nodo_nuevo(w, nombre, plantilla, params, dx=dx, dy=dy, **k))), nodos.update({n['name']: n for n in w['nodes']}))
@@ -285,14 +337,13 @@ def cambiar_reagendar(w, registro):
     nuevo('¿Reagendar seguimiento?', 'Is Client?', si(nodos, "={{ " + dec + ".cita.tipo === 'seguimiento' }}"), 1100, 1400)
     nuevo('Guardar Cliente Reagendar', 'Save Reschedule Client', redis(nodos, 'Save Reschedule Client', 'set', '=followup_resched_client_{{ ' + TEL_DECIDIR + ' }}',
           "={{ JSON.stringify((() => { const c = " + dec + ".cita; return { name: c.nombre || '', email: c.correo || '', company: c.empresa || '', "
-          "subject: String(c.etiqueta || '').split(' · ')[0] || 'Reunión de Seguimiento', notes: 'Reprogramada por el cliente por WhatsApp.', "
+          "subject: c.asunto || String(c.etiqueta || '').split(' · ')[0] || 'Reunión de Seguimiento', notes: c.notas || 'Reprogramada por el cliente por WhatsApp.', "
           "contrato_id: Number(c.contrato_id) || 0, propuesta_id: Number(c.propuesta_id) || 0 }; })()) }}", 86400), 1320, 1340)
     prep = copy.deepcopy(p('Prepare Followup Reschedule Data'))
     prep['jsonOutput'] = ("={{ { phoneNumber: " + dec + ".phoneNumber, phoneNumberId: " + dec + ".phoneNumberId, contactName: '', "
                           "appointmentType: " + dec + ".cita.tipo === 'seguimiento' ? 'Seguimiento' : 'Demo' } }}")
     nuevo('Prepare Reagendar Cita', 'Prepare Followup Reschedule Data', prep, 1540, 1400)
-    rbc = w['connections']['Ruta Botón Cita']['main']
-    rbc[2] = [{'node': 'Marcar Reagendar', 'type': 'main', 'index': 0}]
+    w['connections']['Ruta Botón Cita']['main'][2] = [{'node': 'Marcar Reagendar', 'type': 'main', 'index': 0}]
     reconoce.conectar(w, 'Marcar Reagendar', [['¿Reagendar seguimiento?']])
     reconoce.conectar(w, '¿Reagendar seguimiento?', [['Guardar Cliente Reagendar'], ['Prepare Reagendar Cita']])
     reconoce.conectar(w, 'Guardar Cliente Reagendar', [['Prepare Reagendar Cita']])
@@ -303,12 +354,21 @@ def cambiar_reagendar(w, registro):
         gd['jsCode'] = gd['jsCode'].replace(GD_ANCLA, GD_ANCLA + GD_BLOQUE)
         registro.append(('Generate Days', 'lee el tipo de la cita que se reprograma'))
 
-    # 2) Diagnóstico: después de elegir la hora, si hay marca se agenda con los datos de la vieja (no se pide el nombre)
+    # 2) Revisión B-CITAS-02: una agenda nueva (el agente abre el calendario o se elige un seguimiento) olvida la marca pendiente
+    nuevo('¿Agenda nueva?', 'Is Client?', si(nodos, "={{ $json.action === 'show_calendar' }}"), 220, -300)
+    nuevo('Olvidar Marca Reagendar', 'Delete Seguimiento State', redis(nodos, 'Delete Seguimiento State', 'delete', MARCA % '$json.phoneNumber'), 440, -300)
+    reconoce.conectar(w, '¿Agenda nueva?', [['Olvidar Marca Reagendar'], []])
+    if reconectar(w, 'Parse Response Actions', 0, ['Route Action', '¿Agenda nueva?'], ['Route Action']):
+        registro.append(('Parse Response Actions', 'un calendario nuevo olvida la marca de reprogramar'))
+    if reconectar(w, 'Prepare Followup Data', 0, ['Get Appointments Config', 'Olvidar Marca Reagendar'], ['Get Appointments Config']):
+        registro.append(('Prepare Followup Data', 'un seguimiento nuevo olvida la marca de reprogramar'))
+
+    # 3) Diagnóstico: después de elegir la hora, la marca solo vale con su cita propia y vigente (si no, aviso; sin marca, como hoy)
     nuevo('Leer Marca Reagendar', 'Get Reschedule Client (botón)', redis(nodos, 'Get Reschedule Client (botón)', 'get', MARCA % TEL_HORA, propiedad='marca'),
           220, 1700, on_error='continueRegularOutput')
     nuevo('Citas para Reagendar', 'Contexto Propuesta', http_citas(), 440, 1700, on_error='continueRegularOutput')
     nuevo('Datos Cita Vieja', 'Sumar Contexto', {'jsCode': CODIGO_DATOS_VIEJA}, 660, 1700)
-    nuevo('¿Reagendando diagnóstico?', 'Is Client?', si(nodos, '={{ $json.reagendar === true }}'), 880, 1700)
+    nuevo('Modo Reagendar', 'Route Action', selector(nodos, '={{ $json.modo }}', ('reagendar', 'nuevo', 'aviso')), 880, 1700)
     nuevo('Crear Diagnóstico Reagendado', 'Create Appointment', copy.deepcopy(p('Create Appointment')), 1100, 1640)
     nuevo('¿Agendada nueva?', '¿Seguimiento botón agendado?', si_v2(nodos, '={{ $json.event_id }}'), 1320, 1640)
     datos = "$('Datos Cita Vieja').first().json"
@@ -329,58 +389,74 @@ def cambiar_reagendar(w, registro):
         registro.append(('Is Seguimiento?', 'el diagnóstico pasa primero por la marca de reprogramar'))
     reconoce.conectar(w, 'Leer Marca Reagendar', [['Citas para Reagendar']])
     reconoce.conectar(w, 'Citas para Reagendar', [['Datos Cita Vieja']])
-    reconoce.conectar(w, 'Datos Cita Vieja', [['¿Reagendando diagnóstico?']])
-    reconoce.conectar(w, '¿Reagendando diagnóstico?', [['Crear Diagnóstico Reagendado'], ['Ask For Name']])
+    reconoce.conectar(w, 'Datos Cita Vieja', [['Modo Reagendar']])
+    reconoce.conectar(w, 'Modo Reagendar', [['Crear Diagnóstico Reagendado'], ['Ask For Name'], AVISO])
     reconoce.conectar(w, 'Crear Diagnóstico Reagendado', [['¿Agendada nueva?']])
     reconoce.conectar(w, '¿Agendada nueva?', [['Cancelar Cita Vieja'], ['Send Reagendar Sin Agendar']])
     reconoce.conectar(w, 'Cancelar Cita Vieja', [['Borrar Marca Reagendar', '¿Vieja cancelada?']])
     reconoce.conectar(w, '¿Vieja cancelada?', [['Send Cita Reagendada'], ['Send Cita Reagendada Sin Cancelar', 'Notify Admin Reagendar Vieja']])
 
-    # 3) Seguimiento: la marca se lee antes de agendar (para excluirla del límite) y la vieja se cancela si la nueva quedó
+    # 4) Seguimiento: igual que el diagnóstico; con marca válida se agenda con los datos de la cita propia releída
     nuevo('Leer Marca (seguimiento)', 'Get Reschedule Client (botón)', redis(nodos, 'Get Reschedule Client (botón)', 'get', MARCA % TEL_HORA, propiedad='marca'),
           220, 1950, on_error='continueRegularOutput')
+    nuevo('Citas para Reagendar (seguimiento)', 'Contexto Propuesta', http_citas(), 440, 1950, on_error='continueRegularOutput')
+    nuevo('Datos Seguimiento Viejo', 'Sumar Contexto', {'jsCode': CODIGO_DATOS_SEG}, 660, 1950)
+    nuevo('Modo Reagendar (seguimiento)', 'Route Action', selector(nodos, '={{ $json.modo }}', ('reagendar', 'nuevo', 'aviso')), 880, 1950)
     if reconectar(w, 'Get Reschedule Client (botón)', 0, ['Leer Marca (seguimiento)'], ['Prepare Seguimiento Data Direct']):
         registro.append(('Get Reschedule Client (botón)', 'pasa por la marca de reprogramar'))
-    reconoce.conectar(w, 'Leer Marca (seguimiento)', [['Prepare Seguimiento Data Direct']])
-    jo = p('Prepare Seguimiento Data Direct')['jsonOutput']
-    if 'excluir_tipo' not in jo:
-        a1 = "JSON.parse($json.reschedClient || 'null')"
-        a2 = "appointmentType: 'Seguimiento', "
-        assert jo.count(a1) == 1 and jo.count(a2) == 1, 'Prepare Seguimiento Data Direct: las anclas no calzan una sola vez'
-        jo = jo.replace(a1, "JSON.parse(($json.reschedClient ?? (() => { try { return $('Get Reschedule Client (botón)').first().json.reschedClient; } catch (e) { return null; } })()) || 'null')")
-        jo = jo.replace(a2, a2 + "...(() => { try { const m = JSON.parse(($json.marca ?? (() => { try { return $('Leer Marca (seguimiento)').first().json.marca; } catch (e) { return null; } })()) || 'null'); "
-                        "return m && m.tipo === 'seguimiento' ? { excluir_tipo: 'seguimiento', excluir_id: Number(m.id) } : {}; } catch (e) { return {}; } })(), ")
-        p('Prepare Seguimiento Data Direct')['jsonOutput'] = jo
-        registro.append(('Prepare Seguimiento Data Direct', 'excluye del límite la cita que se reprograma'))
-    nuevo('¿Reagendando seguimiento?', 'Is Client?', si(nodos, '={{ !!' + MARCA_SEG + ' }}'), 1540, 1950)
-    nuevo('Cancelar Cita Vieja (seguimiento)', 'Contexto Propuesta', http_citas('POST', "={{ JSON.stringify({ phone: " + TEL_HORA + ", tipo: 'seguimiento', id: Number("
-          + MARCA_SEG + ".id), motivo: 'reprogramada' }) }}"), 1760, 1890, on_error='continueRegularOutput')
+    reconoce.conectar(w, 'Leer Marca (seguimiento)', [['Citas para Reagendar (seguimiento)']])
+    reconoce.conectar(w, 'Citas para Reagendar (seguimiento)', [['Datos Seguimiento Viejo']])
+    reconoce.conectar(w, 'Datos Seguimiento Viejo', [['Modo Reagendar (seguimiento)']])
+    reconoce.conectar(w, 'Modo Reagendar (seguimiento)', [['Create Seguimiento Direct'], ['Prepare Seguimiento Data Direct'], AVISO])
+    datos_seg = "$('Datos Seguimiento Viejo').first().json"
+    nuevo('¿Reagendando seguimiento?', 'Is Client?', si(nodos, "={{ (() => { try { return " + datos_seg + ".modo === 'reagendar'; } catch (e) { return false; } })() }}"), 1540, 1950)
+    nuevo('Cancelar Cita Vieja (seguimiento)', 'Contexto Propuesta', http_citas('POST', "={{ JSON.stringify({ phone: " + datos_seg + ".phone, tipo: 'seguimiento', id: Number("
+          + datos_seg + ".excluir_id), motivo: 'reprogramada' }) }}"), 1760, 1890, on_error='continueRegularOutput')
     nuevo('Borrar Marca (seguimiento)', 'Delete Seguimiento State', redis(nodos, 'Delete Seguimiento State', 'delete', MARCA % TEL_HORA), 1980, 1890)
     nuevo('¿Vieja cancelada? (seguimiento)', 'Is Client?', si(nodos, '={{ $json.ok === true }}'), 1980, 2010)
     # «Create Seguimiento Direct» ya va en paralelo a «Delete Seguimiento State» (confirmación) y a «¿Seguimiento botón agendado?»,
     # cuya salida «sí» estaba vacía: ahí se cuelga la cancelación de la vieja.
     if reconectar(w, '¿Seguimiento botón agendado?', 0, ['¿Reagendando seguimiento?'], []):
-        registro.append(('¿Seguimiento botón agendado?', 'pasa por la marca de reprogramar'))
+        registro.append(('¿Seguimiento botón agendado?', 'cancela la vieja solo tras agendar la nueva'))
     reconoce.conectar(w, '¿Reagendando seguimiento?', [['Cancelar Cita Vieja (seguimiento)'], []])
     reconoce.conectar(w, 'Cancelar Cita Vieja (seguimiento)', [['Borrar Marca (seguimiento)', '¿Vieja cancelada? (seguimiento)']])
     reconoce.conectar(w, 'Borrar Marca (seguimiento)', [[]])
     reconoce.conectar(w, '¿Vieja cancelada? (seguimiento)', [[], ['Notify Admin Reagendar Vieja']])
 
-    # 4) Botones de reprogramar de los recordatorios: ya no cancelan antes; marcan la cita y siguen al calendario de hoy
+    # 5) Botones de reprogramar de los recordatorios: primero se revisa que la cita sea de este número y siga vigente
+    nuevo('Citas Recordatorio', 'Contexto Propuesta', http_citas(), 220, 2200, on_error='continueRegularOutput')
+    nuevo('Validar Recordatorio', 'Sumar Contexto', {'jsCode': CODIGO_VALIDAR_RECORDATORIO}, 440, 2200)
+    nuevo('Ruta Recordatorio', 'Route Action', selector(nodos, '={{ $json.ruta }}', ('diagnostico', 'seguimiento', 'aviso')), 660, 2200)
     lead = "$('Extract Reprogramar Lead ID').first().json"
     nuevo('Marcar Reagendar (recordatorio)', 'Save Reschedule Client', redis(nodos, 'Save Reschedule Client', 'set', MARCA % (lead + '.phoneNumber'),
-          "={{ JSON.stringify({ tipo: 'diagnostico', id: Number(" + lead + ".leadId) }) }}", 1800), 220, 2200)
-    if reconectar(w, 'Extract Reprogramar Lead ID', 0, ['Marcar Reagendar (recordatorio)'], ['Delete Lead For Reschedule']):
-        registro.append(('Extract Reprogramar Lead ID', 'marca en vez de cancelar antes'))
-    reconoce.conectar(w, 'Marcar Reagendar (recordatorio)', [['Prepare Reschedule Data']])
+          "={{ JSON.stringify({ tipo: 'diagnostico', id: Number(" + lead + ".leadId) }) }}", 1800), 880, 2140)
     seg = "$('Extract Followup Reschedule ID').first().json"
     nuevo('Marcar Reagendar (recordatorio seg)', 'Save Reschedule Client', redis(nodos, 'Save Reschedule Client', 'set', MARCA % (seg + '.phoneNumber'),
-          "={{ JSON.stringify({ tipo: 'seguimiento', id: Number(" + seg + ".meetingId) }) }}", 1800), 220, 2350)
-    if [d['node'] for d in w['connections']['Extract Followup Reschedule ID']['main'][0]] != ['Marcar Reagendar (recordatorio seg)']:
+          "={{ JSON.stringify({ tipo: 'seguimiento', id: Number(" + seg + ".meetingId) }) }}", 1800), 880, 2280)
+    if reconectar(w, 'Extract Reprogramar Lead ID', 0, ['Citas Recordatorio'], ['Delete Lead For Reschedule']):
+        registro.append(('Extract Reprogramar Lead ID', 'revisa la cita y marca en vez de cancelar antes'))
+    if [d['node'] for d in w['connections']['Extract Followup Reschedule ID']['main'][0]] != ['Citas Recordatorio']:
         siguientes = [d['node'] for d in w['connections']['¿Reagendar: cancelación OK?']['main'][0]]
-        assert reconectar(w, 'Extract Followup Reschedule ID', 0, ['Marcar Reagendar (recordatorio seg)'], ['Cancel Followup For Reschedule'])
+        assert reconectar(w, 'Extract Followup Reschedule ID', 0, ['Citas Recordatorio'], ['Cancel Followup For Reschedule'])
         reconoce.conectar(w, 'Marcar Reagendar (recordatorio seg)', [siguientes])
-        registro.append(('Extract Followup Reschedule ID', 'marca en vez de cancelar antes'))
+        registro.append(('Extract Followup Reschedule ID', 'revisa la cita y marca en vez de cancelar antes'))
+    reconoce.conectar(w, 'Citas Recordatorio', [['Validar Recordatorio']])
+    reconoce.conectar(w, 'Validar Recordatorio', [['Ruta Recordatorio']])
+    reconoce.conectar(w, 'Ruta Recordatorio', [['Marcar Reagendar (recordatorio)'], ['Marcar Reagendar (recordatorio seg)'], AVISO])
+    reconoce.conectar(w, 'Marcar Reagendar (recordatorio)', [['Prepare Reschedule Data']])
+
+    # 6) Revisión B-CITAS-07: «otra fecha» durante un reprogramado avisa a Luis en vez de abrir la fecha libre
+    nuevo('Leer Marca (otra fecha)', 'Get Reschedule Client (botón)', redis(nodos, 'Get Reschedule Client (botón)', 'get',
+          MARCA % "$('Process Interactive').first().json.phoneNumber", propiedad='marca'), 220, 2450, on_error='continueRegularOutput')
+    nuevo('Decidir Otra Fecha', 'Sumar Contexto', {'jsCode': CODIGO_OTRA_FECHA}, 440, 2450)
+    nuevo('¿Reagendando (otra fecha)?', 'Is Client?', si(nodos, '={{ $json.reagendar === true }}'), 660, 2450)
+    valores = p('Button Action')['rules']['values']
+    i_otra = next(k for k, r in enumerate(valores) if r['conditions']['conditions'][0].get('rightValue') == 'other_date')
+    if reconectar(w, 'Button Action', i_otra, ['Leer Marca (otra fecha)'], ['Send Other Date Options']):
+        registro.append(('Button Action', '«otra fecha» revisa si hay un reprogramado'))
+    reconoce.conectar(w, 'Leer Marca (otra fecha)', [['Decidir Otra Fecha']])
+    reconoce.conectar(w, 'Decidir Otra Fecha', [['¿Reagendando (otra fecha)?']])
+    reconoce.conectar(w, '¿Reagendando (otra fecha)?', [AVISO, ['Send Other Date Options']])
 
 
 def cambiar_agenda_excluir(w, registro):
@@ -466,13 +542,28 @@ def comprobar_cambio(w, nombres):
     return fallas
 
 
+EJECUCION = ('retryOnFail', 'maxTries', 'waitBetweenTries')
+
+
+def nodos_tocados(antes, despues):
+    """Los de wa-reconoce (parámetros, onError, conexiones) más los que solo cambian sus reintentos (revisión B-CITAS-09)."""
+    tocados = reconoce.nodos_tocados(antes, despues)
+    previos = {n['name']: n for n in antes['nodes']}
+    for n in despues['nodes']:
+        a = previos.get(n['name'], {})
+        if n['name'] not in tocados and any(n.get(k) != a.get(k) for k in EJECUCION):
+            tocados.append(n['name'])
+    return tocados
+
+
 def comprobar(flujo, w, antes, b_reconoce, b_citas):
     if flujo == 'web':
         nodos = {n['name']: n for n in w['nodes']}
         fallas = [f'{o} conecta a un nodo que no existe: {d["node"]}' for o, v in w['connections'].items()
                   for rama in v.get('main', []) for d in rama or [] if d['node'] not in nodos]
-        return reconoce.nodos_tocados(antes, w), fallas + comprobar_cambio(w, CAMBIO_WEB)
-    tocados, fallas = reconoce.comprobar(flujo, w, antes, b_reconoce)
+        return nodos_tocados(antes, w), fallas + comprobar_cambio(w, CAMBIO_WEB)
+    _, fallas = reconoce.comprobar(flujo, w, antes, b_reconoce)
+    tocados = nodos_tocados(antes, w)
     if flujo == 'whatsapp':
         fallas += comprobar_citas(w, b_citas)
     return tocados, fallas
@@ -482,7 +573,7 @@ def verificar_reintentos(releido, nombres):
     av = releido.get('activeVersion') or releido
     pub = {n['name']: n for n in av.get('nodes') or []}
     return [f'{n}: reintentos publicados distintos' for n in nombres
-            if (pub.get(n, {}).get('retryOnFail'), pub.get(n, {}).get('maxTries')) != (True, 3)]
+            if (pub.get(n, {}).get('retryOnFail'), pub.get(n, {}).get('maxTries'), pub.get(n, {}).get('waitBetweenTries')) != (True, 3, 1000)]
 
 
 def main():

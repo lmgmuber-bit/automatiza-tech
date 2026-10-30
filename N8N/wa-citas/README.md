@@ -27,6 +27,13 @@ Para cancelar o reprogramar, la persona ya no escribe nombre, correo, fecha ni h
   - **mensaje:** confirmar, «Esa cita ya no está disponible» o «Tengo una cita».
   - **cancelar:** «Cancelar Cita» → «¿Cita cancelada?». El bot dice «cancelada» solo si WordPress lo confirma.
   - **reprogramar:** ver la Tarea 8 del plan.
+- **Reprogramar.** «Sí, cambiar» marca la cita en Redis (`reagendar_cita_<tel>`, 30 min) y abre el calendario de su tipo; «Generate Days» lee «Prepare Reagendar Cita».
+  - **Después de elegir la hora,** la marca solo vale con su cita propia y vigente, que se relee con «Citas para Reagendar».
+  - **Los datos de la cita nueva salen de esa cita.** Si no es válida o la consulta se cae, va «Send Citas» y se avisa a Luis; nunca se piden datos.
+  - **La vieja se cancela recién con `event_id`** de la cita nueva («¿Agendada nueva?» y «¿Seguimiento botón agendado?»).
+  - **Una agenda nueva** («¿Agenda nueva?» en «Parse Response Actions» y «Prepare Followup Data») olvida la marca.
+  - **Los botones de los recordatorios** pasan por «Citas Recordatorio» → «Validar Recordatorio».
+  - **«Otra fecha» durante un reprogramado** avisa a Luis en vez de abrir la fecha libre.
 - **Los tres «Get Exchange Rate»** van con `onError`, timeout de 8 s y 3 intentos. El prompt dice que, sin tasa, los precios van solo en USD.
 
 **Web** (`3A5Y1NPBxpTjhHdE`): «Get Exchange Rate» protegido y la misma línea en el prompt.

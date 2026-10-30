@@ -22,9 +22,15 @@ Diseño: `Docs/superpowers/specs/2026-10-29-whatsapp-citas-botones-design.md`. P
   - Si ese número está en varias fichas, manda un enlace por ficha.
 - **Tipo de cambio.** WordPress guarda la tasa 6 horas. Los nodos que la consultan siguen aunque se caiga, y el bot da los precios solo en USD cuando no hay tasa; nunca «$0 CLP».
 
-## Límite conocido
+## Resguardos (revisión B de Codex, ronda 1)
 
-Si al reprogramar la persona escribe a mano otra fecha («otra fecha»), la cita vieja no se cancela sola: queda activa y te toca cancelarla a ti. Nunca se pierde una cita.
+- **Solo citas propias.** Reprogramar, también desde los botones de los recordatorios, revisa primero que la cita sea de ese número y siga vigente. Los datos de la cita nueva salen de esa cita, nunca de una copia guardada. Si no es así, el bot dice «Esa cita ya no está disponible» y no agenda nada.
+- **Agenda nueva.** Si la persona empieza otra agenda (un diagnóstico o un seguimiento nuevo), se olvida el reprogramado que había dejado a medias, para no cancelar una cita equivocada.
+- **Si WordPress no responde a mitad de un reprogramado,** el bot no pide nombre ni correo: avisa que la cita no se cambió y te avisa a ti.
+- **Un doble toque en «Sí, cancelar»** cancela una sola vez: un solo correo y un solo aviso.
+- **Si no se pudo quitar el evento de Calendar o no salió el correo,** la cita igual queda cancelada, pero el bot no promete el correo y a ti te llega el aviso de lo que falta hacer a mano.
+- **El seguimiento reprogramado conserva la nota de la reunión vieja,** incluido «Plan de trabajo <código>», así el plan de trabajo la sigue encontrando.
+- **«Otra fecha» durante un reprogramado:** el bot le pide elegir uno de los días de la lista y te avisa, para que tú le propongas otro horario. Su cita actual sigue en pie.
 
 ## Cómo se aplica
 

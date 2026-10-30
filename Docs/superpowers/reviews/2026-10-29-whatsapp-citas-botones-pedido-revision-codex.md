@@ -100,3 +100,41 @@
    - el timeout de 40 s del nodo frente al webhook de Calendar (WordPress espera hasta 30 s);
    - el correo a `admin_email`.
 7. **Tipo de cambio:** `onError` y reintentos en los cuatro nodos, la línea del prompt fuera de las marcas del cerebro, y la caché de 6 h que también guarda la tasa de respaldo.
+
+## Ronda 2 (30-oct): respuesta a `2026-10-29-wa-citas-B-codex.md` (CHANGES_REQUIRED, 2 bloqueantes, 5 importantes, 2 menores)
+
+**Revisión exacta:**
+
+```bash
+git diff 2b147a9..61396e7
+```
+
+Son dos commits: `8283e85` (WordPress) y `61396e7` (n8n). Cada arreglo tiene su prueba, que falló antes del arreglo y pasa después.
+
+| Hallazgo | Arreglo | Prueba |
+|---|---|---|
+| B-CITAS-01 | Los botones de reprogramar de los recordatorios pasan primero por «Citas Recordatorio» → «Validar Recordatorio». Si la cita no es de ese número o no sigue vigente, se avisa y no se abre el calendario. Al agendar un seguimiento con marca, «Datos Seguimiento Viejo» relee la cita en `/wa-citas` y usa sus datos (nunca `reschedClient`). Si no vale, se avisa y no se crea nada. | `test_b01_recordatorio_de_una_cita_ajena_no_abre_el_calendario`, `test_b01_seguimiento_de_otro_numero_o_cancelado_no_se_agenda`, `test_b01_b06_…` |
+| B-CITAS-02 | Una agenda nueva olvida la marca: «Parse Response Actions» → «¿Agenda nueva?» (`show_calendar`) y «Prepare Followup Data» (seguimiento nuevo) → «Olvidar Marca Reagendar». La marca solo vale si es del mismo tipo que el calendario. | `test_b02_una_agenda_nueva_olvida_la_marca_de_reprogramar`, `test_sin_marca_…` (marca de otro tipo → nuevo) |
+| B-CITAS-03 | «Modo Reagendar» tiene tres caminos: reagendar, nuevo y aviso. Una marca con consulta caída (timeout o 503) o con una cita que ya no está va a aviso («Send Citas» y Luis), nunca a «Ask For Name». | `test_b03_marca_con_consulta_caida_o_cita_que_ya_no_esta_no_pide_nombre` |
+| B-CITAS-04 | `efectos: {calendario, correo, aviso}`. El aviso a Luis dice lo que quedó pendiente (borrar el evento a mano, el correo que no salió). «Send Cita Cancelada» promete el correo solo si salió. | `cancelar-wp-test` (Calendar caído, correo caído), `test_b04_cancelada_no_promete_el_correo_si_no_salio` |
+| B-CITAS-05 | `at_wa_cita_marcar_cancelada`: un `UPDATE … WHERE id = %d AND <activa>` del que gana solo una fila. Los efectos solo los ejecuta el ganador; el perdedor recibe `409 no_vigente`. | `cancelar-wp-test` (la primera transición gana, la segunda no) |
+| B-CITAS-06 | La cita trae `notas` y `asunto` de la reunión. El seguimiento reprogramado usa la nota vieja tal cual («Plan de trabajo <código>…»). | `citas-puras-test`, `cancelar-wp-test`, `test_b01_b06_…` |
+| B-CITAS-07 | Decisión de alcance del autor (ver el ledger): durante un reprogramado, «otra fecha» no abre la fecha libre. Pide elegir de la lista y avisa a Luis; la cita actual sigue en pie. Así no se duplica ni se pierde nada. | `test_b07_otra_fecha_durante_un_reprogramado_no_abre_la_fecha_libre` |
+| B-CITAS-08 | Las citas inactivas se descartan en el SQL, antes del `LIMIT 50`. | `citas-wp-test` (50 canceladas antes de una activa) |
+| B-CITAS-09 | `nodos_tocados` suma `retryOnFail`, `maxTries` y `waitBetweenTries`, y `verificar_reintentos` exige también `waitBetweenTries=1000`. | `test_b09_reparar_solo_los_reintentos_se_detecta_como_cambio` |
+
+**Pruebas corridas el 30-oct, todas en verde:**
+- `aplicar_test.py` (wa-citas): 25.
+- Vista previa contra n8n: agenda 1 nodo, WhatsApp 64 y web 2, con las comprobaciones en OK.
+- PHP puro: `citas-puras`.
+- WordPress: `citas`, `cancelar`, `limite-excluir`, `portales`, `rest`, `datos` y `fallos`.
+
+**Para correr las `*-wp-test.php`:** MySQL 8.4.7 de WAMP está encendido como proceso de usuario en el puerto 3306 (los servicios de WAMP siguen detenidos). El comando exacto es:
+
+```bash
+AT_WP_LOAD=C:/wamp64/www/automatiza-tech/wp-load.php C:/wamp64/bin/php/php8.3.36/php.exe tests/wa-contexto/citas-wp-test.php
+```
+
+Imprime `ok …` y termina en `TODO OK`. Si WordPress muestra «Ha habido un error crítico», la causa está en `C:/wamp64/logs/php_error.log`.
+
+**Informe de esta ronda:** `C:/Users/luis_/Documents/Codex/Shared-Tools/revisiones/2026-10-29-wa-citas-B-codex-r2.md`.

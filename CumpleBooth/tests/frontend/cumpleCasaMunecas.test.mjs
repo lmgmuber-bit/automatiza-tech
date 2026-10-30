@@ -33,8 +33,10 @@ test('con intro propio la portada no repite el video', () => {
 })
 
 test('el intro con nombre nunca entra al repo público', () => {
+  // La música de Casa de Muñecas es la canción de la serie (con derechos): también va solo al servidor.
   for (const ruta of ['public/themes/casa-munecas/invitation/intro-fiesta-ana-x1.mp4',
-    'public/themes/casa-munecas/invitation/intro-fiesta-ana-x1-poster.jpg']) {
+    'public/themes/casa-munecas/invitation/intro-fiesta-ana-x1-poster.jpg',
+    'public/themes/casa-munecas/musica-fondo.mp3']) {
     // `git check-ignore` termina en 0 si la ruta está ignorada y lanza si no.
     execFileSync('git', ['check-ignore', '-q', ruta], { cwd: raiz })
   }

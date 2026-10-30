@@ -2145,6 +2145,21 @@ $cssVer = static function (string $rel): string {
             ? 'Gracias por avisar. ¡Nos vemos en el baby shower!'
             : ($esAdulto ? '¡Te esperamos! Nos vemos en la fiesta.' : '¡La familia ya sabe que vienen! Nos vemos en la fiesta.')) ?></p>
         <p class="inv-rsvp-ok-regalo" data-rsvp-ok-regalo hidden></p>
+        <?php
+        // Luis (30-oct-2026): quien acaba de confirmar está contento con la invitación; es el momento de invitarlo a
+        // seguir a CumpleClick. La cuenta sale de data/marca.json (Admin → Marca); sin cuenta, no se muestra nada.
+        $marcaIg = cb_marca();
+        if (($marcaIg['instagram_url'] ?? '') !== ''):
+        ?>
+        <div class="inv-rsvp-ig">
+          <p class="inv-rsvp-ig-titulo">¿Te gustó esta invitación?</p>
+          <p class="inv-rsvp-ig-texto">Síguenos en Instagram y mira más fiestas como esta.</p>
+          <a class="inv-rsvp-ig-boton" data-rsvp-ig href="<?= $esc($marcaIg['instagram_url']) ?>" target="_blank" rel="noopener">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="0.6" fill="currentColor"/></svg>
+            Seguir a <?= $esc($marcaIg['instagram'] ?? 'CumpleClick') ?>
+          </a>
+        </div>
+        <?php endif; ?>
         <button class="inv-button inv-button-ghost" type="button" data-rsvp-cerrar>Cerrar</button>
       </div>
     </dialog>

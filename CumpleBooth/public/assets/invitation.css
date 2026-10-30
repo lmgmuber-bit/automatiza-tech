@@ -2503,6 +2503,55 @@ button.inv-scroll-hint.inv-scroll-hint--waiting {
   font-size: 2.4rem;
   margin: 0;
 }
+/* Invitación a seguir a CumpleClick en Instagram, dentro de la misma ventana de «¡Asistencia confirmada!» (Luis,
+   30-oct-2026). Toma el color del texto de la ventana (azul noche o la crema del Osito), así sirve en todas las
+   temáticas; el botón lleva los colores de Instagram en tonos que dan contraste con la letra blanca. */
+.inv-rsvp-ig {
+  margin: 18px 0 14px;
+  padding: 14px 14px 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-color: color-mix(in srgb, currentColor 22%, transparent);
+  background: rgba(255, 255, 255, 0.06);
+  background: color-mix(in srgb, currentColor 6%, transparent);
+}
+.inv-rsvp-ig-titulo {
+  margin: 0 0 4px;
+  font-weight: 700;
+  font-size: 1rem;
+}
+.inv-rsvp-ig-texto {
+  margin: 0 0 12px;
+  font-size: 0.9rem;
+  opacity: 0.85;
+}
+.inv-rsvp-ig-boton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 10px 18px;
+  border-radius: 999px;
+  background: linear-gradient(100deg, #c13584 0%, #a3318f 50%, #833ab4 100%);
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.95rem;
+  text-decoration: none;
+  box-shadow: 0 6px 18px rgba(131, 58, 180, 0.35);
+}
+.inv-rsvp-ig-boton svg {
+  width: 20px;
+  height: 20px;
+  flex: none;
+}
+.inv-rsvp-ig-boton:focus-visible {
+  outline: 3px solid #fff;
+  outline-offset: 2px;
+}
+.inv-body[data-theme="baby-osito"] .inv-rsvp-ig-boton:focus-visible {
+  outline-color: #3d4a2f;
+}
 
 /* Fundido entre capítulos del recorrido: el video y su gorrito bajan la luz
    un instante al cambiar de personaje (pedido de la clienta: transiciones

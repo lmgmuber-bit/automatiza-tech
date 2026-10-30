@@ -164,6 +164,20 @@ try {
     h_check(str_contains($html, 'despedida-casa-munecas.mp3'), 'la despedida de Casa de Muñecas trae su voz');
     h_check(count($voces) >= 4 && $sinVersion === [],
         'las ' . count($voces) . ' voces llevan versión (sin ?v=: ' . implode(', ', array_column($sinVersion, 0)) . ')');
+
+    // (f) Después de confirmar, la misma ventana invita a seguir a CumpleClick en Instagram (Luis, 30-oct), con la
+    //     cuenta de data/marca.json (Admin → Marca), en una pestaña nueva para no perder la invitación.
+    $marca = cb_marca();
+    h_check(($marca['instagram_url'] ?? '') !== '', 'marca.json trae instagram_url');
+    foreach ([$casaConVoces, $sinIntro] as $tok) {
+        $html = pagina($base, $tok);
+        $ok = preg_match('#data-rsvp-ok.*?</dialog>#s', $html, $m) ? $m[0] : '';
+        h_check(preg_match('#<a [^>]*data-rsvp-ig[^>]*>#', $ok, $a) === 1, 'la ventana de confirmación trae la invitación a Instagram');
+        h_check(str_contains($a[0], 'href="' . htmlspecialchars($marca['instagram_url'], ENT_QUOTES) . '"')
+            && str_contains($a[0], 'target="_blank"') && str_contains($a[0], 'rel="noopener"'),
+            'con la cuenta de la marca y en una pestaña nueva (' . $a[0] . ')');
+        h_check(str_contains($ok, $marca['instagram'] ?? '@'), 'y muestra la cuenta (' . ($marca['instagram'] ?? '') . ')');
+    }
 } catch (Throwable $e) {
     fwrite(STDERR, $e->getMessage() . PHP_EOL);
     exit(1);

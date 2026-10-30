@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { execFileSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
@@ -65,8 +65,20 @@ test('casa-munecas existe en themes.json y en el preset con sus banderas', () =>
   assert.ok(preset?.text_area, 'falta el text_area de casa-munecas en el preset')
 })
 
-test('casa-munecas tiene su despedida en el recorrido', () => {
+test('casa-munecas tiene su despedida en el recorrido, con la voz de Gabby', () => {
   assert.match(php, /'casa-munecas' => \[\s*'despedida-casa-munecas\.mp4' => '¡Te esperamos!',\s*\]/)
+  // Luis, 30-oct: donde dice «¡Te esperamos!» tiene que escucharse. La página busca la voz por el nombre del clip.
+  assert.ok(existsSync(join(raiz, 'public/themes/casa-munecas/narracion-video/despedida-casa-munecas.mp3')))
+})
+
+test('la lámina deja los datos en el centro del panel, sobre los cojines', () => {
+  // Luis, 30-oct: los datos quedaban muy abajo, encima de los cojines de gatos. El panel de la lámina va de 0,27 a
+  // 0,70 del alto; los pompones bajan hasta ~0,31 y los cojines empiezan en ~0,72.
+  const area = JSON.parse(leer('public/data/event-profile-presets.json')).themes['casa-munecas'].text_area
+  assert.ok(area.y >= 0.32 && area.y <= 0.34, `y=${area.y}`)
+  assert.ok(area.y + area.h <= 0.62, `abajo=${area.y + area.h}`)
+  const caja = JSON.parse(leer('public/data/themes.json')).themes['casa-munecas'].frameBox
+  assert.equal(caja.y, area.y)
 })
 
 test('casa-munecas destaca el mensaje como aviso', () => {

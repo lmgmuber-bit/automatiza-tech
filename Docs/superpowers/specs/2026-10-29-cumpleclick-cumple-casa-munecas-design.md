@@ -150,6 +150,9 @@ despedida).
     29-oct); el MCP se usa solo si él lo indica.
   - En la API, Wan 3.0 cuesta US$0,05 por segundo de lista y acepta imágenes de referencia de identidad. Falta comprobar si
     la API acepta audio de referencia; si no lo acepta, el lipsync va por el MCP.
+  - **Autorización de Luis (29-oct):** si por la API no sale el lipsync, se hace **por el MCP**, y tiene que quedar **«lo
+    más real posible»**. Se entiende como lo más fiel posible a la Gabby animada de la serie, con los labios bien
+    sincronizados. Nunca fotorrealista: eso sería la antimeta de la actriz.
   - **El MCP tiene 160,06 créditos (plan starter, consultado el 29-oct con `balance`)**. Allí, a 720p, Seedance 2.0 mini
     cuesta 1,0 crédito por segundo, Seedance 1.5 cuesta 1,2 y Wan 3.0 cuesta 1,75 (`get_cost`, 29-oct).
   - Si el trabajo pasa al MCP, cambian dos restricciones de la sección 5:

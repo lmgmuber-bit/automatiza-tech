@@ -169,6 +169,27 @@ ok($m12 && $m12['subject'] === '❌ Lamentamos la cancelación de tu reunión de
 ok($m12 && strpos((string) $m12['message'], 'reagendar%20mi%20reuni') !== false && strpos((string) $m12['message'], 'Ana Prueba') !== false
 	&& strpos((string) $m12['message'], wa_dia(12)) !== false && strpos((string) $m12['message'], '{{') === false, 'seguimiento: trae el enlace para reagendar, el nombre y la fecha, sin expresiones de n8n');
 
+// Ronda 4 (cierre de la revisión B): nombre con HTML escapado, hora sin segundos y correo caído también en el seguimiento
+$nombre_html = '<b>Ana</b> & "Co"';
+$GLOBALS['wa_mails'] = [];
+$s13 = wa_seguimiento(wa_correo('c13'), wa_con_espacios($n), wa_dia(13), '09:15');
+$GLOBALS['wpdb']->update($GLOBALS['wpdb']->prefix . 'automatiza_followup_meetings', ['client_name' => $nombre_html], ['id' => $s13]);
+wa_cancelar($tel, 'seguimiento', $s13, AT_REST_SECRET);
+$m13 = $correo_a(wa_correo('c13'));
+ok($m13 && strpos((string) $m13['message'], '<b>Ana</b>') === false && strpos((string) $m13['message'], '&lt;b&gt;Ana&lt;/b&gt; &amp; &quot;Co&quot;') !== false, 'seguimiento: un nombre con HTML llega escapado');
+ok($m13 && strpos((string) $m13['message'], wa_dia(13) . ' a las 09:15 hrs') !== false && strpos((string) $m13['message'], '09:15:00') === false, 'seguimiento: fecha Y-m-d y hora sin segundos');
+$GLOBALS['wa_mails'] = [];
+$l14 = wa_lead(wa_correo('c14'), wa_con_espacios($n), wa_dia(14), '11:00');
+$GLOBALS['wpdb']->update($GLOBALS['wpdb']->prefix . 'automatiza_leads', ['name' => $nombre_html], ['id' => $l14]);
+wa_cancelar($tel, 'diagnostico', $l14, AT_REST_SECRET);
+$m14 = $correo_a(wa_correo('c14'));
+ok($m14 && strpos((string) $m14['message'], '<b>Ana</b>') === false, 'diagnóstico: un nombre con HTML no entra como HTML');
+$s15 = wa_seguimiento(wa_correo('c15'), wa_con_espacios($n), wa_dia(15), '10:00');
+$GLOBALS['wa_mail_falla'] = true;
+$r15 = wa_cancelar($tel, 'seguimiento', $s15, AT_REST_SECRET);
+$GLOBALS['wa_mail_falla'] = false;
+ok($r15->get_data()['ok'] === true && ($r15->get_data()['efectos']['correo'] ?? null) === false && wa_fila('automatiza_followup_meetings', $s15)->status === 'cancelled', 'seguimiento: correo caído → cancelada igual y efectos.correo=false');
+
 // Base caída al revisar la cita → 503, nada cancelado
 $l5 = wa_lead(wa_correo('c5'), wa_con_espacios($n), wa_dia(6), '10:00');
 $r5 = con_falla('automatiza_followup_meetings', function () use ($tel, $l5) { return wa_cancelar($tel, 'diagnostico', $l5, AT_REST_SECRET); });

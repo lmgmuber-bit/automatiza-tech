@@ -60,7 +60,7 @@ $ev = wa_borrar_evento_llamadas();
 ok(count($ev) === 1 && strpos($ev[0]['body'], $f->google_event_id) !== false, '1 llamada al webhook de borrar evento, con su id');
 ok(count($GLOBALS['wa_mails']) === 2, '2 correos: a la persona y a Luis');
 ok(in_array(wa_correo('c1'), (array) $GLOBALS['wa_mails'][0]['to'], true) || $GLOBALS['wa_mails'][0]['to'] === wa_correo('c1'), 'el primer correo va a la persona');
-ok(strpos((string) $GLOBALS['wa_mails'][0]['subject'], 'cancelada') !== false, 'asunto de cancelada');
+ok(strpos((string) $GLOBALS['wa_mails'][0]['subject'], 'cancelado tu cita') !== false, 'asunto de cancelación (el correo de siempre)');
 ok((int) $GLOBALS['wpdb']->get_var("SELECT COUNT(*) FROM {$GLOBALS['wpdb']->prefix}automatiza_leads") === $antes, 'la fila nunca se borra');
 
 // Doble cancelación
@@ -145,6 +145,29 @@ try {
 }
 ok($r10->get_status() === 503 && $r10->get_data()['motivo'] === 'no_disponible', 'falla al escribir → 503 no_disponible (no 409)');
 ok(wa_fila('automatiza_leads', $l10)->status === 'active' && $GLOBALS['wa_mails'] === [] && wa_borrar_evento_llamadas() === [], 'la cita sigue activa y no hubo efectos');
+
+// Pedido de Luis (30-oct): al cancelar se reusan los correos de cancelación que ya existían, con sus enlaces para volver a agendar
+$correo_a = function (string $para) {
+	foreach (array_reverse($GLOBALS['wa_mails']) as $m) {
+		if ((array) $m['to'] === [$para] || $m['to'] === $para) {
+			return $m;
+		}
+	}
+	return null;
+};
+$GLOBALS['wa_mails'] = [];
+$l11 = wa_lead(wa_correo('c11'), wa_con_espacios($n), wa_dia(11), '10:00');
+wa_cancelar($tel, 'diagnostico', $l11, AT_REST_SECRET);
+$m11 = $correo_a(wa_correo('c11'));
+ok($m11 && $m11['subject'] === 'Lamentamos que hayas cancelado tu cita - AutomatizaTech', 'diagnóstico: el asunto del correo de cancelación de siempre');
+ok($m11 && strpos((string) $m11['message'], 'Agendar Nueva Cita') !== false && strpos((string) $m11['message'], 'wa.me/56927002984') !== false, 'diagnóstico: trae el botón para agendar de nuevo por WhatsApp');
+$GLOBALS['wa_mails'] = [];
+$s12 = wa_seguimiento(wa_correo('c12'), wa_con_espacios($n), wa_dia(12), '16:30');
+wa_cancelar($tel, 'seguimiento', $s12, AT_REST_SECRET);
+$m12 = $correo_a(wa_correo('c12'));
+ok($m12 && $m12['subject'] === '❌ Lamentamos la cancelación de tu reunión de seguimiento', 'seguimiento: el asunto del correo de cancelación de siempre');
+ok($m12 && strpos((string) $m12['message'], 'reagendar%20mi%20reuni') !== false && strpos((string) $m12['message'], 'Ana Prueba') !== false
+	&& strpos((string) $m12['message'], wa_dia(12)) !== false && strpos((string) $m12['message'], '{{') === false, 'seguimiento: trae el enlace para reagendar, el nombre y la fecha, sin expresiones de n8n');
 
 // Base caída al revisar la cita → 503, nada cancelado
 $l5 = wa_lead(wa_correo('c5'), wa_con_espacios($n), wa_dia(6), '10:00');

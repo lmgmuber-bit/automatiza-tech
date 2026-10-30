@@ -154,6 +154,34 @@ function at_wa_cita_marcar_cancelada(string $tipo, int $id): bool {
 	return $filas === 1;
 }
 
+/**
+ * El correo de cancelación de siempre: el de los diagnósticos («Lamentamos que hayas cancelado tu cita», con «Agendar Nueva
+ * Cita» y el sitio; ruta /send-email, plantilla cancellation) o el de los seguimientos (correo-cancelacion-seguimiento.php).
+ */
+function at_wa_correo_cancelacion(array $cita): bool {
+	$nombre = trim((string) $cita['nombre']) !== '' ? (string) $cita['nombre'] : 'Cliente';
+	if ($cita['tipo'] === 'diagnostico') {
+		$pedido = new WP_REST_Request('POST', '/automatiza-tech/v1/send-email');
+		$pedido->set_header('Content-Type', 'application/json');
+		$pedido->set_body(wp_json_encode(['to' => (string) $cita['correo'], 'subject' => 'Lamentamos que hayas cancelado tu cita - AutomatizaTech',
+			'template' => 'cancellation', 'data' => ['clientName' => $nombre, 'summary' => (string) $cita['etiqueta']]]));
+		$respuesta = rest_do_request($pedido);
+		return $respuesta->get_status() === 200 && !empty(((array) $respuesta->get_data())['success']);
+	}
+	$de = defined('SMTP_USER') ? SMTP_USER : 'contacto@automatizatech.cl';
+	return (bool) wp_mail((string) $cita['correo'], '❌ Lamentamos la cancelación de tu reunión de seguimiento',
+		at_wa_correo_cancelacion_seguimiento($nombre, substr((string) $cita['cuando'], 0, 10), substr((string) $cita['cuando'], 11, 5)),
+		['Content-Type: text/html; charset=UTF-8', 'From: Automatiza Tech <' . $de . '>']);
+}
+
+/** Aviso corto a la persona cuando su cita se reprogramó (la confirmación de la nueva la manda la agenda). */
+function at_wa_correo_reprogramada(array $cita, string $nombre, string $etiqueta, array $cabeceras): bool {
+	$cuerpo = '<p>Hola' . ($nombre !== '' ? ' ' . $nombre : '') . ',</p>'
+		. "<p>Tu cita <strong>{$etiqueta}</strong> se reprogramó. Te llegó aparte la confirmación de la nueva fecha.</p>"
+		. '<p>Equipo AutomatizaTech</p>';
+	return (bool) wp_mail((string) $cita['correo'], 'Tu cita se reprogramó', $cuerpo, $cabeceras);
+}
+
 /** Correo a la persona y aviso a Luis de una cita cancelada o reprogramada por WhatsApp. */
 function at_wa_cita_avisar(array $cita, string $motivo, string $tel, ?bool $calendario = null): array {
 	$reprogramada = $motivo === 'reprogramada';
@@ -162,13 +190,7 @@ function at_wa_cita_avisar(array $cita, string $motivo, string $tel, ?bool $cale
 	$cabeceras = ['Content-Type: text/html; charset=UTF-8'];
 	$correo = false;
 	if (is_email((string) $cita['correo'])) {
-		$asunto = $reprogramada ? 'Tu cita se reprogramó' : 'Tu cita fue cancelada';
-		$cuerpo = '<p>Hola' . ($nombre !== '' ? ' ' . $nombre : '') . ',</p>'
-			. ($reprogramada
-				? "<p>Tu cita <strong>{$etiqueta}</strong> se reprogramó. Te llegó aparte la confirmación de la nueva fecha.</p>"
-				: "<p>Tu cita <strong>{$etiqueta}</strong> fue cancelada, como nos pediste por WhatsApp. Si quieres agendar otra, escríbenos cuando quieras.</p>")
-			. '<p>Equipo AutomatizaTech</p>';
-		$correo = (bool) wp_mail((string) $cita['correo'], $asunto, $cuerpo, $cabeceras);
+		$correo = $reprogramada ? at_wa_correo_reprogramada($cita, $nombre, $etiqueta, $cabeceras) : at_wa_correo_cancelacion($cita);
 		if (!$correo) {
 			error_log("[wa-citas] no salió el correo a la persona de la cita {$cita['tipo']} {$cita['id']}");
 		}

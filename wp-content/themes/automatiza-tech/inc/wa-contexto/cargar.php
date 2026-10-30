@@ -9,3 +9,4 @@ require_once __DIR__ . '/rest.php';
 require_once __DIR__ . '/followup.php';
 require_once __DIR__ . '/citas-puras.php';
 require_once __DIR__ . '/citas.php';
+require_once __DIR__ . '/correo-cancelacion-seguimiento.php';

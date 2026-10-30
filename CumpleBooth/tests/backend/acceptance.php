@@ -111,6 +111,11 @@ $row = cb_load_acceptance_by_token_hash(cb_hash_token($second['token']));
 cb_acceptance_register_view((int) $row['id']);
 acc_check((int) cb_load_acceptance_by_id((int) $row['id'])['view_count'] === 1, 'registra visualización');
 
+// El enlace se vuelve a mostrar en el admin (Luis, 30-oct-2026): se calcula con la clave del servidor, no se guarda.
+acc_check(cb_acceptance_enlace_vigente(cb_load_acceptance_by_id((int) $second['id'])) === $second['url'], 'el enlace pendiente se vuelve a mostrar igual al emitido');
+acc_check(cb_acceptance_enlace_vigente(cb_load_acceptance_by_id((int) $first['id'])) === null, 'el revocado no se vuelve a mostrar');
+acc_check(strpos(json_encode(cb_load_acceptance_by_id((int) $second['id'])), $second['token']) === false, 'el token sigue sin quedar en la base');
+
 // Nonce sin sesión
 $nonce = cb_acceptance_form_nonce($row['public_token_hash'], time());
 acc_check(cb_acceptance_form_nonce_valid($row['public_token_hash'], $nonce), 'nonce válido');
@@ -144,6 +149,7 @@ acc_check(strpos($html, 'Ana María Pérez Soto') !== false && strpos($html, $bu
 acc_check(strpos($html, 'Términos y Condiciones del Servicio CumpleClick') !== false, 'comprobante incluye el texto íntegro');
 acc_check(strpos($html, 'America/Santiago') !== false, 'comprobante incluye metadatos del navegador');
 acc_check(!cb_accept_plan($final, $good, $ctx)['ok'], 'no se puede aceptar dos veces');
+acc_check(cb_acceptance_enlace_vigente($final) === null, 'firmado, el enlace ya no se muestra');
 acc_check(cb_party_acceptance_state($slugNew)['status'] === 'accepted' && cb_party_can_activate($slugNew), 'aceptación firmada permite activar');
 $afterAccepted = cb_create_plan_acceptance($party, $issue, 'test');
 acc_check($afterAccepted['ok'] && cb_party_acceptance_state($slugNew)['status'] === 'accepted', 'un enlace nuevo (re-aceptación) no pisa la aceptación firmada vigente');
@@ -160,9 +166,21 @@ acc_check(cb_revoke_acceptance((int) $waivedRow['id'], 'test') && !cb_party_can_
 
 // Vencimiento
 $pending = cb_create_plan_acceptance($demo, $issue, 'test');
+// Emitir uno nuevo (rotar) anula el anterior aunque pase en el mismo segundo, y el nuevo también se puede volver a ver.
+$rotada = cb_acceptance_rotar_token((int) $pending['id']);
+$filaRotada = cb_load_acceptance_by_id((int) $pending['id']);
+acc_check($rotada !== null && $rotada !== $pending['url'], 'rotar emite un enlace distinto');
+acc_check(cb_load_acceptance_by_token_hash(cb_hash_token($pending['token'])) === null, 'el enlace anterior deja de servir');
+acc_check(cb_acceptance_enlace_vigente($filaRotada) === $rotada, 'el enlace nuevo se vuelve a mostrar');
+parse_str((string) parse_url($rotada, PHP_URL_QUERY), $q);
+acc_check((int) (cb_load_acceptance_by_token_hash(cb_hash_token((string) ($q['t'] ?? '')))['id'] ?? 0) === (int) $pending['id'], 'y la página del papá lo resuelve');
+// Un enlace emitido antes de este cambio (token al azar) no se puede reconstruir: el admin ofrece emitir uno nuevo.
+$pdo->prepare('UPDATE cc_plan_acceptances SET public_token_hash=? WHERE id=?')->execute([cb_hash_token(cb_opaque_token(16)), (int) $pending['id']]);
+acc_check(cb_acceptance_enlace_vigente(cb_load_acceptance_by_id((int) $pending['id'])) === null, 'un enlace al azar de antes no se reconstruye');
 $pdo->prepare('UPDATE cc_plan_acceptances SET expires_at=? WHERE id=?')->execute([gmdate('Y-m-d H:i:s', time() - 60), (int) $pending['id']]);
 $expiredRow = cb_load_acceptance_by_id((int) $pending['id']);
 acc_check(cb_acceptance_is_expired($expiredRow) && cb_party_acceptance_state($slugDemo)['status'] === 'expired', 'detecta enlace vencido');
+acc_check(cb_acceptance_enlace_vigente($expiredRow) === null, 'vencido, el enlace no se muestra');
 acc_check(!cb_accept_plan($expiredRow, $good, $ctx)['ok'], 'no acepta con enlace vencido');
 
 // La evidencia sobrevive al borrado de la fiesta (FK SET NULL + snapshot).

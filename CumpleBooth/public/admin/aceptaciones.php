@@ -240,10 +240,14 @@ if ($party !== null && empty($errors) && $_SERVER['REQUEST_METHOD'] === 'POST' &
                 $url = trim((string) ($_POST['url'] ?? ''));
                 $row = cb_load_acceptance_by_id($id);
                 $prefijo = rtrim((string) cb_public_base_url(), '/') . '/aceptar-plan.php?t=';
+                $vigente = $row ? cb_acceptance_enlace_vigente($row) : null;
                 if (!$row || (string) $row['party_public_slug'] !== $publicSlug || (string) $row['status'] !== 'pending') {
                     $errors[] = 'Ese enlace ya no está pendiente.';
                 } elseif (!str_starts_with($url, $prefijo) || !preg_match('/^[a-f0-9]{32,64}$/', substr($url, strlen($prefijo)))) {
                     $errors[] = 'El enlace no tiene la forma esperada.';
+                } elseif ($vigente !== null && !hash_equals($vigente, $url)) {
+                    // Desde el 30-oct-2026 el enlace se puede recalcular: si se puede, tiene que ser exactamente ese.
+                    $errors[] = 'Ese enlace no es el vigente de esta aceptación. Recarga la página.';
                 } else {
                     // El correo lo arma `lib.envios.php`, que es de donde lo toma también el
                     // panel de la ficha para reenviarlo. Antes vivía acá dentro y no había
@@ -256,6 +260,18 @@ if ($party !== null && empty($errors) && $_SERVER['REQUEST_METHOD'] === 'POST' &
                     }
                     $errors[] = $envio['mensaje'];
                 }
+            } elseif ($action === 'reemitir') {
+                // Enlace nuevo para la misma aceptación pendiente (también si venció): el anterior deja de funcionar.
+                // Sirve para los enlaces de antes del 30-oct-2026, que no se pueden volver a mostrar.
+                $id = (int) ($_POST['id'] ?? 0);
+                $row = cb_load_acceptance_by_id($id);
+                $url = ($row && (string) $row['party_public_slug'] === $publicSlug) ? cb_acceptance_rotar_token($id) : null;
+                if ($url !== null) {
+                    $_SESSION['acceptance_flash'] = ['id' => $id, 'url' => $url];
+                    header('Location: ' . $selfUrl . '&ok=reemitido');
+                    exit;
+                }
+                $errors[] = 'No se pudo emitir un enlace nuevo (solo para enlaces pendientes de esta fiesta).';
             } elseif ($action === 'revocar') {
                 $id = (int) ($_POST['id'] ?? 0);
                 $row = cb_load_acceptance_by_id($id);
@@ -280,7 +296,8 @@ if ($party !== null && empty($errors) && $_SERVER['REQUEST_METHOD'] === 'POST' &
 }
 
 $okMessages = [
-    'generado' => 'Enlace de aceptación generado. Mándalo por correo con el botón, o cópialo: no se volverá a mostrar.',
+    'generado' => 'Enlace de aceptación generado. Mándalo por correo o por WhatsApp; mientras esté pendiente lo puedes volver a copiar desde el historial.',
+    'reemitido' => 'Enlace nuevo emitido. El anterior ya no funciona: si lo habías mandado, manda este.',
     'firma_enviada' => 'Correo enviado con el enlace para firmar. Te llegó copia oculta.',
     'revocado' => 'Registro revocado.',
     'eximido' => 'Fiesta eximida de aceptación (queda auditado).',
@@ -381,10 +398,29 @@ $relationships = ['madre' => 'Madre', 'padre' => 'Padre', 'tutor' => 'Tutor/a le
     <?php endif; ?>
 
     <?php if ($party !== null && empty($errors)): ?>
+      <?php
+        // El mensaje de WhatsApp para pedir la firma. Hasta el 30-oct-2026 existía solo junto al enlace recién
+        // generado; ahora el historial también lo ofrece mientras el enlace esté pendiente (cb_acceptance_enlace_vigente).
+        $festejadoWa = (string) (($party['birthday_person_name'] ?? '') ?: ($party['nombre'] ?? ''));
+        $mensajeFirmaWa = static function (array $fila, string $url) use ($festejadoWa): string {
+            $pila = explode(' ', trim((string) ($fila['client_name'] ?? '')))[0];
+            return ($pila !== '' ? 'Hola ' . $pila . '!' : '¡Hola!')
+                . ' Antes de la fiesta de ' . $festejadoWa . ' necesitamos que firmes los Términos y '
+                . "Condiciones. Son dos minutos: revisas el resumen del plan, marcas tres casillas y firmas con el dedo.\n\n"
+                . $url . "\n\n"
+                . 'El enlace es personal y de un solo uso. — CumpleClick';
+        };
+        // Con el teléfono del cliente, WhatsApp abre su chat directo; sin él, deja elegir a quién mandarlo.
+        $hrefWa = static function (array $fila, string $texto): string {
+            $digitos = preg_replace('/\D+/', '', (string) ($fila['client_phone'] ?? '')) ?? '';
+            if (strlen($digitos) === 9 && $digitos[0] === '9') { $digitos = '56' . $digitos; }
+            return 'https://wa.me/' . (strlen($digitos) >= 10 ? $digitos : '') . '?text=' . rawurlencode($texto);
+        };
+      ?>
       <?php if ($flash): ?>
         <section class="card">
-          <h2>Enlace para el cliente (se muestra una sola vez)</h2>
-          <p class="muted small">Envíalo por WhatsApp o correo a <?= h($state['row']['client_email'] ?? '') ?>. Si se pierde, genera uno nuevo (el anterior queda revocado).</p>
+          <h2>Enlace para el cliente</h2>
+          <p class="muted small">Envíalo por WhatsApp o correo a <?= h($state['row']['client_email'] ?? '') ?>. Mientras esté pendiente, lo puedes volver a copiar desde el historial.</p>
           <div class="acc-link">
             <input type="text" readonly value="<?= h($flash['url']) ?>" onclick="this.select()" aria-label="Enlace de aceptación">
             <button type="button" class="btn btn-icon" data-copy="<?= h($flash['url']) ?>" title="Copiar enlace"><?= admin_icon('copy') ?></button>
@@ -400,21 +436,10 @@ $relationships = ['madre' => 'Madre', 'padre' => 'Padre', 'tutor' => 'Tutor/a le
             <input type="hidden" name="url" value="<?= h($flash['url']) ?>">
             <button class="btn btn-primary" type="submit"><?= admin_icon('check') ?> Enviar por correo a <?= h($state['row']['client_email'] ?? '') ?></button>
           </form>
-          <?php
-            // Este es el único momento en que el enlace existe en claro, así que es el único
-            // en que se puede mandar por WhatsApp. Después queda solo el hash y reenviarlo
-            // obliga a emitir uno nuevo.
-            $festejadoWa = (string) (($party['birthday_person_name'] ?? '') ?: ($party['nombre'] ?? ''));
-            $pilaWa = explode(' ', trim((string) ($state['row']['client_name'] ?? '')))[0];
-            $textoFirmaWa = ($pilaWa !== '' ? 'Hola ' . $pilaWa . '!' : '¡Hola!')
-                . ' Antes de la fiesta de ' . $festejadoWa . ' necesitamos que firmes los Términos y '
-                . "Condiciones. Son dos minutos: revisas el resumen del plan, marcas tres casillas y firmas con el dedo.\n\n"
-                . $flash['url'] . "\n\n"
-                . 'El enlace es personal y de un solo uso. — CumpleClick';
-          ?>
+          <?php $textoFirmaWa = $mensajeFirmaWa($state['row'] ?? [], $flash['url']); ?>
           <div class="inline-form" style="margin-top:10px">
             <a class="btn btn-ghost" target="_blank" rel="noopener"
-               href="https://wa.me/?text=<?= h(rawurlencode($textoFirmaWa)) ?>">Mandar por WhatsApp</a>
+               href="<?= h($hrefWa($state['row'] ?? [], $textoFirmaWa)) ?>">Mandar por WhatsApp</a>
             <button type="button" class="btn btn-ghost" data-copy="<?= h($textoFirmaWa) ?>"><?= admin_icon('copy') ?> Copiar el mensaje</button>
           </div>
         </section>
@@ -471,6 +496,41 @@ $relationships = ['madre' => 'Madre', 'padre' => 'Padre', 'tutor' => 'Tutor/a le
                   <?php if ($row['status'] === 'accepted'): ?><div class="muted small" title="SHA-256 del comprobante">hash <?= h(substr((string) $row['evidence_sha256'], 0, 16)) ?>…</div><?php endif; ?>
                 </td>
               </tr>
+              <?php if ($row['status'] === 'pending'): ?>
+                <?php $enlaceFila = cb_acceptance_enlace_vigente($row); ?>
+                <tr class="acc-enlace-fila" data-acc-enlace="<?= (int) $row['id'] ?>">
+                  <td></td>
+                  <td colspan="6">
+                    <?php if ($enlaceFila !== null): ?>
+                      <?php $textoFila = $mensajeFirmaWa($row, $enlaceFila); ?>
+                      <div class="acc-link">
+                        <input type="text" readonly value="<?= h($enlaceFila) ?>" onclick="this.select()" aria-label="Enlace de aceptación #<?= (int) $row['id'] ?>">
+                        <button type="button" class="btn btn-icon" data-copy="<?= h($enlaceFila) ?>" title="Copiar enlace"><?= admin_icon('copy') ?></button>
+                        <a class="btn btn-icon" href="<?= h($enlaceFila) ?>" target="_blank" rel="noopener" title="Abrir"><?= admin_icon('external') ?></a>
+                      </div>
+                      <div class="inline-form" style="margin-top:8px">
+                        <a class="btn btn-ghost btn-sm" target="_blank" rel="noopener" href="<?= h($hrefWa($row, $textoFila)) ?>">Mandar por WhatsApp</a>
+                        <button type="button" class="btn btn-ghost btn-sm" data-copy="<?= h($textoFila) ?>"><?= admin_icon('copy') ?> Copiar el mensaje</button>
+                        <form method="post" action="<?= h($selfUrl) ?>" class="inline-form">
+                          <?= admin_csrf_field() ?>
+                          <input type="hidden" name="action" value="enviar_firma">
+                          <input type="hidden" name="id" value="<?= (int) $row['id'] ?>">
+                          <input type="hidden" name="url" value="<?= h($enlaceFila) ?>">
+                          <button class="btn btn-ghost btn-sm" type="submit"><?= admin_icon('check') ?> Enviar por correo</button>
+                        </form>
+                      </div>
+                    <?php else: ?>
+                      <p class="muted small" style="margin:0 0 8px"><?= cb_acceptance_is_expired($row)
+                          ? 'Este enlace venció. Emite uno nuevo para la misma aceptación: queda con la vigencia original.'
+                          : 'Este enlace se emitió antes de que el admin pudiera volver a mostrarlo. Para copiarlo o mandarlo por WhatsApp, emite uno nuevo: el anterior deja de funcionar.' ?></p>
+                      <form method="post" action="<?= h($selfUrl) ?>" class="inline-form" data-confirm="Se emite un enlace nuevo para el registro #<?= (int) $row['id'] ?> y el anterior deja de funcionar, también si ya lo mandaste por correo. ¿Seguir?">
+                        <?= admin_csrf_field() ?><input type="hidden" name="action" value="reemitir"><input type="hidden" name="id" value="<?= (int) $row['id'] ?>">
+                        <button type="submit" class="btn btn-ghost btn-sm"><?= admin_icon('link') ?> Emitir enlace nuevo</button>
+                      </form>
+                    <?php endif; ?>
+                  </td>
+                </tr>
+              <?php endif; ?>
             <?php endforeach; ?>
             </tbody>
           </table>

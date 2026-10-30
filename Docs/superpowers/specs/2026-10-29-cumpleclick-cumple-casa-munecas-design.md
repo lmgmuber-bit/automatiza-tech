@@ -117,6 +117,11 @@ despedida).
   - La invitación lo prefiere al intro de la temática cuando existe (cambio de PHP).
   - Si cambia un dato, se vuelve a mezclar el audio sin regenerar el video.
   - Mientras ese video suena, no hay una voz de inicio aparte: una sola voz a la vez.
+- **Ajuste del plan (29-oct), decisión mía:** el video con el nombre ya no va a `themes/`. Se sube como output
+  `personalized_video` de la invitación, que se guarda fuera del webroot y se sirve por token; la bandera
+  `introPersonalizado` lo pone en lugar del intro.
+- **El aviso de la media va en el campo `message`** de la invitación (`invitacion.php:1737`), destacado como tarjeta por
+  el CSS de la temática. Así no hace falta migración. *Decisión mía.*
 - **«Casa de Muñecas» es temática de catálogo,** reutilizable para otras fiestas. *Decisión mía:* los fondos, los colores y
   el intro genérico quedan para la próxima.
 - **Envío:** *decisión mía.* Hay un mes, así que se manda **una sola vez y completa** (video, perfil y música). Antes de

@@ -116,6 +116,36 @@ $s9 = wa_seguimiento(wa_correo('c9'), wa_con_espacios($n), wa_dia(9), '15:00');
 $GLOBALS['wpdb']->update($GLOBALS['wpdb']->prefix . 'automatiza_followup_meetings', ['notes' => 'Plan de trabajo Ab3dE6gH9jK1. Agendada por el cliente por WhatsApp.'], ['id' => $s9]);
 ok((at_wa_cita_del_numero($tel, 'seguimiento', $s9)['notas'] ?? '') === 'Plan de trabajo Ab3dE6gH9jK1. Agendada por el cliente por WhatsApp.', 'la cita del seguimiento trae su nota');
 
+// Revisión R2-03: un error de la base al escribir no es «otro ya la canceló»: 503, la cita sigue activa y no hay efectos
+class WaWpdbFallaEscritura {
+	public $last_error = '';
+	private $real;
+	public function __construct($real) { $this->real = $real; }
+	public function __get($n) { return $this->real->$n; }
+	public function __call($m, $a) {
+		if ($m === 'query' && stripos((string) ($a[0] ?? ''), 'UPDATE') === 0) {
+			$this->last_error = 'falla simulada al escribir';
+			return false;
+		}
+		$this->real->last_error = '';
+		$r = $this->real->$m(...$a);
+		$this->last_error = (string) $this->real->last_error;
+		return $r;
+	}
+}
+$l10 = wa_lead(wa_correo('c10'), wa_con_espacios($n), wa_dia(10), '10:00');
+$GLOBALS['wa_mails'] = [];
+$GLOBALS['wa_http'] = [];
+$real = $GLOBALS['wpdb'];
+$GLOBALS['wpdb'] = new WaWpdbFallaEscritura($real);
+try {
+	$r10 = wa_cancelar($tel, 'diagnostico', $l10, AT_REST_SECRET);
+} finally {
+	$GLOBALS['wpdb'] = $real;
+}
+ok($r10->get_status() === 503 && $r10->get_data()['motivo'] === 'no_disponible', 'falla al escribir → 503 no_disponible (no 409)');
+ok(wa_fila('automatiza_leads', $l10)->status === 'active' && $GLOBALS['wa_mails'] === [] && wa_borrar_evento_llamadas() === [], 'la cita sigue activa y no hubo efectos');
+
 // Base caída al revisar la cita → 503, nada cancelado
 $l5 = wa_lead(wa_correo('c5'), wa_con_espacios($n), wa_dia(6), '10:00');
 $r5 = con_falla('automatiza_followup_meetings', function () use ($tel, $l5) { return wa_cancelar($tel, 'diagnostico', $l5, AT_REST_SECRET); });

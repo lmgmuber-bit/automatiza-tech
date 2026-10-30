@@ -354,14 +354,19 @@ def cambiar_reagendar(w, registro):
         gd['jsCode'] = gd['jsCode'].replace(GD_ANCLA, GD_ANCLA + GD_BLOQUE)
         registro.append(('Generate Days', 'lee el tipo de la cita que se reprograma'))
 
-    # 2) Revisión B-CITAS-02: una agenda nueva (el agente abre el calendario o se elige un seguimiento) olvida la marca pendiente
+    # 2) Revisiones B-CITAS-02 y R2-01: una agenda nueva (el agente abre el calendario o se elige un seguimiento) olvida la marca
+    # pendiente ANTES de abrir el calendario, en la misma línea (executionOrder v1 termina una rama antes de empezar otra).
+    # Sin onError: si no se puede olvidar la marca, no se ofrece un calendario que pudiera reutilizarla.
     nuevo('¿Agenda nueva?', 'Is Client?', si(nodos, "={{ $json.action === 'show_calendar' }}"), 220, -300)
     nuevo('Olvidar Marca Reagendar', 'Delete Seguimiento State', redis(nodos, 'Delete Seguimiento State', 'delete', MARCA % '$json.phoneNumber'), 440, -300)
-    reconoce.conectar(w, '¿Agenda nueva?', [['Olvidar Marca Reagendar'], []])
-    if reconectar(w, 'Parse Response Actions', 0, ['Route Action', '¿Agenda nueva?'], ['Route Action']):
-        registro.append(('Parse Response Actions', 'un calendario nuevo olvida la marca de reprogramar'))
-    if reconectar(w, 'Prepare Followup Data', 0, ['Get Appointments Config', 'Olvidar Marca Reagendar'], ['Get Appointments Config']):
-        registro.append(('Prepare Followup Data', 'un seguimiento nuevo olvida la marca de reprogramar'))
+    nuevo('Olvidar Marca (seguimiento nuevo)', 'Delete Seguimiento State', redis(nodos, 'Delete Seguimiento State', 'delete', MARCA % '$json.phoneNumber'), 220, 300)
+    if reconectar(w, 'Parse Response Actions', 0, ['¿Agenda nueva?'], ['Route Action']):
+        registro.append(('Parse Response Actions', 'un calendario nuevo olvida antes la marca de reprogramar'))
+    reconoce.conectar(w, '¿Agenda nueva?', [['Olvidar Marca Reagendar'], ['Route Action']])
+    reconoce.conectar(w, 'Olvidar Marca Reagendar', [['Route Action']])
+    if reconectar(w, 'Prepare Followup Data', 0, ['Olvidar Marca (seguimiento nuevo)'], ['Get Appointments Config']):
+        registro.append(('Prepare Followup Data', 'un seguimiento nuevo olvida antes la marca de reprogramar'))
+    reconoce.conectar(w, 'Olvidar Marca (seguimiento nuevo)', [['Get Appointments Config']])
 
     # 3) Diagnóstico: después de elegir la hora, la marca solo vale con su cita propia y vigente (si no, aviso; sin marca, como hoy)
     nuevo('Leer Marca Reagendar', 'Get Reschedule Client (botón)', redis(nodos, 'Get Reschedule Client (botón)', 'get', MARCA % TEL_HORA, propiedad='marca'),
@@ -370,6 +375,11 @@ def cambiar_reagendar(w, registro):
     nuevo('Datos Cita Vieja', 'Sumar Contexto', {'jsCode': CODIGO_DATOS_VIEJA}, 660, 1700)
     nuevo('Modo Reagendar', 'Route Action', selector(nodos, '={{ $json.modo }}', ('reagendar', 'nuevo', 'aviso')), 880, 1700)
     nuevo('Crear Diagnóstico Reagendado', 'Create Appointment', copy.deepcopy(p('Create Appointment')), 1100, 1640)
+    # Revisión R2-02: «Save Booking State» dejó booking_<tel> esperando el nombre; en el aviso y tras agendar se borra, así el
+    # mensaje siguiente no cae en la captura de nombre (como hace «Delete Booking State» después de «Create Appointment»).
+    nuevo('Borrar Reserva Reagendar', 'Delete Seguimiento State', copy.deepcopy(p('Delete Seguimiento State')), 1210, 1640)
+    nuevo('Borrar Reserva (aviso)', 'Delete Seguimiento State', copy.deepcopy(p('Delete Seguimiento State')), 1100, 1820)
+    reconoce.conectar(w, 'Borrar Reserva (aviso)', [AVISO])
     nuevo('¿Agendada nueva?', '¿Seguimiento botón agendado?', si_v2(nodos, '={{ $json.event_id }}'), 1320, 1640)
     datos = "$('Datos Cita Vieja').first().json"
     nuevo('Cancelar Cita Vieja', 'Contexto Propuesta', http_citas('POST', "={{ JSON.stringify({ phone: " + datos + ".phone, tipo: " + datos + ".excluir_tipo, id: "
@@ -390,8 +400,9 @@ def cambiar_reagendar(w, registro):
     reconoce.conectar(w, 'Leer Marca Reagendar', [['Citas para Reagendar']])
     reconoce.conectar(w, 'Citas para Reagendar', [['Datos Cita Vieja']])
     reconoce.conectar(w, 'Datos Cita Vieja', [['Modo Reagendar']])
-    reconoce.conectar(w, 'Modo Reagendar', [['Crear Diagnóstico Reagendado'], ['Ask For Name'], AVISO])
-    reconoce.conectar(w, 'Crear Diagnóstico Reagendado', [['¿Agendada nueva?']])
+    reconoce.conectar(w, 'Modo Reagendar', [['Crear Diagnóstico Reagendado'], ['Ask For Name'], ['Borrar Reserva (aviso)']])
+    reconoce.conectar(w, 'Crear Diagnóstico Reagendado', [['Borrar Reserva Reagendar']])
+    reconoce.conectar(w, 'Borrar Reserva Reagendar', [['¿Agendada nueva?']])
     reconoce.conectar(w, '¿Agendada nueva?', [['Cancelar Cita Vieja'], ['Send Reagendar Sin Agendar']])
     reconoce.conectar(w, 'Cancelar Cita Vieja', [['Borrar Marca Reagendar', '¿Vieja cancelada?']])
     reconoce.conectar(w, '¿Vieja cancelada?', [['Send Cita Reagendada'], ['Send Cita Reagendada Sin Cancelar', 'Notify Admin Reagendar Vieja']])
@@ -407,7 +418,7 @@ def cambiar_reagendar(w, registro):
     reconoce.conectar(w, 'Leer Marca (seguimiento)', [['Citas para Reagendar (seguimiento)']])
     reconoce.conectar(w, 'Citas para Reagendar (seguimiento)', [['Datos Seguimiento Viejo']])
     reconoce.conectar(w, 'Datos Seguimiento Viejo', [['Modo Reagendar (seguimiento)']])
-    reconoce.conectar(w, 'Modo Reagendar (seguimiento)', [['Create Seguimiento Direct'], ['Prepare Seguimiento Data Direct'], AVISO])
+    reconoce.conectar(w, 'Modo Reagendar (seguimiento)', [['Create Seguimiento Direct'], ['Prepare Seguimiento Data Direct'], ['Borrar Reserva (aviso)']])
     datos_seg = "$('Datos Seguimiento Viejo').first().json"
     nuevo('¿Reagendando seguimiento?', 'Is Client?', si(nodos, "={{ (() => { try { return " + datos_seg + ".modo === 'reagendar'; } catch (e) { return false; } })() }}"), 1540, 1950)
     nuevo('Cancelar Cita Vieja (seguimiento)', 'Contexto Propuesta', http_citas('POST', "={{ JSON.stringify({ phone: " + datos_seg + ".phone, tipo: 'seguimiento', id: Number("

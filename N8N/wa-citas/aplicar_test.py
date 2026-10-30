@@ -159,7 +159,7 @@ class Reagendar(unittest.TestCase):
         ya_no = self.datos_vieja({'tipo': 'diagnostico', 'id': 12}, {'estado': 'ok', 'citas': []})
         self.assertEqual(ya_no['modo'], 'aviso')
         self.assertIn('ya no está disponible', json.dumps(ya_no['mensaje'], ensure_ascii=False))
-        self.assertEqual(self.modo_sale('Modo Reagendar', 'aviso'), ['Send Citas', '¿Avisar a Luis (citas)?'])
+        self.assertEqual(self.modo_sale('Modo Reagendar', 'aviso'), ['Borrar Reserva (aviso)'])
 
     def test_ocupado_no_se_cancela_la_vieja(self):
         # La agenda (PejBgr2LZQSAbbBy) devuelve event_id solo si creó el evento; ocupado o rechazado no lo trae.
@@ -190,7 +190,7 @@ class Reagendar(unittest.TestCase):
         self.assertNotIn('other@example.com', json.dumps(otra, ensure_ascii=False))
         caida = self.datos_seg({'tipo': 'seguimiento', 'id': 79}, {'estado': 'no_disponible', 'citas': []})
         self.assertEqual((caida['modo'], caida['avisarLuis']), ('aviso', True))
-        self.assertEqual(self.modo_sale('Modo Reagendar (seguimiento)', 'aviso'), ['Send Citas', '¿Avisar a Luis (citas)?'])
+        self.assertEqual(self.modo_sale('Modo Reagendar (seguimiento)', 'aviso'), ['Borrar Reserva (aviso)'])
         sin = self.datos_seg(None, {'estado': 'ok', 'citas': []}, cache={'email': 'propio@prueba.cl'})
         self.assertEqual(sin['modo'], 'nuevo')
         self.assertIn('reschedClient', sin, 'sin marca, el seguimiento sigue como hoy con su caché')
@@ -223,14 +223,36 @@ class Reagendar(unittest.TestCase):
         self.assertNotIn('Cancel Followup For Reschedule', json.dumps(self.con['Marcar Reagendar (recordatorio seg)']))
 
     def test_b02_una_agenda_nueva_olvida_la_marca_de_reprogramar(self):
-        self.assertIn('¿Agenda nueva?', self.salida('Parse Response Actions', 0))
-        self.assertIn('Route Action', self.salida('Parse Response Actions', 0))
+        self.assertEqual(self.salida('Parse Response Actions', 0), ['¿Agenda nueva?'])
         cond = self.nodos['¿Agenda nueva?']['parameters']['conditions']['boolean'][0]['value1']
         self.assertIs(aplicar.reconoce.evaluar(cond, {'action': 'show_calendar'}, {}), True)
         self.assertIs(aplicar.reconoce.evaluar(cond, {'action': 'reschedule_appointment'}, {}), False)
         self.assertEqual(self.salida('¿Agenda nueva?', 0), ['Olvidar Marca Reagendar'])
-        self.assertEqual(sorted(self.salida('Prepare Followup Data', 0)), ['Get Appointments Config', 'Olvidar Marca Reagendar'])
         self.assertEqual(self.nodos['Olvidar Marca Reagendar']['parameters']['operation'], 'delete')
+
+    def test_r2_01_la_marca_se_olvida_antes_de_abrir_un_calendario_nuevo(self):
+        # executionOrder v1 termina una rama antes de la otra: el borrado tiene que ir en la misma línea, antes del calendario.
+        self.assertEqual(self.salida('¿Agenda nueva?', 0), ['Olvidar Marca Reagendar'])
+        self.assertEqual(self.salida('¿Agenda nueva?', 1), ['Route Action'])
+        self.assertEqual(self.salida('Olvidar Marca Reagendar', 0), ['Route Action'])
+        self.assertEqual(self.salida('Prepare Followup Data', 0), ['Olvidar Marca (seguimiento nuevo)'])
+        self.assertEqual(self.salida('Olvidar Marca (seguimiento nuevo)', 0), ['Get Appointments Config'])
+        for n in ('Olvidar Marca Reagendar', 'Olvidar Marca (seguimiento nuevo)'):
+            self.assertIsNone(self.nodos[n].get('onError'), f'{n}: si no se puede olvidar la marca, no se ofrece el calendario')
+            self.assertEqual(self.nodos[n]['parameters']['operation'], 'delete')
+        llega = [o for o, v in self.con.items() for r in v.get('main', []) for d in r or [] if d['node'] == 'Route Action']
+        self.assertEqual(sorted(llega), ['Olvidar Marca Reagendar', '¿Agenda nueva?'], 'a Route Action solo se llega después de decidir el olvido')
+
+    def test_r2_02_el_aviso_y_el_exito_borran_la_reserva_a_medias(self):
+        clave = "=booking_{{ $('Extract Time').first().json.phoneNumber }}"
+        for n in ('Borrar Reserva (aviso)', 'Borrar Reserva Reagendar'):
+            self.assertEqual((self.nodos[n]['parameters']['operation'], self.nodos[n]['parameters']['key']), ('delete', clave), n)
+        self.assertEqual(self.salida('Borrar Reserva (aviso)', 0), ['Send Citas', '¿Avisar a Luis (citas)?'])
+        self.assertEqual(self.salida('Crear Diagnóstico Reagendado', 0), ['Borrar Reserva Reagendar'])
+        self.assertEqual(self.salida('Borrar Reserva Reagendar', 0), ['¿Agendada nueva?'])
+        self.assertEqual(self.modo_sale('Modo Reagendar', 'nuevo'), ['Ask For Name'], 'una agenda nueva normal conserva su reserva y pide el nombre')
+        self.assertEqual(self.nodos['Save Booking State']['parameters']['key'], "=booking_{{ $json.phoneNumber }}")
+        self.assertEqual(self.nodos['Delete Seguimiento State']['parameters']['key'], clave, 'el éxito del seguimiento ya borra la reserva')
 
     def test_b07_otra_fecha_durante_un_reprogramado_no_abre_la_fecha_libre(self):
         pi = {'buttonId': 'other_date_seg', 'phoneNumber': '56900001111', 'phoneNumberId': '1'}

@@ -99,7 +99,7 @@ function at_wa_rest_citas(WP_REST_Request $r): WP_REST_Response {
 /**
  * Cancela una cita del número con todos los efectos: estado cancelado (nunca se borra la fila), evento de Google Calendar,
  * correo a la persona y aviso a Luis. $motivo: 'cancelada' o 'reprogramada'. Devuelve {ok, motivo, cita}; ok es true solo si
- * el estado quedó cancelado. Lanza AtWaConsultaNoDisponible si la base falla al revisar la cita.
+ * el estado quedó cancelado. Lanza AtWaConsultaNoDisponible si la base falla al revisar o al escribir la cita.
  */
 function at_wa_cita_cancelar(string $tel, string $tipo, int $id, string $motivo): array {
 	$cita = at_wa_cita_del_numero($tel, $tipo, $id);
@@ -145,7 +145,13 @@ function at_wa_cita_marcar_cancelada(string $tipo, int $id): bool {
 	} else {
 		$sql = $wpdb->prepare("UPDATE {$wpdb->prefix}automatiza_followup_meetings SET status = 'cancelled', updated_at = %s WHERE id = %d AND {$activa}", $ahora, $id);
 	}
-	return $wpdb->query($sql) === 1;
+	$wpdb->last_error = '';
+	$filas = $wpdb->query($sql);
+	if ($filas === false || (string) $wpdb->last_error !== '') {
+		// Revisión R2-03: un error al escribir no es «otro pedido ya la canceló» (eso es 0 filas).
+		throw new AtWaConsultaNoDisponible();
+	}
+	return $filas === 1;
 }
 
 /** Correo a la persona y aviso a Luis de una cita cancelada o reprogramada por WhatsApp. */

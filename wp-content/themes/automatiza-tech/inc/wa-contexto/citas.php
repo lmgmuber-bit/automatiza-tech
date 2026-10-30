@@ -56,7 +56,9 @@ function at_wa_citas(string $tel): array {
 		if ($correos) {
 			$donde .= " OR LOWER(TRIM({$col_correo})) IN (" . at_wa_marcas(count($correos)) . ')';
 		}
-		$sql = "SELECT {$sql_select} FROM {$p}{$tabla} WHERE ({$donde}) AND CONCAT({$col_fecha}, ' ', {$col_hora}) > %s ORDER BY {$col_fecha}, {$col_hora} LIMIT 50";
+		// Revisión B-CITAS-08: las inactivas se descartan antes del LIMIT (50 canceladas no esconden una activa).
+		$activa = "(status IS NULL OR status NOT IN ('" . implode("', '", AT_WA_CITA_INACTIVA) . "'))";
+		$sql = "SELECT {$sql_select} FROM {$p}{$tabla} WHERE ({$donde}) AND {$activa} AND CONCAT({$col_fecha}, ' ', {$col_hora}) > %s ORDER BY {$col_fecha}, {$col_hora} LIMIT 50";
 		return (array) at_wa_q('get_results', $wpdb->prepare($sql, $u9, ...array_merge($correos, [$ahora])));
 	};
 	$diagnosticos = $leer('id, name, email, scheduled_date, scheduled_time, status', 'automatiza_leads', 'email', 'scheduled_date', 'scheduled_time');
@@ -102,41 +104,57 @@ function at_wa_rest_citas(WP_REST_Request $r): WP_REST_Response {
 function at_wa_cita_cancelar(string $tel, string $tipo, int $id, string $motivo): array {
 	$cita = at_wa_cita_del_numero($tel, $tipo, $id);
 	if (!$cita) {
-		return ['ok' => false, 'motivo' => 'no_vigente', 'cita' => null];
+		return ['ok' => false, 'motivo' => 'no_vigente', 'cita' => null, 'efectos' => null];
 	}
 	global $wpdb;
-	$ahora = current_time('mysql');
-	if ($tipo === 'diagnostico') {
-		$tabla = $wpdb->prefix . 'automatiza_leads';
-		$cambios = ['status' => 'cancelled', 'cancelled_at' => $ahora, 'updated_at' => $ahora];
-	} else {
-		$tabla = $wpdb->prefix . 'automatiza_followup_meetings';
-		$cambios = ['status' => 'cancelled', 'updated_at' => $ahora];
-	}
+	$tabla = $wpdb->prefix . ($tipo === 'diagnostico' ? 'automatiza_leads' : 'automatiza_followup_meetings');
 	$fila = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$tabla} WHERE id = %d", $id));
-	$hecho = $wpdb->update($tabla, $cambios, ['id' => $id]);
-	if ($hecho === false || !$fila) {
-		error_log("[wa-citas] no se pudo cancelar la cita {$tipo} {$id}");
-		return ['ok' => false, 'motivo' => 'error', 'cita' => $cita];
+	if (!$fila) {
+		return ['ok' => false, 'motivo' => 'error', 'cita' => $cita, 'efectos' => null];
+	}
+	if (!at_wa_cita_marcar_cancelada($tipo, $id)) {
+		// Otro pedido (un doble toque) ya la canceló: no se repiten el borrado del evento ni los correos.
+		return ['ok' => false, 'motivo' => 'no_vigente', 'cita' => null, 'efectos' => null];
 	}
 	$evento = (string) ($fila->google_event_id ?? '');
 	if ($evento === '' && $tipo === 'diagnostico') {
 		$evento = (string) ($fila->event_id ?? '');
 	}
-	if ($evento !== '' && function_exists('automatiza_tech_delete_google_calendar_event')
-		&& !automatiza_tech_delete_google_calendar_event($evento)) {
-		error_log("[wa-citas] la cita {$tipo} {$id} quedó cancelada, pero no se pudo quitar su evento de Google Calendar");
+	$calendario = null;
+	if ($evento !== '') {
+		$calendario = function_exists('automatiza_tech_delete_google_calendar_event') && automatiza_tech_delete_google_calendar_event($evento);
+		if (!$calendario) {
+			error_log("[wa-citas] la cita {$tipo} {$id} quedó cancelada, pero no se pudo quitar su evento de Google Calendar");
+		}
 	}
-	at_wa_cita_avisar($cita, $motivo, $tel);
-	return ['ok' => true, 'motivo' => '', 'cita' => $cita];
+	$avisos = at_wa_cita_avisar($cita, $motivo, $tel, $calendario);
+	// Revisión B-CITAS-04: ok dice que la cita quedó cancelada; efectos dice qué más se hizo, para no prometer lo que falló.
+	return ['ok' => true, 'motivo' => '', 'cita' => $cita, 'efectos' => ['calendario' => $calendario, 'correo' => $avisos['correo'], 'aviso' => $avisos['aviso']]];
+}
+
+/**
+ * Pasa la cita a cancelada solo si sigue activa, en una sola sentencia: de dos pedidos simultáneos gana uno (revisión B-CITAS-05).
+ * Nunca borra la fila. Devuelve true si este pedido hizo el cambio.
+ */
+function at_wa_cita_marcar_cancelada(string $tipo, int $id): bool {
+	global $wpdb;
+	$ahora = current_time('mysql');
+	$activa = "(status IS NULL OR status NOT IN ('" . implode("', '", AT_WA_CITA_INACTIVA) . "'))";
+	if ($tipo === 'diagnostico') {
+		$sql = $wpdb->prepare("UPDATE {$wpdb->prefix}automatiza_leads SET status = 'cancelled', cancelled_at = %s, updated_at = %s WHERE id = %d AND {$activa}", $ahora, $ahora, $id);
+	} else {
+		$sql = $wpdb->prepare("UPDATE {$wpdb->prefix}automatiza_followup_meetings SET status = 'cancelled', updated_at = %s WHERE id = %d AND {$activa}", $ahora, $id);
+	}
+	return $wpdb->query($sql) === 1;
 }
 
 /** Correo a la persona y aviso a Luis de una cita cancelada o reprogramada por WhatsApp. */
-function at_wa_cita_avisar(array $cita, string $motivo, string $tel): void {
+function at_wa_cita_avisar(array $cita, string $motivo, string $tel, ?bool $calendario = null): array {
 	$reprogramada = $motivo === 'reprogramada';
 	$etiqueta = esc_html($cita['etiqueta']);
 	$nombre = esc_html(function_exists('at_wa_primer_nombre') ? at_wa_primer_nombre((string) $cita['nombre']) : (string) $cita['nombre']);
 	$cabeceras = ['Content-Type: text/html; charset=UTF-8'];
+	$correo = false;
 	if (is_email((string) $cita['correo'])) {
 		$asunto = $reprogramada ? 'Tu cita se reprogramó' : 'Tu cita fue cancelada';
 		$cuerpo = '<p>Hola' . ($nombre !== '' ? ' ' . $nombre : '') . ',</p>'
@@ -144,16 +162,25 @@ function at_wa_cita_avisar(array $cita, string $motivo, string $tel): void {
 				? "<p>Tu cita <strong>{$etiqueta}</strong> se reprogramó. Te llegó aparte la confirmación de la nueva fecha.</p>"
 				: "<p>Tu cita <strong>{$etiqueta}</strong> fue cancelada, como nos pediste por WhatsApp. Si quieres agendar otra, escríbenos cuando quieras.</p>")
 			. '<p>Equipo AutomatizaTech</p>';
-		if (!wp_mail((string) $cita['correo'], $asunto, $cuerpo, $cabeceras)) {
+		$correo = (bool) wp_mail((string) $cita['correo'], $asunto, $cuerpo, $cabeceras);
+		if (!$correo) {
 			error_log("[wa-citas] no salió el correo a la persona de la cita {$cita['tipo']} {$cita['id']}");
 		}
 	}
 	$asunto_luis = '[WhatsApp] Cita ' . ($reprogramada ? 'reprogramada' : 'cancelada') . ': ' . $cita['etiqueta'];
 	$cuerpo_luis = "<p>Por WhatsApp, desde el número " . esc_html($tel) . ", se " . ($reprogramada ? 'reprogramó' : 'canceló') . " la cita <strong>{$etiqueta}</strong>"
 		. ' (' . esc_html($cita['tipo']) . ' ' . (int) $cita['id'] . ').</p>';
-	if (!wp_mail((string) get_option('admin_email'), $asunto_luis, $cuerpo_luis, $cabeceras)) {
+	if ($calendario === false) {
+		$cuerpo_luis .= '<p><strong>Pendiente:</strong> no se pudo quitar el evento de Google Calendar. Bórralo a mano.</p>';
+	}
+	if (!$correo) {
+		$cuerpo_luis .= '<p><strong>Pendiente:</strong> no salió el correo de confirmación a la persona.</p>';
+	}
+	$aviso = (bool) wp_mail((string) get_option('admin_email'), $asunto_luis, $cuerpo_luis, $cabeceras);
+	if (!$aviso) {
 		error_log("[wa-citas] no salió el aviso a Luis de la cita {$cita['tipo']} {$cita['id']}");
 	}
+	return ['correo' => $correo, 'aviso' => $aviso];
 }
 
 function at_wa_rest_cancelar_cita(WP_REST_Request $r): WP_REST_Response {

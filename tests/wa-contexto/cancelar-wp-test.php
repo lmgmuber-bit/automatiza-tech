@@ -12,13 +12,18 @@ if (!defined('AT_REST_SECRET')) {
 
 $GLOBALS['wa_http'] = [];
 $GLOBALS['wa_mails'] = [];
+$GLOBALS['wa_calendar_falla'] = false;
+$GLOBALS['wa_mail_falla'] = false;
 add_filter('pre_http_request', function ($pre, $args, $url) {
 	$GLOBALS['wa_http'][] = ['url' => $url, 'body' => (string) ($args['body'] ?? '')];
+	if ($GLOBALS['wa_calendar_falla'] && strpos($url, 'delete-calendar-event') !== false) {
+		return new WP_Error('http_request_failed', 'calendar caído (simulado)');
+	}
 	return ['headers' => [], 'body' => '{"ok":true}', 'response' => ['code' => 200, 'message' => 'OK'], 'cookies' => [], 'filename' => null];
 }, 10, 3);
 add_filter('pre_wp_mail', function ($nulo, $atts) {
 	$GLOBALS['wa_mails'][] = $atts;
-	return true;
+	return !$GLOBALS['wa_mail_falla'];
 }, 10, 2);
 
 function wa_cancelar(string $tel, string $tipo, int $id, ?string $clave, string $motivo = 'cancelada'): WP_REST_Response {
@@ -80,6 +85,36 @@ ok($r4->get_status() === 409 && wa_fila('automatiza_leads', $lo)->status === 'ac
 
 // Tipo inválido
 ok(wa_cancelar($tel, 'otra', $l, AT_REST_SECRET)->get_status() === 409, 'tipo inválido → 409');
+
+// B-CITAS-05: la transición a cancelada es atómica; el segundo que llega no gana ni repite efectos
+$l6 = wa_lead(wa_correo('c6'), wa_con_espacios($n), wa_dia(7), '10:00');
+ok(at_wa_cita_marcar_cancelada('diagnostico', $l6) === true, 'la primera transición gana');
+ok(at_wa_cita_marcar_cancelada('diagnostico', $l6) === false, 'la segunda transición no gana (ya estaba cancelada)');
+$s6 = wa_seguimiento(wa_correo('c6'), wa_con_espacios($n), wa_dia(7), '12:00');
+ok(at_wa_cita_marcar_cancelada('seguimiento', $s6) === true && at_wa_cita_marcar_cancelada('seguimiento', $s6) === false, 'lo mismo en el seguimiento');
+
+// B-CITAS-04: Calendar caído → cancelada en la base, pero el resultado lo dice y el aviso a Luis pide borrarlo a mano
+$l7 = wa_lead(wa_correo('c7'), wa_con_espacios($n), wa_dia(8), '10:00');
+$GLOBALS['wa_mails'] = [];
+$GLOBALS['wa_calendar_falla'] = true;
+$r7 = wa_cancelar($tel, 'diagnostico', $l7, AT_REST_SECRET);
+$GLOBALS['wa_calendar_falla'] = false;
+$e7 = $r7->get_data()['efectos'] ?? [];
+ok($r7->get_status() === 200 && $r7->get_data()['ok'] === true && ($e7['calendario'] ?? null) === false && ($e7['correo'] ?? null) === true, 'Calendar caído → ok con efectos.calendario=false');
+$aviso = end($GLOBALS['wa_mails']);
+ok(strpos((string) $aviso['message'], 'Calendar') !== false && strpos((string) $aviso['message'], 'mano') !== false, 'el aviso a Luis dice que el evento quedó pendiente');
+
+// B-CITAS-04: correo caído → efectos.correo=false (el bot no promete el correo)
+$l8 = wa_lead(wa_correo('c8'), wa_con_espacios($n), wa_dia(8), '12:00');
+$GLOBALS['wa_mail_falla'] = true;
+$r8 = wa_cancelar($tel, 'diagnostico', $l8, AT_REST_SECRET);
+$GLOBALS['wa_mail_falla'] = false;
+ok($r8->get_data()['ok'] === true && ($r8->get_data()['efectos']['correo'] ?? null) === false, 'correo caído → efectos.correo=false');
+
+// B-CITAS-06: la cita del seguimiento trae la nota y el asunto para reprogramar
+$s9 = wa_seguimiento(wa_correo('c9'), wa_con_espacios($n), wa_dia(9), '15:00');
+$GLOBALS['wpdb']->update($GLOBALS['wpdb']->prefix . 'automatiza_followup_meetings', ['notes' => 'Plan de trabajo Ab3dE6gH9jK1. Agendada por el cliente por WhatsApp.'], ['id' => $s9]);
+ok((at_wa_cita_del_numero($tel, 'seguimiento', $s9)['notas'] ?? '') === 'Plan de trabajo Ab3dE6gH9jK1. Agendada por el cliente por WhatsApp.', 'la cita del seguimiento trae su nota');
 
 // Base caída al revisar la cita → 503, nada cancelado
 $l5 = wa_lead(wa_correo('c5'), wa_con_espacios($n), wa_dia(6), '10:00');

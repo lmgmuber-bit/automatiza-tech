@@ -49,6 +49,14 @@ ok(!in_array('d' . $l3, $ids(at_wa_citas('56' . $n)), true), 'una cita de otro n
 ok(at_wa_cita_del_numero('56' . $n, 'diagnostico', $l3) === null, 'cita_del_numero de otro número → null');
 ok((at_wa_cita_del_numero('56' . $n, 'diagnostico', $l1)['id'] ?? 0) === $l1, 'cita_del_numero propia → la cita');
 
+// B-CITAS-08: 50 citas futuras canceladas no esconden una activa posterior
+$n50 = wa_numero_libre();
+for ($i = 0; $i < 50; $i++) {
+	wa_lead(wa_correo('c50'), wa_con_espacios($n50), wa_dia(2), sprintf('%02d:%02d', 8 + intdiv($i, 6), ($i % 6) * 10), 'cancelled');
+}
+$activa = wa_lead(wa_correo('c50'), wa_con_espacios($n50), wa_dia(9), '10:00');
+ok($ids(at_wa_citas('56' . $n50)) === ['d' . $activa], '50 canceladas antes no esconden la activa');
+
 // Base caída → 503 no_disponible
 foreach (['automatiza_leads', 'automatiza_followup_meetings'] as $tabla) {
 	$r = con_falla($tabla, function () use ($n) { return wa_pedir_citas('56' . $n, AT_REST_SECRET); });

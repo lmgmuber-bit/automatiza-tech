@@ -14,7 +14,8 @@ $diag = function (int $id, string $fecha, string $hora, string $estado = 'active
 $seg = function (int $id, string $fecha, string $hora, string $estado = 'scheduled', string $vinculo = '') {
 	return ['id' => $id, 'meeting_date' => $fecha, 'meeting_time' => $hora . ':00', 'status' => $estado,
 		'client_name' => 'Ana Pérez', 'client_email' => 'ana.seg@prueba.cl', 'company' => 'Empresa Prueba',
-		'contrato_id' => '5', 'propuesta_id' => null, 'vinculo' => $vinculo];
+		'contrato_id' => '5', 'propuesta_id' => null, 'vinculo' => $vinculo,
+		'notes' => 'Plan de trabajo Ab3dE6gH9jK1. Agendada por el cliente por WhatsApp.', 'meeting_subject' => 'Seguimiento: Agenda'];
 };
 $ids = function (array $citas) { return array_map(function ($c) { return $c['tipo'][0] . $c['id']; }, $citas); };
 
@@ -54,6 +55,10 @@ ok($d['tipo'] === 'diagnostico' && $d['id'] === 20 && $d['cuando'] === '2026-11-
 	&& $d['nombre'] === 'Ana Pérez' && $d['empresa'] === 'Empresa Prueba' && $d['contrato_id'] === 0 && $d['propuesta_id'] === 0, 'datos de la cita vieja (diagnóstico)');
 ok($s['tipo'] === 'seguimiento' && $s['correo'] === 'ana.seg@prueba.cl' && $s['contrato_id'] === 5 && $s['propuesta_id'] === 0
 	&& $s['etiqueta'] === 'Seguimiento: Proyecto: Agenda · lun 09-nov · 10:00', 'datos de la cita vieja (seguimiento, ids enteros)');
+
+// B-CITAS-06: el seguimiento lleva la nota y el asunto de la reunión vieja (la agenda del plan busca «Plan de trabajo <código>»)
+ok($s['notas'] === 'Plan de trabajo Ab3dE6gH9jK1. Agendada por el cliente por WhatsApp.' && $s['asunto'] === 'Seguimiento: Agenda', 'el seguimiento conserva nota y asunto');
+ok($d['notas'] === '' && $d['asunto'] === '', 'el diagnóstico no trae nota ni asunto');
 
 // Fecha rota no rompe
 ok(at_wa_citas_armar([$diag(30, '', '')], [], AHORA) === [], 'una fila sin fecha no se ofrece');

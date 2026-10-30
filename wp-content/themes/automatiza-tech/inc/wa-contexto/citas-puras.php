@@ -47,13 +47,15 @@ function at_wa_citas_armar(array $diagnosticos, array $seguimientos, string $aho
 		$f = (array) $f;
 		$sumar('diagnostico', $f, at_wa_cita_cuando((string) ($f['scheduled_date'] ?? ''), (string) ($f['scheduled_time'] ?? '')),
 			(string) ($f['status'] ?? ''), ['nombre' => (string) ($f['name'] ?? ''), 'correo' => (string) ($f['email'] ?? ''),
-				'empresa' => (string) ($f['empresa'] ?? ''), 'contrato_id' => 0, 'propuesta_id' => 0]);
+				'empresa' => (string) ($f['empresa'] ?? ''), 'contrato_id' => 0, 'propuesta_id' => 0, 'notas' => '', 'asunto' => '']);
 	}
 	foreach ($seguimientos as $f) {
 		$f = (array) $f;
 		$sumar('seguimiento', $f, at_wa_cita_cuando((string) ($f['meeting_date'] ?? ''), (string) ($f['meeting_time'] ?? '')),
 			(string) ($f['status'] ?? ''), ['nombre' => (string) ($f['client_name'] ?? ''), 'correo' => (string) ($f['client_email'] ?? ''),
-				'empresa' => (string) ($f['company'] ?? ''), 'contrato_id' => (int) ($f['contrato_id'] ?? 0), 'propuesta_id' => (int) ($f['propuesta_id'] ?? 0)]);
+				'empresa' => (string) ($f['company'] ?? ''), 'contrato_id' => (int) ($f['contrato_id'] ?? 0), 'propuesta_id' => (int) ($f['propuesta_id'] ?? 0),
+				// Revisión B-CITAS-06: la nota viaja tal cual al reprogramar (la agenda del plan la busca por «Plan de trabajo <código>»).
+				'notas' => (string) ($f['notes'] ?? ''), 'asunto' => (string) ($f['meeting_subject'] ?? '')]);
 	}
 	usort($citas, function ($a, $b) {
 		return [$a['cuando'], $a['tipo'], $a['id']] <=> [$b['cuando'], $b['tipo'], $b['id']];

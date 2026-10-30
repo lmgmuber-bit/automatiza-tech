@@ -137,7 +137,13 @@ despedida).
 - **El salón es el del condominio** y la mayoría de los invitados son vecinos: basta la dirección. *Decisión mía:* el texto
   del lugar dice «Salón del condominio».
 - **Higgsfield: primero la API, en la cuenta que tenga saldo, y si no hay, el MCP** (Luis, 29-oct, dos veces).
-  - La API no tiene endpoint de saldo. Lo último medido es del 24-oct: la cuenta `n8n` rechazó un video por saldo, y en
+  - **Saldo verificado el 29-oct:** la cuenta de la API con saldo tiene **US$8,60** (captura de Billing que mandó Luis). Es
+    la clave «N8N», que en `hf_api.py` es `--cuenta n8n` (se cotejó el prefijo del id de la clave, sin imprimirla). Esa
+    cuenta tiene el 15 % de descuento activo.
+  - En el catálogo de la API están `alibaba/wan-3.0/{image,reference}-to-video`. No se pudo leer si aceptan audio de
+    referencia: la lista de modelos devuelve `input_schema` nulo y no hay documentación pública que lo diga. Se resuelve en
+    el plan, sin probar a ciegas, porque un parámetro mal puesto igual puede quedar en cola y cobrarse.
+  - La API no tiene endpoint de saldo. Antes de la captura, lo último medido era del 24-oct: la cuenta `n8n` rechazó un video por saldo, y en
     `api-n8n` el clip de 10 s se rechazó y el de 5 s salió.
   - El saldo se comprueba con el primer video real: un rechazo por saldo (`403 not_enough_credits`) no se cobra
     (`api-rest.md`). Se intenta en `api-n8n` y después en `n8n`. **Si las dos rechazan, se le avisa a Luis para que recargue** (Luis,

@@ -272,10 +272,12 @@ if ($esBabyShower && $modoRegalos === 'rsvp' && function_exists('cb_regalo_valid
 }
 // Guía al final (Luis, 24-oct-2026): quien no baja no ve el botón de confirmar. Si se queda quieto,
 // la página lo lleva hasta «Confirma tu asistencia» y esta voz le explica el botón y los regalos.
-// Solo en el modo de confirmar con regalo, porque la voz habla del regalo.
+// Solo en el modo de confirmar con regalo, porque esa voz habla del regalo; o en una temática cuya guía no lo
+// menciona (`guiaSinRegalos` en themes.json, Casa de Muñecas 29-oct-2026).
+$guiaSinRegalos = !empty($themeData['guiaSinRegalos']);
 $vozGuiaUrl = '';
 $vozGuiaRuta = __DIR__ . '/themes/' . $themeSlug . '/narracion-video/' . 'guia-confirmar.mp3';
-if ($modoRegalos === 'rsvp' && preg_match('/^[a-z0-9-]+$/', $themeSlug) && is_file($vozGuiaRuta)) {
+if (($modoRegalos === 'rsvp' || $guiaSinRegalos) && preg_match('/^[a-z0-9-]+$/', $themeSlug) && is_file($vozGuiaRuta)) {
     $vozGuiaUrl = 'themes/' . rawurlencode($themeSlug) . '/narracion-video/guia-confirmar.mp3?v='
         . rawurlencode((string) filemtime($vozGuiaRuta));
 }
@@ -541,6 +543,31 @@ if (preg_match('/^[a-z0-9-]+$/', $themeSlug)) {
         if (is_file($themeIntroPosterPath)) {
             $themeIntroPosterUrl = 'themes/' . rawurlencode($themeSlug) . '/' . $themeIntroPosterRelative . '?v=' . rawurlencode((string) filemtime($themeIntroPosterPath));
         }
+    }
+}
+
+// Intro propio de una fiesta: el video con el nombre de la persona festejada (Casa de Muñecas, 29-oct-2026).
+// Vive solo en el servidor, como la despedida propia (`themes/<tema>/invitation/intro-fiesta-<slug>.mp4`,
+// .gitignore). El slug lleva 96 bits al azar y el servidor web lo entrega con Range, que es lo que pide Safari
+// para un <video>; descargar-invitacion.php no lo hace. Si existe, reemplaza al intro genérico y la portada ya
+// no repite el video.
+$introPersonalizado = false;
+$slugFiesta = '';
+if (!empty($invitation['party_id']) && cb_storage_mode() === 'db' && preg_match('/^[a-z0-9-]+$/', $themeSlug)) {
+    $consultaSlug = cb_pdo()->prepare('SELECT public_slug FROM cc_parties WHERE id = ?');
+    $consultaSlug->execute([(int) $invitation['party_id']]);
+    $slugFiesta = (string) ($consultaSlug->fetchColumn() ?: '');
+}
+if ($slugFiesta !== '' && cb_valid_public_slug($slugFiesta)) {
+    $introFiestaRuta = __DIR__ . '/themes/' . $themeSlug . '/invitation/intro-fiesta-' . $slugFiesta . '.mp4';
+    if (is_file($introFiestaRuta)) {
+        $introFiestaBase = 'themes/' . rawurlencode($themeSlug) . '/invitation/intro-fiesta-' . rawurlencode($slugFiesta);
+        $themeIntroUrl = $introFiestaBase . '.mp4?v=' . rawurlencode((string) filemtime($introFiestaRuta));
+        $posterFiestaRuta = __DIR__ . '/themes/' . $themeSlug . '/invitation/intro-fiesta-' . $slugFiesta . '-poster.jpg';
+        $themeIntroPosterUrl = is_file($posterFiestaRuta)
+            ? $introFiestaBase . '-poster.jpg?v=' . rawurlencode((string) filemtime($posterFiestaRuta))
+            : $imageUrl;
+        $introPersonalizado = true;
     }
 }
 
@@ -1659,7 +1686,7 @@ $cssVer = static function (string $rel): string {
       <?php if (!($esAdulto && $hasVideo)): ?>
       <img class="inv-art" src="<?= $esc($imageUrl) ?>" alt="<?= $esc($tituloInvitacion) ?>" decoding="async">
       <?php endif; ?>
-      <?php if ($hasVideo): ?>
+      <?php if ($hasVideo && !$introPersonalizado): ?>
       <?php /* Sin loop ni muted: el invitado lo inicia con un toque (gesto que
                ya permite el sonido) y al terminar la página avanza sola a los
                datos de la fiesta — un video de invitación se ve UNA vez, no en

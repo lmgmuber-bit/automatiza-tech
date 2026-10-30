@@ -1223,7 +1223,11 @@ if (preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $eventDate, $m)) {
     }
 }
 $ogUrl = cb_invitation_pretty_url($token, $birthdayName);
-$ogImagen = cb_invitation_download_url($token, 'image') . '&preview=1';
+// La vista previa sale `public, max-age=86400` (el CDN la guarda un día) y WhatsApp guarda la suya por dirección:
+// la versión de la imagen aprobada va en la dirección para que corregir la lámina no deje la vieja en las tarjetas.
+$ogVersion = substr((string) ($imageOutputs[0]['file_sha256'] ?? ''), 0, 12);
+$ogImagen = cb_invitation_download_url($token, 'image') . '&preview=1'
+    . (preg_match('/^[a-f0-9]{12}$/', $ogVersion) ? '&v=' . $ogVersion : '');
 ?>
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="CumpleClick">

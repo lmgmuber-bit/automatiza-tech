@@ -133,6 +133,27 @@ try {
     $html = pagina($base, $conVideoSinIntro);
     h_check(str_contains($html, 'data-inv-video-final'), 'sin intro propio el video sigue en la portada');
     h_check(srcIntro($html) === null, 'y sin intro, porque spidey no tiene genérico');
+
+    // (d) La vista previa para WhatsApp (og:image) lleva la versión de la imagen aprobada. Esa respuesta sale
+    //     `public, max-age=86400` y el CDN la guarda un día; WhatsApp guarda la suya por dirección. Sin la versión,
+    //     corregir la lámina dejaba la vieja en toda tarjeta compartida (30-oct-2026, invitación Casa de Muñecas).
+    $ogImagen = static fn(string $html): string
+        => preg_match('/<meta property="og:image" content="([^"]*)"/', $html, $m) ? html_entity_decode($m[1]) : '';
+    $bajar = static fn(string $url): string
+        => (string) @file_get_contents($url, false, stream_context_create(['http' => ['ignore_errors' => true, 'timeout' => 30]]));
+    $img = cb_invitation_approved_outputs((int) cb_load_invitation_by_public_token($conIntro)['id'], 'personalized_image')[0];
+    $og1 = $ogImagen(pagina($base, $conIntro));
+    h_check(str_contains($og1, '&preview=1&v=' . substr((string) $img['file_sha256'], 0, 12)),
+        'la vista previa lleva la versión de la imagen (og:image=' . var_export($og1, true) . ')');
+    h_check($bajar($og1) === 'contenido de prueba personalized-image', 'y con la versión sigue entregando la imagen');
+    $ruta = cb_invitation_file_path((string) $img['file_storage_key']);
+    file_put_contents($ruta, 'lámina corregida');
+    $pdo->prepare('UPDATE cc_invitation_outputs SET file_sha256=?, file_byte_size=? WHERE id=?')
+        ->execute([hash_file('sha256', $ruta), filesize($ruta), (int) $img['id']]);
+    $og2 = $ogImagen(pagina($base, $conIntro));
+    h_check($og2 !== $og1 && str_contains($og2, '&v=' . substr(hash_file('sha256', $ruta), 0, 12)),
+        'corregir la lámina cambia la dirección de la vista previa');
+    h_check($bajar($og2) === 'lámina corregida', 'y la dirección nueva entrega la lámina corregida');
 } catch (Throwable $e) {
     fwrite(STDERR, $e->getMessage() . PHP_EOL);
     exit(1);

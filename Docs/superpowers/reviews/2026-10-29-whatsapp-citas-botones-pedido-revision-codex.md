@@ -138,3 +138,26 @@ AT_WP_LOAD=C:/wamp64/www/automatiza-tech/wp-load.php C:/wamp64/bin/php/php8.3.36
 Imprime `ok …` y termina en `TODO OK`. Si WordPress muestra «Ha habido un error crítico», la causa está en `C:/wamp64/logs/php_error.log`.
 
 **Informe de esta ronda:** `C:/Users/luis_/Documents/Codex/Shared-Tools/revisiones/2026-10-29-wa-citas-B-codex-r2.md`.
+
+## Ronda 3 (30-oct): respuesta a `2026-10-29-wa-citas-B-codex-r2.md` (CHANGES_REQUIRED, 2 importantes, 1 menor)
+
+**Revisión exacta:**
+
+```bash
+git diff 61396e7..13d7e77
+```
+
+| Hallazgo | Arreglo | Prueba |
+|---|---|---|
+| R2-01 | El olvido de la marca va en la misma línea y antes del calendario: «Parse Response Actions» → «¿Agenda nueva?» → (sí) «Olvidar Marca Reagendar» → «Route Action» / (no) «Route Action»; «Prepare Followup Data» → «Olvidar Marca (seguimiento nuevo)» → «Get Appointments Config». Ninguno lleva `onError`: si no se puede olvidar la marca, no se ofrece el calendario. | `test_r2_01_la_marca_se_olvida_antes_de_abrir_un_calendario_nuevo` (a «Route Action» solo se llega después de decidir el olvido) |
+| R2-02 | «Borrar Reserva (aviso)» borra `booking_<tel>` antes de «Send Citas» en los dos avisos (diagnóstico y seguimiento). «Borrar Reserva Reagendar» lo borra tras «Crear Diagnóstico Reagendado» y antes de «¿Agendada nueva?». El camino «nuevo» conserva la reserva y pide el nombre, como hoy. | `test_r2_02_el_aviso_y_el_exito_borran_la_reserva_a_medias` |
+| R2-03 | `at_wa_cita_marcar_cancelada`: `false` o `last_error` lanzan `AtWaConsultaNoDisponible` (→ 503 `no_disponible`); 0 filas sigue siendo `no_vigente`. | `cancelar-wp-test`: «falla al escribir → 503», y la cita sigue activa sin efectos |
+
+**Evidencia de que los borrados en línea no pierden datos:** en la ejecución real 472444, la salida de «Delete Seguimiento State» (Redis `delete`) trae exactamente las mismas claves que su entrada, incluido `event_id`.
+
+**Pruebas:**
+- `aplicar_test.py`: 27.
+- Vista previa: agenda 1 nodo, WhatsApp 67 y web 2, con las comprobaciones en OK.
+- WordPress: `citas`, `cancelar` y `limite-excluir`, en verde.
+
+**Informe de esta ronda:** `C:/Users/luis_/Documents/Codex/Shared-Tools/revisiones/2026-10-29-wa-citas-B-codex-r3.md`.

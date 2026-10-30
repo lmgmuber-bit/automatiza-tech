@@ -2761,3 +2761,43 @@ button.inv-scroll-hint.inv-scroll-hint--waiting {
 .inv-body[data-theme="baby-osito"] .inv-rsvp-equipo.is-error .inv-rsvp-team span {
   border-color: #a6402f;
 }
+
+/* Casa de Muñecas (29-oct-2026): el mensaje de la invitación es un aviso que nadie puede pasar por alto
+   (en la primera fiesta, la media vieja para el títere de mano). Tarjeta clara de la paleta, con ícono y
+   letra grande, en vez de la cita oscura de las demás temáticas. */
+.inv-body[data-theme="casa-munecas"] .inv-message blockquote {
+  padding: 22px 22px 22px 74px;
+  border: 3px solid #d6409f;
+  background: #fff5fb;
+  box-shadow: 0 12px 28px rgba(78, 32, 102, .2);
+  color: #4a2156;
+  font-size: 1.22rem;
+  font-weight: 700;
+  text-align: left;
+}
+
+.inv-body[data-theme="casa-munecas"] .inv-message blockquote::before {
+  position: absolute;
+  top: 50%;
+  left: 18px;
+  margin: 0;
+  content: "\1F9E6";
+  font-size: 2.4rem;
+  line-height: 1;
+  transform: translateY(-50%);
+}
+
+/* La lámina de Casa de Muñecas tiene el panel angosto (68 % del marco): con las reglas generales, en un
+   teléfono de 375 px la fecha y el lugar quedaban en 8,8 px y turquesa sobre rosado. Aquí se agrandan y van
+   en blanco sobre la píldora fucsia; la frase de arriba va en la tinta oscura de la temática. */
+.inv-body[data-theme="casa-munecas"] .inv-plate-kicker {
+  font-size: clamp(.8rem, 6cqw, 1.1rem);
+  color: #4a2156;
+  text-shadow: none;
+}
+
+.inv-body[data-theme="casa-munecas"] .inv-plate-when,
+.inv-body[data-theme="casa-munecas"] .inv-plate-where {
+  font-size: clamp(.8rem, 6.4cqw, 1.2rem);
+  color: #fff;
+}

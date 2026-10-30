@@ -2043,6 +2043,45 @@
       "musicaHint": "Cuna suave",
       "transition": "none"
     },
+    "casa-munecas": {
+      "nombre": "Casa de Muñecas",
+      "vozPropia": true,
+      "guiaSinRegalos": true,
+      "franquicia": "La casa de muñecas de Gabby",
+      "publico": "mixto",
+      "diploma": "Invitada de honor de la Casa de Muñecas",
+      "colors": {
+        "accent": "#D6409F",
+        "accentSoft": "#FBE3F1",
+        "yellow": "#3FC1BC",
+        "ink": "#4A2156",
+        "bgLight1": "#FFF5FB",
+        "bgLight2": "#F1E6FB",
+        "dark1": "#7B3A9E",
+        "dark2": "#4E2066",
+        "dark3": "#F4B3D8"
+      },
+      "confetti": [
+        "#D6409F",
+        "#9B6BE0",
+        "#3FC1BC",
+        "#F4B3D8",
+        "#FFFFFF",
+        "#FFD45E"
+      ],
+      "videos": {
+        "despedida": "despedida-casa-munecas.mp4"
+      },
+      "personajes": [],
+      "frameBox": {
+        "x": 0.16,
+        "y": 0.42,
+        "w": 0.68,
+        "h": 0.26
+      },
+      "musicaHint": "Música alegre de casa de muñecas",
+      "transition": "none"
+    },
     "baby-osito": {
       "nombre": "Osito de Bienvenida",
       "vozPropia": true,

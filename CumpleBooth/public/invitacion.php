@@ -842,6 +842,11 @@ $playlistOrdersByTheme = [
         'saludo-papa-marino.mp4' => 'Papá Marino enciende la música',
         'despedida-familia-canina.mp4' => '¡Te esperamos!',
     ],
+    /* Casa de Muñecas (29-oct-2026): el intro con el nombre es propio de cada fiesta (intro-fiesta-<slug>.mp4);
+       el recorrido solo cierra con la despedida de la temática, que no nombra a nadie. */
+    'casa-munecas' => [
+        'despedida-casa-munecas.mp4' => '¡Te esperamos!',
+    ],
 ];
 
 // Revision aislada de los saludos nuevos de Hielo. Solo se usa con

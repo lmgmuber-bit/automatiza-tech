@@ -244,6 +244,28 @@
                 "tone": "#7a1c10"
             }
         },
+        "casa-munecas": {
+          "status": "active",
+          "background": "fondo-banner.jpg",
+          "layout": "storybook-kids-v1",
+          "intro_style": "mágico",
+          "surface": {
+            "scrim": 0.6,
+            "blur": 12,
+            "saturate": 0.9,
+            "title": "#FFE3F3",
+            "surface_mix": 86,
+            "hero_dim": 0.45
+          },
+          "scene": "original whimsical pink and lilac dollhouse playroom with cat-shaped cushions, pompom garlands, balloons and fairy lights",
+          "text_area": {
+            "x": 0.16,
+            "y": 0.42,
+            "w": 0.68,
+            "h": 0.26,
+            "tone": "#4A2156"
+          }
+        },
         "familia-canina": {
             "status": "active",
             "background": "fondo-banner.jpg",

@@ -26,6 +26,16 @@ test('el intro propio de la fiesta reemplaza el intro de la temática', () => {
   assert.ok(php.indexOf('$introPersonalizado = true;') > php.indexOf("$themeIntroRelative = 'invitation/intro-invitacion-wow-v1.mp4'"))
 })
 
+test('el intro propio suena aunque el teléfono pida reducir movimiento', () => {
+  // 30-oct, en PROD: con «reducir movimiento» activado (Windows sin animaciones, iPhone con Reducir movimiento) el
+  // intro se cerraba sin reproducirse y el video de Gabby no se veía en ninguna parte. El intro genérico de una
+  // temática es decoración y se puede saltar; el de la fiesta es la invitación misma. Se puede omitir con el botón.
+  const js = leer('public/assets/invitation.js')
+  assert.match(php, /<\?php if \(\$introPersonalizado\): \?> data-inv-theme-intro-personal<\?php endif; \?>/)
+  assert.match(js, /const themeIntroPersonal = themeIntro\?\.hasAttribute\('data-inv-theme-intro-personal'\)/)
+  assert.match(js, /if \(reducedMotion\.matches && !themeIntroPersonal\) \{\s*finishThemeIntro\(\);/)
+})
+
 test('con intro propio la portada no repite el video', () => {
   const antes = php.slice(0, php.indexOf('data-inv-video-final'))
   const condicion = antes.slice(antes.lastIndexOf('<?php if ('))

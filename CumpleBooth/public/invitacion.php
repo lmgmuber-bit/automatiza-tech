@@ -1299,7 +1299,7 @@ $cssVer = static function (string $rel): string {
 </section>
 
 <?php if ($themeIntroUrl !== ''): ?>
-<section class='inv-theme-intro' data-inv-theme-intro role='dialog' aria-modal='true' aria-label='Intro de la invitación' aria-hidden='true' hidden>
+<section class='inv-theme-intro' data-inv-theme-intro<?php if ($introPersonalizado): ?> data-inv-theme-intro-personal<?php endif; ?> role='dialog' aria-modal='true' aria-label='Intro de la invitación' aria-hidden='true' hidden>
   <video class='inv-theme-intro-media' data-inv-theme-intro-video src='<?= $esc($themeIntroUrl) ?>'<?php if ($themeIntroPosterUrl !== ''): ?> poster='<?= $esc($themeIntroPosterUrl) ?>'<?php endif; ?> playsinline preload='metadata'></video>
   <div class='inv-theme-intro-shade' aria-hidden='true'></div>
   <?= cb_lockup_html('claro', 'inv-theme-intro-brand') ?>

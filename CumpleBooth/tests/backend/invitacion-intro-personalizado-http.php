@@ -120,12 +120,14 @@ try {
         'el intro es el de la fiesta (src=' . var_export($src, true) . ')');
     h_check(str_contains($html, "poster='themes/spidey/invitation/intro-fiesta-" . $slugConIntro . "-poster.jpg?v="), 'con su póster');
     h_check(!str_contains($html, 'data-inv-video-final'), 'la portada no repite el video');
+    h_check(str_contains($html, 'data-inv-theme-intro-personal'), 'el intro propio va marcado (suena aunque se pida reducir movimiento)');
     h_check(str_contains($html, 'Descargar video'), 'la familia puede seguir bajando el video');
 
     // (b) Otra fiesta de la misma temática, sin intro propio: el genérico de siempre, nunca vacío.
     $html = pagina($base, $sinIntro);
     h_check(str_starts_with((string) srcIntro($html), 'themes/familia-canina/invitation/intro-invitacion-wow-v1.mp4?v='), 'sin intro propio: el genérico');
     h_check(!str_contains($html, "src=''"), 'nunca un src vacío');
+    h_check(!str_contains($html, 'data-inv-theme-intro-personal'), 'el intro genérico no va marcado como propio');
 
     // (c) Con video aprobado pero sin intro propio: igual que antes, el video sigue en la portada.
     $html = pagina($base, $conVideoSinIntro);

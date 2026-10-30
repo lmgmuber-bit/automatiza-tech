@@ -1538,7 +1538,9 @@ $cssVer = static function (string $rel): string {
             if ($usaCierreCompartido) {
                 $narrationUrl = $narrationPlaylistEndUrl;
             } elseif (is_file($narrationPath)) {
-                $narrationUrl = 'themes/' . rawurlencode($themeSlug) . '/narracion-video/' . rawurlencode($narrationKey) . '.mp3';
+                // ?v= como las demás voces: una voz de capítulo se regraba con el mismo nombre (Casa de Muñecas, 30-oct).
+                $narrationUrl = 'themes/' . rawurlencode($themeSlug) . '/narracion-video/' . rawurlencode($narrationKey) . '.mp3'
+                    . '?v=' . rawurlencode((string) filemtime($narrationPath));
             }
             $encodedFilePath = implode('/', array_map('rawurlencode', explode('/', $fileName)));
             // ?v= por archivo: los clips se reemplazan CON EL MISMO NOMBRE

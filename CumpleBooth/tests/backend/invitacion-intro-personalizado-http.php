@@ -39,7 +39,7 @@ function h_check(bool $cond, string $msg): void { global $tests; $tests++; if (!
 $fiesta = static fn(string $tema): array => ['nombre' => 'Niña Prueba', 'tema' => $tema, 'event_type' => 'child_birthday',
     'fecha' => '2026-12-06', 'activa' => true, 'invitados' => [], 'creada' => gmdate('Y-m-d H:i:s')];
 h_check(cb_save_parties(['parties' => ['spidey-con-intro' => $fiesta('spidey'), 'canina-sin-intro' => $fiesta('familia-canina'),
-    'spidey-video-sin-intro' => $fiesta('spidey')]]), 'fiestas de prueba creadas');
+    'spidey-video-sin-intro' => $fiesta('spidey'), 'casa-con-voces' => $fiesta('casa-munecas')]]), 'fiestas de prueba creadas');
 
 /** Invitación publicada de una fiesta ya creada; con $conVideo agrega el output personalized_video aprobado. Devuelve el token. */
 function invitacion(PDO $pdo, string $slug, string $tema, string $tipo, bool $conVideo): string
@@ -70,6 +70,7 @@ function invitacion(PDO $pdo, string $slug, string $tema, string $tipo, bool $co
 $conIntro = invitacion($pdo, 'spidey-con-intro', 'spidey', 'child_birthday', true);
 $sinIntro = invitacion($pdo, 'canina-sin-intro', 'familia-canina', 'child_birthday', false);
 $conVideoSinIntro = invitacion($pdo, 'spidey-video-sin-intro', 'spidey', 'child_birthday', true);
+$casaConVoces = invitacion($pdo, 'casa-con-voces', 'casa-munecas', 'child_birthday', false);
 
 // El intro propio de la primera fiesta, con el slug real que le dio la base (lleva 96 bits al azar).
 $slugConIntro = (string) $pdo->query("SELECT public_slug FROM cc_parties WHERE id=" . (int) cb_party_db_id('spidey-con-intro'))->fetchColumn();
@@ -154,6 +155,15 @@ try {
     h_check($og2 !== $og1 && str_contains($og2, '&v=' . substr(hash_file('sha256', $ruta), 0, 12)),
         'corregir la lámina cambia la dirección de la vista previa');
     h_check($bajar($og2) === 'lámina corregida', 'y la dirección nueva entrega la lámina corregida');
+
+    // (e) Toda voz de narracion-video/ lleva ?v=: los estáticos de las temáticas salen con 30 días de caché, y la voz
+    //     de un capítulo (la despedida de Casa de Muñecas, 30-oct) se reemplaza con el mismo nombre.
+    $html = pagina($base, $casaConVoces);
+    preg_match_all('#narracion-video(?:/|\\\\/)[A-Za-z0-9._%-]+\.mp3(\?v=)?#', $html, $voces, PREG_SET_ORDER);
+    $sinVersion = array_values(array_filter($voces, static fn(array $v): bool => ($v[1] ?? '') === ''));
+    h_check(str_contains($html, 'despedida-casa-munecas.mp3'), 'la despedida de Casa de Muñecas trae su voz');
+    h_check(count($voces) >= 4 && $sinVersion === [],
+        'las ' . count($voces) . ' voces llevan versión (sin ?v=: ' . implode(', ', array_column($sinVersion, 0)) . ')');
 } catch (Throwable $e) {
     fwrite(STDERR, $e->getMessage() . PHP_EOL);
     exit(1);

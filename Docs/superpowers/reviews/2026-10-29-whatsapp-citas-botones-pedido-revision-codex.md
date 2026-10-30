@@ -161,3 +161,28 @@ git diff 61396e7..13d7e77
 - WordPress: `citas`, `cancelar` y `limite-excluir`, en verde.
 
 **Informe de esta ronda:** `C:/Users/luis_/Documents/Codex/Shared-Tools/revisiones/2026-10-29-wa-citas-B-codex-r3.md`.
+
+## Ronda 4 (30-oct): correos de cancelación de siempre (pedido de Luis)
+
+Luis pidió que al cancelar por WhatsApp llegue el mismo correo que ya existía, el que invita a volver a agendar, y no uno nuevo. Ya está en PROD desde las 09:40, con su OK para subirlo antes de esta revisión.
+
+**Revisión exacta:**
+
+```bash
+git diff a82d05f..545f5e9
+```
+
+| Qué cambió | Dónde | Prueba |
+|---|---|---|
+| Diagnóstico: el correo sale por la ruta interna `/send-email` con la plantilla `cancellation`, la misma que ya usaba el sitio (botón «📅 Agendar Nueva Cita» por WhatsApp y enlace al sitio). | `at_wa_correo_cancelacion` en `inc/wa-contexto/citas.php` | `cancelar-wp-test`: asunto y botón |
+| Seguimiento: `wp_mail` con el HTML del nodo de n8n «Send Followup Cancel Email»; las expresiones de n8n pasan a `%%NOMBRE%%`, `%%FECHA%%` y `%%HORA%%`, con `esc_html`. | `inc/wa-contexto/correo-cancelacion-seguimiento.php` (nuevo), cargado en `cargar.php` | `cancelar-wp-test`: asunto, enlace para reagendar, nombre y fecha, sin `{{` |
+| Reprogramar sigue enviando el aviso corto «Tu cita se reprogramó». | `at_wa_correo_reprogramada` | sin cambio |
+
+**Foco para B:**
+- Si `/send-email` no responde 200 con `success`, `efectos.correo` queda en `false` y el bot no promete el correo. Revisar que ese camino no deje la cita a medias.
+- Que ningún dato del cliente entre sin escapar al HTML del seguimiento.
+- Que la fecha y la hora salgan bien con el formato que guarda `wp_followup_meetings`.
+
+**Pruebas:** `cancelar-wp-test` con 4 comprobaciones nuevas, en verde. En PROD, la sonda confirmó que las dos funciones y la ruta existen, sin fatales. Todavía no se ha visto llegar el correo nuevo desde una cancelación real: queda para la próxima prueba de Luis.
+
+**Informe de esta ronda:** `C:/Users/luis_/Documents/Codex/Shared-Tools/revisiones/2026-10-29-wa-citas-B-codex-r4.md`.

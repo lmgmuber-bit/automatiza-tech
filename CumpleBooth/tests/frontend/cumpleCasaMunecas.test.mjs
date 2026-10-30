@@ -77,8 +77,15 @@ test('la lámina deja los datos en el centro del panel, sobre los cojines', () =
   const area = JSON.parse(leer('public/data/event-profile-presets.json')).themes['casa-munecas'].text_area
   assert.ok(area.y >= 0.32 && area.y <= 0.34, `y=${area.y}`)
   assert.ok(area.y + area.h <= 0.62, `abajo=${area.y + area.h}`)
+})
+
+test('el marco de la foto del kiosco es grande y cabe en el lienzo', () => {
+  // La lámina de la invitación no usa frameBox (va con su text_area): el marco del kiosco se mide contra
+  // fondo-sala.jpg y tiene que dejar la cara grande (lección de baby-rosas: 352 px se veía chico, 552 px bien).
   const caja = JSON.parse(leer('public/data/themes.json')).themes['casa-munecas'].frameBox
-  assert.equal(caja.y, area.y)
+  assert.ok(caja.x >= 0 && caja.y >= 0 && caja.x + caja.w <= 1 && caja.y + caja.h <= 1, JSON.stringify(caja))
+  const lado = Math.min(caja.w * 1080, caja.h * 1920) * (1 - 2 * 0.085)
+  assert.ok(lado >= 550, `cuadrado de la foto: ${Math.round(lado)} px`)
 })
 
 test('casa-munecas destaca el mensaje como aviso', () => {

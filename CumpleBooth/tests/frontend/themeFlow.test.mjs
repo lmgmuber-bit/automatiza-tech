@@ -467,6 +467,8 @@ const HOMOLOGADAS = {
   hielo: { estrella: 'Olaf', propio: 'armar-muneco', stage: 'ice-gala' },
   kpop: { estrella: 'Rumi', propio: 'ritmo', stage: 'neon-arena' },
   heroes: { estrella: 'Capitán América', propio: 'escudo', stage: 'rooftop-city' },
+  // neon-arena es de K-Pop: Casa de Muñecas lo usa a propósito para no recompilar el kiosco (diseño del 30-oct-2026).
+  'casa-munecas': { estrella: 'Gabby', propio: 'ritmo', stage: 'neon-arena' },
 }
 
 for (const [slug, { estrella, propio, stage, full = 'concierto3d' }] of Object.entries(HOMOLOGADAS)) {

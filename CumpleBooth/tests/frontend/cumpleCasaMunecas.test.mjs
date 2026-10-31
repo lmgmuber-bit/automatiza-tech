@@ -88,6 +88,18 @@ test('el marco de la foto del kiosco es grande y cabe en el lienzo', () => {
   assert.ok(lado >= 550, `cuadrado de la foto: ${Math.round(lado)} px`)
 })
 
+test('el agradecimiento de la foto termina antes de la cabeza del personaje', () => {
+  // App.jsx compone la foto: el texto parte en (frameBox.y+h)·H + 0,018·H, línea 1 de 0,046·W, línea 2 a 1,35 líneas y
+  // de 0,036·W; se dibuja DESPUÉS del personaje, que va en la pista 0,58–0,88·H (frameGeometry.js). Medido el 31-oct
+  // sobre los 6 recortes: lo visible del más alto (DJ Catnip) empieza en 1189 px = 0,58·H + 75. La revisión final
+  // encontró el texto encima de las caras con el marco grande.
+  const [W, H] = [1080, 1920]
+  const caja = JSON.parse(leer('public/data/themes.json')).themes['casa-munecas'].frameBox
+  const base = (caja.y + caja.h) * H + 0.018 * H
+  const fin = base + 0.046 * W * 1.35 + 0.036 * W * 0.6
+  assert.ok(fin <= 0.58 * H + 70, `el texto termina en ${Math.round(fin)} px; la cabeza más alta está en ${0.58 * H + 75}`)
+})
+
 test('casa-munecas destaca el mensaje como aviso', () => {
   const css = leer('public/assets/invitation.css')
   assert.match(css, /\.inv-body\[data-theme="casa-munecas"\] \.inv-message/)

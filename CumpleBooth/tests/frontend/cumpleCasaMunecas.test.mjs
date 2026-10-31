@@ -124,3 +124,17 @@ test('la guía también carga con guiaSinRegalos', () => {
   assert.match(php, /\['guiaSinRegalos'\]/)
   assert.match(php, /\(\$modoRegalos === 'rsvp' \|\| \$guiaSinRegalos\)[\s\S]{0,300}guia-confirmar/)
 })
+
+test('en la bienvenida del kiosco el título y la guirnalda van en el cielo, sobre la casa', () => {
+  // Luis, 31-oct (captura): con el top general (título 25,5 %, guirnalda 41 %) quedaban encima del techo y no se leían.
+  // En fondo-banner.jpg el cielo libre va del logo (~9 %) a los techos del centro (~29 %).
+  const css = leer('src/styles.css')
+  const top = (sel) => {
+    const m = css.match(new RegExp(sel.replace(/[.]/g, '\\.') + '\\s*\\{[^}]*?top:\\s*([\\d.]+)%'))
+    return m ? Number(m[1]) : null
+  }
+  const titulo = top('.intro--casa-munecas .intro-title')
+  const guirnalda = top('.intro--casa-munecas .intro-party-decoration')
+  assert.ok(titulo !== null && titulo >= 12 && titulo <= 17, `título en ${titulo}%`)
+  assert.ok(guirnalda !== null && guirnalda >= 9.5 && guirnalda < titulo, `guirnalda en ${guirnalda}%`)
+})

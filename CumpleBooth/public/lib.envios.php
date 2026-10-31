@@ -134,17 +134,26 @@ function cb_envio_opciones_previas(array $estado, string $tipo): array
 /**
  * El mismo contenido del correo, en un mensaje corto para pegar en WhatsApp.
  *
- * Solo existe para los dos que tienen un enlace **estable**: el manual y el comprobante van
- * firmados con HMAC y su dirección es siempre la misma, así que se pueden compartir por donde
- * sea. Los otros dos no: el enlace de firma y el de descarga del comprobante de Términos se
- * guardan hasheados y existen en claro una sola vez, así que no hay nada que copiar acá sin
- * emitir uno nuevo y matar el anterior. Para esos, el enlace se copia en Aceptaciones, en el
- * momento en que se genera.
+ * Existe para los que tienen un enlace que se puede volver a calcular: el manual y el comprobante
+ * van firmados con HMAC y su dirección es siempre la misma, y desde el 30-oct-2026 también la
+ * firma de Términos mientras esté pendiente (cb_acceptance_enlace_vigente). El de descarga del
+ * comprobante de Términos sigue guardado hasheado y existe en claro una sola vez: sin mensaje.
  *
  * Devuelve '' cuando el tipo no tiene mensaje o la fiesta no da los datos.
  */
 function cb_envio_texto_whatsapp(string $slug, string $tipo): string
 {
+    if ($tipo === 'firma') {
+        require_once __DIR__ . '/lib.acceptance.php';
+        $row = cb_acceptance_pendiente_de_fiesta($slug);
+        $url = $row !== null ? cb_acceptance_enlace_vigente($row) : null;
+        if ($url === null) {
+            return '';
+        }
+        $party = cb_load_parties()['parties'][$slug] ?? [];
+        $festejado = (string) (($party['birthday_person_name'] ?? '') ?: ($party['nombre'] ?? ''));
+        return cb_acceptance_texto_whatsapp($row, $festejado, $url);
+    }
     if ($tipo === 'boleta') {
         require_once __DIR__ . '/lib.comprobante.php';
         $d = cb_comprobante_datos($slug);

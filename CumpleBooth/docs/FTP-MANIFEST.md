@@ -37,7 +37,7 @@ Los corre Luis. Nada de esto lleva datos de familias.
   Aceptaciones y en la ficha (`lib.acceptance.php`, `admin/aceptaciones.php`, `lib.envios.php`, `admin/index.php`).
   Respaldos `app-antes-aceptaciones-enlace-20261030-1218.tar.gz` y `app-antes-envios-firma-20261030-1244.tar.gz`.
 
-**LOCAL, por subir** (`desplegar-kiosco.py`): el kiosco de la temática. Solo datos y archivos; no hay build.
+**DESPLEGADO 31-oct 09:19** (`desplegar-kiosco.py`, 27 de 27, sha256 cotejado; respaldo `app-themes.json.antes-kiosco-casa-munecas-20261031-0919.tar.gz`): el kiosco de la temática. Solo datos y archivos; no hay build. Verificado desde afuera por `api.php?p=<slug>` (6 personajes, show `neon-arena`, frameBox nuevo) y los 26 archivos con 200. Ojo: `data/themes.json` responde 403 desde afuera; se verifica por `api.php`.
 1. Archivos nuevos en `themes/casa-munecas/` (OBLIGATORIO, primero): `gabby|pandy-paws|cakey|mercat|kitty-fairy|dj-catnip`
    × (`.jpg`, `-cut.png`, `puzzle-*.jpg`, `saludo-*.mp4`), `fondo-sala.jpg`, `roulette/roulette-background-v1.png`.
 2. `data/themes.json` (OBLIGATORIO, al final): entrada `casa-munecas` con los 6 personajes, `fullGame` (`neon-arena`)

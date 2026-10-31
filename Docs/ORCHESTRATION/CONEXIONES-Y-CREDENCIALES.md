@@ -176,9 +176,13 @@ Guía completa (modelo, ajustes de voz, consejos y costo): `C:\Users\luis_\Docum
 - ⚠️ **No uses la variable de entorno `ELEVENLABS_API_KEY`:** en esta máquina guarda el **ID** de la clave y
   ElevenLabs responde `400 api_key_id_used_as_api_key` (le pasó a una sesión el 30-oct).
 - **Modelo y voz:** `eleven_multilingual_v2`; Josh = `TxGEqnHWrfWFTfGW9XjX` (cierre de los reels AT).
-- **Costo:** cerca de 1 crédito por carácter. Pide el visto bueno de Luis antes de textos largos o de muchas pruebas.
-- **Permisos de la clave:** TTS y STT sí; listar voces y consultar la cuota no (un 401 ahí no significa que la clave
-  esté mala).
+- **Costo:** 0,4 créditos por carácter (medido el 31-oct con `/v1/usage/character-stats`, en `eleven_multilingual_v2` y `eleven_v3`).
+  Pide el visto bueno de Luis antes de textos largos o de muchas pruebas.
+- **Registro de consumo:** pasa tu nombre como último argumento (`voces.py linea josh "<texto>" salida.wav <Nombre>`, o la variable
+  `AT_AGENTE`) y la voz queda anotada en `Shared-Tools/elevenlabs-voces/registro-consumo.csv`. No registres en Finanzas: Balance lo
+  cierra a fin de mes desde ese registro.
+- **Permisos de la clave:** TTS, STT y estadísticas de uso (`/v1/usage/character-stats`) sí; listar voces no (un 401 ahí no
+  significa que la clave esté mala).
 
 ---
 

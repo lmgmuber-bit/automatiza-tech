@@ -2072,12 +2072,177 @@
       "videos": {
         "despedida": "despedida-casa-munecas.mp4"
       },
-      "personajes": [],
+      "personajes": [
+        {
+          "emoji": "🎀",
+          "name": "Gabby",
+          "img": "gabby.jpg",
+          "game": [
+            {
+              "kind": "ritmo",
+              "label": "¡Baila en la casa de muñecas!",
+              "image": "fondo-banner.jpg",
+              "lanes": 4,
+              "seconds": 15
+            },
+            {
+              "kind": "fichas",
+              "label": "¡Arma la imagen!",
+              "image": "puzzle-gabby.jpg",
+              "cols": 3,
+              "filas": 3
+            },
+            {
+              "kind": "copos",
+              "label": "¡Atrapa las sorpresas!",
+              "emojis": [
+                "🎀",
+                "🐱",
+                "💖",
+                "⭐"
+              ],
+              "seconds": 15
+            }
+          ]
+        },
+        {
+          "emoji": "🐼",
+          "name": "Pandy Paws",
+          "img": "pandy-paws.jpg",
+          "game": [
+            {
+              "kind": "fichas",
+              "label": "¡Arma la imagen!",
+              "image": "puzzle-pandy-paws.jpg",
+              "cols": 3,
+              "filas": 3
+            },
+            {
+              "kind": "copos",
+              "label": "¡Atrapa las sorpresas!",
+              "emojis": [
+                "🐼",
+                "🎀",
+                "⭐",
+                "💖"
+              ],
+              "seconds": 15
+            }
+          ]
+        },
+        {
+          "emoji": "🧁",
+          "name": "Cakey",
+          "img": "cakey.jpg",
+          "game": [
+            {
+              "kind": "fichas",
+              "label": "¡Arma la imagen!",
+              "image": "puzzle-cakey.jpg",
+              "cols": 3,
+              "filas": 3
+            },
+            {
+              "kind": "copos",
+              "label": "¡Atrapa las sorpresas!",
+              "emojis": [
+                "🧁",
+                "🍓",
+                "🍰",
+                "⭐"
+              ],
+              "seconds": 15
+            }
+          ]
+        },
+        {
+          "emoji": "🧜",
+          "name": "MerCat",
+          "img": "mercat.jpg",
+          "game": [
+            {
+              "kind": "fichas",
+              "label": "¡Arma la imagen!",
+              "image": "puzzle-mercat.jpg",
+              "cols": 3,
+              "filas": 3
+            },
+            {
+              "kind": "copos",
+              "label": "¡Atrapa las sorpresas!",
+              "emojis": [
+                "🫧",
+                "🐚",
+                "🐟",
+                "💎"
+              ],
+              "seconds": 15
+            }
+          ]
+        },
+        {
+          "emoji": "🧚",
+          "name": "Kitty Fairy",
+          "img": "kitty-fairy.jpg",
+          "game": [
+            {
+              "kind": "fichas",
+              "label": "¡Arma la imagen!",
+              "image": "puzzle-kitty-fairy.jpg",
+              "cols": 3,
+              "filas": 3
+            },
+            {
+              "kind": "copos",
+              "label": "¡Atrapa las sorpresas!",
+              "emojis": [
+                "🌸",
+                "🦋",
+                "✨",
+                "🌷"
+              ],
+              "seconds": 15
+            }
+          ]
+        },
+        {
+          "emoji": "🎧",
+          "name": "DJ Catnip",
+          "img": "dj-catnip.jpg",
+          "game": [
+            {
+              "kind": "fichas",
+              "label": "¡Arma la imagen!",
+              "image": "puzzle-dj-catnip.jpg",
+              "cols": 3,
+              "filas": 3
+            },
+            {
+              "kind": "copos",
+              "label": "¡Atrapa las sorpresas!",
+              "emojis": [
+                "🎵",
+                "🎶",
+                "🎧",
+                "⭐"
+              ],
+              "seconds": 15
+            }
+          ]
+        }
+      ],
       "frameBox": {
-        "x": 0.16,
-        "y": 0.335,
-        "w": 0.68,
-        "h": 0.26
+        "x": 0.1991,
+        "y": 0.312,
+        "w": 0.6241,
+        "h": 0.3672
+      },
+      "fullGame": {
+        "kind": "concierto3d",
+        "stage": "neon-arena",
+        "label": "¡El Show de la Casa de Muñecas 3D!",
+        "seconds": 24,
+        "image": "fondo-banner.jpg"
       },
       "musicaHint": "Música alegre de casa de muñecas",
       "transition": "none"

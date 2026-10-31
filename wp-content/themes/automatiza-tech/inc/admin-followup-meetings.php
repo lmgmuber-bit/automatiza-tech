@@ -12,6 +12,9 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
+// Quién escribe por WhatsApp (ruta wa-contexto y vínculo de la reunión con su contrato o propuesta), 28-oct-2026.
+require_once __DIR__ . '/wa-contexto/cargar.php';
+
 /**
  * Crear tabla en la base de datos al activar
  */
@@ -1136,6 +1139,9 @@ function automatiza_tech_followup_page() {
                                         <td>
                                             <strong><?php echo esc_html($m->client_name); ?></strong><br>
                                             <small style="color:#666;"><?php echo esc_html($m->client_email); ?></small>
+                                            <?php if (function_exists('at_wa_vinculo_texto') && ($at_wa_vinc = at_wa_vinculo_texto($m)) !== ''): ?>
+                                                <br><small style="color:#0f766e;">🔗 <?php echo esc_html($at_wa_vinc); ?></small>
+                                            <?php endif; ?>
                                         </td>
                                         <td><?php echo esc_html($m->company_name ?: '-'); ?></td>
                                         <td>
@@ -2452,7 +2458,10 @@ function automatiza_tech_verify_client_by_phone($request) {
  * (automatiza_tech_create_followup_meeting_api) y la agenda web del plan (at_pt_agendar_seguimiento).
  * Devuelve ['alcanzado' => bool, 'seguimientos' => int, 'demos' => int, 'mensaje' => string].
  */
-function automatiza_tech_limite_reuniones_activas($email) {
+function automatiza_tech_limite_reuniones_activas($email, array $excluir = []) {
+    if ($excluir && function_exists('at_wa_limite_con_excluir')) {
+        return at_wa_limite_con_excluir((string) $email, $excluir); // la cita que se reprograma por WhatsApp no cuenta
+    }
     global $wpdb;
     $table_name = $wpdb->prefix . 'automatiza_followup_meetings';
     $leads_table = $wpdb->prefix . 'automatiza_leads';
@@ -2532,7 +2541,7 @@ function automatiza_tech_create_followup_meeting_api($request) {
     }
     
     // Verificar límite de agendamientos por email (máximo 2 activos en total: DEMOs + Seguimientos)
-    $limite = automatiza_tech_limite_reuniones_activas($email);
+    $limite = automatiza_tech_limite_reuniones_activas($email, function_exists('at_wa_excluir_de_request') ? at_wa_excluir_de_request($request) : []);
     if ($limite['alcanzado']) {
         return new WP_Error('limit_reached', $limite['mensaje'], array('status' => 400));
     }
@@ -2562,7 +2571,11 @@ function automatiza_tech_create_followup_meeting_api($request) {
     if (!empty($google_event_id_param)) {
         $data['google_event_id'] = $google_event_id_param;
     }
-    
+    // 28-oct-2026: el contrato o la propuesta de la reunión, solo si son del mismo cliente (inc/wa-contexto/followup.php).
+    if (function_exists('at_wa_followup_datos_con_vinculo')) {
+        $data = at_wa_followup_datos_con_vinculo($data, $request);
+    }
+
     $result = $wpdb->insert($table_name, $data);
     
     if ($result === false) {
@@ -2697,7 +2710,10 @@ function automatiza_tech_get_followup_meeting($request) {
         'meet_link' => $meeting->meet_link,
         'meeting_subject' => $meeting->meeting_subject,
         'notes' => $meeting->notes,
-        'status' => $meeting->status
+        'status' => $meeting->status,
+        // 28-oct-2026: el reagendamiento por WhatsApp conserva el vínculo de la reunión (inc/wa-contexto/followup.php).
+        'contrato_id' => isset($meeting->contrato_id) ? (int) $meeting->contrato_id : 0,
+        'propuesta_id' => isset($meeting->propuesta_id) ? (int) $meeting->propuesta_id : 0
     ), 200);
 }
 

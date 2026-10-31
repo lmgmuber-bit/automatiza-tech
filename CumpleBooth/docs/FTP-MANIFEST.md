@@ -45,6 +45,8 @@ Los corre Luis. Nada de esto lleva datos de familias.
 No subir: el material de producción (`material/…/kiosco/`), que está fuera del repo.
 
 **DESPLEGADO 31-oct** (`desplegar-bienvenida.py`): en la bienvenida del kiosco de Casa de Muñecas el título y la guirnalda van en el cielo (`src/styles.css`, regla `.intro--casa-munecas`). Bundle recompilado: cambian solo `assets/main-DDjzb0IP.js` y `assets/main-DNktZ8-y.css` (los otros 5 trozos idénticos a los de PROD, cotejado) y `index.html` al final, con respaldo `~/respaldos/app-index.html.antes-bienvenida-casa-*`. Los trozos viejos `main-CPkbWfbA.js` y `main-BYDY8wH5.css` siguen en el servidor. Validado por Luis en la tablet y desde afuera.
+
+**LOCAL, listo para subir (commit `ae1473b`, script privado `desplegar-asomate.py`, lo corre Luis):** Casa de Muñecas tenía la ruleta con el video genérico del auto (App.jsx cae a `welcome-car.mp4` sin `videos.welcome`) y le faltaban la foto grupal y Asómate. Solo datos y archivos, sin recompilar: nuevos `themes/casa-munecas/welcome-casa-munecas.mp4`, `fondo-grupal.jpg` y `asomate/` (fondo + 6 recortes con hueco); reemplazados los 6 `*-cut.png` (escamas de MerCat que el recorte de verde había dejado semitransparentes); `data/themes.json` al final. Respaldo de lo pisado en `~/respaldos/app-casa-munecas-antes-asomate-*.tar.gz`. Verificar por `api.php?p=<slug>`: `videos.welcome`, `grupal` y `asomate` con 6 personajes. Probado en un kiosco local con fiesta ficticia y cámara simulada; sin probar en la tablet.
 No probado: el kiosco con esta temática en la tablet física ni la cabina con un niño real.
 
 ## DESPLEGADO 2026-10-24 (~02:30): baby shower con regalo validado y temática Osito de Bienvenida (rama `claude/baby-shower-regalos`)

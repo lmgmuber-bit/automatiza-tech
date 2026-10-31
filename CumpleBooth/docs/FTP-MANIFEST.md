@@ -21,6 +21,30 @@ grep -o 'assets/[a-zA-Z0-9._-]*' dist/index.html   # lo que index.html pide
 Sube **todos** los de `dist/assets/` junto con `dist/index.html` en la misma
 tanda. Los que sobren del build anterior se pueden borrar después.
 
+## Temática Casa de Muñecas: invitación, firma de Términos y kiosco (rama `claude/cumple-casa-gabby`, 29 al 31-oct-2026)
+
+Todo se sube con scripts privados (`herramientas/prod/cumple-gabby/`, fuera del repo) que cotejan con lo desplegado,
+respaldan en `~/respaldos/`, suben a una carpeta de paso, cotejan sha256, instalan con `mv` y verifican desde afuera.
+Los corre Luis. Nada de esto lleva datos de familias.
+
+**DESPLEGADO** (verificado desde afuera):
+- 30-oct: temática Casa de Muñecas en la invitación (intro propio por fiesta, voz diseñada, despedida con sello,
+  guía sin regalos), vista previa de WhatsApp con versión (`invitacion.php`, `&v=` del sha de la imagen), voz de
+  cada capítulo con `?v=`.
+- 30-oct 12:17: tarjeta «Seguir a @Cumple_Click» en la ventana de «¡Asistencia confirmada!», todas las invitaciones
+  (`invitacion.php`, `assets/invitation.css`). Respaldo `app-antes-instagram-20261030-1217.tar.gz`.
+- 30-oct 12:18 y 12:44: el enlace de firma de Términos se calcula (HMAC de id + vencimiento) y se vuelve a ver en
+  Aceptaciones y en la ficha (`lib.acceptance.php`, `admin/aceptaciones.php`, `lib.envios.php`, `admin/index.php`).
+  Respaldos `app-antes-aceptaciones-enlace-20261030-1218.tar.gz` y `app-antes-envios-firma-20261030-1244.tar.gz`.
+
+**LOCAL, por subir** (`desplegar-kiosco.py`): el kiosco de la temática. Solo datos y archivos; no hay build.
+1. Archivos nuevos en `themes/casa-munecas/` (OBLIGATORIO, primero): `gabby|pandy-paws|cakey|mercat|kitty-fairy|dj-catnip`
+   × (`.jpg`, `-cut.png`, `puzzle-*.jpg`, `saludo-*.mp4`), `fondo-sala.jpg`, `roulette/roulette-background-v1.png`.
+2. `data/themes.json` (OBLIGATORIO, al final): entrada `casa-munecas` con los 6 personajes, `fullGame` (`neon-arena`)
+   y el `frameBox` del fondo de la sala. Respaldo antes de pisar.
+No subir: el material de producción (`material/…/kiosco/`), que está fuera del repo.
+No probado: el kiosco con esta temática en la tablet física ni la cabina con un niño real.
+
 ## DESPLEGADO 2026-10-24 (~02:30): baby shower con regalo validado y temática Osito de Bienvenida (rama `claude/baby-shower-regalos`)
 
 Go de Luis el 24-oct («Mándala ahora mismo»). Diseño y plan en `Docs/superpowers/specs/2026-10-24-cumpleclick-baby-shower-invitacion-design.md` y `Docs/superpowers/plans/2026-10-24-cumpleclick-baby-shower-invitacion.md`.

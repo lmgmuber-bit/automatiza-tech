@@ -43,6 +43,8 @@ Los corre Luis. Nada de esto lleva datos de familias.
 2. `data/themes.json` (OBLIGATORIO, al final): entrada `casa-munecas` con los 6 personajes, `fullGame` (`neon-arena`)
    y el `frameBox` del fondo de la sala. Respaldo antes de pisar.
 No subir: el material de producción (`material/…/kiosco/`), que está fuera del repo.
+
+**DESPLEGADO 31-oct** (`desplegar-bienvenida.py`): en la bienvenida del kiosco de Casa de Muñecas el título y la guirnalda van en el cielo (`src/styles.css`, regla `.intro--casa-munecas`). Bundle recompilado: cambian solo `assets/main-DDjzb0IP.js` y `assets/main-DNktZ8-y.css` (los otros 5 trozos idénticos a los de PROD, cotejado) y `index.html` al final, con respaldo `~/respaldos/app-index.html.antes-bienvenida-casa-*`. Los trozos viejos `main-CPkbWfbA.js` y `main-BYDY8wH5.css` siguen en el servidor. Validado por Luis en la tablet y desde afuera.
 No probado: el kiosco con esta temática en la tablet física ni la cabina con un niño real.
 
 ## DESPLEGADO 2026-10-24 (~02:30): baby shower con regalo validado y temática Osito de Bienvenida (rama `claude/baby-shower-regalos`)

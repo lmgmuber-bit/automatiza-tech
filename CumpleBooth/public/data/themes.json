@@ -2070,7 +2070,97 @@
         "#FFD45E"
       ],
       "videos": {
+        "welcome": "welcome-casa-munecas.mp4",
         "despedida": "despedida-casa-munecas.mp4"
+      },
+      "grupal": {
+        "fondo": "fondo-grupal.jpg",
+        "frameBox": {
+          "x": 0.0889,
+          "y": 0.0891,
+          "w": 0.8333,
+          "h": 0.3333
+        },
+        "titulo": "La foto de todos"
+      },
+      "asomate": {
+        "fondo": "asomate/fondo.jpg",
+        "personajes": {
+          "gabby": {
+            "w": 695,
+            "h": 1384,
+            "arriba": 0,
+            "pies": 1383,
+            "izq": 0,
+            "der": 694,
+            "cx": 319.0,
+            "cy": 439.0,
+            "rx": 168.0,
+            "ry": 192.0
+          },
+          "pandy-paws": {
+            "w": 837,
+            "h": 1289,
+            "arriba": 0,
+            "pies": 1288,
+            "izq": 0,
+            "der": 836,
+            "cx": 450.0,
+            "cy": 529.0,
+            "rx": 268.0,
+            "ry": 240.0
+          },
+          "cakey": {
+            "w": 719,
+            "h": 894,
+            "arriba": 0,
+            "pies": 893,
+            "izq": 0,
+            "der": 718,
+            "cx": 373.0,
+            "cy": 327.0,
+            "rx": 205.0,
+            "ry": 215.0
+          },
+          "mercat": {
+            "w": 891,
+            "h": 1042,
+            "arriba": 0,
+            "pies": 1041,
+            "izq": 0,
+            "der": 890,
+            "cx": 425.0,
+            "cy": 392.0,
+            "rx": 248.0,
+            "ry": 215.0
+          },
+          "kitty-fairy": {
+            "w": 1031,
+            "h": 1131,
+            "arriba": 0,
+            "pies": 1130,
+            "izq": 0,
+            "der": 1030,
+            "cx": 541.0,
+            "cy": 433.0,
+            "rx": 205.0,
+            "ry": 210.0
+          },
+          "dj-catnip": {
+            "w": 783,
+            "h": 1462,
+            "arriba": 0,
+            "pies": 1461,
+            "izq": 0,
+            "der": 782,
+            "cx": 366.0,
+            "cy": 460.0,
+            "rx": 210.0,
+            "ry": 205.0
+          }
+        },
+        "boton": "🎀 Asómate a la casa de muñecas",
+        "titulo": "¿Con quién te quieres asomar?"
       },
       "personajes": [
         {

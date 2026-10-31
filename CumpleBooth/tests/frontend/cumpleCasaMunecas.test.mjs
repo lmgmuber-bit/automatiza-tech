@@ -125,6 +125,28 @@ test('la guía también carga con guiaSinRegalos', () => {
   assert.match(php, /\(\$modoRegalos === 'rsvp' \|\| \$guiaSinRegalos\)[\s\S]{0,300}guia-confirmar/)
 })
 
+test('casa-munecas tiene su propia bienvenida, foto grupal y Asómate, como Spidey', () => {
+  // Luis, 31-oct: al elegir en la ruleta salía el auto genérico (`welcome-car.mp4`, el respaldo de App.jsx cuando la
+  // temática no declara `videos.welcome`), y no había foto grupal ni Asómate. lib.php los publica solo si el archivo
+  // existe, así que un nombre mal escrito apaga el botón sin error: por eso se mira el disco.
+  const tema = JSON.parse(leer('public/data/themes.json')).themes['casa-munecas']
+  const dir = join(raiz, 'public/themes/casa-munecas')
+  assert.ok(existsSync(join(dir, tema.videos.welcome)), `falta ${tema.videos.welcome}`)
+  assert.ok(existsSync(join(dir, tema.grupal.fondo)), `falta ${tema.grupal.fondo}`)
+  const c = tema.grupal.frameBox
+  assert.ok(c.x >= 0 && c.y >= 0 && c.x + c.w <= 1 && c.y + c.h <= 1, JSON.stringify(c))
+  // El marco de la grupal es apaisado (la foto se saca con la tablet acostada).
+  assert.ok((c.w * 1080) / (c.h * 1920) > 1.2, `proporción ${((c.w * 1080) / (c.h * 1920)).toFixed(2)}`)
+  assert.ok(existsSync(join(dir, tema.asomate.fondo)), `falta ${tema.asomate.fondo}`)
+  const nombres = tema.personajes.map((p) => p.img.replace(/\.jpg$/, ''))
+  assert.deepEqual(Object.keys(tema.asomate.personajes).sort(), [...nombres].sort())
+  for (const [clave, g] of Object.entries(tema.asomate.personajes)) {
+    assert.ok(existsSync(join(dir, 'asomate', clave + '.png')), `falta asomate/${clave}.png`)
+    // El hueco queda entero dentro del recorte.
+    assert.ok(g.cx - g.rx >= 0 && g.cx + g.rx <= g.w && g.cy - g.ry >= 0 && g.cy + g.ry <= g.h, clave)
+  }
+})
+
 test('en la bienvenida del kiosco el título y la guirnalda van en el cielo, sobre la casa', () => {
   // Luis, 31-oct (captura): con el top general (título 25,5 %, guirnalda 41 %) quedaban encima del techo y no se leían.
   // En fondo-banner.jpg el cielo libre va del logo (~9 %) a los techos del centro (~29 %).

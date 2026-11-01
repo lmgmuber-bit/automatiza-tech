@@ -176,6 +176,10 @@ CumpleBooth/public/themes/*/musica-album-*.mp3
 # Despedida propia de una fiesta (cara de la persona festejada): solo en el servidor.
 CumpleBooth/public/themes/*/despedida-fiesta-*.mp4
 CumpleBooth/public/themes/*/voces-fiesta-*/
+# Intro propio de una fiesta (video con el nombre de la persona festejada): solo en el servidor.
+CumpleBooth/public/themes/*/invitation/intro-fiesta-*
+# Musica de Casa de Munecas: es la cancion de la serie (con derechos). Solo en el servidor.
+CumpleBooth/public/themes/casa-munecas/musica-fondo.mp3
 
 # Python: bytecode generado al compilar o importar scripts
 __pycache__/

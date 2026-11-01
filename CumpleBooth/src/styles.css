@@ -181,6 +181,16 @@ body {
   top: 14%;
   width: 26%;
 }
+/* Casa de Muñecas: con el top general el título y la guirnalda caían sobre el techo de la casa y no se leían (Luis,
+   31-oct-2026, con captura). En su fondo-banner el cielo libre va del logo (~9 %) a los techos del centro (~29 %):
+   la guirnalda arriba y el título debajo, los dos en el cielo. */
+.intro--casa-munecas .intro-party-decoration {
+  top: 10.5%;
+  width: 30%;
+}
+.intro--casa-munecas .intro-title {
+  top: 15.5%;
+}
 /* Spidey: el fondo-banner ya trae su propia guirnalda de banderines pintada
    en el arco de globos, y la de HTML se montaba encima (Luis lo reportó).
    Acá no se reubica: se quita, porque a cualquier altura duplica la del arte. */

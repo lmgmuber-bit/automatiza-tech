@@ -20,6 +20,9 @@
   const themeIntroVideo = document.querySelector('[data-inv-theme-intro-video]');
   const themeIntroSkip = document.querySelector('[data-inv-theme-intro-skip]');
   const themeIntroProgress = document.querySelector('[data-inv-theme-intro-progress]');
+  // El intro propio de la fiesta (el video con el nombre) es la invitación misma, no decoración: se reproduce aunque
+  // el teléfono pida reducir movimiento (30-oct-2026: así no se veía en ninguna parte). Se puede omitir con el botón.
+  const themeIntroPersonal = themeIntro?.hasAttribute('data-inv-theme-intro-personal');
   let musicStarted = false;
   let musicStartPending = false;
   let musicPrimePromise = Promise.resolve(false);
@@ -413,7 +416,7 @@
       primeIntroNarration();
       primeOutro();
 
-      if (reducedMotion.matches) {
+      if (reducedMotion.matches && !themeIntroPersonal) {
         finishThemeIntro();
         return true;
       }

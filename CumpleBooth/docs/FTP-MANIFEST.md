@@ -21,6 +21,34 @@ grep -o 'assets/[a-zA-Z0-9._-]*' dist/index.html   # lo que index.html pide
 Sube **todos** los de `dist/assets/` junto con `dist/index.html` en la misma
 tanda. Los que sobren del build anterior se pueden borrar después.
 
+## Temática Casa de Muñecas: invitación, firma de Términos y kiosco (rama `claude/cumple-casa-gabby`, 29 al 31-oct-2026)
+
+Todo se sube con scripts privados (`herramientas/prod/cumple-gabby/`, fuera del repo) que cotejan con lo desplegado,
+respaldan en `~/respaldos/`, suben a una carpeta de paso, cotejan sha256, instalan con `mv` y verifican desde afuera.
+Los corre Luis. Nada de esto lleva datos de familias.
+
+**DESPLEGADO** (verificado desde afuera):
+- 30-oct: temática Casa de Muñecas en la invitación (intro propio por fiesta, voz diseñada, despedida con sello,
+  guía sin regalos), vista previa de WhatsApp con versión (`invitacion.php`, `&v=` del sha de la imagen), voz de
+  cada capítulo con `?v=`.
+- 30-oct 12:17: tarjeta «Seguir a @Cumple_Click» en la ventana de «¡Asistencia confirmada!», todas las invitaciones
+  (`invitacion.php`, `assets/invitation.css`). Respaldo `app-antes-instagram-20261030-1217.tar.gz`.
+- 30-oct 12:18 y 12:44: el enlace de firma de Términos se calcula (HMAC de id + vencimiento) y se vuelve a ver en
+  Aceptaciones y en la ficha (`lib.acceptance.php`, `admin/aceptaciones.php`, `lib.envios.php`, `admin/index.php`).
+  Respaldos `app-antes-aceptaciones-enlace-20261030-1218.tar.gz` y `app-antes-envios-firma-20261030-1244.tar.gz`.
+
+**DESPLEGADO 31-oct 09:19** (`desplegar-kiosco.py`, 27 de 27, sha256 cotejado; respaldo `app-themes.json.antes-kiosco-casa-munecas-20261031-0919.tar.gz`): el kiosco de la temática. Solo datos y archivos; no hay build. Verificado desde afuera por `api.php?p=<slug>` (6 personajes, show `neon-arena`, frameBox nuevo) y los 26 archivos con 200. Ojo: `data/themes.json` responde 403 desde afuera; se verifica por `api.php`.
+1. Archivos nuevos en `themes/casa-munecas/` (OBLIGATORIO, primero): `gabby|pandy-paws|cakey|mercat|kitty-fairy|dj-catnip`
+   × (`.jpg`, `-cut.png`, `puzzle-*.jpg`, `saludo-*.mp4`), `fondo-sala.jpg`, `roulette/roulette-background-v1.png`.
+2. `data/themes.json` (OBLIGATORIO, al final): entrada `casa-munecas` con los 6 personajes, `fullGame` (`neon-arena`)
+   y el `frameBox` del fondo de la sala. Respaldo antes de pisar.
+No subir: el material de producción (`material/…/kiosco/`), que está fuera del repo.
+
+**DESPLEGADO 31-oct** (`desplegar-bienvenida.py`): en la bienvenida del kiosco de Casa de Muñecas el título y la guirnalda van en el cielo (`src/styles.css`, regla `.intro--casa-munecas`). Bundle recompilado: cambian solo `assets/main-DDjzb0IP.js` y `assets/main-DNktZ8-y.css` (los otros 5 trozos idénticos a los de PROD, cotejado) y `index.html` al final, con respaldo `~/respaldos/app-index.html.antes-bienvenida-casa-*`. Los trozos viejos `main-CPkbWfbA.js` y `main-BYDY8wH5.css` siguen en el servidor. Validado por Luis en la tablet y desde afuera.
+
+**LOCAL, listo para subir (commit `ae1473b`, script privado `desplegar-asomate.py`, lo corre Luis):** Casa de Muñecas tenía la ruleta con el video genérico del auto (App.jsx cae a `welcome-car.mp4` sin `videos.welcome`) y le faltaban la foto grupal y Asómate. Solo datos y archivos, sin recompilar: nuevos `themes/casa-munecas/welcome-casa-munecas.mp4`, `fondo-grupal.jpg` y `asomate/` (fondo + 6 recortes con hueco); reemplazados los 6 `*-cut.png` (escamas de MerCat que el recorte de verde había dejado semitransparentes); `data/themes.json` al final. Respaldo de lo pisado en `~/respaldos/app-casa-munecas-antes-asomate-*.tar.gz`. Verificar por `api.php?p=<slug>`: `videos.welcome`, `grupal` y `asomate` con 6 personajes. Probado en un kiosco local con fiesta ficticia y cámara simulada; sin probar en la tablet.
+No probado: el kiosco con esta temática en la tablet física ni la cabina con un niño real.
+
 ## DESPLEGADO 2026-10-24 (~02:30): baby shower con regalo validado y temática Osito de Bienvenida (rama `claude/baby-shower-regalos`)
 
 Go de Luis el 24-oct («Mándala ahora mismo»). Diseño y plan en `Docs/superpowers/specs/2026-10-24-cumpleclick-baby-shower-invitacion-design.md` y `Docs/superpowers/plans/2026-10-24-cumpleclick-baby-shower-invitacion.md`.

@@ -272,10 +272,12 @@ if ($esBabyShower && $modoRegalos === 'rsvp' && function_exists('cb_regalo_valid
 }
 // Guía al final (Luis, 24-oct-2026): quien no baja no ve el botón de confirmar. Si se queda quieto,
 // la página lo lleva hasta «Confirma tu asistencia» y esta voz le explica el botón y los regalos.
-// Solo en el modo de confirmar con regalo, porque la voz habla del regalo.
+// Solo en el modo de confirmar con regalo, porque esa voz habla del regalo; o en una temática cuya guía no lo
+// menciona (`guiaSinRegalos` en themes.json, Casa de Muñecas 29-oct-2026).
+$guiaSinRegalos = !empty($themeData['guiaSinRegalos']);
 $vozGuiaUrl = '';
 $vozGuiaRuta = __DIR__ . '/themes/' . $themeSlug . '/narracion-video/' . 'guia-confirmar.mp3';
-if ($modoRegalos === 'rsvp' && preg_match('/^[a-z0-9-]+$/', $themeSlug) && is_file($vozGuiaRuta)) {
+if (($modoRegalos === 'rsvp' || $guiaSinRegalos) && preg_match('/^[a-z0-9-]+$/', $themeSlug) && is_file($vozGuiaRuta)) {
     $vozGuiaUrl = 'themes/' . rawurlencode($themeSlug) . '/narracion-video/guia-confirmar.mp3?v='
         . rawurlencode((string) filemtime($vozGuiaRuta));
 }
@@ -541,6 +543,31 @@ if (preg_match('/^[a-z0-9-]+$/', $themeSlug)) {
         if (is_file($themeIntroPosterPath)) {
             $themeIntroPosterUrl = 'themes/' . rawurlencode($themeSlug) . '/' . $themeIntroPosterRelative . '?v=' . rawurlencode((string) filemtime($themeIntroPosterPath));
         }
+    }
+}
+
+// Intro propio de una fiesta: el video con el nombre de la persona festejada (Casa de Muñecas, 29-oct-2026).
+// Vive solo en el servidor, como la despedida propia (`themes/<tema>/invitation/intro-fiesta-<slug>.mp4`,
+// .gitignore). El slug lleva 96 bits al azar y el servidor web lo entrega con Range, que es lo que pide Safari
+// para un <video>; descargar-invitacion.php no lo hace. Si existe, reemplaza al intro genérico y la portada ya
+// no repite el video.
+$introPersonalizado = false;
+$slugFiesta = '';
+if (!empty($invitation['party_id']) && cb_storage_mode() === 'db' && preg_match('/^[a-z0-9-]+$/', $themeSlug)) {
+    $consultaSlug = cb_pdo()->prepare('SELECT public_slug FROM cc_parties WHERE id = ?');
+    $consultaSlug->execute([(int) $invitation['party_id']]);
+    $slugFiesta = (string) ($consultaSlug->fetchColumn() ?: '');
+}
+if ($slugFiesta !== '' && cb_valid_public_slug($slugFiesta)) {
+    $introFiestaRuta = __DIR__ . '/themes/' . $themeSlug . '/invitation/intro-fiesta-' . $slugFiesta . '.mp4';
+    if (is_file($introFiestaRuta)) {
+        $introFiestaBase = 'themes/' . rawurlencode($themeSlug) . '/invitation/intro-fiesta-' . rawurlencode($slugFiesta);
+        $themeIntroUrl = $introFiestaBase . '.mp4?v=' . rawurlencode((string) filemtime($introFiestaRuta));
+        $posterFiestaRuta = __DIR__ . '/themes/' . $themeSlug . '/invitation/intro-fiesta-' . $slugFiesta . '-poster.jpg';
+        $themeIntroPosterUrl = is_file($posterFiestaRuta)
+            ? $introFiestaBase . '-poster.jpg?v=' . rawurlencode((string) filemtime($posterFiestaRuta))
+            : $imageUrl;
+        $introPersonalizado = true;
     }
 }
 
@@ -814,6 +841,11 @@ $playlistOrdersByTheme = [
         'saludo-mama-coral.mp4' => 'Mamá Coral ordena la casa',
         'saludo-papa-marino.mp4' => 'Papá Marino enciende la música',
         'despedida-familia-canina.mp4' => '¡Te esperamos!',
+    ],
+    /* Casa de Muñecas (29-oct-2026): el intro con el nombre es propio de cada fiesta (intro-fiesta-<slug>.mp4);
+       el recorrido solo cierra con la despedida de la temática, que no nombra a nadie. */
+    'casa-munecas' => [
+        'despedida-casa-munecas.mp4' => '¡Te esperamos!',
     ],
 ];
 
@@ -1191,7 +1223,11 @@ if (preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $eventDate, $m)) {
     }
 }
 $ogUrl = cb_invitation_pretty_url($token, $birthdayName);
-$ogImagen = cb_invitation_download_url($token, 'image') . '&preview=1';
+// La vista previa sale `public, max-age=86400` (el CDN la guarda un día) y WhatsApp guarda la suya por dirección:
+// la versión de la imagen aprobada va en la dirección para que corregir la lámina no deje la vieja en las tarjetas.
+$ogVersion = substr((string) ($imageOutputs[0]['file_sha256'] ?? ''), 0, 12);
+$ogImagen = cb_invitation_download_url($token, 'image') . '&preview=1'
+    . (preg_match('/^[a-f0-9]{12}$/', $ogVersion) ? '&v=' . $ogVersion : '');
 ?>
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="CumpleClick">
@@ -1267,7 +1303,7 @@ $cssVer = static function (string $rel): string {
 </section>
 
 <?php if ($themeIntroUrl !== ''): ?>
-<section class='inv-theme-intro' data-inv-theme-intro role='dialog' aria-modal='true' aria-label='Intro de la invitación' aria-hidden='true' hidden>
+<section class='inv-theme-intro' data-inv-theme-intro<?php if ($introPersonalizado): ?> data-inv-theme-intro-personal<?php endif; ?> role='dialog' aria-modal='true' aria-label='Intro de la invitación' aria-hidden='true' hidden>
   <video class='inv-theme-intro-media' data-inv-theme-intro-video src='<?= $esc($themeIntroUrl) ?>'<?php if ($themeIntroPosterUrl !== ''): ?> poster='<?= $esc($themeIntroPosterUrl) ?>'<?php endif; ?> playsinline preload='metadata'></video>
   <div class='inv-theme-intro-shade' aria-hidden='true'></div>
   <?= cb_lockup_html('claro', 'inv-theme-intro-brand') ?>
@@ -1502,7 +1538,9 @@ $cssVer = static function (string $rel): string {
             if ($usaCierreCompartido) {
                 $narrationUrl = $narrationPlaylistEndUrl;
             } elseif (is_file($narrationPath)) {
-                $narrationUrl = 'themes/' . rawurlencode($themeSlug) . '/narracion-video/' . rawurlencode($narrationKey) . '.mp3';
+                // ?v= como las demás voces: una voz de capítulo se regraba con el mismo nombre (Casa de Muñecas, 30-oct).
+                $narrationUrl = 'themes/' . rawurlencode($themeSlug) . '/narracion-video/' . rawurlencode($narrationKey) . '.mp3'
+                    . '?v=' . rawurlencode((string) filemtime($narrationPath));
             }
             $encodedFilePath = implode('/', array_map('rawurlencode', explode('/', $fileName)));
             // ?v= por archivo: los clips se reemplazan CON EL MISMO NOMBRE
@@ -1659,7 +1697,7 @@ $cssVer = static function (string $rel): string {
       <?php if (!($esAdulto && $hasVideo)): ?>
       <img class="inv-art" src="<?= $esc($imageUrl) ?>" alt="<?= $esc($tituloInvitacion) ?>" decoding="async">
       <?php endif; ?>
-      <?php if ($hasVideo): ?>
+      <?php if ($hasVideo && !$introPersonalizado): ?>
       <?php /* Sin loop ni muted: el invitado lo inicia con un toque (gesto que
                ya permite el sonido) y al terminar la página avanza sola a los
                datos de la fiesta — un video de invitación se ve UNA vez, no en
@@ -2107,6 +2145,21 @@ $cssVer = static function (string $rel): string {
             ? 'Gracias por avisar. ¡Nos vemos en el baby shower!'
             : ($esAdulto ? '¡Te esperamos! Nos vemos en la fiesta.' : '¡La familia ya sabe que vienen! Nos vemos en la fiesta.')) ?></p>
         <p class="inv-rsvp-ok-regalo" data-rsvp-ok-regalo hidden></p>
+        <?php
+        // Luis (30-oct-2026): quien acaba de confirmar está contento con la invitación; es el momento de invitarlo a
+        // seguir a CumpleClick. La cuenta sale de data/marca.json (Admin → Marca); sin cuenta, no se muestra nada.
+        $marcaIg = cb_marca();
+        if (($marcaIg['instagram_url'] ?? '') !== ''):
+        ?>
+        <div class="inv-rsvp-ig">
+          <p class="inv-rsvp-ig-titulo">¿Te gustó esta invitación?</p>
+          <p class="inv-rsvp-ig-texto">Síguenos en Instagram y mira más fiestas como esta.</p>
+          <a class="inv-rsvp-ig-boton" data-rsvp-ig href="<?= $esc($marcaIg['instagram_url']) ?>" target="_blank" rel="noopener">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="0.6" fill="currentColor"/></svg>
+            Seguir a <?= $esc($marcaIg['instagram'] ?? 'CumpleClick') ?>
+          </a>
+        </div>
+        <?php endif; ?>
         <button class="inv-button inv-button-ghost" type="button" data-rsvp-cerrar>Cerrar</button>
       </div>
     </dialog>

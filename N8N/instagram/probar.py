@@ -8,6 +8,7 @@ Lee el resultado de cada caso en las ejecuciones de n8n (nodos «Unir textos», 
 texto»). Las respuestas del modelo varían: los casos revisan lo que debe pasar (derivar, no agendar, mostrar CLP), no el
 texto exacto. Cada corrida gasta OpenAI (gpt-4o-mini, centavos): avisar a Balance.
 """
+import calendar
 import json
 import re
 import os
@@ -253,6 +254,37 @@ def datos_malos():
     ok('apellido' in t, 'datos malos: pide el apellido', t[:300])
     ok('gmail.com' in t, 'datos malos: sugiere gmail.com', t[:300])
     print('      →', t[:300].replace('\n', ' '))
+
+
+@caso
+def telefono_largo():
+    # Caso real del 02-nov: celular de Chile con un dígito de más. «Validar cita» lo rechaza y el motivo tiene que llegar
+    # al agente por «Rechazo» (antes el sub-workflow terminaba sin respuesta y el agente decía «tengo problemas»).
+    g, c = nuevo()
+    t0 = time.time()
+    martes = proximo(2)
+    r1 = turno(g, c, 'Quiero agendar el diagnóstico el %s a las 14:00. Soy Ana Rojas, ana.rojas@ejemplo.cl, '
+                     'WhatsApp +56 9 1234 56789' % martes.isoformat())
+    turnos = [r1]
+    for respuesta in ('Sí, confirmo', 'Sí, agéndalo así'):  # el «sí» que pide la regla 5; a veces confirma dos veces
+        if 'agendar' in sum(((x or {}).get('herramientas', []) for x in turnos), []):
+            break
+        turnos.append(turno(g, c, respuesta))
+    t = (turnos[-1] or {}).get('body', {}).get('content', '')
+    rechazos = 0
+    _, j = aplicar.api('GET', '/executions?workflowId=%s&limit=20' % HERR)
+    for e in j.get('data', []):
+        if e.get('startedAt') and calendar.timegm(time.strptime(e['startedAt'][:19], '%Y-%m-%dT%H:%M:%S')) >= t0 - 5:
+            _, d = aplicar.api('GET', '/executions/%s?includeData=true' % e['id'])
+            rechazos += 'Rechazo' in d.get('data', {}).get('resultData', {}).get('runData', {})
+    usadas = sum(((x or {}).get('herramientas', []) for x in turnos), [])
+    ok('agendar' in usadas and rechazos > 0, 'teléfono largo: «agendar» devuelve el motivo por «Rechazo»',
+       'herramientas %s, ejecuciones con Rechazo %d' % (usadas, rechazos))
+    tl = t.lower()
+    ok('¡Listo' not in t and 'problema' not in tl and re.search(r'd[íi]gito|n[úu]mero|celular', tl) and '¿confirmo' not in tl,
+       'teléfono largo: no agenda y pide corregir el número', t[:300])
+    for i, x in enumerate(turnos, 1):
+        print('      %d →' % i, (x or {}).get('body', {}).get('content', '')[:220].replace('\n', ' '))
 
 
 @caso

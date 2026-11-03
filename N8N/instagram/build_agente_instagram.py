@@ -465,6 +465,10 @@ def flujo_herramientas():
              {'workflowId': AGENDAR_PROD, 'options': {}}),
         code('igh-resultado', 'Resultado', [1980, 480],
              "return [{ json: { result: String($json.result || 'No pudimos agendar esa hora. Ofrece otra o deriva a una persona.') } }];"),
+        # Salida «no» de las dos revisiones: sin este nodo el sub-workflow termina en un IF vacío, el agente recibe «The
+        # workflow did not return a response» y no sabe qué dato pedir (caso real del 02-nov: un celular con un dígito de más).
+        code('igh-rechazo', 'Rechazo', [880, 560],
+             "return [{ json: { result: String($json.result || 'No se agendó. Pide de nuevo los datos o deriva a una persona.') } }];"),
     ]
     con = conectar(
         ('Entrada', '¿Qué herramienta?', 0),
@@ -474,6 +478,7 @@ def flujo_herramientas():
         ('Validar cita', '¿Cita válida?', 0), ('¿Cita válida?', 'Agenda del día', 0),
         ('Agenda del día', 'Revisar hora', 0), ('Revisar hora', '¿Hora libre?', 0),
         ('¿Hora libre?', '¿Es prueba?', 0),
+        ('¿Cita válida?', 'Rechazo', 1), ('¿Hora libre?', 'Rechazo', 1),
         ('¿Es prueba?', 'Cita simulada', 0), ('¿Es prueba?', 'Agendar en PROD', 1),
         ('Agendar en PROD', 'Resultado', 0),
     )

@@ -326,8 +326,8 @@ que el portal sirve el bundle nuevo y que la API responde).
 
 ## 11. Anuncios de Meta (pestaña «Anuncios», rama `claude/portal-metricas-anuncios`)
 
-> Estado: **LOCAL**, sin desplegar. Falta el token con `ads_read` (§11.4). Dueño: Eje. Pedido de Luis, 4-nov-2026, tras publicar los
-> dos primeros anuncios de mensajes desde Business Suite.
+> Estado: **EN PROD desde el 5-nov-2026**, con autorización de Luis (evidencia en §11.6). Dueño: Eje. Pedido de Luis, 4-nov-2026,
+> tras publicar los dos primeros anuncios de mensajes desde Business Suite.
 
 **Por qué hacía falta.** Métricas IG lee `graph.instagram.com` con el token de Instagram Login: trae lo orgánico de las publicaciones
 del perfil. Los anuncios creados con un video subido (no «promocionar publicación») no están en `me/media`, y sus resultados (gasto,
@@ -421,3 +421,24 @@ porque cambió el de íconos; su contenido es el mismo salvo Marketing IG (cotej
 **Verificación desde afuera:** `GET ig-metrics/ads` sin cabecera 403 y con la credencial 200 con `ads_status`; `admin/meta-ads` sin
 sesión 403; la pestaña muestra los dos anuncios del 4-nov. **Reversa:** subir de nuevo `api-omnichannel.php` y el `index.html` del
 respaldo; el controlador nuevo puede quedar (nadie lo carga) y la opción `omni_meta_ads_cache` se puede borrar.
+
+### 11.6 Despliegue del 5-nov-2026 (evidencia)
+
+- **Token:** usuario del sistema «Portal AT lectura» del portfolio automatizatech.cl, con la cuenta publicitaria asignada solo con
+  «Ver rendimiento» y token sin vencimiento con solo `ads_read`. Lo creó Luis y lo guardó en el archivo de claves (`AT META ADS TOKEN`).
+  Antes de subir se probó en modo lectura contra Meta: cuenta en CLP y 4 anuncios con sus cifras.
+- **Cotejo previo:** `api-omnichannel.php` de PROD era igual a `main` (LF) y `omnicliente/index.html` igual byte a byte; el controlador
+  no existía.
+- **Respaldo:** `~/respaldos/meta-ads-antes-20261105/` (`api-omnichannel.php`, `index.html`, `wp-config.php` 600).
+- **Subido** con nombre temporal, `php -l`, renombrado y md5 cotejado: el controlador, la API (LF), 19 bundles nuevos de
+  `omnicliente/assets/` y al final `index.html`. `wp-config.php`: dos constantes antes de `wp-settings.php`, `php -l` antes de reemplazar,
+  permisos 644 conservados; el valor nunca se mostró.
+- **Verificado desde afuera:** `ig-metrics/ads` sin cabecera 403 y con la credencial 200 `status: ok`; `admin/meta-ads` sin sesión 403; el
+  portal y los 4 archivos que referencia, 200. La respuesta no contiene el token (las cadenas `EAAAA` que aparecen son parámetros de las
+  URL de miniaturas de Meta).
+- **Hallazgos con la cuenta real:** Meta deja `ACTIVE` a anuncios ya terminados (dos de diciembre de 2025): la vista los marca
+  «Terminado» por la fecha. Al 5-nov los dos anuncios nuevos no tenían todavía el tipo de acción de conversaciones (0 conversaciones),
+  así que sigue sin confirmarse ese nombre.
+
+**No verificado:** la pestaña con una sesión de admin en PROD (la ve Luis).
+

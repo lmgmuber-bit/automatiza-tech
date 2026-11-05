@@ -40,7 +40,6 @@ $canonical = get_permalink();
 <title><?php echo esc_html($title); ?></title>
 <meta name="description" content="<?php echo esc_attr($desc); ?>">
 <link rel="canonical" href="<?php echo esc_url($canonical); ?>">
-<meta name="robots" content="index,follow">
 <link rel="icon" type="image/svg+xml" href="<?php echo esc_url($at_img); ?>/favicon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

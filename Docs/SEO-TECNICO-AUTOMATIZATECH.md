@@ -1,0 +1,31 @@
+# SEO técnico de automatizatech.cl
+
+Fuente única de cómo el tema arma título, descripción, canonical, sitemap y robots.txt. Responsables: Eje (plataforma) con Faro (SEO). Origen: prueba manual del 5-nov-2026 con la checklist de claude-seo-ai, usada solo como referencia (Aduana no autorizó instalarla). Estándar aplicado: `Shared-Tools/Estandar-Visibilidad-Web-IA.md`.
+
+## Cómo funciona
+
+- **Plantillas con `<head>` propio** (home premium, las siete landings y `template-legal.php`) escriben su `<title>`, su descripción y su canonical; el home deja el canonical y las etiquetas `og:` a `automatiza_tech_home_premium_head()`. En esas plantillas `inc/seo-tecnico/cargar.php` saca `_wp_render_title_tag` y `rel_canonical` de `wp_head`, para que WordPress no imprima los suyos. Una plantilla nueva con `<head>` propio se agrega a `at_seo_plantillas_propias()` (`inc/seo-tecnico/puras.php`), o volverá a salir duplicada.
+- **Las páginas comunes** (las que usan `header.php`) siguen con el `<title>` y el canonical de WordPress.
+- **Sitemap** (`wp-sitemap.xml`, el del núcleo; no hay plugin de SEO): sin el sitemap de usuarios, sin «Hola mundo», «Página de ejemplo», `validar-factura/` ni la categoría «Sin categoría». Lo excluido, el archivo de autor y esa categoría llevan `noindex, follow`. **No se despublicó ni borró nada**: eso lo decide Luis.
+- **robots.txt** es el virtual de WordPress: el núcleo escribe el grupo `*` y una sola línea `Sitemap`. El tema agrega un grupo para la búsqueda con IA (OAI-SearchBot, ChatGPT-User, Claude-SearchBot, Claude-User) con el mismo acceso que el resto, y el `llms.txt` como comentario (la línea `LLMS:` no era una directiva). El bloqueo del entrenamiento (GPTBot, ClaudeBot, Google-Extended) depende de `at_seo_bloquea_entrenamiento()`; hoy devuelve `false`, igual que antes, hasta que Luis decida.
+- Se eliminó `automatiza_tech_seo_optimizations()` de `functions.php`: imprimía en el inicio la descripción y las `og:` del home antiguo («bots inteligentes») encima de las de la plantilla.
+
+## Pruebas
+
+```bash
+php tests/seo-tecnico/puras-test.php
+php tests/seo-tecnico/ganchos-test.php
+```
+
+Después de desplegar, contar etiquetas por URL pública (debe dar una de cada una): el script `contar.sh` del despliegue del 5-nov-2026 hace un GET por URL y cuenta `<title>`, descripción, canonical y meta robots.
+
+## Estado por control (V1–V6 del estándar)
+
+| Control | Estado | Evidencia o motivo |
+|---|---|---|
+| V1 Alcance | PASS | Públicas: inicio, siete landings y tres páginas legales. Fuera del índice: relleno de WordPress, `validar-factura/`, autor y «Sin categoría». Privadas y fuera de este alcance: wp-admin, CRM, portal OmniCliente, propuestas y demos. |
+| V2 Acceso | PASS antes y después | Las 11 URLs públicas responden 200 (GET del 5-nov-2026). |
+| V3 Descubrimiento | Ver el PR | Sitemap y canonical corregidos en la rama; en PROD solo después del despliegue autorizado. |
+| V4 Presentación | Ver el PR | Un título y una descripción por página. Pendiente aparte: las `og:` y el JSON-LD del home van sin tildes. |
+| V5 Motores con IA | Parcial | Búsqueda con IA permitida explícitamente. Entrenamiento: decisión de Luis pendiente. Estado de la inclusión generativa en Search Console: NOT_RUN, sin acceso. |
+| V6 Medición | NOT_RUN | Sin acceso a Search Console ni a Bing Webmaster Tools. |

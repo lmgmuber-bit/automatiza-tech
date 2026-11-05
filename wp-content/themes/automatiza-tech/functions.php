@@ -1142,22 +1142,10 @@ function get_whatsapp_url($message = '') {
 
 
 /**
- * Optimizaciones SEO básicas
+ * SEO técnico: un solo título, descripción y canonical por página, sitemap sin relleno y robots.txt.
+ * Reemplaza las metas del home antiguo («bots inteligentes»), que se sumaban a las de la plantilla.
  */
-function automatiza_tech_seo_optimizations() {
-    // Meta tags básicos
-    add_action('wp_head', function() {
-        if (is_front_page()) {
-            echo '<meta name="description" content="Automatiza Tech - Conectamos tus ventas, web y CRM. Bots inteligentes para negocios que no se detienen. Mejora tu atención al cliente 24/7.">';
-            echo '<meta name="keywords" content="automatización, chatbots, CRM, ventas, WhatsApp, Instagram, atención al cliente">';
-            echo '<meta property="og:title" content="Automatiza Tech - Conectamos tus ventas, web y CRM">';
-            echo '<meta property="og:description" content="Bots inteligentes para negocios que no se detienen. Automatiza tu atención, ahorra tiempo, escala tu negocio.">';
-            echo '<meta property="og:type" content="website">';
-            echo '<meta property="og:url" content="' . home_url() . '">';
-        }
-    });
-}
-add_action('init', 'automatiza_tech_seo_optimizations');
+require_once get_template_directory() . '/inc/seo-tecnico/cargar.php';
 
 /**
  * Incluir archivos adicionales

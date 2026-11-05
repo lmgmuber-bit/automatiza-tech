@@ -61,6 +61,9 @@ $r = correr('robots_txt', $nucleo, '1');
 ok(substr_count($r, 'Sitemap:') === 1, 'robots.txt: un solo Sitemap');
 ok(strpos($r, "\nLLMS:") === false, 'robots.txt: sin LLMS:');
 ok(strpos($r, 'User-agent: OAI-SearchBot') !== false && strpos($r, 'User-agent: Claude-SearchBot') !== false, 'robots.txt: grupo de búsqueda con IA');
+ok(preg_match("/User-agent: Google-Extended
+Disallow: \/
+/", $r) === 1, 'robots.txt: entrenamiento bloqueado (decisión de Luis)');
 ok(correr('robots_txt', "User-agent: *\nDisallow: /\n", '0') === "User-agent: *\nDisallow: /\n", 'sitio no público: robots.txt intacto');
 echo "\n--- robots.txt resultante ---\n{$r}";
 

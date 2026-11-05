@@ -4,11 +4,11 @@ if (!defined('ABSPATH')) { exit; }
 require_once __DIR__ . '/puras.php';
 
 /**
- * Decisión de Luis sobre los rastreadores de entrenamiento (GPTBot, ClaudeBot, Google-Extended).
- * false = igual que antes del 5-nov-2026: los cubre el grupo `*` y pueden leer el sitio.
+ * Decisión de Luis (5-nov-2026): GPTBot, ClaudeBot y Google-Extended no leen el sitio para entrenar.
+ * No afecta a Googlebot, Bingbot ni a la búsqueda con IA. false = vuelven a quedar bajo el grupo `*`.
  */
 function at_seo_bloquea_entrenamiento(): bool {
-	return false;
+	return true;
 }
 
 /** En las plantillas con <head> propio, WordPress no imprime un segundo <title> ni un segundo canonical. */

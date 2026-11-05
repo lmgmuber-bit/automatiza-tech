@@ -42,6 +42,7 @@ const AD_STATUS = {
   archived:             { label: 'Archivado', cls: 'bg-gray-100 text-gray-600 ring-gray-200 dark:bg-slate-700 dark:text-slate-300 dark:ring-slate-600' },
   disapproved:          { label: 'Rechazado', cls: 'bg-red-50 text-red-700 ring-red-200 dark:bg-red-500/10 dark:text-red-300 dark:ring-red-500/30' },
   with_issues:          { label: 'Con problemas', cls: 'bg-amber-50 text-amber-800 ring-amber-200 dark:bg-amber-500/10 dark:text-amber-300 dark:ring-amber-500/30' },
+  completed:            { label: 'Terminado', cls: 'bg-gray-100 text-gray-600 ring-gray-200 dark:bg-slate-700 dark:text-slate-300 dark:ring-slate-600' },
   pending_billing_info: { label: 'Falta el pago', cls: 'bg-amber-50 text-amber-800 ring-amber-200 dark:bg-amber-500/10 dark:text-amber-300 dark:ring-amber-500/30' },
 };
 
@@ -172,7 +173,9 @@ function AdsTable({ ads, currency }) {
         <tbody>
           {ads.map(ad => {
             const m = ad.metrics || {};
-            const st = AD_STATUS[ad.status] || { label: ad.status || '—', cls: 'bg-gray-100 text-gray-600 ring-gray-200 dark:bg-slate-700 dark:text-slate-300 dark:ring-slate-600' };
+            // Meta deja «ACTIVE» a un anuncio cuya fecha de término ya pasó: se muestra como terminado.
+            const ended = ad.end_at && new Date(ad.end_at) < new Date();
+            const st = (ended && ad.status === 'active' ? AD_STATUS.completed : AD_STATUS[ad.status]) || { label: ad.status || '—', cls: 'bg-gray-100 text-gray-600 ring-gray-200 dark:bg-slate-700 dark:text-slate-300 dark:ring-slate-600' };
             return (
               <tr key={ad.id} className="border-b border-gray-50 dark:border-slate-700/50 align-top">
                 <td className="py-2.5 pr-2">

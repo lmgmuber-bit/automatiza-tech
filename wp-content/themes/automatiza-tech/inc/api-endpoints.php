@@ -9,6 +9,8 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
+require_once __DIR__ . '/tipo-cambio-cache.php';
+
 /**
  * Desactivar caché para endpoints de recordatorios
  */
@@ -753,7 +755,7 @@ function automatiza_tech_save_lead($request) {
     // Es la misma regla de la reunión de seguimiento y de la agenda del plan (automatiza_tech_limite_reuniones_activas).
     $test_email = 'lmgm.uber@gmail.com';
     if (strtolower($email) !== strtolower($test_email)) {
-        $limite = automatiza_tech_limite_reuniones_activas($email);
+        $limite = automatiza_tech_limite_reuniones_activas($email, function_exists('at_wa_excluir_de_request') ? at_wa_excluir_de_request($request) : []);
         if ($limite['alcanzado']) {
             return new WP_Error('email_limit_reached', $limite['mensaje'], array('status' => 400));
         }
@@ -844,7 +846,10 @@ function automatiza_tech_get_exchange_rate() {
     }
 
     $updater = automatiza_tech_init_currency_updater();
-    $rate = $updater->get_current_exchange_rate();
+    // Guardado 6 h (tipo-cambio-cache.php): los bots ya no esperan al Banco Central en cada mensaje.
+    $rate = function_exists('at_tipo_cambio_guardado')
+        ? at_tipo_cambio_guardado(function () use ($updater) { return $updater->get_current_exchange_rate(); })
+        : $updater->get_current_exchange_rate();
 
     if (!$rate) {
         // Intentar obtener el último guardado si falla la API en tiempo real

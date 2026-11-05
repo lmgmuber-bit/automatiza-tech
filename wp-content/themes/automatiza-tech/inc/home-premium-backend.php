@@ -7,7 +7,6 @@ const AT_HOME_PREMIUM_ATTR_VERSION = '2026_06_20_reuse_pipeline_v2';
 
 add_action('init', 'automatiza_tech_home_premium_maybe_install_attribution');
 add_action('wp_head', 'automatiza_tech_home_premium_head', 2);
-add_filter('robots_txt', 'automatiza_tech_home_premium_robots_txt', 10, 2);
 // Atribución por session_id (path Opción A: el lead lo crea n8n, no hay lead_id al enviar).
 add_action('wp_ajax_at_home_premium_attr', 'automatiza_tech_home_premium_attr_ajax');
 add_action('wp_ajax_nopriv_at_home_premium_attr', 'automatiza_tech_home_premium_attr_ajax');
@@ -243,10 +242,4 @@ function automatiza_tech_home_premium_head() {
     echo '<meta name="twitter:description" content="' . esc_attr($desc) . '">' . "\n";
     echo '<meta name="twitter:image" content="' . esc_url($img) . '">' . "\n";
     echo '<script type="application/ld+json">' . wp_json_encode($schema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . '</script>' . "\n";
-}
-
-function automatiza_tech_home_premium_robots_txt($output, $public) {
-    $extra = "\nSitemap: " . home_url('/wp-sitemap.xml') . "\n";
-    $extra .= "LLMS: " . home_url('/llms.txt') . "\n";
-    return $output . $extra;
 }

@@ -19,6 +19,7 @@ require_once __DIR__ . '/omnichannel-controller.php';
 require_once __DIR__ . '/omnichannel-atfinance-controller.php';
 require_once __DIR__ . '/omnichannel-ig-insights-controller.php';
 require_once __DIR__ . '/omnichannel-ig-comments-controller.php';
+require_once __DIR__ . '/omnichannel-meta-ads-controller.php';
 require_once __DIR__ . '/at-rate-limit.php';
 require_once __DIR__ . '/at-mime-check.php';
 
@@ -39,6 +40,7 @@ $iginsights = new OmniIgInsightsController($controller);
 $iginsights->maybe_create_tables(); // ídem: tablas de Métricas IG
 $igcomments = new OmniIgCommentsController($controller);
 $igcomments->maybe_create_tables(); // ídem: registro de respuestas a comentarios
+$metaads = new OmniMetaAdsController(); // anuncios de Meta: sin tablas, caché en una opción
 
 // Parse request
 $method = $_SERVER['REQUEST_METHOD'];
@@ -639,6 +641,11 @@ try {
         if (($segments[1] ?? '') === 'sync' && $method === 'POST') {
             $igm_result = $iginsights->sync($igm_channel_id, false);
             send_json($igm_result, empty($igm_result['ok']) ? 502 : 200);
+        }
+
+        // GET ig-metrics/ads — anuncios pagados de Meta (solo lectura; usa la caché de 30 min, sin forzar).
+        if (($segments[1] ?? '') === 'ads' && $method === 'GET' && !isset($segments[2])) {
+            send_json($metaads->get_overview(false));
         }
 
         send_json(['error' => 'Ruta ig-metrics no encontrada'], 404);
@@ -1324,6 +1331,16 @@ try {
                 }
                 if (!isset($segments[2]) && $method === 'GET') {
                     send_json($iginsights->get_overview($igi_channel_id, $_GET['days'] ?? 30, $_GET['posts_limit'] ?? 50));
+                }
+                break;
+
+            // Admin: anuncios pagados de Meta (Marketing IG → Anuncios). sync relee ahora (mín. 2 min entre lecturas).
+            case 'meta-ads':
+                if (($segments[2] ?? '') === 'sync' && $method === 'POST') {
+                    send_json($metaads->get_overview(true));
+                }
+                if (!isset($segments[2]) && $method === 'GET') {
+                    send_json($metaads->get_overview(false));
                 }
                 break;
 

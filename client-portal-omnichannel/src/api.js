@@ -240,6 +240,9 @@ export const getUsageStats = ({ client_id, days = 30 } = {}) =>
 export const getIgInsights = ({ days = 30, posts_limit = 50 } = {}) =>
   request(`ig-insights?days=${days}&posts_limit=${posts_limit}`);
 export const syncIgInsights = () => request('ig-insights/sync', 'POST', {});
+// Anuncios de Meta (admin): resultados por anuncio de la cuenta publicitaria; sync relee ahora.
+export const getMetaAds = () => request('meta-ads');
+export const syncMetaAds = () => request('meta-ads/sync', 'POST', {});
 export const getClient = (id) => request(`clients/${id}`);
 export const createClient = (data) => request('clients', 'POST', data);
 export const updateClient = (id, data) => request(`clients/${id}`, 'PUT', data);

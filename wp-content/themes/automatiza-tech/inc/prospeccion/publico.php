@@ -97,3 +97,44 @@ add_action('wp_enqueue_scripts', static function () {
 	wp_enqueue_script('at-prospeccion-ref', get_template_directory_uri() . '/assets/js/prospeccion-ref.js', [], (string) filemtime($ruta), true);
 	wp_add_inline_script('at-prospeccion-ref', 'window.AtProRef=' . wp_json_encode(['ajax' => admin_url('admin-ajax.php')]) . ';', 'before');
 });
+
+/** Página mínima, sin el tema, sin índice de buscadores. */
+function at_pro_baja_html(string $titulo, string $cuerpo): string {
+	$icono = '<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#0e7c86" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M8 12l3 3 5-6"/></svg>';
+	return '<!doctype html><html lang="es-CL"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>' . esc_html($titulo) . ' · AutomatizaTech</title>'
+		. '<style>body{margin:0;font-family:system-ui,-apple-system,Segoe UI,sans-serif;background:#f4f7f9;color:#12263a;display:grid;place-items:center;min-height:100vh;padding:16px;box-sizing:border-box}main{background:#fff;border-radius:12px;padding:28px;max-width:440px;box-shadow:0 2px 14px rgba(0,0,0,.08);text-align:center}h1{font-size:1.3rem;margin:.6rem 0}p{line-height:1.5}button{background:#12263a;color:#fff;border:0;border-radius:8px;padding:12px 22px;font-size:1rem;cursor:pointer;display:inline-flex;gap:8px;align-items:center}</style></head><body><main>'
+		. $icono . '<h1>' . esc_html($titulo) . '</h1>' . $cuerpo . '</main></body></html>';
+}
+
+/**
+ * Página de baja. Un GET nunca cambia nada: solo muestra el botón; la baja la da el POST con nonce.
+ * Con un token inexistente responde igual que con uno válido, sin revelar si existe.
+ */
+function at_pro_baja_pagina(string $token, bool $es_post, string $nonce): array {
+	$token = strlen($token) <= 64 ? $token : '';
+	$p = at_pro_token_valido($token) ? at_pro_por_token($token) : null;
+	$hecho = at_pro_baja_html('Listo, no te volveremos a escribir', '<p>Quitamos tu contacto de nuestra lista. Si fue un error, puedes escribirnos a contacto@automatizatech.cl.</p>');
+	if ($es_post) {
+		if ($p && wp_verify_nonce($nonce, 'at_pro_baja_' . $token)) { at_pro_dar_baja($token); return ['status' => 200, 'html' => $hecho]; }
+		if (!$p) { return ['status' => 200, 'html' => $hecho]; }
+		return ['status' => 200, 'html' => at_pro_baja_html('Confirma tu baja', '<p>No pudimos validar la solicitud. Vuelve a abrir el enlace del mensaje y confirma de nuevo.</p>')];
+	}
+	if ($p && $p['estado'] === 'baja') { return ['status' => 200, 'html' => $hecho]; }
+	$form = '<p>Si no quieres recibir más mensajes de AutomatizaTech, confirma aquí.</p><form method="post" action="' . esc_url(add_query_arg('baja', rawurlencode($token), home_url('/'))) . '">'
+		. '<input type="hidden" name="at_pro_nonce" value="' . esc_attr(wp_create_nonce('at_pro_baja_' . $token)) . '"><button type="submit"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M5 12l5 5 9-10"/></svg> Confirmar baja</button></form>';
+	return ['status' => 200, 'html' => at_pro_baja_html('Darte de baja', $form)];
+}
+
+add_action('template_redirect', static function () {
+	if (is_admin() || !isset($_GET['baja'])) { return; }
+	$token = is_string($_GET['baja']) ? sanitize_text_field(wp_unslash($_GET['baja'])) : '';
+	$es_post = ($_SERVER['REQUEST_METHOD'] ?? '') === 'POST';
+	$r = at_pro_baja_pagina($token, $es_post, $es_post ? (string) wp_unslash($_POST['at_pro_nonce'] ?? '') : '');
+	nocache_headers();
+	do_action('litespeed_control_set_nocache', 'rastro baja');
+	status_header($r['status']);
+	header('Content-Type: text/html; charset=utf-8');
+	header('X-Robots-Tag: noindex, nofollow');
+	echo $r['html']; // HTML armado arriba con esc_html/esc_attr
+	exit;
+}, 1);

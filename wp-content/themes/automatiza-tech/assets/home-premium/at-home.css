@@ -172,3 +172,4 @@ a.at-cl-card:focus-visible{outline:2px solid #2dd4bf;outline-offset:3px}
 #at-root[data-motion="off"] .at-cl-track{animation:none;flex-wrap:wrap;justify-content:center;width:auto;padding:6px 28px 10px}
 #at-root[data-motion="off"] .at-cl-dup{display:none}
 #at-root[data-motion="off"] .at-cl-marquee{-webkit-mask-image:none;mask-image:none}
+.at-cl-logo--oscuro{background:#0b131f}

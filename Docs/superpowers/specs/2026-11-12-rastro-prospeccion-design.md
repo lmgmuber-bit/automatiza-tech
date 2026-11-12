@@ -1,6 +1,6 @@
 # Rastro · Prospección: pestaña de prospectos en el panel de AT
 
-Fecha: 12-nov-2026 · Responsable: Eje (plataforma AT) para Rastro · Estado: **borrador para aprobación de Luis**
+Fecha: 12-nov-2026 · Responsable: Eje (plataforma AT) para Rastro · Estado: **borrador con las decisiones de Luis del 12-nov; falta su OK final para construir**
 
 ## Intención
 
@@ -64,9 +64,9 @@ Rastro es la oficina que hace la búsqueda y la calificación. Esta pestaña es 
 
 ### Formulario y baja
 
-- El enlace personal apunta al formulario público que elija Luis (ver pregunta 1) con `?r=<token>`. El formulario lo lleva en un campo oculto.
+- El enlace personal apunta al formulario de **agendar diagnóstico** que ya existe (`handle_contact_form`, con nonce, honeypot y límite por IP) con `?r=<token>`. El formulario lo lleva en un campo oculto.
 - Al guardar el formulario: si el token existe y no está en `baja`, el prospecto pasa a `formulario`, se crea o actualiza el cliente con `at_cc_asegurar_cliente([... 'origen' => 'prospeccion'])` y se guarda `crm_cliente_id`. El formulario sigue funcionando igual sin token.
-- Aviso: el correo que ya manda el formulario, con una línea «Viene de Prospección: <negocio>, contactado el <fecha>».
+- Aviso por **correo y WhatsApp**: el correo que ya manda el formulario, con una línea «Viene de Prospección: <negocio>, contactado el <fecha>», y además un WhatsApp al número de Luis. El WhatsApp sale por n8n con una **plantilla aprobada por Meta** (categoría Utilidad), porque un mensaje que no es plantilla solo llega si Luis escribió en las últimas 24 h. Si la plantilla no está aprobada, el correo sigue saliendo igual.
 - Baja: una página pública `?baja=<token>` marca `baja` y lo confirma en pantalla. El texto del mensaje siempre incluye ese enlace.
 
 ### Cómo sirve a más de un cliente
@@ -91,11 +91,15 @@ La misma pieza (lista con estados, enlace personal al formulario y paso al CRM) 
 - Importación por CSV en v1 en vez de una conexión directa con n8n.
 - Estados propios de la prospección (no los del glosario de leads, que describen otra etapa).
 
-## Preguntas para Luis
+- Formulario: el de agendar diagnóstico que ya existe.
+- Aviso: correo y WhatsApp.
+- Envío en v1: lo hace Luis (copiar el mensaje o abrir WhatsApp con el texto listo); el envío automático espera la revisión de Toga.
 
-1. ¿A qué formulario apunta el enlace: al de agendar diagnóstico que ya existe, o a uno nuevo y corto solo para prospección?
-2. ¿El aviso basta por correo, o también quieres WhatsApp?
-3. ¿Confirmas que en v1 el envío lo haces tú (copiar o abrir WhatsApp) y que el envío automático espera a Toga?
+## Revisión de Aduana (12-nov-2026)
+
+- **Sellbird:** apto con condiciones, solo como piloto local para armar la lista, fijado al commit `25ec839`, en una carpeta fuera del webroot, con el canal de correo apagado, sin buzón ni credenciales, cuota de Claude limitada al 10–15 % y sin la verificación de correos por el puerto 25. Lo opera Luis desde su terminal, no dentro de Claude Code. Revisión B de Codex pendiente.
+- **cold-email:** ya está en la biblioteca `at-marketingskills`; no se instala otra vez.
+- **lead-scoring:** segura, pero se pospone hasta tener historial de cierres.
 
 ## Lo que queda al constructor
 

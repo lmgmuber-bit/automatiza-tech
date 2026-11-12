@@ -60,12 +60,12 @@ Rastro es la oficina que hace la búsqueda y la calificación. Esta pestaña es 
 - Acciones por fila: **Copiar mensaje** (texto con la señal real y el enlace personal), **Abrir WhatsApp** (`wa.me` con el texto prellenado; Luis aprieta enviar), **Marcar contactado**, **Marcar respondió**, **Descartar**, **Ver en CRM**.
 - Acciones masivas: marcar contactado, descartar.
 - **Importar CSV**: mapea columnas, salta duplicados por dominio o teléfono, nunca reimporta un `baja` y muestra cuántos entraron, cuántos se repetían y cuántos eran baja.
-- Íconos Phosphor 2.1.1 en menú, acciones y estados, con `aria-label` en los botones que solo tienen ícono.
+- Íconos en menú, acciones y estados con los Dashicons del propio wp-admin (el panel ya los usa en todo el menú), con `aria-label` en los botones que solo tienen ícono.
 
 ### Formulario y baja
 
 - El enlace personal apunta al formulario de **agendar diagnóstico** que ya existe (`handle_contact_form`, con nonce, honeypot y límite por IP) con `?r=<token>`. El formulario lo lleva en un campo oculto.
-- Al guardar el formulario: si el token existe y no está en `baja`, el prospecto pasa a `formulario`, se crea o actualiza el cliente con `at_cc_asegurar_cliente([... 'origen' => 'prospeccion'])` y se guarda `crm_cliente_id`. El formulario sigue funcionando igual sin token.
+- Al guardar el formulario: si el token existe y no está en `baja`, el prospecto pasa a `formulario`, se crea el prospecto en `crm_clientes` (`tipo` = `prospecto`, `origen` = `prospeccion`) con una función propia, sin bajar a prospecto a quien ya es cliente, y se guarda `crm_cliente_id`. No se usa `at_cc_asegurar_cliente`, que convierte en cliente. El formulario sigue funcionando igual sin token.
 - Aviso por **correo y WhatsApp**: el correo que ya manda el formulario, con una línea «Viene de Prospección: <negocio>, contactado el <fecha>», y además un WhatsApp al número de Luis. El WhatsApp sale por n8n con una **plantilla aprobada por Meta** (categoría Utilidad), porque un mensaje que no es plantilla solo llega si Luis escribió en las últimas 24 h. Si la plantilla no está aprobada, el correo sigue saliendo igual.
 - Baja: una página pública `?baja=<token>` marca `baja` y lo confirma en pantalla. El texto del mensaje siempre incluye ese enlace.
 
@@ -88,6 +88,8 @@ La misma pieza (lista con estados, enlace personal al formulario y paso al CRM) 
 ## Llamadas de Eje (revisables)
 
 - Submenú bajo CRM y no menú propio, para que todo lo comercial quede junto.
+- El aviso por correo es uno propio («Prospección: <negocio> llenó el formulario») y no una línea agregada al correo del formulario, para no tocar el manejador del formulario.
+- El paso a «llenó formulario» se detecta sin cambiar el formulario: una cookie del enlace personal más el aviso que el sitio ya emite al agendar (`window.atLead`) y el gancho del respaldo `contact_form`; el servidor confirma que el lead existe con ese correo antes de marcar.
 - Importación por CSV en v1 en vez de una conexión directa con n8n.
 - Estados propios de la prospección (no los del glosario de leads, que describen otra etapa).
 

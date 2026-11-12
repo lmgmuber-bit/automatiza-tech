@@ -20,6 +20,8 @@ Estados: `por_contactar → contactado → respondio → formulario`, más `desc
 
 - `?r=<token>` deja la cookie `at_pro_r` (30 días, HttpOnly, SameSite Lax) y redirige a la misma URL sin `r`.
 - `assets/js/prospeccion-ref.js` envuelve `window.atLead` (el aviso que el sitio ya emite al agendar) y avisa al AJAX `at_pro_formulario`; el servidor lee el token de la cookie, comprueba que exista un lead con ese correo creado hace menos de 30 minutos y recién entonces marca. Respaldo: el gancho `save_post_at_demo_request` hace lo mismo para el formulario de contacto.
+- Si el aviso llega antes de que el sitio guarde el lead (la portada agenda por n8n), se programa un reintento 2 minutos después (`at_pro_reintentar`, WP-Cron; en PROD confirmar que el cron corre).
+- `?r=` y `?baja=` piden no cachear la página (LiteSpeed/CDN); verificar en PROD.
 - El AJAX no usa nonce a propósito (la caché de página lo vencería); lo protegen la cookie, el lead real reciente y un límite de 10 por hora por IP.
 
 ## Diccionario de datos: `{prefix}at_prospectos` (opción de versión `at_pro_db_version` = `1`)
@@ -60,7 +62,11 @@ Retención y rollback: la tabla guarda datos de contacto publicados por negocios
 
 ## Lista de subida a PROD (cuando Luis dé el OK; nada subido hoy)
 
-Orden: 1) `wp-content/themes/automatiza-tech/inc/prospeccion/` (esquema, puras, datos, lista, admin, publico, crm-avisos, cargar), 2) `wp-content/themes/automatiza-tech/assets/js/prospeccion-ref.js`, 3) al final `wp-content/themes/automatiza-tech/functions.php` **cotejado contra PROD** (solo se agrega una línea después de la de `seo-tecnico/cargar.php`). La tabla se crea sola en el primer `init` tras subir el código (el usuario de la base de PROD necesita `CREATE`). **No subir:** `tests/`, `fixtures/`, ningún CSV, `.superpowers/`. Respaldo previo de los archivos sobrescritos, verificación desde afuera (el panel pide sesión: comprobar `?baja=<token inventado>` responde 200 con el mensaje genérico) y recién entonces reportar.
+Orden: 1) `wp-content/themes/automatiza-tech/inc/prospeccion/` (esquema, puras, datos, lista, admin, publico, crm-avisos, cargar), 2) `wp-content/themes/automatiza-tech/assets/js/prospeccion-ref.js`, 3) al final `wp-content/themes/automatiza-tech/functions.php` **cotejado contra PROD** (solo se agrega una línea después de la de `seo-tecnico/cargar.php`). La tabla se crea sola en el primer `init` tras subir el código (el usuario de la base de PROD necesita `CREATE`). **No subir:** `tests/`, `fixtures/`, ningún CSV, `.superpowers/`. Respaldo previo de los archivos sobrescritos, verificación desde afuera (el panel pide sesión: comprobar que `?baja=<token inventado>` responde 200 con la página «Darte de baja» (un GET nunca da de baja)) y recién entonces reportar.
+
+## Riesgos abiertos (revisión final)
+
+- El límite de 10 por hora por IP usa `REMOTE_ADDR`: si en Hostinger llega la IP del CDN, todas las visitas comparten el cupo. Confirmar qué IP llega antes de encender.
 
 ## Lo que no está probado
 

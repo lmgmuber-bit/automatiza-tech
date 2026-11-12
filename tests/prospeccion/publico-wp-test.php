@@ -80,6 +80,20 @@ unset($_COOKIE['at_pro_r']);
 wp_insert_post(['post_type' => 'at_demo_request', 'post_title' => 'Otra — otra@prueba.test', 'post_status' => 'private', 'meta_input' => ['_at_name' => 'Otra', '_at_email' => 'otra@prueba.test', '_at_source' => 'contact_form']]);
 ok(at_pro_obtener($f)['estado'] === 'por_contactar', 'gancho sin cookie no marca a nadie');
 
+
+// Revisión final I1: si el lead todavía no existe cuando llega el aviso, se reintenta un poco después
+$g = at_pro_crear(['negocio' => 'Tarde', 'web' => 'tarde.test']);
+$tg = at_pro_obtener($g)['token'];
+ok(at_pro_marcar_formulario($tg, 'tarde@prueba.test', 'agenda') === false, 'sin lead todavía: no marca');
+at_pro_diferir($tg, 'tarde@prueba.test');
+ok((bool) wp_next_scheduled('at_pro_reintentar', [$tg, 'tarde@prueba.test']), 'queda un reintento programado');
+$nuevo_lead('tarde@prueba.test', '0');
+$antes = count($llamadas);
+do_action('at_pro_reintentar', $tg, 'tarde@prueba.test');
+ok(at_pro_obtener($g)['estado'] === 'formulario' && count($llamadas) === $antes + 1, 'el reintento marca cuando el lead ya existe');
+at_pro_diferir('zzzzzzzzzzzzzzzz', 'x@prueba.test');
+ok(!wp_next_scheduled('at_pro_reintentar', ['zzzzzzzzzzzzzzzz', 'x@prueba.test']), 'token inexistente: no se programa nada');
+wp_clear_scheduled_hook('at_pro_reintentar', [$tg, 'tarde@prueba.test']);
 // límite por IP del AJAX
 $ip = '203.0.113.' . wp_rand(1, 250);
 $ok = 0;

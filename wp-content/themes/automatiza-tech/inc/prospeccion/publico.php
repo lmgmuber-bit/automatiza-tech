@@ -25,6 +25,8 @@ add_action('template_redirect', static function () {
 	if (is_admin() || !isset($_GET['r'])) { return; }
 	$r = at_pro_procesar_ref(wp_unslash($_GET));
 	if ($r['cookie'] === '') { return; }
+	nocache_headers();
+	do_action('litespeed_control_set_nocache', 'rastro ref');
 	setcookie(AT_PRO_COOKIE, $r['cookie'], ['expires' => time() + 30 * DAY_IN_SECONDS, 'path' => '/', 'secure' => is_ssl(), 'httponly' => true, 'samesite' => 'Lax']);
 	wp_safe_redirect($r['redirect'], 302);
 	exit;
@@ -76,7 +78,8 @@ function at_pro_ajax_formulario(): void {
 	$ip = (string) ($_SERVER['REMOTE_ADDR'] ?? '');
 	$token = isset($_COOKIE[AT_PRO_COOKIE]) ? sanitize_text_field(wp_unslash((string) $_COOKIE[AT_PRO_COOKIE])) : '';
 	if ($token !== '' && at_pro_limite_ip($ip)) {
-		at_pro_marcar_formulario($token, sanitize_email(wp_unslash((string) ($_POST['email'] ?? ''))), 'agenda');
+		$email = sanitize_email(wp_unslash((string) ($_POST['email'] ?? '')));
+		if (!at_pro_marcar_formulario($token, $email, 'agenda')) { at_pro_diferir($token, $email); }
 	}
 	wp_send_json_success(); // misma respuesta siempre: no revela si el token existe
 }
@@ -138,3 +141,14 @@ add_action('template_redirect', static function () {
 	echo $r['html']; // HTML armado arriba con esc_html/esc_attr
 	exit;
 }, 1);
+
+/**
+ * Si el aviso llega antes de que el sitio termine de guardar el lead (la portada agenda por n8n), se vuelve a intentar
+ * un par de minutos después. Solo para tokens que todavía pueden pasar a «llenó formulario».
+ */
+function at_pro_diferir(string $token, string $email): void {
+	$p = at_pro_token_valido($token) ? at_pro_por_token($token) : null;
+	if (!$p || !at_pro_transicion_valida($p['estado'], 'formulario') || !is_email($email)) { return; }
+	if (!wp_next_scheduled('at_pro_reintentar', [$token, $email])) { wp_schedule_single_event(time() + 120, 'at_pro_reintentar', [$token, $email]); }
+}
+add_action('at_pro_reintentar', static function ($token, $email) { at_pro_marcar_formulario((string) $token, (string) $email, 'agenda'); }, 10, 2);

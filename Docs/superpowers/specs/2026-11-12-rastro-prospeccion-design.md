@@ -91,6 +91,8 @@ La misma pieza (lista con estados, enlace personal al formulario y paso al CRM) 
 - Importación por CSV en v1 en vez de una conexión directa con n8n.
 - Estados propios de la prospección (no los del glosario de leads, que describen otra etapa).
 
+## Respuestas de Luis a las preguntas (12-nov-2026)
+
 - Formulario: el de agendar diagnóstico que ya existe.
 - Aviso: correo y WhatsApp.
 - Envío en v1: lo hace Luis (copiar el mensaje o abrir WhatsApp con el texto listo); el envío automático espera la revisión de Toga.

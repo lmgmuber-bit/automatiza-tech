@@ -36,6 +36,20 @@ Pedido de Luis (13-nov): dejar funcionando la medición y la conversión para Go
   - las conversiones mejoradas (correo o teléfono cifrado).
 - **Datos de contacto:** el envoltorio de `atLead` manda a Google solo el origen («Agenda diagnóstico (portada)»), nunca el correo que recibe para Meta (lo cubre una prueba), y ningún script escribe datos de contacto en la URL. Falta confirmar en la cita de prueba que `page_location` llega limpio.
 
+## Estado en PROD (13-nov-2026)
+
+- **Código:** subido a las 06:09 con `deploy_medicion.py subir` (respaldo `~/respaldos/medicion-antes-*.tar.gz`).
+- **Textos de cookies:** publicados por Eje · AT general a las 07:39 (commit `58b95e5`), con el OK de Luis.
+- **GA4 encendido:** `deploy_medicion.py encender`, comprobado por GET:
+  - el ID de medición está en el HTML;
+  - solo se carga con `at_consentimiento=si`;
+  - no queda `AW-17691911857`.
+- **Ubicación granular:** activa por decisión de Luis. Aunque se apagara, GA4 derivaría país y región de la IP ([ayuda de Google](https://support.google.com/analytics/answer/12002752)), así que `/privacidad/` debe mencionar la ubicación aproximada. Lo pidió Eje · AT general a Toga.
+- **Pendiente:**
+  - la prueba en GA4 › Tiempo real;
+  - una cita de prueba para ver `generate_lead` y comprobar que `page_location` llega sin datos de contacto;
+  - marcar `generate_lead` como evento clave.
+
 ## Despliegue (con el OK de Luis)
 
 1. Cotejar con PROD el md5 sin `\r` de `header.php` e `inc/home-premium-backend.php` contra `main` y respaldarlos.

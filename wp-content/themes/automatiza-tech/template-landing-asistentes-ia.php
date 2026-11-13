@@ -24,6 +24,9 @@ if ($body === false) { $body = '<!-- landing-asistentes-ia: body.html missing --
 $body = str_replace('assets/', $at_img . '/', $body);
 // Nav/footer enlazan de vuelta al home (esta landing es una página aparte).
 $body = str_replace('{{HOME_URL}}', esc_url(home_url('/')), $body);
+require_once get_template_directory() . '/inc/at-servicios.php';
+$body = str_replace('{{OTROS_SERVICIOS}}', at_otros_servicios_html('asistentes-inteligentes-ia-whatsapp'), $body);
+$body = str_replace('{{PREFERENCIAS_COOKIES}}', at_preferencias_cookies_html(), $body);
 
 $css_ver = @filemtime($at_dir . '/assets/home-premium/at-home.css') ?: '1';
 $js_ver  = @filemtime($at_dir . '/assets/home-premium/at-home.js') ?: '1';

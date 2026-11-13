@@ -21,6 +21,9 @@ $body = @file_get_contents($at_dir . '/assets/landing-portal-omnicliente/body.ht
 if ($body === false) { $body = '<!-- landing-portal-omnicliente: body.html missing -->'; }
 $body = str_replace('assets/', $at_img . '/', $body);
 $body = str_replace('{{HOME_URL}}', esc_url(home_url('/')), $body);
+require_once get_template_directory() . '/inc/at-servicios.php';
+$body = str_replace('{{OTROS_SERVICIOS}}', at_otros_servicios_html('portal-omnicliente-precios'), $body);
+$body = str_replace('{{PREFERENCIAS_COOKIES}}', at_preferencias_cookies_html(), $body);
 
 $css_ver = @filemtime($at_dir . '/assets/home-premium/at-home.css') ?: '1';
 $js_ver  = @filemtime($at_dir . '/assets/home-premium/at-home.js') ?: '1';

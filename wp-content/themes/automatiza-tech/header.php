@@ -16,23 +16,7 @@
     <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
     <noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"></noscript>
 
-    <!-- Google tag (gtag.js) -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=AW-17691911857"></script>
-    <script>
-      window.dataLayer = window.dataLayer || [];
-      function gtag(){dataLayer.push(arguments);}
-      gtag('js', new Date());
-
-      gtag('config', 'AW-17691911857');
-    </script>
-
-    <!-- Event snippet for Compra conversion page -->
-    <script>
-      gtag('event', 'conversion', {
-          'send_to': 'AW-17691911857/AmZuCJaF-7YbELHNlPRB',
-          'transaction_id': ''
-      });
-    </script>
+    <!-- Google Analytics y Google Ads: inc/medicion/ (solo con permiso de cookies) -->
 
     <!-- Favicon -->
     <link rel="icon" href="<?php echo get_template_directory_uri(); ?>/assets/images/solo-logo.svg" type="image/svg+xml">

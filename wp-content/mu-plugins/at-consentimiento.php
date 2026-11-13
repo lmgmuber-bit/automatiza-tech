@@ -44,7 +44,7 @@ function at_consent_dibujar() {
 <div id="at-consent" class="at-consent" role="dialog" aria-modal="false" aria-labelledby="at-consent-titulo" aria-describedby="at-consent-texto" hidden>
   <div class="at-consent__caja">
     <p id="at-consent-titulo" class="at-consent__titulo">Cookies en AutomatizaTech</p>
-    <p id="at-consent-texto" class="at-consent__texto">Usamos cookies necesarias para que el sitio funcione y, solo si aceptas, cookies de medición y publicidad (Meta). Puedes cambiar tu elección cuando quieras. <a href="<?php echo $cookies; ?>">Política de Cookies</a> · <a href="<?php echo $privacidad; ?>">Privacidad</a></p>
+    <p id="at-consent-texto" class="at-consent__texto">Usamos cookies necesarias para que el sitio funcione y, solo si aceptas, cookies de medición (Google Analytics) y de publicidad (Google Ads y Meta). Puedes cambiar tu elección cuando quieras. <a href="<?php echo $cookies; ?>">Política de Cookies</a> · <a href="<?php echo $privacidad; ?>">Privacidad</a></p>
     <div class="at-consent__botones">
       <button type="button" class="at-consent__btn" data-at-consent="no">Rechazar</button>
       <button type="button" class="at-consent__btn at-consent__btn--si" data-at-consent="si">Aceptar</button>
@@ -80,22 +80,36 @@ function at_consent_dibujar() {
     var m = document.cookie.match(/(?:^|;\s*)at_consentimiento=(si|no)(?:;|$)/);
     return m ? m[1] : null;
   }
+  // La elección vive solo en la cookie (6 meses): al vencer, el aviso vuelve a preguntar (revisión de Toga, 13-nov-2026).
   function guardar(v) {
     document.cookie = NOMBRE + '=' + v + '; max-age=' + SEIS_MESES + '; path=/; SameSite=Lax' + (location.protocol === 'https:' ? '; Secure' : '');
-    try { localStorage.setItem('at_cookie_consent', v === 'si' ? 'accepted' : 'rejected'); } catch (e) {}
   }
-  // Quien ya decidió en el aviso anterior (localStorage) no vuelve a ver la pregunta.
-  if (!leer()) {
-    try {
-      var previo = localStorage.getItem('at_cookie_consent');
-      if (previo === 'accepted') { guardar('si'); } else if (previo === 'rejected') { guardar('no'); }
-    } catch (e) {}
+  // Quien decidió en el aviso anterior (localStorage) no vuelve a ver la pregunta, pero solo una vez:
+  // la copia se pasa a la cookie y se borra, para que el permiso venza a los 6 meses como dice la política.
+  try {
+    var previo = localStorage.getItem('at_cookie_consent');
+    if (previo !== null) {
+      if (!leer()) { if (previo === 'accepted') { guardar('si'); } else if (previo === 'rejected') { guardar('no'); } }
+      localStorage.removeItem('at_cookie_consent');
+    }
+  } catch (e) {}
+  // Al retirar el permiso se borran las cookies de medición y publicidad de este sitio (Google Analytics, Google Ads, Meta).
+  function borrarMedicion() {
+    var nombres = document.cookie.split(';').map(function (c) { return c.split('=')[0].trim(); })
+      .filter(function (n) { return /^(_ga|_ga_.+|_gid|_gcl_.+|_fbp|_fbc)$/.test(n); });
+    var host = location.hostname, dominios = ['', host, '.' + host, '.' + host.replace(/^www\./, '')];
+    nombres.forEach(function (n) {
+      dominios.forEach(function (d) {
+        document.cookie = n + '=; max-age=0; path=/' + (d ? '; domain=' + d : '');
+      });
+    });
   }
   var caja = document.getElementById('at-consent');
   function abrir() { if (caja) { caja.hidden = false; } }
   function decidir(v) {
     var antes = leer();
     guardar(v);
+    if (v === 'no') { borrarMedicion(); }
     if (caja) { caja.hidden = true; }
     // El píxel se decide al cargar la página: cambiar a «sí», o retirar un «sí», recarga una vez.
     if (v === 'si' || antes === 'si') { location.reload(); }

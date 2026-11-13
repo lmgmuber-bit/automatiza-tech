@@ -173,3 +173,5 @@ a.at-cl-card:hover .at-cl-logo img{transform:scale(1.04)}
 .at-cl-anima .at-cl-gitem.is-in{opacity:1;transform:none}
 @media (prefers-reduced-motion:reduce){.at-cl-anima .at-cl-gitem{opacity:1;transform:none;transition:none}}
 @media (max-width:560px){.at-cl-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.at-cl-grid--uno{grid-template-columns:1fr}.at-cl-logo{height:88px;padding:12px 14px}.at-cl-meta{padding:12px 12px 14px;gap:5px}.at-cl-name{font-size:14px}.at-cl-tag{font-size:12px}.at-cl-causas{padding:14px}}
+/* «Por qué AutomatizaTech»: el bloque de la izquierda solo queda fijo con dos columnas; en una columna se montaba sobre la lista al hacer scroll (13-nov-2026). */
+@media (max-width:860px){#porque .at-pq-lado{position:static !important;top:auto !important}}

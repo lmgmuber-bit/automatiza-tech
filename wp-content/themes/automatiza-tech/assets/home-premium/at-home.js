@@ -895,3 +895,24 @@
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
   else boot();
 })();
+
+/* Clientes: las tarjetas se asoman al hacer scroll (12-nov-2026). Sin IntersectionObserver o con
+   menos movimiento quedan visibles desde el inicio: el CSS solo las oculta si existe .at-cl-anima. */
+(function () {
+  var grillas = document.querySelectorAll('.at-cl-grid');
+  if (!grillas.length || !('IntersectionObserver' in window)) return;
+  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  var io = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (!e.isIntersecting) return;
+      var item = e.target, hermanos = item.parentNode.children, i = Array.prototype.indexOf.call(hermanos, item);
+      item.style.transitionDelay = (i % 4) * 90 + 'ms';
+      item.classList.add('is-in');
+      io.unobserve(item);
+    });
+  }, { rootMargin: '0px 0px -8% 0px', threshold: 0.12 });
+  grillas.forEach(function (g) {
+    g.classList.add('at-cl-anima');
+    g.querySelectorAll('.at-cl-gitem').forEach(function (it) { io.observe(it); });
+  });
+})();

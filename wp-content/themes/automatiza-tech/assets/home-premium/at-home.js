@@ -511,6 +511,8 @@
     // Tráfico pagado (utm_*) va directo al contenido: la intro de 4.4s
     // destruye el LCP y quema presupuesto de ads en rebotes.
     try { if (/[?&]utm_/.test(location.search)) return; } catch (e) {}
+    // Decisión de Luis (12-nov-2026): en celular no se muestra (tapaba la pantalla; lo principal aparecía a los 7,7 s en red lenta).
+    try { if (window.matchMedia && window.matchMedia('(max-width: 767px), (pointer: coarse) and (max-width: 1024px)').matches) return; } catch (e) {}
     // Premium UX: play the brand intro only once per browser session, so
     // internal navigation isn't blocked by the 4.4s sequence every time.
     try { if (sessionStorage.getItem('at_intro_seen')) return; sessionStorage.setItem('at_intro_seen', '1'); } catch (e) {}

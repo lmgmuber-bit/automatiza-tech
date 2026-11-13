@@ -12,7 +12,7 @@
       <sc-if data-when="isDesktop">
         <nav style="display:flex;align-items:center;gap:34px">
           <a href="#dolor" style="font-size:14px;font-weight:500;color:var(--text-3);transition:color .2s" data-hover="color:var(--text)">El problema</a>
-          <a href="#soluciones" style="font-size:14px;font-weight:500;color:var(--text-3);transition:color .2s" data-hover="color:var(--text)">Soluciones</a>
+          {{MENU_SERVICIOS}}
           <a href="#metodo" style="font-size:14px;font-weight:500;color:var(--text-3);transition:color .2s" data-hover="color:var(--text)">Método</a>
           <a href="#casos" style="font-size:14px;font-weight:500;color:var(--text-3);transition:color .2s" data-hover="color:var(--text)">Casos</a>
           <a href="#porque" style="font-size:14px;font-weight:500;color:var(--text-3);transition:color .2s" data-hover="color:var(--text)">Por qué AT</a>
@@ -37,7 +37,7 @@
     <sc-if data-when="menuOpen">
       <div style="padding:8px 18px 20px;display:flex;flex-direction:column;gap:2px;background:var(--menu-bg);border-bottom:1px solid var(--bd2)">
         <a href="#dolor" data-act="closeMenu" style="padding:13px 12px;font-weight:600;color:var(--text-2);border-radius:8px">El problema</a>
-        <a href="#soluciones" data-act="closeMenu" style="padding:13px 12px;font-weight:600;color:var(--text-2);border-radius:8px">Soluciones</a>
+        {{MENU_SERVICIOS_MOVIL}}
         <a href="#metodo" data-act="closeMenu" style="padding:13px 12px;font-weight:600;color:var(--text-2);border-radius:8px">Método</a>
         <a href="#planes" data-act="closeMenu" style="padding:13px 12px;font-weight:600;color:var(--text-2);border-radius:8px">Planes</a>
         <a href="#casos" data-act="closeMenu" style="padding:13px 12px;font-weight:600;color:var(--text-2);border-radius:8px">Casos</a>

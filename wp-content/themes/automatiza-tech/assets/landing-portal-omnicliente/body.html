@@ -10,6 +10,7 @@
       </a>
       <sc-if data-when="isDesktop">
         <nav style="display:flex;align-items:center;gap:34px">
+          {{MENU_SERVICIOS}}
           <a href="#planes" style="font-size:14px;font-weight:500;color:var(--text-3);transition:color .2s" data-hover="color:var(--text)">Planes</a>
           <a href="#faq" style="font-size:14px;font-weight:500;color:var(--text-3);transition:color .2s" data-hover="color:var(--text)">Preguntas</a>
           <a href="{{HOME_URL}}#rubros" style="font-size:14px;font-weight:500;color:var(--text-3);transition:color .2s" data-hover="color:var(--text)">Casos por rubro</a>
@@ -33,6 +34,7 @@
     </div>
     <sc-if data-when="menuOpen">
       <div style="padding:8px 18px 20px;display:flex;flex-direction:column;gap:2px;background:var(--menu-bg);border-bottom:1px solid var(--bd2)">
+        {{MENU_SERVICIOS_MOVIL}}
         <a href="#planes" data-act="closeMenu" style="padding:13px 12px;font-weight:600;color:var(--text-2);border-radius:8px">Planes</a>
         <a href="#faq" data-act="closeMenu" style="padding:13px 12px;font-weight:600;color:var(--text-2);border-radius:8px">Preguntas</a>
         <a href="{{HOME_URL}}#rubros" data-act="closeMenu" style="padding:13px 12px;font-weight:600;color:var(--text-2);border-radius:8px">Casos por rubro</a>

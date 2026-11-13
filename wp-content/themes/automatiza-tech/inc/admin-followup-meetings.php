@@ -2533,10 +2533,11 @@ function automatiza_tech_create_followup_meeting_api($request) {
     
     if (!$availability_check['available']) {
         $conflict_type = $availability_check['conflict_type'] === 'demo' ? 'DEMO' : 'reunión de seguimiento';
+        error_log('followup-meetings: horario ocupado: ' . (string) $availability_check['conflict_details']);
         return new WP_Error(
             'slot_taken', 
             'Este horario ya está ocupado por una ' . $conflict_type . '. Por favor selecciona otro horario.', 
-            array('status' => 400, 'conflict_details' => $availability_check['conflict_details'])
+            array('status' => 400)
         );
     }
     

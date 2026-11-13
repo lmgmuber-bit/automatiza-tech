@@ -43,7 +43,7 @@ if ($node === '') {
 			. 'var document={cookie:' . json_encode($cookie) . ',createElement:function(){return {};},head:{appendChild:function(s){cargados.push(s.src);}}};'
 			. 'var window=globalThis;window.atLead=function(o){metaLeads++;return "original:"+o;};'
 			. $cuerpo
-			. 'var r=window.atLead("agenda");'
+			. 'var r=window.atLead("agenda",{email:"persona@ejemplo.cl",fecha:"2026-11-20"});'
 			. 'var eventos=(window.dataLayer||[]).map(function(a){return Array.prototype.slice.call(a);});'
 			. 'console.log(JSON.stringify({cargados:cargados,eventos:eventos,r:r,metaLeads:metaLeads}));';
 		$f = tempnam(sys_get_temp_dir(), 'med') . '.js';
@@ -61,6 +61,7 @@ if ($node === '') {
 	ok(in_array('config:G-ABC123DEF4', $tipos, true) && in_array('config:AW-17691911857', $tipos, true), 'con permiso: configura GA4 y Ads');
 	ok(in_array('event:generate_lead', $tipos, true), 'con permiso: atLead manda generate_lead');
 	ok(is_array($con) && $con['r'] === 'original:agenda' && $con['metaLeads'] === 1, 'con permiso: el aviso a Meta sigue saliendo una vez');
+	ok(is_array($con) && strpos(json_encode($con['eventos']), 'persona@ejemplo.cl') === false, 'con permiso: el correo que recibe atLead no llega a Google');
 	$no = $js('at_consentimiento=no');
 	ok(is_array($no) && $no['cargados'] === [], 'rechazó: no carga nada');
 }

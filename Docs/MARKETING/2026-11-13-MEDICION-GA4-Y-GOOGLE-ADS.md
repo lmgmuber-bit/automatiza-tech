@@ -24,9 +24,17 @@ Pedido de Luis (13-nov): dejar funcionando la medición y la conversión para Go
    - quitar como principal o eliminar la conversión vieja «Compra», que se disparaba en cada carga;
    - antes de cualquier campaña, cambiar la URL final de los anuncios: hoy apuntan a `automatizatech.shop`, que está vencido.
 
-## Antes de encender GA4 en PROD
+## Antes de encender GA4 en PROD (dictamen de Toga del 13-nov: APTO CON AJUSTES)
 
-- **Texto del aviso y política de cookies:** el aviso dice «cookies de medición y publicidad (Meta)» y la página `/cookies/` debe nombrar también Google Analytics y Google Ads. Hay que corregir los dos textos antes de cargar el ID; los dueños de esos archivos son Eje · AT general (aviso) y la plantilla legal. Revisión legal: Toga.
+- **Textos legales:** el aviso de cookies, `/cookies/` y `/privacidad/` tienen que nombrar Google Analytics y Google Ads. Lo prepara Eje · AT general en `claude/sitio-arreglos-vitrina` (commit `58b95e5`). **El ID de GA4 no se carga hasta que esos textos estén publicados con el OK de Luis.**
+- **Bloqueante B3, independiente de GA4:** el `header.php` de PROD carga `AW-17691911857` y dispara «Compra» sin permiso, lo que contradice la política. Subir el `header.php` de este PR apenas Luis dé el OK, aunque GA4 se encienda después.
+- **Configuración de GA4 (la hace Luis en su cuenta):**
+  - conservación de datos en **14 meses** (Administrar › Recopilación y conservación de datos), porque eso declara la política;
+  - **Google Signals** y la **personalización de anuncios**, apagados.
+- **Lo que no se hace sin cambiar antes las políticas:**
+  - el modo «avanzado» de Consent Mode, que manda señales antes de que la persona elija; este módulo equivale al modo básico;
+  - las conversiones mejoradas (correo o teléfono cifrado).
+- **Datos de contacto:** el envoltorio de `atLead` manda a Google solo el origen («Agenda diagnóstico (portada)»), nunca el correo que recibe para Meta (lo cubre una prueba), y ningún script escribe datos de contacto en la URL. Falta confirmar en la cita de prueba que `page_location` llega limpio.
 
 ## Despliegue (con el OK de Luis)
 
@@ -43,4 +51,4 @@ Pedido de Luis (13-nov): dejar funcionando la medición y la conversión para Go
 php tests/medicion/puras-test.php
 ```
 
-31 comprobaciones; si hay Node, ejecuta los scripts generados simulando el navegador: sin permiso no carga `gtag.js` ni manda eventos, con permiso configura GA4 y Ads y manda `generate_lead`, y el aviso a Meta sale una sola vez en los dos casos.
+32 comprobaciones; si hay Node, ejecuta los scripts generados simulando el navegador: sin permiso no carga `gtag.js` ni manda eventos, con permiso configura GA4 y Ads y manda `generate_lead`, y el aviso a Meta sale una sola vez en los dos casos.

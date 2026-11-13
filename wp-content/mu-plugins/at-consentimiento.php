@@ -24,6 +24,14 @@ add_filter('pys_disable_by_gdpr', function ($desactivado) {
 });
 add_filter('pys_gdpr_ajax_enabled', '__return_true');
 
+/**
+ * Cookies propias de PixelYourSite (pys_*: primera visita, página de llegada, origen y sesión; además pbid): apagadas
+ * siempre (12-nov-2026). La Política de Cookies promete que sin permiso solo hay esenciales, y ese HTML pasa por la
+ * caché de LiteSpeed, así que no se puede decidir persona por persona. Los píxeles siguen funcionando con permiso,
+ * solo sin esos datos extra de origen. El filtro lo lee el plugin en `pys_cookie_domain_cookies_disabled()`.
+ */
+add_filter('pys_disable_all_cookie', '__return_true');
+
 add_action('wp_footer', 'at_consent_dibujar', 99);
 
 function at_consent_dibujar() {

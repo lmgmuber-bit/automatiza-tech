@@ -14,6 +14,7 @@ if (!defined('ABSPATH')) {
 
 // Quién escribe por WhatsApp (ruta wa-contexto y vínculo de la reunión con su contrato o propuesta), 28-oct-2026.
 require_once __DIR__ . '/wa-contexto/cargar.php';
+require_once ABSPATH . 'at-texto.php';
 
 /**
  * Crear tabla en la base de datos al activar
@@ -2370,7 +2371,7 @@ function automatiza_tech_verify_client_by_phone($request) {
     $propuestas_table = $wpdb->prefix . 'automatiza_propuestas';
     $leads_table = $wpdb->prefix . 'automatiza_leads';
     
-    $phone = (string) $request->get_param('phone');
+    $phone = at_texto($request->get_param('phone'));
     
     // 01-oct-2026: las propuestas y las citas guardan el teléfono con o sin espacios ("+56 9 1234 5678",
     // "+56912345678") y WhatsApp lo manda como "56912345678". Se compara por los últimos 9 dígitos de
@@ -2506,11 +2507,11 @@ function automatiza_tech_create_followup_meeting_api($request) {
     $time = $request->get_param('time');
     $subject = $request->get_param('subject') ?: 'Reunión de Seguimiento';
     $source = $request->get_param('source') ?: 'whatsapp';
-    $company_name = $request->get_param('company_name') ?: '';
+    $company_name = at_texto($request->get_param('company_name'));
     
     // Parámetros opcionales que vienen del subworkflow de N8N (ya tiene evento creado)
-    $meet_link_param = $request->get_param('meet_link') ?: '';
-    $google_event_id_param = $request->get_param('google_event_id') ?: '';
+    $meet_link_param = at_texto($request->get_param('meet_link'));
+    $google_event_id_param = at_texto($request->get_param('google_event_id'));
     
     // Validar email
     if (!is_email($email)) {
@@ -2549,7 +2550,7 @@ function automatiza_tech_create_followup_meeting_api($request) {
 
     // Nota: el bot manda «Plan de trabajo <código>. …» al reagendar, para que la página del plan vea la reunión
     // (at_pt_seguimiento_pendiente). Sin nota, la de siempre.
-    $notes_param = trim(sanitize_textarea_field((string) $request->get_param('notes')));
+    $notes_param = trim(sanitize_textarea_field(at_texto($request->get_param('notes'))));
 
     // Insertar reunión
     $data = array(

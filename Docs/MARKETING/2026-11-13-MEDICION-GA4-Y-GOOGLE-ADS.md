@@ -53,8 +53,9 @@ Pedido de Luis (13-nov): dejar funcionando la medición y la conversión para Go
   - la vinculación con GA4 ya existía;
   - las dos campañas viejas, «Leads-Search-1» y «Solicita Ahora Tu Presupuesto», quedaron **detenidas**. Apuntaban al dominio vencido automatizatech.shop y se habrían reactivado solas al pagar el saldo vencido de la cuenta, que paga Luis. El monto está en la bóveda.
 - **Cita de prueba (14-nov):** GA4 › Tiempo real recibió `form_start` y `generate_lead`. El `page_location` de `generate_lead` llegó como `https://automatizatech.cl/` sin parámetros, sin `@` y sin números largos: no viaja ningún dato de contacto a Google.
-- **Pendiente:**
-  - marcar `generate_lead` como evento clave.
+- **Evento clave (14-nov):** `generate_lead` se registró en GA4 con «Crear evento › Crear con código», marcado como evento clave, sin valor predeterminado y contado una vez por evento. Se usó esa vía porque el evento todavía no aparecía en «Eventos recientes». «Crear sin código» no se usó: arma un evento derivado y habría duplicado `generate_lead`.
+- **Importado en Google Ads (14-nov):** «automatizatech.shop (web) generate_lead», fuente GA4 511172041, categoría «Enviar formulario de clientes potenciales», **principal**, recuento «Una», ventana de 90 días y atribución basada en datos. Se comprobó después de recargar la página.
+- **Pendiente:** quitarle la estrella al evento clave `purchase` de GA4, que no tiene datos y viene de la tienda vieja, si Luis lo aprueba.
 
 ## Despliegue (con el OK de Luis)
 

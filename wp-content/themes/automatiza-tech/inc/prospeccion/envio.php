@@ -26,7 +26,9 @@ function at_pro_remitente(): string {
 }
 
 function at_pro_remitente_nombre(): string {
-	$n = trim((string) get_option('at_pro_remitente_nombre', 'Luis González · AutomatizaTech'));
+	$n = trim(str_replace([',', '<', '>', '"', "
+", "
+"], '', (string) get_option('at_pro_remitente_nombre', 'Luis González · AutomatizaTech')));
 	return $n !== '' ? $n : 'AutomatizaTech';
 }
 
@@ -39,6 +41,16 @@ function at_pro_pendientes_envio(): array {
 function at_pro_cola(): array {
 	$c = get_option('at_pro_cola', []);
 	return is_array($c) ? array_values(array_filter(array_map('intval', $c))) : [];
+}
+
+/** Generación del envío: cambia al encolar y al detener. Se lee sin caché porque Detener ocurre en otra petición. */
+function at_pro_envio_gen(): int {
+	global $wpdb;
+	return (int) $wpdb->get_var($wpdb->prepare("SELECT option_value FROM {$wpdb->options} WHERE option_name = %s", 'at_pro_envio_gen'));
+}
+
+function at_pro_nueva_gen(): void {
+	update_option('at_pro_envio_gen', at_pro_envio_gen() + 1, false);
 }
 
 function at_pro_envio_estado(): array {
@@ -73,6 +85,7 @@ function at_pro_programar_tanda(int $cuando): void {
 function at_pro_encolar(): int {
 	if (!at_pro_envio_listo()) { return 0; }
 	$ids = at_pro_pendientes_envio();
+	at_pro_nueva_gen();
 	update_option('at_pro_cola', $ids, false);
 	$e = at_pro_envio_estado();
 	$e['pausado'] = false;
@@ -84,6 +97,7 @@ function at_pro_encolar(): int {
 }
 
 function at_pro_detener_envio(): void {
+	at_pro_nueva_gen();
 	update_option('at_pro_cola', [], false);
 	wp_clear_scheduled_hook('at_pro_enviar_tanda');
 }
@@ -103,7 +117,6 @@ function at_pro_mandar(array $p, string $para, bool $prueba = false) {
 	$de = at_pro_remitente();
 	$cab = [
 		'Content-Type: text/html; charset=UTF-8',
-		'Reply-To: ' . at_pro_remitente_nombre() . ' <' . $de . '>',
 		'List-Unsubscribe: <' . $url_baja . '>, <mailto:' . $de . '?subject=baja>',
 	];
 	$cco = at_pro_cco();
@@ -119,12 +132,20 @@ function at_pro_mandar(array $p, string $para, bool $prueba = false) {
 		$m->Sender = $de;
 		$m->FromName = at_pro_remitente_nombre();
 		$m->AltBody = $texto;
+		$m->Timeout = 30;
+		$m->clearReplyTos(); // smtp-config.php agrega contacto@: las respuestas van solo a la casilla de prospección
+		$m->addReplyTo($de, at_pro_remitente_nombre());
 	};
 	add_action('wp_mail_failed', $al_fallar);
 	add_action('phpmailer_init', $casilla, 99);
-	$ok = wp_mail($para, $asunto, $html, $cab);
-	remove_action('phpmailer_init', $casilla, 99);
-	remove_action('wp_mail_failed', $al_fallar);
+	try {
+		$ok = wp_mail($para, $asunto, $html, $cab);
+	} finally {
+		remove_action('phpmailer_init', $casilla, 99);
+		remove_action('wp_mail_failed', $al_fallar);
+		// wp_mail no limpia el remitente de sobre: que un correo posterior de la misma petición no salga con él.
+		if (isset($GLOBALS['phpmailer']) && is_object($GLOBALS['phpmailer'])) { $GLOBALS['phpmailer']->Sender = ''; }
+	}
 	if (!$ok) { return new WP_Error('envio', $error !== '' ? mb_substr($error, 0, 300) : 'El servidor de correo no aceptó el mensaje.'); }
 	return true;
 }
@@ -135,12 +156,43 @@ function at_pro_se_puede_enviar(?array $p): bool {
 		&& !at_pro_coincide_baja((string) ($p['dominio'] ?? ''), (string) $p['telefono'], strtolower((string) $p['correo']));
 }
 
-/** Una tanda del envío (WP-Cron). */
+/** Reserva al prospecto antes de enviarle: lo pasa a contactado/correo solo si sigue por contactar (atómico). */
+function at_pro_reservar(int $id): bool {
+	global $wpdb;
+	$ahora = current_time('mysql');
+	return $wpdb->query($wpdb->prepare('UPDATE ' . at_pro_tabla() . " SET estado = 'contactado', canal = 'correo', contactado_at = COALESCE(contactado_at, %s), updated_at = %s WHERE id = %d AND estado = 'por_contactar'", $ahora, $ahora, $id)) === 1;
+}
+
+/** Deshace la reserva si el servidor de correo no aceptó el mensaje. */
+function at_pro_liberar(int $id): void {
+	global $wpdb;
+	$wpdb->query($wpdb->prepare('UPDATE ' . at_pro_tabla() . " SET estado = 'por_contactar', canal = '', contactado_at = NULL, updated_at = %s WHERE id = %d AND estado = 'contactado' AND canal = 'correo'", current_time('mysql'), $id));
+}
+
+/** Candado atómico (add_option no pisa una fila existente). Uno vencido (más de 15 min) se recupera. */
+function at_pro_tomar_candado(): bool {
+	if (add_option('at_pro_envio_lock', (string) time(), '', 'no')) { return true; }
+	global $wpdb;
+	$t = (int) $wpdb->get_var($wpdb->prepare("SELECT option_value FROM {$wpdb->options} WHERE option_name = %s", 'at_pro_envio_lock'));
+	if ($t > 0 && time() - $t > 15 * MINUTE_IN_SECONDS) {
+		$wpdb->query($wpdb->prepare("DELETE FROM {$wpdb->options} WHERE option_name = %s AND option_value = %s", 'at_pro_envio_lock', (string) $t));
+		wp_cache_delete('at_pro_envio_lock', 'options');
+		return (bool) add_option('at_pro_envio_lock', (string) time(), '', 'no');
+	}
+	return false;
+}
+
+/**
+ * Una tanda del envío (WP-Cron). Si Luis aprieta «Detener» mientras corre, la generación cambia y la tanda se
+ * corta antes del siguiente correo, sin volver a guardar la cola ni programar otra. Un fallo no se reintenta solo:
+ * el prospecto vuelve a «por contactar» y sale de la cola (si el servidor alcanzó a entregarlo, no se duplica).
+ */
 function at_pro_enviar_tanda(): void {
-	if (get_transient('at_pro_envio_lock')) { return; }
-	set_transient('at_pro_envio_lock', 1, 5 * MINUTE_IN_SECONDS);
+	if (!at_pro_tomar_candado()) { return; }
+	$gen = at_pro_envio_gen();
 	$e = at_pro_envio_estado();
 	$cola = at_pro_cola();
+	$seguir = false;
 	try {
 		if (!$cola || $e['pausado']) { return; }
 		if (!at_pro_envio_listo()) { $e['pausado'] = true; $e['ultimo_error'] = 'Falta conectar la casilla de prospección.'; return; }
@@ -150,32 +202,35 @@ function at_pro_enviar_tanda(): void {
 		if ($e['dia'] !== $hoy) { $e['dia'] = $hoy; $e['enviados_hoy'] = 0; }
 		$cupo = min(AT_PRO_LOTE, AT_PRO_TOPE_DIA - (int) $e['enviados_hoy']);
 		while ($cupo > 0 && $cola) {
+			if (at_pro_envio_gen() !== $gen) { return; } // detenido mientras corría
 			$id = array_shift($cola);
 			$p = at_pro_obtener($id);
-			if (!at_pro_se_puede_enviar($p)) { continue; }
+			if (!at_pro_se_puede_enviar($p) || !at_pro_reservar($id)) { continue; }
 			$r = at_pro_mandar($p, (string) $p['correo']);
 			if (is_wp_error($r)) {
+				at_pro_liberar($id);
 				$e['fallos_seguidos']++;
 				$e['ultimo_error'] = $p['negocio'] . ': ' . $r->get_error_message();
-				$cola[] = $id;
 				if ($e['fallos_seguidos'] >= AT_PRO_FALLOS_MAX) { $e['pausado'] = true; break; }
 				continue;
 			}
-			at_pro_cambiar_estado($id, 'contactado', 'correo');
 			$e['fallos_seguidos'] = 0;
 			$e['enviados_hoy']++;
 			$e['enviados_total']++;
 			$e['ultimo_envio'] = current_time('mysql');
 			$cupo--;
 		}
+		$seguir = $cola && !$e['pausado'];
 	} finally {
-		update_option('at_pro_cola', array_values($cola), false);
+		if (at_pro_envio_gen() === $gen) {
+			update_option('at_pro_cola', array_values($cola), false);
+			if ($seguir) {
+				$siguiente = ((int) $e['enviados_hoy'] >= AT_PRO_TOPE_DIA) ? strtotime('tomorrow', time()) : time() + AT_PRO_INTERVALO;
+				at_pro_programar_tanda((int) $siguiente);
+			}
+		}
 		at_pro_guardar_envio_estado($e);
-		delete_transient('at_pro_envio_lock');
-	}
-	if ($cola && !$e['pausado']) {
-		$siguiente = ((int) $e['enviados_hoy'] >= AT_PRO_TOPE_DIA) ? strtotime('tomorrow', time()) : time() + AT_PRO_INTERVALO;
-		at_pro_programar_tanda((int) $siguiente);
+		delete_option('at_pro_envio_lock');
 	}
 }
 add_action('at_pro_enviar_tanda', 'at_pro_enviar_tanda');

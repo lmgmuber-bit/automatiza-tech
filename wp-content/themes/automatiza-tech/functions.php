@@ -1147,6 +1147,7 @@ function get_whatsapp_url($message = '') {
  */
 require_once get_template_directory() . '/inc/seo-tecnico/cargar.php';
 require_once get_template_directory() . '/inc/medicion/cargar.php';
+require_once get_template_directory() . '/inc/prospeccion/cargar.php';
 
 /**
  * Incluir archivos adicionales

@@ -230,8 +230,32 @@
         privacy_accepted_at: new Date().toISOString(),
         marketing_optin: data.get('marketing_optin') === '1'
       };
+      // Un solo envío a la vez: el botón queda en «Agendando…» con un aviso de espera junto a él,
+      // y un segundo clic o Enter no vuelve a enviar (14-nov-2026). Va por clase y no por estilo en
+      // línea porque el efecto data-hover restaura el style del botón al salir el mouse.
+      if (form.__enviando) return;
+      form.__enviando = true;
+      var exito = false;
+      var espera = form.querySelector('[data-form-espera]');
+      if (!espera) {
+        espera = document.createElement('p');
+        espera.setAttribute('data-form-espera', '');
+        espera.setAttribute('role', 'status');
+        espera.setAttribute('aria-live', 'polite');
+        espera.className = 'at-f-full at-form-espera';
+        if (submit && submit.parentNode) submit.parentNode.insertBefore(espera, submit.nextSibling); else form.appendChild(espera);
+      }
+      espera.textContent = 'Estamos agendando tu cita y preparando el enlace de la reunión. Puede tardar unos segundos; no cierres esta ventana.';
+      espera.hidden = false;
+      if (submit) {
+        submit.__htmlOriginal = submit.innerHTML;
+        submit.disabled = true;
+        submit.setAttribute('aria-busy', 'true');
+        submit.classList.add('at-btn-cargando');
+        submit.innerHTML = '<span class="at-spin" aria-hidden="true"></span><span>Agendando tu cita…</span>';
+      }
+      form.setAttribute('aria-busy', 'true');
       track('diagnostico_form_started', { intent: intent, interest: interest });
-      if (submit) { submit.disabled = true; submit.style.opacity = '.72'; submit.style.cursor = 'wait'; }
       setFormMessage(form, '', '');
       fetch(cfg.availabilityUrl, {
         method: 'POST',
@@ -296,6 +320,7 @@
               fetch(cfg.attrAjaxUrl, { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: ad.toString() }).catch(function () {});
             } catch (e) {}
           }
+          exito = true;
           setState({ scheduled: true });
           form.reset();
           fillUtm();
@@ -305,7 +330,20 @@
           setFormMessage(form, 'error', err && err.message ? err.message : 'No pudimos enviar la solicitud. Intenta nuevamente.');
         })
         .finally(function () {
-          if (submit) { submit.disabled = false; submit.style.opacity = ''; submit.style.cursor = ''; }
+          form.__enviando = false;
+          form.removeAttribute('aria-busy');
+          if (espera) { espera.textContent = ''; espera.hidden = true; }
+          if (submit) {
+            submit.disabled = false;
+            submit.removeAttribute('aria-busy');
+            submit.classList.remove('at-btn-cargando');
+            if (submit.__htmlOriginal != null) submit.innerHTML = submit.__htmlOriginal;
+          }
+          // Con error, el aviso queda arriba del formulario: lo traemos a la vista (en el celular el botón está abajo).
+          if (!exito) {
+            var msg = form.querySelector('[data-form-message]');
+            if (msg && msg.scrollIntoView) { try { msg.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); } catch (e) { msg.scrollIntoView(); } }
+          }
         });
     },
     stopProp: function (e) { if (e && e.stopPropagation) e.stopPropagation(); }
@@ -511,6 +549,8 @@
     // Tráfico pagado (utm_*) va directo al contenido: la intro de 4.4s
     // destruye el LCP y quema presupuesto de ads en rebotes.
     try { if (/[?&]utm_/.test(location.search)) return; } catch (e) {}
+    // Decisión de Luis (12-nov-2026): en celular no se muestra (tapaba la pantalla; lo principal aparecía a los 7,7 s en red lenta).
+    try { if (window.matchMedia && window.matchMedia('(max-width: 767px), (pointer: coarse) and (max-width: 1024px)').matches) return; } catch (e) {}
     // Premium UX: play the brand intro only once per browser session, so
     // internal navigation isn't blocked by the 4.4s sequence every time.
     try { if (sessionStorage.getItem('at_intro_seen')) return; sessionStorage.setItem('at_intro_seen', '1'); } catch (e) {}
@@ -894,4 +934,25 @@
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
   else boot();
+})();
+
+/* Clientes: las tarjetas se asoman al hacer scroll (12-nov-2026). Sin IntersectionObserver o con
+   menos movimiento quedan visibles desde el inicio: el CSS solo las oculta si existe .at-cl-anima. */
+(function () {
+  var grillas = document.querySelectorAll('.at-cl-grid');
+  if (!grillas.length || !('IntersectionObserver' in window)) return;
+  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  var io = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (!e.isIntersecting) return;
+      var item = e.target, hermanos = item.parentNode.children, i = Array.prototype.indexOf.call(hermanos, item);
+      item.style.transitionDelay = (i % 4) * 90 + 'ms';
+      item.classList.add('is-in');
+      io.unobserve(item);
+    });
+  }, { rootMargin: '0px 0px -8% 0px', threshold: 0.12 });
+  grillas.forEach(function (g) {
+    g.classList.add('at-cl-anima');
+    g.querySelectorAll('.at-cl-gitem').forEach(function (it) { io.observe(it); });
+  });
 })();

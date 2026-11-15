@@ -50,7 +50,9 @@ function at_pro_envio_gen(): int {
 }
 
 function at_pro_nueva_gen(): void {
-	update_option('at_pro_envio_gen', at_pro_envio_gen() + 1, false);
+	global $wpdb;
+	$wpdb->query($wpdb->prepare("INSERT INTO {$wpdb->options} (option_name, option_value, autoload) VALUES (%s, '1', 'no') ON DUPLICATE KEY UPDATE option_value = option_value + 1", 'at_pro_envio_gen'));
+	wp_cache_delete('at_pro_envio_gen', 'options');
 }
 
 function at_pro_envio_estado(): array {
@@ -169,17 +171,25 @@ function at_pro_liberar(int $id): void {
 	$wpdb->query($wpdb->prepare('UPDATE ' . at_pro_tabla() . " SET estado = 'por_contactar', canal = '', contactado_at = NULL, updated_at = %s WHERE id = %d AND estado = 'contactado' AND canal = 'correo'", current_time('mysql'), $id));
 }
 
-/** Candado atómico (add_option no pisa una fila existente). Uno vencido (más de 15 min) se recupera. */
+/** Candado atómico: INSERT IGNORE solo entra si no hay otro. Uno vencido (más de 15 min) se recupera. */
 function at_pro_tomar_candado(): bool {
-	if (add_option('at_pro_envio_lock', (string) time(), '', 'no')) { return true; }
 	global $wpdb;
+	$entrar = static function () use ($wpdb): bool {
+		return $wpdb->query($wpdb->prepare("INSERT IGNORE INTO {$wpdb->options} (option_name, option_value, autoload) VALUES (%s, %s, 'no')", 'at_pro_envio_lock', (string) time())) === 1;
+	};
+	if ($entrar()) { return true; }
 	$t = (int) $wpdb->get_var($wpdb->prepare("SELECT option_value FROM {$wpdb->options} WHERE option_name = %s", 'at_pro_envio_lock'));
 	if ($t > 0 && time() - $t > 15 * MINUTE_IN_SECONDS) {
 		$wpdb->query($wpdb->prepare("DELETE FROM {$wpdb->options} WHERE option_name = %s AND option_value = %s", 'at_pro_envio_lock', (string) $t));
-		wp_cache_delete('at_pro_envio_lock', 'options');
-		return (bool) add_option('at_pro_envio_lock', (string) time(), '', 'no');
+		return $entrar();
 	}
 	return false;
+}
+
+function at_pro_soltar_candado(): void {
+	global $wpdb;
+	$wpdb->query($wpdb->prepare("DELETE FROM {$wpdb->options} WHERE option_name = %s", 'at_pro_envio_lock'));
+	wp_cache_delete('at_pro_envio_lock', 'options');
 }
 
 /**
@@ -188,7 +198,10 @@ function at_pro_tomar_candado(): bool {
  * el prospecto vuelve a «por contactar» y sale de la cola (si el servidor alcanzó a entregarlo, no se duplica).
  */
 function at_pro_enviar_tanda(): void {
-	if (!at_pro_tomar_candado()) { return; }
+	if (!at_pro_tomar_candado()) { // otra tanda corriendo: volver a intentar en 2 min para que la cola no quede parada
+		if (!wp_next_scheduled('at_pro_enviar_tanda')) { wp_schedule_single_event(time() + 120, 'at_pro_enviar_tanda'); }
+		return;
+	}
 	$gen = at_pro_envio_gen();
 	$e = at_pro_envio_estado();
 	$cola = at_pro_cola();
@@ -230,7 +243,7 @@ function at_pro_enviar_tanda(): void {
 			}
 		}
 		at_pro_guardar_envio_estado($e);
-		delete_option('at_pro_envio_lock');
+		at_pro_soltar_candado();
 	}
 }
 add_action('at_pro_enviar_tanda', 'at_pro_enviar_tanda');

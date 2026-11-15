@@ -52,8 +52,8 @@ Pedido de Luis (13-nov): dejar funcionando la medición y la conversión para Go
   - la aplicación automática de recomendaciones está desactivada;
   - la vinculación con GA4 ya existía;
   - las dos campañas viejas, «Leads-Search-1» y «Solicita Ahora Tu Presupuesto», quedaron **detenidas**. Apuntaban al dominio vencido automatizatech.shop y se habrían reactivado solas al pagar el saldo vencido de la cuenta, que paga Luis. El monto está en la bóveda.
+- **Cita de prueba (14-nov):** GA4 › Tiempo real recibió `form_start` y `generate_lead`. El `page_location` de `generate_lead` llegó como `https://automatizatech.cl/` sin parámetros, sin `@` y sin números largos: no viaja ningún dato de contacto a Google.
 - **Pendiente:**
-  - una cita de prueba para ver `generate_lead` y comprobar que `page_location` llega sin datos de contacto;
   - marcar `generate_lead` como evento clave.
 
 ## Despliegue (con el OK de Luis)

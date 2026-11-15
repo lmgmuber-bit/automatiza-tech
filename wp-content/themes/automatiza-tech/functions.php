@@ -1146,6 +1146,7 @@ function get_whatsapp_url($message = '') {
  * Reemplaza las metas del home antiguo («bots inteligentes»), que se sumaban a las de la plantilla.
  */
 require_once get_template_directory() . '/inc/seo-tecnico/cargar.php';
+require_once get_template_directory() . '/inc/medicion/cargar.php';
 
 /**
  * Incluir archivos adicionales

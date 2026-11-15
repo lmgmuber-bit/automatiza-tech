@@ -3474,7 +3474,7 @@ class OmnichannelController {
      * Crea un contenedor de media de Instagram sin esperar el procesamiento.
      * Usado por n8n para evitar requests HTTP bloqueantes de varios minutos.
      */
-    public function create_instagram_media_container($channel_id, $video_url, $caption = '', $media_type = 'REELS') {
+    public function create_instagram_media_container($channel_id, $video_url, $caption = '', $media_type = 'REELS', $trial = '') {
         $channel = $this->get_instagram_channel_for_api($channel_id);
         if (!$channel) return ['error' => 'Canal no encontrado'];
         if (trim((string) $video_url) === '') return ['error' => 'Falta video_url'];
@@ -3486,6 +3486,13 @@ class OmnichannelController {
         ];
         if ($media_type === 'REELS' && $caption !== '') {
             $container_body['caption'] = $caption;
+        }
+        // Reel de prueba (14-nov-2026): se muestra primero solo a quienes no siguen la cuenta.
+        // MANUAL = se comparte con los seguidores a mano en la app; SS_PERFORMANCE = Instagram decide.
+        // Solo REELS; no se puede leer ni cambiar después por API.
+        $trial = strtoupper(trim((string) $trial));
+        if ($media_type === 'REELS' && in_array($trial, ['MANUAL', 'SS_PERFORMANCE'], true)) {
+            $container_body['trial_params'] = ['graduation_strategy' => $trial];
         }
 
         $create = $this->ig_api_request('POST', $channel, 'me/media', $container_body);
@@ -3500,6 +3507,7 @@ class OmnichannelController {
             'success'     => true,
             'creation_id' => (string) $create['data']['id'],
             'media_type'  => $media_type,
+            'trial'       => isset($container_body['trial_params']) ? $trial : '',
             'status_code' => 'CREATED',
         ];
     }

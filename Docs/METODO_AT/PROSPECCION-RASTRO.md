@@ -1,10 +1,10 @@
 # Rastro · Prospección
 
-Estado: **construido y probado en un sitio local de prueba; nada desplegado.** Spec: `Docs/superpowers/specs/2026-11-12-rastro-prospeccion-design.md`. Plan: `Docs/superpowers/plans/2026-11-12-rastro-prospeccion.md`. Módulo: `wp-content/themes/automatiza-tech/inc/prospeccion/`.
+Estado: **EN PROD desde el 12-nov-2026** (correo con diseño 15-nov, solo correo 15-nov, copia oculta 15-nov). El envío escalonado del primer correo (`envio.php`) está construido el 15-nov y revisado por Vigía; ver «Envío del primer correo». Spec: `Docs/superpowers/specs/2026-11-12-rastro-prospeccion-design.md`. Plan: `Docs/superpowers/plans/2026-11-12-rastro-prospeccion.md`. Módulo: `wp-content/themes/automatiza-tech/inc/prospeccion/`.
 
 ## Qué es
 
-Una pestaña en el wp-admin (CRM › 🔎 Prospección) con la lista de negocios que Rastro encuentra, su estado, un enlace personal al formulario de agendar y un enlace de baja. **Nada sale desde el sistema**: Luis copia el mensaje o abre WhatsApp con el texto listo, lo manda él y marca «contactado». El envío automático queda para después de la revisión de Toga.
+Una pestaña en el wp-admin (CRM › 🔎 Prospección) con la lista de negocios que Rastro encuentra, su estado, un enlace personal al formulario de agendar y un enlace de baja. El primer contacto va **solo por correo** (decisión de Luis, 15-nov-2026: WhatsApp en frío va contra la política de WhatsApp Business). El correo sale **solo cuando Luis aprieta «Enviar correo a todos los por contactar»**; los contactos que Luis haga a mano por WhatsApp se marcan con «Contactado por WhatsApp».
 
 ## Cómo se usa
 
@@ -71,3 +71,12 @@ Orden: 1) `wp-content/themes/automatiza-tech/inc/prospeccion/` (esquema, puras, 
 ## Lo que no está probado
 
 Ver el informe de entrega: el paso de punta a punta con un navegador real en PROD (agendar desde el modal con la cookie), la entrega del WhatsApp, el comportamiento con la caché LiteSpeed de PROD y el motor MariaDB/MySQL de Hostinger.
+
+
+## Envío del primer correo (15-nov-2026)
+- Botón **«Enviar correo a todos los por contactar»** en la caja «Envío del primer correo» del panel: pone en cola a los `por_contactar` con correo y un evento WP-Cron (`at_pro_enviar_tanda`) los manda de a 5 cada 15 min, lunes a viernes de 9 a 18 h (hora de Chile), máximo 40 al día. «Detener envío» corta incluso una tanda en curso.
+- Cada correo: diseño AT (`at_pro_correo_html`), texto alternativo (`at_pro_mensaje`), remitente «Luis González · AutomatizaTech» desde la casilla de prospección, Reply-To a esa casilla, copia oculta a `at_pro_cco` y cabecera `List-Unsubscribe` con el enlace de baja. Antes de enviar se vuelve a revisar la lista de bajas y se **reserva** al prospecto (pasa a `contactado`/`correo`); si el servidor rechaza el mensaje se libera y no se reintenta solo. Tres fallos seguidos pausan el envío.
+- «Enviarme una prueba» manda el primer pendiente solo a la copia oculta, con `[PRUEBA]` en el asunto, sin cambiar estados.
+- Configuración en el wp-config de PROD (las pone Luis, nunca el repo): `AT_PRO_SMTP_USER` y `AT_PRO_SMTP_PASS`. Opciones en la base: `at_pro_cco` (copia oculta), `at_pro_remitente_nombre` (opcional), y las de trabajo `at_pro_cola`, `at_pro_envio_estado`, `at_pro_envio_gen`, `at_pro_envio_lock`.
+- Por qué una casilla real y no un alias: Hostinger solo deja enviar desde un alias en su correo web, no por SMTP.
+- Correos de la lista: Google Places no los entrega; se tomaron del sitio de cada negocio (29 buzones de empresa el 15-nov, con la URL de origen en `notas`). Los correos de personas se revisan uno por uno.

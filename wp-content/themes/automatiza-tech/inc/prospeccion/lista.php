@@ -162,6 +162,9 @@ class AT_Prospectos_Lista extends WP_List_Table {
 			if ($i['telefono'] !== '' && in_array($i['estado'], ['respondio', 'formulario'], true)) {
 				$b[] = '<a class="button button-small" href="' . esc_attr('https://wa.me/' . $i['telefono']) . '" target="_blank" rel="noopener noreferrer" aria-label="Abrir WhatsApp con ' . $neg . '"><span class="dashicons dashicons-format-chat" aria-hidden="true"></span> Abrir WhatsApp</a>';
 			}
+			if ($i['telefono'] !== '' && in_array($i['estado'], ['por_contactar', 'descartado'], true)) {
+				$b[] = '<a class="button button-small" href="' . $this->url_estado($i, 'contactado', 'whatsapp') . '" aria-label="Marcar ' . $neg . ' como contactado por WhatsApp"><span class="dashicons dashicons-smartphone" aria-hidden="true"></span> Contactado por WhatsApp</a>';
+			}
 			$canal = $i['correo'] !== '' ? 'correo' : 'web';
 			foreach ([['contactado', 'Marcar contactado', 'dashicons-email-alt', $canal], ['respondio', 'Marcar respondió', 'dashicons-format-chat', ''], ['descartado', 'Descartar', 'dashicons-dismiss', '']] as [$est, $txt, $ico, $can]) {
 				if (at_pro_transicion_valida($i['estado'], $est)) {

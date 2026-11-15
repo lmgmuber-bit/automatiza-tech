@@ -81,8 +81,12 @@ function at_pro_avisos(): void {
 	$p = isset($_GET['pro']) ? sanitize_key((string) $_GET['pro']) : '';
 	$mapa = [
 		'estado_ok' => ['updated', 'Listo, cambié el estado.'], 'estado_no' => ['error', 'No pude cambiar el estado (permiso, enlace vencido o paso no permitido).'],
-		'crear_ok' => ['updated', 'Prospecto agregado.'], 'importar_no' => ['error', 'No pude importar: sube un archivo .csv y vuelve a intentar.'],
+		'crear_ok' => ['updated', 'Prospecto agregado.'],
+		'envio_detenido' => ['updated', 'Envío detenido. Los que ya salieron quedan como contactados.'], 'envio_no' => ['error', 'No pude hacer eso (permiso o enlace vencido).'],
+		'prueba_ok' => ['updated', 'Te mandé una prueba a tu copia oculta. Revisa la etiqueta «Copia correos prospecto».'], 'importar_no' => ['error', 'No pude importar: sube un archivo .csv y vuelve a intentar.'],
 	];
+	if ($p === 'envio_cola') { echo '<div class="notice notice-success"><p>' . (int) ($_GET['n'] ?? 0) . ' correo(s) en cola. Salen de a pocos en horario hábil; aquí ves el avance.</p></div>'; return; }
+	if ($p === 'prueba_no') { echo '<div class="notice notice-error"><p>No salió la prueba: ' . esc_html((string) get_transient('at_pro_err_' . get_current_user_id())) . '</p></div>'; return; }
 	if ($p === 'masivo') { echo '<div class="notice notice-success"><p>' . (int) ($_GET['n'] ?? 0) . ' prospecto(s) actualizados.</p></div>'; }
 	elseif ($p === 'crear_no') {
 		$txt = ['repetido' => 'Ya existe un prospecto con ese dominio o teléfono.', 'en_bajas' => 'Ese contacto pidió baja: no se vuelve a cargar.', 'sin_contacto' => 'Falta una web, un teléfono o un correo válido.', 'demasiado_largo' => 'Un campo es demasiado largo.', 'sin_negocio' => 'Falta el nombre del negocio.'][sanitize_key((string) ($_GET['c'] ?? ''))] ?? 'No pude agregarlo.';
@@ -126,11 +130,12 @@ function at_pro_pagina(): void {
 	echo '<div class="wrap at-pro"><h1><span class="dashicons dashicons-search" aria-hidden="true"></span> Prospección <small class="description">Rastro</small></h1>';
 	echo '<style>.at-pro-tarjetas{display:flex;flex-wrap:wrap;gap:10px;margin:14px 0}.at-pro-tarjeta{background:#fff;border:1px solid #c3c4c7;border-radius:6px;padding:10px 16px;min-width:110px;text-align:center}.at-pro-tarjeta strong{display:block;font-size:24px;line-height:1.2}.at-pro-desglose{background:#fff;border:1px solid #c3c4c7;border-radius:6px;padding:8px 12px}.at-pro-acciones{display:flex;flex-wrap:wrap;gap:4px}.at-pro-acciones .dashicons{vertical-align:text-bottom;font-size:16px;width:16px;height:16px}.at-pro-estado .dashicons{vertical-align:text-bottom}.at-pro-estado--formulario{color:#1a7f37;font-weight:600}.at-pro-estado--baja,.at-pro-estado--descartado{color:#8c8f94}.at-pro-caja{background:#fff;border:1px solid #c3c4c7;border-radius:6px;padding:8px 14px;margin:10px 0}.at-pro-caja summary{cursor:pointer;font-weight:600}.at-pro-caja label{display:block;margin:6px 0 2px}.at-pro-caja .regular-text{width:100%;max-width:420px}</style>';
 	at_pro_avisos();
-	echo '<p class="description">Aquí vive lo que Rastro encuentra. <strong>Nada sale desde este panel</strong>: copias el correo con diseño, lo mandas tú desde tu correo y marcas «contactado». El primer contacto va solo por correo; WhatsApp aparece cuando el prospecto ya respondió.</p>';
+	echo '<p class="description">Aquí vive lo que Rastro encuentra. El primer correo sale <strong>solo cuando aprietas «Enviar correo a todos»</strong>, escalonado y con copia oculta para ti; cada envío deja al prospecto en «contactado» por correo. Si contactas a alguien por WhatsApp, márcalo con «Contactado por WhatsApp».</p>';
 	if (at_pro_cco() !== '') {
 		echo '<p class="description"><span class="dashicons dashicons-hidden" aria-hidden="true"></span> Copia oculta (CCO) de cada correo: <code>' . esc_html(at_pro_cco()) . '</code>. «Abrir en el correo» ya la trae puesta; si pegas el correo con diseño en un mensaje nuevo, usa «Copiar CCO» en la vista previa.</p>';
 	}
 	at_pro_tarjetas();
+	at_pro_caja_envio();
 
 	// Importar y agregar
 	echo '<details class="at-pro-caja"><summary><span class="dashicons dashicons-upload" aria-hidden="true"></span> Importar un CSV (Lead Scout o Sellbird)</summary>';

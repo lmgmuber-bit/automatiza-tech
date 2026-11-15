@@ -54,8 +54,12 @@ comprobar(!$tarde['permitir'] && $tarde['estado'] === 'sin_firma', 'pasada la gr
 comprobar(at_agenda_evaluar_enlace(12, 'cancel', (string) ($fin + 3600), at_agenda_firma(12, 'cancel', $fin + 3600), $fin + 1)['permitir'], 'pasada la gracia, uno firmado sigue sirviendo');
 $GLOBALS['opciones']['at_agenda_enlaces_gracia_hasta'] = (string) ($ahora + 10);
 comprobar(at_agenda_gracia_vigente($ahora) && !at_agenda_gracia_vigente($ahora + 11), 'tambien acepta una marca de tiempo');
-$GLOBALS['opciones']['at_agenda_enlaces_gracia_hasta'] = 'pronto';
-comprobar(!at_agenda_gracia_vigente($ahora), 'una fecha ilegible cierra la gracia');
+foreach (['pronto', 'now', 'tomorrow', '+1 year', ' 2027-01-15', '2027-01-15 ', '12/01/2027', '2027-1-5', '2027-02-30', '2027-01-15 10:00', '2027-13-01', 'next monday'] as $raro) {
+	$GLOBALS['opciones']['at_agenda_enlaces_gracia_hasta'] = $raro;
+	comprobar(!at_agenda_gracia_vigente(0), "la gracia se cierra con «$raro»");
+}
+$GLOBALS['opciones']['at_agenda_enlaces_gracia_hasta'] = '2027-12-01';
+comprobar(at_agenda_gracia_vigente($ahora), '2027-12-01 es una fecha valida');
 $GLOBALS['opciones']['at_agenda_enlaces_gracia_hasta'] = '2027-01-15';
 comprobar(!at_agenda_evaluar_enlace(12, 'cancel', (string) $vence, $t_mal, $fin - 100)['permitir'], 'en gracia, una firma alterada tampoco pasa');
 

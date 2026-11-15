@@ -40,17 +40,18 @@ function at_agenda_modo_auth(): string {
 	return at_agenda_config('AT_AGENDA_AUTH_MODO', 'aviso') === 'exigir' ? 'exigir' : 'aviso';
 }
 
+/** true solo si la petición trae la cabecera X-AT-Secret y es válida (at_cc_rest_auth). */
+function at_agenda_credencial_valida($request): bool {
+	return (string) $request->get_header('x_at_secret') !== '' && function_exists('at_cc_rest_auth') && at_cc_rest_auth($request) === true;
+}
+
 /**
  * permission_callback de las rutas de máquina a máquina. true deja pasar; WP_Error 401 solo en modo «exigir».
  * Reutiliza at_cc_rest_auth (cabecera X-AT-Secret contra AT_REST_SECRET). Nunca anota el valor de la cabecera.
  */
 function at_agenda_permiso_maquina($request) {
 	$trae = (string) $request->get_header('x_at_secret') !== '';
-	$valida = false;
-	if ($trae && function_exists('at_cc_rest_auth')) {
-		$valida = at_cc_rest_auth($request) === true;
-	}
-	if ($valida) {
+	if (at_agenda_credencial_valida($request)) {
 		return true;
 	}
 	if (at_agenda_modo_auth() === 'exigir') {
@@ -59,6 +60,17 @@ function at_agenda_permiso_maquina($request) {
 	error_log('agenda-rutas: llamada sin credencial valida ruta=' . $request->get_route() . ' metodo=' . $request->get_method()
 		. ' cabecera=' . ($trae ? 'invalida' : 'ausente'));
 	return true;
+}
+
+/**
+ * permission_callback de las rutas que nadie usa: exige SIEMPRE la credencial, sin importar el modo.
+ */
+function at_agenda_permiso_siempre($request) {
+	if (at_agenda_credencial_valida($request)) {
+		return true;
+	}
+	error_log('agenda-rutas: ruta cerrada, llamada rechazada ruta=' . $request->get_route() . ' metodo=' . $request->get_method());
+	return new WP_Error('rest_forbidden', 'No autorizado.', ['status' => 401]);
 }
 
 /* ----------------------------- Respuestas mínimas ----------------------------- */
@@ -135,11 +147,15 @@ function at_agenda_gracia_vigente(?int $ahora = null): bool {
 	if (is_int($hasta) || (is_string($hasta) && ctype_digit($hasta))) {
 		return $ahora <= (int) $hasta;
 	}
-	try {
-		$fin = new DateTimeImmutable(trim((string) $hasta) . ' 23:59:59', new DateTimeZone('America/Santiago'));
-	} catch (Exception $e) {
+	// Solo AAAA-MM-DD exacto (ida y vuelta): 'now', 'tomorrow', '+1 year', espacios o 12/01/2026 cierran la gracia.
+	if (!is_string($hasta)) {
+		return false;
+	}
+	$d = DateTimeImmutable::createFromFormat('!Y-m-d', $hasta, new DateTimeZone('America/Santiago'));
+	if ($d === false || $d->format('Y-m-d') !== $hasta) {
 		return false; // fecha ilegible: se cierra, no se deja abierta
 	}
+	$fin = $d->setTime(23, 59, 59);
 	return $ahora <= $fin->getTimestamp();
 }
 

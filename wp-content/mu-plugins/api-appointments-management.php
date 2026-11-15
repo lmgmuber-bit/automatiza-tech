@@ -22,6 +22,47 @@ class AutomatizaTech_Appointments_API {
         // NOTA: Menú de admin eliminado - se usa admin-reminders.php para unificar pantallas
     }
     
+    /** Rutas que llama n8n: modo aviso o exigir según AT_AGENDA_AUTH_MODO (si falta la función del tema, en exigir responde 401). */
+    public static function permiso_maquina($r) {
+        if (function_exists('at_agenda_permiso_maquina')) {
+            return at_agenda_permiso_maquina($r);
+        }
+        $modo = defined('AT_AGENDA_AUTH_MODO') ? AT_AGENDA_AUTH_MODO : get_option('at_agenda_auth_modo', 'aviso');
+        return $modo === 'exigir' ? new WP_Error('rest_forbidden', 'No autorizado.', array('status' => 401)) : true;
+    }
+
+    /** Rutas que nadie usa: siempre exigen la credencial; sin la función del tema, 401. */
+    public static function permiso_siempre($r) {
+        return function_exists('at_agenda_permiso_siempre')
+            ? at_agenda_permiso_siempre($r)
+            : new WP_Error('rest_forbidden', 'No autorizado.', array('status' => 401));
+    }
+
+    /** Quita la columna token de una fila, de una lista de filas o de un arreglo asociativo. */
+    private function sin_token($v) {
+        if (is_object($v)) {
+            unset($v->token);
+            return $v;
+        }
+        if (is_array($v)) {
+            foreach ($v as $k => $x) {
+                $v[$k] = $this->sin_token($x);
+            }
+            unset($v['token']);
+        }
+        return $v;
+    }
+
+    /** true si el correo es de un lead o de una reunión de seguimiento que existe en la base (sin distinguir mayúsculas). */
+    private function destinatario_conocido($to) {
+        global $wpdb;
+        $seguimientos = $wpdb->prefix . 'automatiza_followup_meetings';
+        if ((int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$this->table_name} WHERE LOWER(email) = LOWER(%s)", $to)) > 0) {
+            return true;
+        }
+        return (int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$seguimientos} WHERE LOWER(client_email) = LOWER(%s)", $to)) > 0;
+    }
+
     /**
      * Registrar rutas REST API
      */
@@ -30,64 +71,58 @@ class AutomatizaTech_Appointments_API {
         register_rest_route('automatiza-tech/v1', '/appointments', array(
             'methods' => 'GET',
             'callback' => array($this, 'get_appointments'),
-            'permission_callback' => '__return_true'
+            'permission_callback' => array('AutomatizaTech_Appointments_API', 'permiso_siempre')
         ));
         
         // GET /appointments/{id} - Obtener una cita específica
         register_rest_route('automatiza-tech/v1', '/appointments/(?P<id>\d+)', array(
             'methods' => 'GET',
             'callback' => array($this, 'get_appointment'),
-            'permission_callback' => '__return_true'
+            'permission_callback' => array('AutomatizaTech_Appointments_API', 'permiso_siempre')
         ));
         
         // GET /appointments/search - Buscar citas por email/phone
         register_rest_route('automatiza-tech/v1', '/appointments/search', array(
             'methods' => 'GET',
             'callback' => array($this, 'search_appointments'),
-            'permission_callback' => function ($r) { return function_exists('at_agenda_permiso_maquina') ? at_agenda_permiso_maquina($r) : true; }
+            'permission_callback' => array('AutomatizaTech_Appointments_API', 'permiso_maquina')
         ));
         
         // POST /appointments - Crear nueva cita (ya existe como /leads pero lo duplicamos)
         register_rest_route('automatiza-tech/v1', '/appointments', array(
             'methods' => 'POST',
             'callback' => array($this, 'create_appointment'),
-            'permission_callback' => '__return_true'
+            'permission_callback' => array('AutomatizaTech_Appointments_API', 'permiso_siempre')
         ));
         
         // PUT /appointments/{id} - Actualizar cita (reprogramar)
         register_rest_route('automatiza-tech/v1', '/appointments/(?P<id>\d+)', array(
             'methods' => 'PUT',
             'callback' => array($this, 'update_appointment'),
-            'permission_callback' => '__return_true'
+            'permission_callback' => array('AutomatizaTech_Appointments_API', 'permiso_siempre')
         ));
         
         // PATCH /appointments/{id} - Actualizar parcialmente
         register_rest_route('automatiza-tech/v1', '/appointments/(?P<id>\d+)', array(
             'methods' => 'PATCH',
             'callback' => array($this, 'patch_appointment'),
-            'permission_callback' => '__return_true'
+            'permission_callback' => array('AutomatizaTech_Appointments_API', 'permiso_siempre')
         ));
         
         // DELETE /appointments/{id} - Eliminar/cancelar cita
         register_rest_route('automatiza-tech/v1', '/appointments/(?P<id>\d+)', array(
             'methods' => 'DELETE',
             'callback' => array($this, 'delete_appointment'),
-            'permission_callback' => function ($r) { return function_exists('at_agenda_permiso_maquina') ? at_agenda_permiso_maquina($r) : true; }
+            'permission_callback' => array('AutomatizaTech_Appointments_API', 'permiso_maquina')
         ));
         
         // POST /send-email - Enviar correo corporativo
         register_rest_route('automatiza-tech/v1', '/send-email', array(
             'methods' => 'POST',
             'callback' => array($this, 'send_email'),
-            'permission_callback' => '__return_true'
+            'permission_callback' => array('AutomatizaTech_Appointments_API', 'permiso_maquina')
         ));
         
-        // GET /appointments/debug - Debug de búsqueda
-        register_rest_route('automatiza-tech/v1', '/appointments/debug', array(
-            'methods' => 'GET',
-            'callback' => array($this, 'debug_search'),
-            'permission_callback' => '__return_true'
-        ));
     }
     
     /**
@@ -96,8 +131,9 @@ class AutomatizaTech_Appointments_API {
     public function get_appointments($request) {
         global $wpdb;
         
-        $page = $request->get_param('page') ?: 1;
-        $per_page = $request->get_param('per_page') ?: 50;
+        $page = max(1, (int) $request->get_param('page'));
+        $per_page = (int) $request->get_param('per_page');
+        $per_page = $per_page > 0 ? min(100, $per_page) : 50;
         $offset = ($page - 1) * $per_page;
         $status = $request->get_param('status'); // 'active', 'cancelled'
         
@@ -118,7 +154,7 @@ class AutomatizaTech_Appointments_API {
         
         return new WP_REST_Response(array(
             'success' => true,
-            'data' => $results,
+            'data' => $this->sin_token($results),
             'pagination' => array(
                 'total' => (int)$total,
                 'page' => (int)$page,
@@ -150,7 +186,7 @@ class AutomatizaTech_Appointments_API {
         
         return new WP_REST_Response(array(
             'success' => true,
-            'data' => $result
+            'data' => $this->sin_token($result)
         ), 200);
     }
     
@@ -266,7 +302,7 @@ class AutomatizaTech_Appointments_API {
         
         return new WP_REST_Response(array(
             'success' => true,
-            'data' => $all_results,
+            'data' => $this->sin_token($all_results),
             'count' => count($all_results)
         ), 200);
     }
@@ -320,10 +356,10 @@ class AutomatizaTech_Appointments_API {
             'success' => true,
             'message' => 'Cita creada exitosamente',
             'appointment_id' => $appointment_id,
-            'data' => $wpdb->get_row($wpdb->prepare(
+            'data' => $this->sin_token($wpdb->get_row($wpdb->prepare(
                 "SELECT * FROM {$this->table_name} WHERE id = %d",
                 $appointment_id
-            ))
+            )))
         ), 201);
     }
     
@@ -395,10 +431,10 @@ class AutomatizaTech_Appointments_API {
         return new WP_REST_Response(array(
             'success' => true,
             'message' => 'Cita actualizada exitosamente',
-            'data' => $wpdb->get_row($wpdb->prepare(
+            'data' => $this->sin_token($wpdb->get_row($wpdb->prepare(
                 "SELECT * FROM {$this->table_name} WHERE id = %d",
                 $id
-            ))
+            )))
         ), 200);
     }
     
@@ -470,10 +506,10 @@ class AutomatizaTech_Appointments_API {
             return new WP_REST_Response(array(
                 'success' => true,
                 'message' => 'Cita cancelada exitosamente',
-                'data' => $wpdb->get_row($wpdb->prepare(
+                'data' => $this->sin_token($wpdb->get_row($wpdb->prepare(
                     "SELECT * FROM {$this->table_name} WHERE id = %d",
                     $id
-                ))
+                )))
             ), 200);
         }
     }
@@ -498,6 +534,12 @@ class AutomatizaTech_Appointments_API {
             ), 400);
         }
         
+        // Solo a correos de un lead o de una reunión de seguimiento que existen en la base.
+        if (!$this->destinatario_conocido($to)) {
+            error_log('appointments-api: send-email rechazado, destinatario no reconocido');
+            return new WP_REST_Response(array('success' => false, 'message' => 'No autorizado.'), 403);
+        }
+
         // Generar contenido según template
         $html_body = $this->generate_email_template($template, $data);
         
@@ -652,54 +694,6 @@ class AutomatizaTech_Appointments_API {
     </div>
 </body>
 </html>';
-    }
-    
-    /**
-     * GET /appointments/debug - Debug de búsqueda
-     */
-    public function debug_search($request) {
-        global $wpdb;
-        
-        $email = $request->get_param('email');
-        $name = $request->get_param('name');
-        $scheduled_date = $request->get_param('scheduled_date');
-        $scheduled_time = $request->get_param('scheduled_time');
-        
-        // Obtener registro ID 70 directamente
-        $record = $wpdb->get_row("SELECT id, name, email, scheduled_date, scheduled_time, status FROM {$this->table_name} WHERE id = 70");
-        
-        // Preparar comparaciones
-        $debug = array(
-            'input' => array(
-                'email' => $email,
-                'email_trimmed_upper' => strtoupper(trim($email)),
-                'name' => $name,
-                'name_trimmed_upper' => strtoupper(trim($name)),
-                'scheduled_date' => $scheduled_date,
-                'scheduled_time' => $scheduled_time,
-                'time_hhmm' => substr($scheduled_time, 0, 5)
-            ),
-            'record_70' => $record ? array(
-                'id' => $record->id,
-                'name' => $record->name,
-                'name_trimmed_upper' => strtoupper(trim($record->name)),
-                'email' => $record->email,
-                'email_trimmed_upper' => strtoupper(trim($record->email)),
-                'scheduled_date' => $record->scheduled_date,
-                'scheduled_time' => $record->scheduled_time,
-                'time_hhmm' => substr($record->scheduled_time, 0, 5),
-                'status' => $record->status
-            ) : 'NOT FOUND',
-            'comparisons' => $record ? array(
-                'email_match' => strtoupper(trim($email)) === strtoupper(trim($record->email)),
-                'name_match' => strtoupper(trim($name)) === strtoupper(trim($record->name)),
-                'date_match' => $scheduled_date === $record->scheduled_date,
-                'time_match' => substr($scheduled_time, 0, 5) === substr($record->scheduled_time, 0, 5),
-                'status_ok' => ($record->status === null || $record->status !== 'cancelled')
-            ) : 'N/A'
-        );
-        
-        return new WP_REST_Response($debug, 200);
     }
     
     // NOTA: El menú de admin se maneja desde admin-reminders.php para evitar duplicados

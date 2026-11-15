@@ -513,7 +513,7 @@ add_action('rest_api_init', function () {
     register_rest_route('automatiza-tech/v1', '/leads/update-reminder', array(
         'methods' => array('POST', 'GET'),
         'callback' => 'automatiza_tech_mark_reminder_sent',
-        'permission_callback' => '__return_true'
+        'permission_callback' => 'at_agenda_permiso_siempre'
     ));
 
     // Endpoint para acciones de usuario (Confirmar/Rechazar/Eliminar)
@@ -1853,6 +1853,8 @@ function automatiza_tech_get_leads_reminder_8pm($request) {
         $tomorrow
     ));
 
+    $con_credencial = function_exists('at_agenda_credencial_valida') && at_agenda_credencial_valida($request);
+
     // Formatear fechas para visualización
     if (!empty($meetings)) {
         foreach ($meetings as $meeting) {
@@ -1862,8 +1864,8 @@ function automatiza_tech_get_leads_reminder_8pm($request) {
                 $meeting->meet_link = '';
             }
             automatiza_tech_attach_recipient_metadata($meeting, 'followup');
-            // Enlaces de acción del correo, firmados (se suman; no se quita ningún campo).
-            if (function_exists('at_agenda_url_firmada')) {
+            // Enlaces de acción del correo, firmados (se suman; solo para quien trae la credencial de n8n).
+            if ($con_credencial && function_exists('at_agenda_url_firmada')) {
                 $meeting->confirm_url = at_agenda_url_firmada((int) $meeting->id, 'confirm');
                 $meeting->reschedule_url = at_agenda_url_firmada((int) $meeting->id, 'reschedule');
                 $meeting->cancel_url = at_agenda_url_firmada((int) $meeting->id, 'cancel');
@@ -1905,6 +1907,8 @@ function automatiza_tech_get_leads_reminder_8am($request) {
         $today
     ));
 
+    $con_credencial = function_exists('at_agenda_credencial_valida') && at_agenda_credencial_valida($request);
+
     // Formatear fechas para visualización
     if (!empty($meetings)) {
         foreach ($meetings as $meeting) {
@@ -1914,8 +1918,8 @@ function automatiza_tech_get_leads_reminder_8am($request) {
                 $meeting->meet_link = '';
             }
             automatiza_tech_attach_recipient_metadata($meeting, 'followup');
-            // Enlaces de acción del correo, firmados (se suman; no se quita ningún campo).
-            if (function_exists('at_agenda_url_firmada')) {
+            // Enlaces de acción del correo, firmados (se suman; solo para quien trae la credencial de n8n).
+            if ($con_credencial && function_exists('at_agenda_url_firmada')) {
                 $meeting->confirm_url = at_agenda_url_firmada((int) $meeting->id, 'confirm');
                 $meeting->reschedule_url = at_agenda_url_firmada((int) $meeting->id, 'reschedule');
                 $meeting->cancel_url = at_agenda_url_firmada((int) $meeting->id, 'cancel');

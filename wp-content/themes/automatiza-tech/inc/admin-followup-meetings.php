@@ -292,6 +292,7 @@ function automatiza_tech_check_slot_availability($date, $time, $exclude_followup
         return array(
             'available' => false,
             'conflict_type' => 'demo',
+            'conflict_id' => (int) $demo_conflict->id,
             'conflict_details' => sprintf(
                 'DEMO con %s (%s) - %s %s hrs',
                 $demo_conflict->name,
@@ -324,6 +325,7 @@ function automatiza_tech_check_slot_availability($date, $time, $exclude_followup
         return array(
             'available' => false,
             'conflict_type' => 'followup',
+            'conflict_id' => (int) $followup_conflict->id,
             'conflict_details' => sprintf(
                 'Seguimiento con %s (%s) - %s %s hrs',
                 $followup_conflict->client_name,
@@ -1292,7 +1294,7 @@ function automatiza_tech_followup_page() {
                         });
                     } else {
                         var conflictType = response.data.conflict_type === 'demo' ? '🎯 DEMO' : '📋 Seguimiento';
-                        $availabilityMsg.html('❌ <strong>Horario ocupado</strong><br><small>' + conflictType + ': ' + response.data.conflict_details + '</small>').css({
+                        $availabilityMsg.empty().append('❌ ').append($('<strong>').text('Horario ocupado')).append('<br>').append($('<small>').text(conflictType + ': ' + response.data.conflict_details)).css({
                             'background': '#fee2e2',
                             'border': '1px solid #f87171',
                             'color': '#991b1b'
@@ -2537,7 +2539,8 @@ function automatiza_tech_create_followup_meeting_api($request) {
     
     if (!$availability_check['available']) {
         $conflict_type = $availability_check['conflict_type'] === 'demo' ? 'DEMO' : 'reunión de seguimiento';
-        error_log('followup-meetings: horario ocupado: ' . (string) $availability_check['conflict_details']);
+        // Solo el tipo y el id del conflicto: nunca nombre ni correo de otra persona.
+        error_log('followup-meetings: horario ocupado tipo=' . (string) $availability_check['conflict_type'] . ' id=' . (int) ($availability_check['conflict_id'] ?? 0));
         return new WP_Error(
             'slot_taken', 
             'Este horario ya está ocupado por una ' . $conflict_type . '. Por favor selecciona otro horario.', 

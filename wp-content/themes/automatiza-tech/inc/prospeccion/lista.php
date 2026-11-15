@@ -150,6 +150,13 @@ class AT_Prospectos_Lista extends WP_List_Table {
 		$b = [];
 		if ($i['estado'] !== 'baja') {
 			$b[] = '<button type="button" class="button button-small at-pro-copiar" data-mensaje="' . esc_attr($msg) . '" aria-label="Copiar mensaje para ' . $neg . '"><span class="dashicons dashicons-clipboard" aria-hidden="true"></span> Copiar mensaje</button>';
+			$asunto = at_pro_correo_asunto($i);
+			$html_correo = at_pro_correo_html($i, at_pro_url_formulario($i['token']), at_pro_url_baja($i['token']));
+			$b[] = '<button type="button" class="button button-small at-pro-ver-correo" aria-label="Ver correo para ' . $neg . '"><span class="dashicons dashicons-visibility" aria-hidden="true"></span> Ver correo</button>';
+			$b[] = '<button type="button" class="button button-small at-pro-copiar-correo" data-asunto="' . esc_attr($asunto) . '" data-html="' . esc_attr($html_correo) . '" data-texto="' . esc_attr($msg) . '" aria-label="Copiar correo con diseño para ' . $neg . '"><span class="dashicons dashicons-email-alt2" aria-hidden="true"></span> Copiar correo con diseño</button>';
+			if ($i['correo'] !== '') {
+				$b[] = '<a class="button button-small" href="' . esc_attr('mailto:' . $i['correo'] . '?subject=' . rawurlencode($asunto) . '&body=' . rawurlencode($msg)) . '" aria-label="Abrir en el correo: ' . $neg . '"><span class="dashicons dashicons-external" aria-hidden="true"></span> Abrir en el correo</a>';
+			}
 			if ($i['telefono'] !== '') {
 				$b[] = '<a class="button button-small" href="' . esc_attr('https://wa.me/' . $i['telefono'] . '?text=' . rawurlencode($msg)) . '" target="_blank" rel="noopener noreferrer" aria-label="Abrir WhatsApp con ' . $neg . '"><span class="dashicons dashicons-format-chat" aria-hidden="true"></span> Abrir WhatsApp</a>';
 			}

@@ -42,6 +42,8 @@ ok(strpos($html, 'data-mensaje="' . esc_attr($msg) . '"') !== false, 'Copiar men
 ok(strpos($html, 'https://wa.me/56955501001?text=' . rawurlencode($msg)) !== false, 'enlace wa.me con el mensaje codificado');
 ok(substr_count($html, 'https://wa.me/') === 1, 'solo hay wa.me donde hay teléfono');
 ok(strpos($html, 'aria-label="Copiar mensaje para Café Sur"') !== false, 'aria-label en el botón de solo ícono');
+ok(strpos($html, 'aria-label="Ver correo para Café Sur"') !== false && strpos($html, 'aria-label="Copiar correo con diseño para Café Sur"') !== false, 'botones Ver correo y Copiar correo con aria-label');
+ok(strpos($html, 'data-asunto="' . esc_attr(at_pro_correo_asunto($p1)) . '"') !== false && strpos($html, 'at-pro-modal') !== false, 'correo: asunto en el botón y vista previa en el panel');
 ok(strpos($html, 'dashicons-') !== false, 'íconos Dashicons');
 ok(strpos($html, 'action=at_pro_estado') !== false && strpos($html, '_wpnonce=') !== false, 'acciones de estado con nonce');
 ok(strpos($html, 'name="action"') === false || strpos($html, 'value="at_pro_masivo"') !== false, 'masivas con nombre propio');

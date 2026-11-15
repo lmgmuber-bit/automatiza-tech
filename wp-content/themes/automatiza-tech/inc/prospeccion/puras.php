@@ -71,14 +71,14 @@ function at_pro_columna_csv(string $cabecera): string {
 	return '';
 }
 
-/** Texto base que Luis copia o manda por WhatsApp. Sin precios ni promesas de resultados; siempre con el enlace de baja. */
+/** Texto simple (WhatsApp o texto del correo) que Luis copia. Sin precios ni promesas de resultados; siempre con el aviso de baja. */
 function at_pro_mensaje(array $p, string $url_form, string $url_baja): string {
 	$negocio = trim((string) ($p['negocio'] ?? ''));
 	$senal = trim((string) ($p['senales'] ?? ''));
-	$saludo = $negocio !== '' ? "Hola, te escribe Luis de AutomatizaTech. Estuve mirando {$negocio}" : 'Hola, te escribe Luis de AutomatizaTech. Estuve mirando tu negocio';
-	$linea_senal = $senal !== '' ? " y vi que {$senal}." : '.';
-	return $saludo . $linea_senal . "\n\n"
-		. "En AutomatizaTech ayudamos a negocios como el tuyo a ordenar su atención y sus reservas con automatizaciones simples.\n\n"
-		. "Si te interesa, puedes agendar un diagnóstico sin costo aquí: {$url_form}\n\n"
-		. "Si no quieres recibir más mensajes: {$url_baja}";
+	$fuente = function_exists('at_pro_fuente_texto') ? at_pro_fuente_texto($p) : 'tu sitio web';
+	$vi = ($negocio !== '' ? $negocio : 'tu negocio') . ' en ' . $fuente;
+	$noto = $senal !== '' ? ' y noté que ' . $senal . '.' : '.';
+	return "Hola, soy Luis de AutomatizaTech SpA (automatizatech.cl). Vi {$vi}{$noto} "
+		. "Ayudamos a negocios como el tuyo con reservas y atención automáticas. Si te interesa, agenda un diagnóstico sin costo: {$url_form}\n\n"
+		. "Es un mensaje comercial. Si no quieres que te escribamos más, responde NO o entra aquí: {$url_baja}";
 }

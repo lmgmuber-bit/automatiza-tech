@@ -172,5 +172,58 @@ function at_pro_pagina(): void {
 	$tabla->display();
 	echo '</form>';
 	echo '<script>document.addEventListener("click",function(e){var b=e.target.closest(".at-pro-copiar");if(!b)return;var t=b.getAttribute("data-mensaje")||"";var ok=function(){var o=b.innerHTML;b.textContent="Copiado";setTimeout(function(){b.innerHTML=o},1600)};if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t).then(ok)}else{var a=document.createElement("textarea");a.value=t;document.body.appendChild(a);a.select();document.execCommand("copy");a.remove();ok()}});</script>';
+
+	echo <<<'ATPRO'
+<style>.at-pro-modal{position:fixed;inset:0;z-index:100000;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:16px}.at-pro-modal__caja{background:#fff;border-radius:8px;width:100%;max-width:680px;max-height:94vh;display:flex;flex-direction:column;overflow:hidden}.at-pro-modal__cab{padding:12px 16px;border-bottom:1px solid #dcdcde}.at-pro-modal__cab strong{display:block;word-break:break-word}.at-pro-modal__marco{flex:1;border:0;width:100%;min-height:60vh;background:#f4f4f4}.at-pro-modal__pie{padding:10px 16px;border-top:1px solid #dcdcde;display:flex;flex-wrap:wrap;gap:6px;align-items:center}.at-pro-modal .dashicons{vertical-align:text-bottom}</style>
+<div id="at-pro-aviso" class="screen-reader-text" role="status" aria-live="polite"></div>
+<script>
+(function(){
+var aviso=document.getElementById("at-pro-aviso");
+function decir(t){if(aviso){aviso.textContent="";setTimeout(function(){aviso.textContent=t},30)}}
+function marcar(b,t){var o=b.innerHTML;b.textContent=t;decir(t);setTimeout(function(){b.innerHTML=o},1600)}
+function textoSimple(txt,html){
+ var d=document.createElement("div");d.contentEditable="true";d.setAttribute("aria-hidden","true");
+ d.style.cssText="position:fixed;left:-9999px;top:0;opacity:0";d.innerHTML=html;document.body.appendChild(d);
+ var r=document.createRange();r.selectNodeContents(d);var s=window.getSelection();s.removeAllRanges();s.addRange(r);
+ var ok=false;try{ok=document.execCommand("copy")}catch(e){}
+ s.removeAllRanges();d.remove();return ok}
+function copiarCorreo(o,b){
+ var ok=function(){marcar(b,"Copiado")};var fallo=function(){marcar(b,"No se pudo copiar")};
+ if(navigator.clipboard&&window.ClipboardItem&&navigator.clipboard.write){
+  navigator.clipboard.write([new ClipboardItem({"text/html":new Blob([o.html],{type:"text/html"}),"text/plain":new Blob([o.texto],{type:"text/plain"})})]).then(ok,function(){textoSimple(o.texto,o.html)?ok():fallo()});
+ }else{textoSimple(o.texto,o.html)?ok():fallo()}}
+function copiarTexto(t,b){
+ var ok=function(){marcar(b,"Copiado")};
+ if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t).then(ok)}
+ else{var a=document.createElement("textarea");a.value=t;document.body.appendChild(a);a.select();document.execCommand("copy");a.remove();ok()}}
+function datos(b){return{asunto:b.getAttribute("data-asunto")||"",html:b.getAttribute("data-html")||"",texto:b.getAttribute("data-texto")||""}}
+var previo=null;
+function cerrar(){var m=document.getElementById("at-pro-modal");if(m){m.remove()}if(previo){previo.focus();previo=null}}
+function abrir(o,origen){
+ cerrar();previo=origen;
+ var m=document.createElement("div");m.id="at-pro-modal";m.className="at-pro-modal";
+ var c=document.createElement("div");c.className="at-pro-modal__caja";c.setAttribute("role","dialog");c.setAttribute("aria-modal","true");c.setAttribute("aria-labelledby","at-pro-modal-t");
+ var h=document.createElement("div");h.className="at-pro-modal__cab";
+ var e=document.createElement("span");e.className="description";e.textContent="Asunto";
+ var t=document.createElement("strong");t.id="at-pro-modal-t";t.textContent=o.asunto;h.appendChild(e);h.appendChild(t);
+ var f=document.createElement("iframe");f.className="at-pro-modal__marco";f.setAttribute("sandbox","");f.setAttribute("title","Vista previa del correo");f.srcdoc=o.html;
+ var p=document.createElement("div");p.className="at-pro-modal__pie";
+ function boton(txt,ico,fn){var x=document.createElement("button");x.type="button";x.className="button";x.innerHTML='<span class="dashicons dashicons-'+ico+'" aria-hidden="true"></span> '+txt;x.addEventListener("click",function(){fn(x)});p.appendChild(x);return x}
+ var primero=boton("Copiar correo con diseño","email-alt2",function(x){copiarCorreo(o,x)});
+ boton("Copiar asunto","clipboard",function(x){copiarTexto(o.asunto,x)});
+ boton("Cerrar","no-alt",cerrar);
+ c.appendChild(h);c.appendChild(f);c.appendChild(p);m.appendChild(c);
+ m.addEventListener("click",function(ev){if(ev.target===m){cerrar()}});
+ m.addEventListener("keydown",function(ev){if(ev.key==="Escape"){cerrar()}});
+ document.body.appendChild(m);primero.focus();}
+document.addEventListener("click",function(e){
+ var v=e.target.closest(".at-pro-ver-correo");
+ if(v){var w=v.parentNode.querySelector(".at-pro-copiar-correo");if(w){abrir(datos(w),v)}return}
+ var b=e.target.closest(".at-pro-copiar-correo");
+ if(b){copiarCorreo(datos(b),b)}
+});
+})();
+</script>
+ATPRO;
 	echo '</div>';
 }

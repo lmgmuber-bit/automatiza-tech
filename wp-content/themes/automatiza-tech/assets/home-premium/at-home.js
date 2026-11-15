@@ -230,8 +230,32 @@
         privacy_accepted_at: new Date().toISOString(),
         marketing_optin: data.get('marketing_optin') === '1'
       };
+      // Un solo envío a la vez: el botón queda en «Agendando…» con un aviso de espera junto a él,
+      // y un segundo clic o Enter no vuelve a enviar (14-nov-2026). Va por clase y no por estilo en
+      // línea porque el efecto data-hover restaura el style del botón al salir el mouse.
+      if (form.__enviando) return;
+      form.__enviando = true;
+      var exito = false;
+      var espera = form.querySelector('[data-form-espera]');
+      if (!espera) {
+        espera = document.createElement('p');
+        espera.setAttribute('data-form-espera', '');
+        espera.setAttribute('role', 'status');
+        espera.setAttribute('aria-live', 'polite');
+        espera.className = 'at-f-full at-form-espera';
+        if (submit && submit.parentNode) submit.parentNode.insertBefore(espera, submit.nextSibling); else form.appendChild(espera);
+      }
+      espera.textContent = 'Estamos agendando tu cita y preparando el enlace de la reunión. Puede tardar unos segundos; no cierres esta ventana.';
+      espera.hidden = false;
+      if (submit) {
+        submit.__htmlOriginal = submit.innerHTML;
+        submit.disabled = true;
+        submit.setAttribute('aria-busy', 'true');
+        submit.classList.add('at-btn-cargando');
+        submit.innerHTML = '<span class="at-spin" aria-hidden="true"></span><span>Agendando tu cita…</span>';
+      }
+      form.setAttribute('aria-busy', 'true');
       track('diagnostico_form_started', { intent: intent, interest: interest });
-      if (submit) { submit.disabled = true; submit.style.opacity = '.72'; submit.style.cursor = 'wait'; }
       setFormMessage(form, '', '');
       fetch(cfg.availabilityUrl, {
         method: 'POST',
@@ -296,6 +320,7 @@
               fetch(cfg.attrAjaxUrl, { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: ad.toString() }).catch(function () {});
             } catch (e) {}
           }
+          exito = true;
           setState({ scheduled: true });
           form.reset();
           fillUtm();
@@ -305,7 +330,20 @@
           setFormMessage(form, 'error', err && err.message ? err.message : 'No pudimos enviar la solicitud. Intenta nuevamente.');
         })
         .finally(function () {
-          if (submit) { submit.disabled = false; submit.style.opacity = ''; submit.style.cursor = ''; }
+          form.__enviando = false;
+          form.removeAttribute('aria-busy');
+          if (espera) { espera.textContent = ''; espera.hidden = true; }
+          if (submit) {
+            submit.disabled = false;
+            submit.removeAttribute('aria-busy');
+            submit.classList.remove('at-btn-cargando');
+            if (submit.__htmlOriginal != null) submit.innerHTML = submit.__htmlOriginal;
+          }
+          // Con error, el aviso queda arriba del formulario: lo traemos a la vista (en el celular el botón está abajo).
+          if (!exito) {
+            var msg = form.querySelector('[data-form-message]');
+            if (msg && msg.scrollIntoView) { try { msg.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); } catch (e) { msg.scrollIntoView(); } }
+          }
         });
     },
     stopProp: function (e) { if (e && e.stopPropagation) e.stopPropagation(); }

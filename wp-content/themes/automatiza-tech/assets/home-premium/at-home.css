@@ -175,3 +175,9 @@ a.at-cl-card:hover .at-cl-logo img{transform:scale(1.04)}
 @media (max-width:560px){.at-cl-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.at-cl-grid--uno{grid-template-columns:1fr}.at-cl-logo{height:88px;padding:12px 14px}.at-cl-meta{padding:12px 12px 14px;gap:5px}.at-cl-name{font-size:14px}.at-cl-tag{font-size:12px}.at-cl-causas{padding:14px}}
 /* «Por qué AutomatizaTech»: el bloque de la izquierda solo queda fijo con dos columnas; en una columna se montaba sobre la lista al hacer scroll (13-nov-2026). */
 @media (max-width:860px){#porque .at-pq-lado{position:static !important;top:auto !important}}
+/* Modal de agendamiento: botón en espera y aviso mientras se agenda (14-nov-2026). */
+.at-btn-cargando{opacity:.88;cursor:progress !important;pointer-events:none}
+.at-spin{display:inline-block;width:16px;height:16px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:atSpin .8s linear infinite;flex:none}
+.at-form-espera{margin:0;text-align:center;font-size:13px;line-height:1.45;color:var(--text-2)}
+.at-form-espera[hidden]{display:none}
+@media (prefers-reduced-motion:reduce){.at-spin{animation-duration:2.4s}}

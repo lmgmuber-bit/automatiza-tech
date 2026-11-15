@@ -45,8 +45,14 @@ Pedido de Luis (13-nov): dejar funcionando la medición y la conversión para Go
   - solo se carga con `at_consentimiento=si`;
   - no queda `AW-17691911857`.
 - **Ubicación granular:** activa por decisión de Luis. Aunque se apagara, GA4 derivaría país y región de la IP ([ayuda de Google](https://support.google.com/analytics/answer/12002752)), así que `/privacidad/` debe mencionar la ubicación aproximada. Lo pidió Eje · AT general a Toga.
+- **Tiempo real:** GA4 registró la visita de Luis (13-nov).
+- **Google Ads, cuenta 425-837-1800 (14-nov, con la autorización de Luis; cada cambio comprobado tras recargar):**
+  - la conversión «Compra» pasó a **secundaria**;
+  - el etiquetado automático ya estaba activado;
+  - la aplicación automática de recomendaciones está desactivada;
+  - la vinculación con GA4 ya existía;
+  - las dos campañas viejas, «Leads-Search-1» y «Solicita Ahora Tu Presupuesto», quedaron **detenidas**. Apuntaban al dominio vencido automatizatech.shop y se habrían reactivado solas al pagar el saldo vencido de la cuenta, que paga Luis. El monto está en la bóveda.
 - **Pendiente:**
-  - la prueba en GA4 › Tiempo real;
   - una cita de prueba para ver `generate_lead` y comprobar que `page_location` llega sin datos de contacto;
   - marcar `generate_lead` como evento clave.
 

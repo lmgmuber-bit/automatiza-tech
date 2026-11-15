@@ -6,17 +6,11 @@
                     <h3>Automatiza Tech</h3>
                     <p>Automatización y tecnología digital premium para hacer crecer tu negocio: asistentes inteligentes, automatización, sitios premium, apps y sistemas a medida.</p>
                     <div class="social-links">
-                        <a href="https://www.facebook.com/automatizatech.cl" target="_blank" rel="noopener" title="Facebook">
+                        <a href="https://www.facebook.com/profile.php?id=61584793150484" target="_blank" rel="noopener" title="Facebook" aria-label="Facebook">
                             <i class="fab fa-facebook"></i>
                         </a>
-                        <a href="https://www.instagram.com/automatizatech.cl/" target="_blank" rel="noopener" title="Instagram">
+                        <a href="https://www.instagram.com/automatizatech.cl/" target="_blank" rel="noopener" title="Instagram" aria-label="Instagram">
                             <i class="fab fa-instagram"></i>
-                        </a>
-                        <a href="https://www.linkedin.com/company/automatizatech" target="_blank" rel="noopener" title="LinkedIn">
-                            <i class="fab fa-linkedin"></i>
-                        </a>
-                        <a href="https://www.twitter.com/automatizatech.cl" target="_blank" rel="noopener" title="Twitter">
-                            <i class="fab fa-twitter"></i>
                         </a>
                     </div>
                 </div>
@@ -53,6 +47,10 @@
                         <li>
                             <i class="fas fa-envelope"></i>
                             <a href="mailto:contacto@automatizatech.cl">contacto@automatizatech.cl</a>
+                        </li>
+                        <li>
+                            <i class="fas fa-phone" aria-hidden="true"></i>
+                            <a href="tel:+56927002984">+56 9 2700 2984</a>
                         </li>
                         <li>
                             <i class="fab fa-whatsapp"></i>

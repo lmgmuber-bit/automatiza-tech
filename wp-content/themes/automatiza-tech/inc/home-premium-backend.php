@@ -195,6 +195,20 @@ function automatiza_tech_home_premium_head() {
                 'name' => 'AutomatizaTech',
                 'url' => home_url('/'),
                 'logo' => $img,
+                'sameAs' => array(
+                    'https://www.instagram.com/automatizatech.cl/',
+                    'https://www.facebook.com/profile.php?id=61584793150484',
+                ),
+                'telephone' => '+56927002984',
+                'email' => 'contacto@automatizatech.cl',
+                'contactPoint' => array(
+                    '@type' => 'ContactPoint',
+                    'contactType' => 'customer service',
+                    'telephone' => '+56927002984',
+                    'email' => 'contacto@automatizatech.cl',
+                    'areaServed' => 'CL',
+                    'availableLanguage' => 'es',
+                ),
             ),
             array(
                 '@type' => 'Service',

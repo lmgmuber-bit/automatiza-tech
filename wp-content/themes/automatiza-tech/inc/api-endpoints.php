@@ -442,7 +442,7 @@ add_action('rest_api_init', function () {
     register_rest_route('automatiza-tech/v1', '/leads/reminders(?:/(?P<type>[a-zA-Z0-9]+))?', array(
         'methods' => 'GET',
         'callback' => 'automatiza_tech_get_leads_for_reminders',
-        'permission_callback' => '__return_true'
+        'permission_callback' => 'at_agenda_permiso_maquina'
     ));
 
     // Endpoint para obtener leads para recordatorios por WHATSAPP
@@ -450,63 +450,63 @@ add_action('rest_api_init', function () {
     register_rest_route('automatiza-tech/v1', '/leads/reminders-wa(?:/(?P<type>[a-zA-Z0-9]+))?', array(
         'methods' => 'GET',
         'callback' => 'automatiza_tech_get_leads_for_reminders_wa',
-        'permission_callback' => '__return_true'
+        'permission_callback' => 'at_agenda_permiso_maquina'
     ));
 
     // Endpoint para recordatorio 8PM (citas del día siguiente) - EMAIL
     register_rest_route('automatiza-tech/v1', '/leads/reminders-8pm', array(
         'methods' => 'GET',
         'callback' => 'automatiza_tech_get_leads_reminder_8pm',
-        'permission_callback' => '__return_true'
+        'permission_callback' => 'at_agenda_permiso_maquina'
     ));
 
     // Endpoint para recordatorio 8AM (citas del mismo día) - EMAIL
     register_rest_route('automatiza-tech/v1', '/leads/reminders-8am', array(
         'methods' => 'GET',
         'callback' => 'automatiza_tech_get_leads_reminder_8am',
-        'permission_callback' => '__return_true'
+        'permission_callback' => 'at_agenda_permiso_maquina'
     ));
 
     // Endpoint para recordatorio 8PM (citas del día siguiente) - WHATSAPP
     register_rest_route('automatiza-tech/v1', '/leads/reminders-wa-8pm', array(
         'methods' => 'GET',
         'callback' => 'automatiza_tech_get_leads_reminder_8pm_wa',
-        'permission_callback' => '__return_true'
+        'permission_callback' => 'at_agenda_permiso_maquina'
     ));
 
     // Endpoint para recordatorio 8AM (citas del mismo día) - WHATSAPP
     register_rest_route('automatiza-tech/v1', '/leads/reminders-wa-8am', array(
         'methods' => 'GET',
         'callback' => 'automatiza_tech_get_leads_reminder_8am_wa',
-        'permission_callback' => '__return_true'
+        'permission_callback' => 'at_agenda_permiso_maquina'
     ));
 
     // Endpoint para marcar recordatorio 8PM/8AM como enviado - EMAIL
     register_rest_route('automatiza-tech/v1', '/leads/update-reminder-daily/(?P<lead_id>\d+)/(?P<type>8pm|8am)', array(
         'methods' => array('POST', 'GET'),
         'callback' => 'automatiza_tech_mark_reminder_daily_sent',
-        'permission_callback' => '__return_true'
+        'permission_callback' => 'at_agenda_permiso_maquina'
     ));
 
     // Endpoint para marcar recordatorio 8PM/8AM como enviado - WHATSAPP
     register_rest_route('automatiza-tech/v1', '/leads/update-reminder-wa-daily/(?P<lead_id>\d+)/(?P<type>8pm|8am)', array(
         'methods' => array('POST', 'GET'),
         'callback' => 'automatiza_tech_mark_reminder_daily_sent_wa',
-        'permission_callback' => '__return_true'
+        'permission_callback' => 'at_agenda_permiso_maquina'
     ));
 
     // Endpoint para actualizar estado de recordatorio por CORREO (Ruta con parámetros obligatorios en URL)
     register_rest_route('automatiza-tech/v1', '/leads/update-reminder/(?P<lead_id>\d+)/(?P<type>[a-zA-Z0-9]+)', array(
         'methods' => array('POST', 'GET'),
         'callback' => 'automatiza_tech_mark_reminder_sent',
-        'permission_callback' => '__return_true'
+        'permission_callback' => 'at_agenda_permiso_maquina'
     ));
 
     // Endpoint para actualizar estado de recordatorio por WHATSAPP
     register_rest_route('automatiza-tech/v1', '/leads/update-reminder-wa/(?P<lead_id>\d+)/(?P<type>[a-zA-Z0-9]+)', array(
         'methods' => array('POST', 'GET'),
         'callback' => 'automatiza_tech_mark_reminder_sent_wa',
-        'permission_callback' => '__return_true'
+        'permission_callback' => 'at_agenda_permiso_maquina'
     ));
 
     // Endpoint FALLBACK para actualizar estado (para compatibilidad con versiones anteriores de n8n)
@@ -534,21 +534,21 @@ add_action('rest_api_init', function () {
     register_rest_route('automatiza-tech/v1', '/leads/confirm-attendance/(?P<lead_id>\d+)/(?P<type>[a-zA-Z0-9]+)', array(
         'methods' => array('POST', 'GET'),
         'callback' => 'automatiza_tech_confirm_attendance',
-        'permission_callback' => '__return_true'
+        'permission_callback' => 'at_agenda_permiso_maquina'
     ));
     
     // Endpoint para verificar si un evento de DEMO existe en BD (para sync con Google Calendar)
     register_rest_route('automatiza-tech/v1', '/leads/check-event', array(
         'methods' => 'GET',
         'callback' => 'automatiza_tech_check_lead_event_exists',
-        'permission_callback' => '__return_true'
+        'permission_callback' => 'at_agenda_permiso_maquina'
     ));
 
     // Endpoint para marcar WhatsApp enviado en leads (llamado por N8N)
     register_rest_route('automatiza-tech/v1', '/leads/(?P<lead_id>\d+)/mark-whatsapp-sent', array(
         'methods' => 'POST',
         'callback' => 'automatiza_tech_mark_lead_whatsapp_sent',
-        'permission_callback' => '__return_true'
+        'permission_callback' => 'at_agenda_permiso_maquina'
     ));
 });
 
@@ -1862,6 +1862,12 @@ function automatiza_tech_get_leads_reminder_8pm($request) {
                 $meeting->meet_link = '';
             }
             automatiza_tech_attach_recipient_metadata($meeting, 'followup');
+            // Enlaces de acción del correo, firmados (se suman; no se quita ningún campo).
+            if (function_exists('at_agenda_url_firmada')) {
+                $meeting->confirm_url = at_agenda_url_firmada((int) $meeting->id, 'confirm');
+                $meeting->reschedule_url = at_agenda_url_firmada((int) $meeting->id, 'reschedule');
+                $meeting->cancel_url = at_agenda_url_firmada((int) $meeting->id, 'cancel');
+            }
         }
     }
 
@@ -1908,6 +1914,12 @@ function automatiza_tech_get_leads_reminder_8am($request) {
                 $meeting->meet_link = '';
             }
             automatiza_tech_attach_recipient_metadata($meeting, 'followup');
+            // Enlaces de acción del correo, firmados (se suman; no se quita ningún campo).
+            if (function_exists('at_agenda_url_firmada')) {
+                $meeting->confirm_url = at_agenda_url_firmada((int) $meeting->id, 'confirm');
+                $meeting->reschedule_url = at_agenda_url_firmada((int) $meeting->id, 'reschedule');
+                $meeting->cancel_url = at_agenda_url_firmada((int) $meeting->id, 'cancel');
+            }
         }
     }
 

@@ -63,7 +63,7 @@ function at_agenda_permiso_maquina($request) {
 
 /* ----------------------------- Respuestas mínimas ----------------------------- */
 
-const AT_AGENDA_CAMPOS_REUNION = ['id', 'client_name', 'client_email', 'company_name', 'meeting_date', 'meeting_time', 'status', 'contrato_id', 'propuesta_id'];
+const AT_AGENDA_CAMPOS_REUNION = ['id', 'client_name', 'client_email', 'company_name', 'meeting_date', 'meeting_time', 'meeting_subject', 'notes', 'status', 'contrato_id', 'propuesta_id'];
 const AT_AGENDA_CAMPOS_BUSQUEDA = ['id', 'meeting_date', 'meeting_time', 'status'];
 const AT_AGENDA_CAMPOS_EVENTO = ['exists', 'event_id'];
 

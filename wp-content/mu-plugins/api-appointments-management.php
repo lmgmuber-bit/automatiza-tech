@@ -44,7 +44,7 @@ class AutomatizaTech_Appointments_API {
         register_rest_route('automatiza-tech/v1', '/appointments/search', array(
             'methods' => 'GET',
             'callback' => array($this, 'search_appointments'),
-            'permission_callback' => '__return_true'
+            'permission_callback' => function ($r) { return function_exists('at_agenda_permiso_maquina') ? at_agenda_permiso_maquina($r) : true; }
         ));
         
         // POST /appointments - Crear nueva cita (ya existe como /leads pero lo duplicamos)
@@ -72,7 +72,7 @@ class AutomatizaTech_Appointments_API {
         register_rest_route('automatiza-tech/v1', '/appointments/(?P<id>\d+)', array(
             'methods' => 'DELETE',
             'callback' => array($this, 'delete_appointment'),
-            'permission_callback' => '__return_true'
+            'permission_callback' => function ($r) { return function_exists('at_agenda_permiso_maquina') ? at_agenda_permiso_maquina($r) : true; }
         ));
         
         // POST /send-email - Enviar correo corporativo

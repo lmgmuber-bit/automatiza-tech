@@ -2334,7 +2334,7 @@ function automatiza_tech_register_followup_api_routes() {
     
     // Confirmar asistencia desde Email
     register_rest_route('automatiza-tech/v1', '/followup-meetings/email-action/confirm/(?P<id>\d+)', array(
-        'methods' => 'GET',
+        'methods' => array('GET', 'POST'),
         'callback' => 'automatiza_tech_followup_email_confirm',
         'permission_callback' => '__return_true'
     ));
@@ -3029,6 +3029,18 @@ function automatiza_tech_followup_email_confirm($request) {
         exit;
     }
     
+    // Solo un POST confirma. El GET muestra un botón: un prefetch del correo no confirma nada.
+    if (strtoupper((string) $request->get_method()) !== 'POST') {
+        $fecha_previa = date('d/m/Y', strtotime($meeting->meeting_date));
+        $form_confirmar = '<form method="post" action="' . esc_url(at_agenda_url_firmada($meeting_id, 'confirm', AT_AGENDA_PAGINA_TTL)) . '" style="margin:0 0 16px;">'
+            . '<button type="submit" class="btn" style="border:0;cursor:pointer;font-family:inherit;">✅ Confirmar mi asistencia</button></form>';
+        automatiza_tech_render_followup_action_page($logo_src, $site_title, $home_url,
+            '¿Confirmas tu asistencia?',
+            'Hola <strong>' . esc_html($meeting->client_name) . '</strong>, tu reunión es el ' . esc_html($fecha_previa) . ' a las ' . esc_html($meeting->meeting_time) . ' hrs.',
+            'info', $form_confirmar);
+        exit;
+    }
+
     // Confirmar asistencia
     $wpdb->update(
         $table_name,
@@ -3044,12 +3056,12 @@ function automatiza_tech_followup_email_confirm($request) {
     
     automatiza_tech_render_followup_action_page($logo_src, $site_title, $home_url,
         '¡Asistencia Confirmada!',
-        "Gracias <strong>{$meeting->client_name}</strong>, tu asistencia ha sido confirmada.<br><br>
+        "Gracias <strong>" . esc_html($meeting->client_name) . "</strong>, tu asistencia ha sido confirmada.<br><br>
          <div style='background: #f0f4ff; padding: 15px; border-radius: 8px; margin: 15px 0; text-align: left;'>
-            <p style='margin: 5px 0;'><strong>📋 Proyecto:</strong> " . ($meeting->meeting_subject ?: 'Reunión de Seguimiento') . "</p>
+            <p style='margin: 5px 0;'><strong>📋 Proyecto:</strong> " . esc_html($meeting->meeting_subject ?: 'Reunión de Seguimiento') . "</p>
             <p style='margin: 5px 0;'><strong>📅 Fecha:</strong> {$fecha_formateada}</p>
-            <p style='margin: 5px 0;'><strong>🕐 Hora:</strong> {$meeting->meeting_time} hrs</p>
-            <p style='margin: 5px 0;'><strong>📍 Enlace:</strong> " . ($meeting->meet_link ?: 'Te llegará por correo') . "</p>
+            <p style='margin: 5px 0;'><strong>🕐 Hora:</strong> " . esc_html($meeting->meeting_time) . " hrs</p>
+            <p style='margin: 5px 0;'><strong>📍 Enlace:</strong> " . esc_html($meeting->meet_link ?: 'Te llegará por correo') . "</p>
          </div>
          ¡Te esperamos! 🚀",
         'success');
@@ -3103,7 +3115,7 @@ function automatiza_tech_followup_email_cancel($request) {
         $reschedule_url = at_agenda_url_firmada($meeting_id, 'reschedule', AT_AGENDA_PAGINA_TTL);
         
         echo '<!DOCTYPE html>
-        <html lang="' . get_bloginfo('language') . '">
+        <html lang="' . esc_attr(get_bloginfo('language')) . '">
         <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -3205,7 +3217,7 @@ function automatiza_tech_followup_email_cancel($request) {
     
     automatiza_tech_render_followup_action_page($logo_src, $site_title, $home_url,
         'Reunión Cancelada',
-        "Lamentamos que no puedas asistir, <strong>{$meeting->client_name}</strong>.<br><br>
+        "Lamentamos que no puedas asistir, <strong>" . esc_html($meeting->client_name) . "</strong>.<br><br>
          Entendemos que surgen imprevistos. Te invitamos a seguir visitando nuestro sitio y, cuando estés listo, 
          volver a coordinar una reunión para continuar conversando sobre tu proyecto.<br><br>
          ¡Esperamos verte pronto!",
@@ -3258,7 +3270,7 @@ function automatiza_tech_followup_email_reschedule($request) {
     // Mostrar formulario de reagendamiento
     ?>
     <!DOCTYPE html>
-    <html lang="<?php echo get_bloginfo('language'); ?>">
+    <html lang="<?php echo esc_attr(get_bloginfo('language')); ?>">
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -3785,14 +3797,14 @@ function automatiza_tech_send_followup_reschedule_email($meeting_id, $new_date, 
 /**
  * Helper para renderizar página de acción de seguimiento
  */
-function automatiza_tech_render_followup_action_page($logo_src, $site_title, $home_url, $title, $message, $type = 'info') {
+function automatiza_tech_render_followup_action_page($logo_src, $site_title, $home_url, $title, $message, $type = 'info', $extra_html = '') {
     $header_color = '#1e40af';
     if ($type === 'success') $header_color = '#06d6a0';
     if ($type === 'warning') $header_color = '#fca311';
     if ($type === 'error') $header_color = '#dc3545';
     
     echo '<!DOCTYPE html>
-    <html lang="' . get_bloginfo('language') . '">
+    <html lang="' . esc_attr(get_bloginfo('language')) . '">
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -3817,6 +3829,7 @@ function automatiza_tech_render_followup_action_page($logo_src, $site_title, $ho
             <div class="content">
                 <h2>' . $title . '</h2>
                 <p>' . $message . '</p>
+                ' . $extra_html . '
                 <a href="' . esc_url($home_url) . '" class="btn">Volver al Inicio</a>
             </div>
         </div>

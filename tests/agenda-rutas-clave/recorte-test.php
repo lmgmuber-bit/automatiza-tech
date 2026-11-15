@@ -11,8 +11,8 @@ $reunion = [
 ];
 $r = at_agenda_recortar_reunion($reunion);
 foreach (['client_name', 'client_email', 'company_name', 'meeting_date', 'meeting_time'] as $k) { comprobar(array_key_exists($k, $r), "GET {id} conserva $k"); }
-foreach (['id', 'status', 'contrato_id', 'propuesta_id'] as $k) { comprobar(array_key_exists($k, $r), "GET {id} conserva $k (imprescindible o con duda)"); }
-foreach (['phone', 'meet_link', 'meeting_subject', 'notes'] as $k) { comprobar(!array_key_exists($k, $r), "GET {id} quita $k"); }
+foreach (['id', 'status', 'contrato_id', 'propuesta_id', 'meeting_subject', 'notes'] as $k) { comprobar(array_key_exists($k, $r), "GET {id} conserva $k (imprescindible, con duda o usado por el nodo vivo Get Rescheduled Meeting)"); }
+foreach (['phone', 'meet_link'] as $k) { comprobar(!array_key_exists($k, $r), "GET {id} quita $k"); }
 
 $b = at_agenda_recortar_busqueda($reunion);
 comprobar(array_keys($b) === ['id', 'meeting_date', 'meeting_time', 'status'] || array_diff(array_keys($b), ['id', 'meeting_date', 'meeting_time', 'status']) === [], 'search solo deja id, fecha, hora y estado');

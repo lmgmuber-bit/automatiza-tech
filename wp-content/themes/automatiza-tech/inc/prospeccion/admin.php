@@ -127,6 +127,9 @@ function at_pro_pagina(): void {
 	echo '<style>.at-pro-tarjetas{display:flex;flex-wrap:wrap;gap:10px;margin:14px 0}.at-pro-tarjeta{background:#fff;border:1px solid #c3c4c7;border-radius:6px;padding:10px 16px;min-width:110px;text-align:center}.at-pro-tarjeta strong{display:block;font-size:24px;line-height:1.2}.at-pro-desglose{background:#fff;border:1px solid #c3c4c7;border-radius:6px;padding:8px 12px}.at-pro-acciones{display:flex;flex-wrap:wrap;gap:4px}.at-pro-acciones .dashicons{vertical-align:text-bottom;font-size:16px;width:16px;height:16px}.at-pro-estado .dashicons{vertical-align:text-bottom}.at-pro-estado--formulario{color:#1a7f37;font-weight:600}.at-pro-estado--baja,.at-pro-estado--descartado{color:#8c8f94}.at-pro-caja{background:#fff;border:1px solid #c3c4c7;border-radius:6px;padding:8px 14px;margin:10px 0}.at-pro-caja summary{cursor:pointer;font-weight:600}.at-pro-caja label{display:block;margin:6px 0 2px}.at-pro-caja .regular-text{width:100%;max-width:420px}</style>';
 	at_pro_avisos();
 	echo '<p class="description">Aquí vive lo que Rastro encuentra. <strong>Nada sale desde este panel</strong>: copias el correo con diseño, lo mandas tú desde tu correo y marcas «contactado». El primer contacto va solo por correo; WhatsApp aparece cuando el prospecto ya respondió.</p>';
+	if (at_pro_cco() !== '') {
+		echo '<p class="description"><span class="dashicons dashicons-hidden" aria-hidden="true"></span> Copia oculta (CCO) de cada correo: <code>' . esc_html(at_pro_cco()) . '</code>. «Abrir en el correo» ya la trae puesta; si pegas el correo con diseño en un mensaje nuevo, usa «Copiar CCO» en la vista previa.</p>';
+	}
 	at_pro_tarjetas();
 
 	// Importar y agregar
@@ -196,7 +199,7 @@ function copiarTexto(t,b){
  var ok=function(){marcar(b,"Copiado")};
  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t).then(ok)}
  else{var a=document.createElement("textarea");a.value=t;document.body.appendChild(a);a.select();document.execCommand("copy");a.remove();ok()}}
-function datos(b){return{asunto:b.getAttribute("data-asunto")||"",html:b.getAttribute("data-html")||"",texto:b.getAttribute("data-texto")||""}}
+function datos(b){return{asunto:b.getAttribute("data-asunto")||"",html:b.getAttribute("data-html")||"",texto:b.getAttribute("data-texto")||"",cco:b.getAttribute("data-cco")||""}}
 var previo=null;
 function cerrar(){var m=document.getElementById("at-pro-modal");if(m){m.remove()}if(previo){previo.focus();previo=null}}
 function abrir(o,origen){
@@ -211,6 +214,7 @@ function abrir(o,origen){
  function boton(txt,ico,fn){var x=document.createElement("button");x.type="button";x.className="button";x.innerHTML='<span class="dashicons dashicons-'+ico+'" aria-hidden="true"></span> '+txt;x.addEventListener("click",function(){fn(x)});p.appendChild(x);return x}
  var primero=boton("Copiar correo con diseño","email-alt2",function(x){copiarCorreo(o,x)});
  boton("Copiar asunto","clipboard",function(x){copiarTexto(o.asunto,x)});
+ if(o.cco){boton("Copiar CCO","hidden",function(x){copiarTexto(o.cco,x)})}
  boton("Cerrar","no-alt",cerrar);
  c.appendChild(h);c.appendChild(f);c.appendChild(p);m.appendChild(c);
  m.addEventListener("click",function(ev){if(ev.target===m){cerrar()}});

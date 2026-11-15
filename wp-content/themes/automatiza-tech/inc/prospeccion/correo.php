@@ -11,6 +11,12 @@ function at_pro_fuente_texto(array $p): string {
 }
 
 /** Asunto del correo. */
+/** Copia oculta de cada correo de prospección (opción at_pro_cco en el servidor; nunca escrita en el repo, que es público). */
+function at_pro_cco(): string {
+	$v = trim((string) get_option('at_pro_cco', ''));
+	return is_email($v) ? $v : '';
+}
+
 function at_pro_correo_asunto(array $p): string {
 	$n = trim((string) ($p['negocio'] ?? ''));
 	return 'Propuesta comercial para ' . ($n !== '' ? $n : 'tu negocio') . ' · AutomatizaTech';

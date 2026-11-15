@@ -153,9 +153,9 @@ class AT_Prospectos_Lista extends WP_List_Table {
 			$asunto = at_pro_correo_asunto($i);
 			$html_correo = at_pro_correo_html($i, at_pro_url_formulario($i['token']), at_pro_url_baja($i['token']));
 			$b[] = '<button type="button" class="button button-small at-pro-ver-correo" aria-label="Ver correo para ' . $neg . '"><span class="dashicons dashicons-visibility" aria-hidden="true"></span> Ver correo</button>';
-			$b[] = '<button type="button" class="button button-small at-pro-copiar-correo" data-asunto="' . esc_attr($asunto) . '" data-html="' . esc_attr($html_correo) . '" data-texto="' . esc_attr($msg) . '" aria-label="Copiar correo con diseño para ' . $neg . '"><span class="dashicons dashicons-email-alt2" aria-hidden="true"></span> Copiar correo con diseño</button>';
+			$b[] = '<button type="button" class="button button-small at-pro-copiar-correo" data-asunto="' . esc_attr($asunto) . '" data-html="' . esc_attr($html_correo) . '" data-texto="' . esc_attr($msg) . '" data-cco="' . esc_attr(at_pro_cco()) . '" aria-label="Copiar correo con diseño para ' . $neg . '"><span class="dashicons dashicons-email-alt2" aria-hidden="true"></span> Copiar correo con diseño</button>';
 			if ($i['correo'] !== '') {
-				$b[] = '<a class="button button-small" href="' . esc_attr('mailto:' . $i['correo'] . '?subject=' . rawurlencode($asunto) . '&body=' . rawurlencode($msg)) . '" aria-label="Abrir en el correo: ' . $neg . '"><span class="dashicons dashicons-external" aria-hidden="true"></span> Abrir en el correo</a>';
+				$b[] = '<a class="button button-small" href="' . esc_attr('mailto:' . $i['correo'] . '?subject=' . rawurlencode($asunto) . (at_pro_cco() !== '' ? '&bcc=' . rawurlencode(at_pro_cco()) : '') . '&body=' . rawurlencode($msg)) . '" aria-label="Abrir en el correo: ' . $neg . '"><span class="dashicons dashicons-external" aria-hidden="true"></span> Abrir en el correo</a>';
 			}
 			// Primer contacto solo por correo (decisión de Luis, 15-nov-2026): escribir en frío por WhatsApp va contra la
 			// política de WhatsApp Business y arriesga el bloqueo del número. WhatsApp aparece recién cuando el prospecto respondió.

@@ -43,7 +43,7 @@ Sistema completo para generar, revisar, firmar y archivar contratos digitales co
 | Archivo | Función |
 |---|---|
 | `Docs/CONTRATO_SOPORTE_POSTPROYECTO.md` | **Plantilla legal blindada v2.0** con cesión de propiedad al cliente (cl. 12), portabilidad y handover obligatorio (cl. 13), y blindaje completo a AT |
-| `contracts/setup-contracts-db.php` | Crea/actualiza tabla `wp_automatiza_contracts` |
+| `contracts/setup-contracts-db.php` | Retirado. La tabla se crea con el `CREATE TABLE` de `Docs/MASTER/09_MODULO_CONTRATOS.md` |
 | `contracts/contract-service.php` | Lógica central: create, sign_as_at, send_for_client_signature, sign_as_client |
 | `contracts/contract-mailer.php` | Emails corporativos branded (4 templates: review interno, request firma cliente, copia firmada cliente, notif interna) |
 | `contracts/create-contract.php` | Endpoint POST para crear contratos (admin / N8N) |
@@ -55,11 +55,7 @@ Sistema completo para generar, revisar, firmar y archivar contratos digitales co
 
 ## 🚀 Instalación (una sola vez)
 
-1. **Crear la tabla:**
-   ```
-   https://automatizatech.cl/contracts/setup-contracts-db.php?key=AT_SETUP_2026
-   ```
-   *(cambia `AT_SETUP_2026` por algo seguro en producción)*
+1. **Crear la tabla:** el esquema se crea con el `CREATE TABLE` documentado en `Docs/MASTER/09_MODULO_CONTRATOS.md`.
 
 2. **(Opcional) Subir firma corporativa AT preimpresa:**
    `wp-content/themes/automatiza-tech/assets/images/firma-at.png` (PNG transparente, ~300×100px). Si no existe, el rep AT firma manualmente cada vez.
@@ -214,7 +210,7 @@ El PDF firmado es accesible directamente vía la URL almacenada en `signed_pdf_u
 
 ## 🧪 Testing rápido
 
-1. Crear tabla: visitar `setup-contracts-db.php?key=...`
+1. Crear tabla: usar el `CREATE TABLE` de `Docs/MASTER/09_MODULO_CONTRATOS.md`
 2. Crear contrato vía PHP CLI o endpoint.
 3. Revisar email interno (rep AT recibe link `at-sign-contract.php?token=...`).
 4. Firmar como AT (canvas o upload).

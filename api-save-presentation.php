@@ -81,7 +81,8 @@ if ( $pdf_url ) {
 $updated = $wpdb->update( $table_name, $update, [ 'unique_link_id' => $unique_id ] );
 
 if ( $updated === false ) {
-    echo json_encode( [ 'error' => 'Database update failed', 'db_error' => $wpdb->last_error ] );
+    error_log( 'api-save-presentation: fallo al guardar: ' . $wpdb->last_error );
+    echo json_encode( [ 'error' => 'internal_error' ] );
     exit;
 }
 

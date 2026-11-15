@@ -1,3 +1,4 @@
+<?php defined('ABSPATH') || exit; ?>
     <footer id="colophon" class="site-footer">
         <div class="container">
             <div class="footer-content">

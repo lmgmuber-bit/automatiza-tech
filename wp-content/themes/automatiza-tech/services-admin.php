@@ -1,4 +1,5 @@
 <?php
+defined('ABSPATH') || exit;
 /**
  * Panel de Administración de Servicios
  * Solo accesible para administradores

@@ -1,6 +1,9 @@
 <?php
 declare(strict_types=1);
 
+ini_set('display_errors', '0');
+ini_set('log_errors', '1');
+
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store');
 
@@ -41,8 +44,8 @@ function request_token(array $body): string
     if (isset($_SERVER['HTTP_X_AT_SIGNAL_TOKEN'])) {
         return (string) $_SERVER['HTTP_X_AT_SIGNAL_TOKEN'];
     }
-    if (isset($body['token'])) {
-        return (string) $body['token'];
+    if (isset($body['token']) && is_string($body['token'])) {
+        return $body['token'];
     }
     return '';
 }

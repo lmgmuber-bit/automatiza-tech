@@ -1,4 +1,5 @@
 <?php
+defined('ABSPATH') || exit;
 /**
  * Automatiza Tech - Contact Form Handler
  * Maneja el formulario de contacto y administración de datos

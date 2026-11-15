@@ -741,7 +741,7 @@ class AutomatizaTechReceipts {
 
         } catch (Throwable $e) {
             error_log('Receipt Gen Critical Error: ' . $e->getMessage());
-            wp_send_json_error('Error del Servidor: ' . $e->getMessage());
+            wp_send_json_error('Error del servidor.');
         }
     }
     

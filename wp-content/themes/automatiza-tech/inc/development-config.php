@@ -1,4 +1,5 @@
 <?php
+defined('ABSPATH') || exit;
 /**
  * Configuraciones adicionales para desarrollo local
  * Incluir este archivo en functions.php cuando esté en desarrollo local

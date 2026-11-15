@@ -126,7 +126,7 @@ function at_pro_pagina(): void {
 	echo '<div class="wrap at-pro"><h1><span class="dashicons dashicons-search" aria-hidden="true"></span> Prospección <small class="description">Rastro</small></h1>';
 	echo '<style>.at-pro-tarjetas{display:flex;flex-wrap:wrap;gap:10px;margin:14px 0}.at-pro-tarjeta{background:#fff;border:1px solid #c3c4c7;border-radius:6px;padding:10px 16px;min-width:110px;text-align:center}.at-pro-tarjeta strong{display:block;font-size:24px;line-height:1.2}.at-pro-desglose{background:#fff;border:1px solid #c3c4c7;border-radius:6px;padding:8px 12px}.at-pro-acciones{display:flex;flex-wrap:wrap;gap:4px}.at-pro-acciones .dashicons{vertical-align:text-bottom;font-size:16px;width:16px;height:16px}.at-pro-estado .dashicons{vertical-align:text-bottom}.at-pro-estado--formulario{color:#1a7f37;font-weight:600}.at-pro-estado--baja,.at-pro-estado--descartado{color:#8c8f94}.at-pro-caja{background:#fff;border:1px solid #c3c4c7;border-radius:6px;padding:8px 14px;margin:10px 0}.at-pro-caja summary{cursor:pointer;font-weight:600}.at-pro-caja label{display:block;margin:6px 0 2px}.at-pro-caja .regular-text{width:100%;max-width:420px}</style>';
 	at_pro_avisos();
-	echo '<p class="description">Aquí vive lo que Rastro encuentra. <strong>Nada sale desde este panel</strong>: copias el mensaje o abres WhatsApp con el texto listo, lo mandas tú y marcas «contactado».</p>';
+	echo '<p class="description">Aquí vive lo que Rastro encuentra. <strong>Nada sale desde este panel</strong>: copias el correo con diseño, lo mandas tú desde tu correo y marcas «contactado». El primer contacto va solo por correo; WhatsApp aparece cuando el prospecto ya respondió.</p>';
 	at_pro_tarjetas();
 
 	// Importar y agregar

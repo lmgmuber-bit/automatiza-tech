@@ -39,8 +39,12 @@ ok(preg_match('/por contactar[^<]*<[^>]*>\s*\(?2\)?/iu', strip_tags($html, '<spa
 ok(strpos($html, 'at-pro-tarjetas') !== false && strpos($html, 'Total') !== false, 'tarjeta de números');
 $msg = at_pro_mensaje($p1, add_query_arg('r', $p1['token'], home_url('/')), add_query_arg('baja', $p1['token'], home_url('/')));
 ok(strpos($html, 'data-mensaje="' . esc_attr($msg) . '"') !== false, 'Copiar mensaje con el texto y el enlace personal');
-ok(strpos($html, 'https://wa.me/56955501001?text=' . rawurlencode($msg)) !== false, 'enlace wa.me con el mensaje codificado');
-ok(substr_count($html, 'https://wa.me/') === 1, 'solo hay wa.me donde hay teléfono');
+ok(substr_count($html, 'https://wa.me/') === 0, 'primer contacto solo por correo: sin WhatsApp antes de que el prospecto responda');
+ok(strpos($html, 'canal=whatsapp') === false, 'marcar contactado nunca registra WhatsApp como canal');
+$wpdb->update($wpdb->prefix . 'at_prospectos', ['estado' => 'respondio'], ['id' => (int) $p1['id']]);
+ob_start(); at_pro_pagina(); $html_resp = ob_get_clean();
+ok(strpos($html_resp, 'href="https://wa.me/56955501001"') !== false, 'cuando el prospecto respondió aparece Abrir WhatsApp, sin texto prellenado');
+$wpdb->update($wpdb->prefix . 'at_prospectos', ['estado' => 'por_contactar'], ['id' => (int) $p1['id']]);
 ok(strpos($html, 'aria-label="Copiar mensaje para Café Sur"') !== false, 'aria-label en el botón de solo ícono');
 ok(strpos($html, 'aria-label="Ver correo para Café Sur"') !== false && strpos($html, 'aria-label="Copiar correo con diseño para Café Sur"') !== false, 'botones Ver correo y Copiar correo con aria-label');
 ok(strpos($html, 'data-asunto="' . esc_attr(at_pro_correo_asunto($p1)) . '"') !== false && strpos($html, 'at-pro-modal') !== false, 'correo: asunto en el botón y vista previa en el panel');

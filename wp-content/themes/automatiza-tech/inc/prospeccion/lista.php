@@ -157,10 +157,12 @@ class AT_Prospectos_Lista extends WP_List_Table {
 			if ($i['correo'] !== '') {
 				$b[] = '<a class="button button-small" href="' . esc_attr('mailto:' . $i['correo'] . '?subject=' . rawurlencode($asunto) . '&body=' . rawurlencode($msg)) . '" aria-label="Abrir en el correo: ' . $neg . '"><span class="dashicons dashicons-external" aria-hidden="true"></span> Abrir en el correo</a>';
 			}
-			if ($i['telefono'] !== '') {
-				$b[] = '<a class="button button-small" href="' . esc_attr('https://wa.me/' . $i['telefono'] . '?text=' . rawurlencode($msg)) . '" target="_blank" rel="noopener noreferrer" aria-label="Abrir WhatsApp con ' . $neg . '"><span class="dashicons dashicons-format-chat" aria-hidden="true"></span> Abrir WhatsApp</a>';
+			// Primer contacto solo por correo (decisión de Luis, 15-nov-2026): escribir en frío por WhatsApp va contra la
+			// política de WhatsApp Business y arriesga el bloqueo del número. WhatsApp aparece recién cuando el prospecto respondió.
+			if ($i['telefono'] !== '' && in_array($i['estado'], ['respondio', 'formulario'], true)) {
+				$b[] = '<a class="button button-small" href="' . esc_attr('https://wa.me/' . $i['telefono']) . '" target="_blank" rel="noopener noreferrer" aria-label="Abrir WhatsApp con ' . $neg . '"><span class="dashicons dashicons-format-chat" aria-hidden="true"></span> Abrir WhatsApp</a>';
 			}
-			$canal = $i['telefono'] !== '' ? 'whatsapp' : ($i['correo'] !== '' ? 'correo' : 'web');
+			$canal = $i['correo'] !== '' ? 'correo' : 'web';
 			foreach ([['contactado', 'Marcar contactado', 'dashicons-email-alt', $canal], ['respondio', 'Marcar respondió', 'dashicons-format-chat', ''], ['descartado', 'Descartar', 'dashicons-dismiss', '']] as [$est, $txt, $ico, $can]) {
 				if (at_pro_transicion_valida($i['estado'], $est)) {
 					$b[] = '<a class="button button-small" href="' . $this->url_estado($i, $est, $can) . '" aria-label="' . esc_attr($txt . ': ' . $i['negocio']) . '"><span class="dashicons ' . $ico . '" aria-hidden="true"></span> ' . esc_html($txt) . '</a>';

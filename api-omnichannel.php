@@ -473,7 +473,7 @@ try {
             send_json(['url' => $rd_upload['url'], 'file' => basename($rd_upload['file'])], 201);
         }
 
-        // POST reel-diario/media-create — body {video_url, caption?, media_type?, channel_id?}.
+        // POST reel-diario/media-create — body {video_url, caption?, media_type?, channel_id?, trial?}.
         // Crea el contenedor de Instagram y devuelve creation_id sin hacer polling bloqueante.
         // Imágenes (23-oct): {image_url, media_type: IMAGE|STORIES|CAROUSEL_ITEM, caption?}.
         // Carrusel: {media_type: CAROUSEL, children: [creation_id, ...] o "id,id", caption?}.
@@ -508,7 +508,9 @@ try {
             if (!$rd_channel_id) {
                 send_json(['error' => 'Falta channel_id (o define REEL_DIARIO_CHANNEL_ID en wp-config-secrets.php)'], 400);
             }
-            $result = $controller->create_instagram_media_container($rd_channel_id, $rd_video_url, $rd_caption, $rd_media_type);
+            // trial (14-nov-2026): MANUAL | SS_PERFORMANCE publica el reel como «Reel de prueba»; vacío = reel normal.
+            $rd_trial = sanitize_text_field($body['trial'] ?? '');
+            $result = $controller->create_instagram_media_container($rd_channel_id, $rd_video_url, $rd_caption, $rd_media_type, $rd_trial);
             send_json($result, isset($result['error']) ? 502 : 201);
         }
 

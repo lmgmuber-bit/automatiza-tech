@@ -13,7 +13,7 @@ Responde los directos de @automatizatech.cl las 24 horas, con el criterio del ag
   lead en el CRM con origen **Instagram** y correo de confirmación.
 - **Deriva a una persona** cuando la piden, hay un reclamo, es un cliente que pide seguimiento o piden algo a medida. Se despide
   («Le avisé a Luis, te va a responder por aquí mismo»), deja de responder en esa conversación y llega un correo
-  «Instagram: <nombre> quiere hablar contigo» a lgonzalez@automatizatech.cl y lmgm.030@gmail.com.
+  «Instagram: <nombre> quiere hablar contigo» a los dos correos de derivación del canal (`custom_functions_json.derivacion` del canal 2).
 - **Sabe de dónde viene la persona**: si comentó una palabra clave (MÉTODO, SPA…), el asistente recibe la palabra y el privado que
   le enviamos, y entiende que «quiero agendar» responde a «agenda tu diagnóstico gratis».
 - Si mandan varios mensajes seguidos, espera 6 segundos y responde una vez a todos. Audios, fotos y stickers: «Por ahora leo solo texto».
@@ -99,6 +99,15 @@ conversaciones 5 y 7 siguen asignadas.
 - La personalidad y la validación de datos vienen del Cerebro AT (`N8N/cerebro-at`, lo mantiene Eje). En Instagram solo esta sesión corre `aplicar.py` y `probar.py`; Eje avisa cuando cambia el cerebro.
 - `agendar` revisa la agenda real del día antes de crear la cita (nodos «Agenda del día» → «Revisar hora»): no agenda en feriados, días sin atención, fuera de horario ni en horas tomadas, y agenda con un solo «sí».
 - **Pendiente de Eje:** el sub-workflow compartido `PejBgr2LZQSAbbBy` solo revisa choques con otras citas, no feriados ni horario. Instagram ya lo cubre con su propia revisión; la web y WhatsApp agendan por ese mismo sub-workflow. Lo natural es revisar `check-availability` dentro del sub-workflow, antes de «Create Event», y así cubrir los tres canales.
+
+## Primera respuesta y bots de otros negocios (16-nov, rama `claude/ig-primera-respuesta`, sin aplicar)
+
+Nació de las conversaciones 26 a 29 que trajeron los anuncios de Meta (15-nov): un solo prospecto real, que recibió una lista de rubros con invitación a agendar en el mismo mensaje, dijo «prefiero investigar» y el bot se despidió sin ofrecer nada; y otra conversación fue un bot hablando con el bot de otro negocio.
+
+- **Primero su negocio:** si no sabe a qué se dedica la persona, Tech le pregunta qué negocio tiene antes de invitar a agendar; con el rubro da un ejemplo concreto y recién ahí ofrece el diagnóstico (`personalidad-instagram.md` del Cerebro AT).
+- **Si prefiere investigar:** respeta la decisión y ofrece una vez algo liviano para mirar (automatizatech.cl o lo que publicamos en @automatizatech.cl) y que puede agendar sin compromiso cuando quiera. Puede citar en video los dos casos autorizados por Luis el 16-nov: PetsGo y GT Baseball Academy (reels de @automatizatech.cl). Sin precios ni rangos: la regla de Instagram y del Cerebro sigue igual.
+- **Bots de otros negocios:** `respuesta-automatica.js` se inyecta en «Validar». Si el mensaje es una respuesta automática (agradece el contacto y promete responder, se declara automático, o trae un menú de opciones), no se contesta; tampoco la publicidad masiva de plantilla (título en negrita, saludo con el nombre vacío, texto largo con viñetas: dos de las tres señales). Una sola señal no alcanza, para no callar a una persona que pregunta por respuestas automáticas. Prueba sin red: `node N8N/instagram/respuesta-automatica.test.js` (19 casos, con los textos reales de las conversaciones 27 y 29).
+- `probar.py` suma `primera_respuesta`, `prefiere_investigar` y `bot_de_otro_negocio`. Aplicar con `aplicar.py` y correr `probar.py` necesita el OK de Luis (toca los flujos de PROD).
 
 ## Después
 

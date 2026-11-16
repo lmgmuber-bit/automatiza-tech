@@ -100,6 +100,15 @@ conversaciones 5 y 7 siguen asignadas.
 - `agendar` revisa la agenda real del día antes de crear la cita (nodos «Agenda del día» → «Revisar hora»): no agenda en feriados, días sin atención, fuera de horario ni en horas tomadas, y agenda con un solo «sí».
 - **Pendiente de Eje:** el sub-workflow compartido `PejBgr2LZQSAbbBy` solo revisa choques con otras citas, no feriados ni horario. Instagram ya lo cubre con su propia revisión; la web y WhatsApp agendan por ese mismo sub-workflow. Lo natural es revisar `check-availability` dentro del sub-workflow, antes de «Create Event», y así cubrir los tres canales.
 
+## Primera respuesta y bots de otros negocios (16-nov, rama `claude/ig-primera-respuesta`, sin aplicar)
+
+Nació de las conversaciones 26 a 29 que trajeron los anuncios de Meta (15-nov): un solo prospecto real, que recibió una lista de rubros con invitación a agendar en el mismo mensaje, dijo «prefiero investigar» y el bot se despidió sin ofrecer nada; y otra conversación fue un bot hablando con el bot de otro negocio.
+
+- **Primero su negocio:** si no sabe a qué se dedica la persona, Tech le pregunta qué negocio tiene antes de invitar a agendar; con el rubro da un ejemplo concreto y recién ahí ofrece el diagnóstico (`personalidad-instagram.md` del Cerebro AT).
+- **Si prefiere investigar:** respeta la decisión y ofrece una vez algo liviano para mirar (casos en @automatizatech.cl, el sitio de GT Baseball Academy o automatizatech.cl). Sin precios ni rangos: la regla de Instagram y del Cerebro sigue igual.
+- **Bots de otros negocios:** `respuesta-automatica.js` se inyecta en «Validar». Si el mensaje es una respuesta automática (agradece el contacto y promete responder, se declara automático, o trae un menú de opciones), no se contesta. Una sola señal no alcanza, para no callar a una persona que pregunta por respuestas automáticas. Prueba sin red: `node N8N/instagram/respuesta-automatica.test.js` (14 casos).
+- `probar.py` suma `primera_respuesta`, `prefiere_investigar` y `bot_de_otro_negocio`. Aplicar con `aplicar.py` y correr `probar.py` necesita el OK de Luis (toca los flujos de PROD).
+
 ## Después
 
 - Clasificar en frío, tibio, caliente o «no califica» y avisar al instante cuando llega uno caliente.

@@ -3024,6 +3024,9 @@ class AutomatizaTech_CRM_AI {
                                     <div>
                                         <span style="background:<?php echo $s_color; ?>; color:#fff; padding:2px 10px; border-radius:12px; font-size:11px; font-weight:600;"><?php echo $s_label; ?></span>
                                         <strong style="margin-left:8px; font-size:14px;"><?php echo esc_html($fm['meeting_subject'] ?? 'Reunión de Seguimiento'); ?></strong>
+                                        <?php if (function_exists('at_wa_vinculo_texto') && ($at_wa_vinc = at_wa_vinculo_texto($fm)) !== ''): ?>
+                                            <small style="margin-left:8px; color:#0f766e;">🔗 <?php echo esc_html($at_wa_vinc); ?></small>
+                                        <?php endif; ?>
                                     </div>
                                     <div style="display:flex; gap:6px; align-items:center;">
                                         <?php if (!empty($fm['meet_link'])): ?>

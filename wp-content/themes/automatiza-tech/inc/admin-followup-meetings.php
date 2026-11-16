@@ -16,6 +16,9 @@ if (!defined('ABSPATH')) {
 require_once __DIR__ . '/wa-contexto/cargar.php';
 require_once ABSPATH . 'at-texto.php';
 
+// Credencial de las rutas de n8n, respuestas mínimas y enlaces de correo firmados (13-nov-2026).
+require_once __DIR__ . '/agenda-rutas-clave/cargar.php';
+
 /**
  * Crear tabla en la base de datos al activar
  */
@@ -289,6 +292,7 @@ function automatiza_tech_check_slot_availability($date, $time, $exclude_followup
         return array(
             'available' => false,
             'conflict_type' => 'demo',
+            'conflict_id' => (int) $demo_conflict->id,
             'conflict_details' => sprintf(
                 'DEMO con %s (%s) - %s %s hrs',
                 $demo_conflict->name,
@@ -321,6 +325,7 @@ function automatiza_tech_check_slot_availability($date, $time, $exclude_followup
         return array(
             'available' => false,
             'conflict_type' => 'followup',
+            'conflict_id' => (int) $followup_conflict->id,
             'conflict_details' => sprintf(
                 'Seguimiento con %s (%s) - %s %s hrs',
                 $followup_conflict->client_name,
@@ -1289,7 +1294,7 @@ function automatiza_tech_followup_page() {
                         });
                     } else {
                         var conflictType = response.data.conflict_type === 'demo' ? '🎯 DEMO' : '📋 Seguimiento';
-                        $availabilityMsg.html('❌ <strong>Horario ocupado</strong><br><small>' + conflictType + ': ' + response.data.conflict_details + '</small>').css({
+                        $availabilityMsg.empty().append('❌ ').append($('<strong>').text('Horario ocupado')).append('<br>').append($('<small>').text(conflictType + ': ' + response.data.conflict_details)).css({
                             'background': '#fee2e2',
                             'border': '1px solid #f87171',
                             'color': '#991b1b'
@@ -2165,7 +2170,7 @@ function automatiza_tech_register_followup_api_routes() {
     register_rest_route('automatiza-tech/v1', '/followup-meetings/(?P<id>\d+)', array(
         'methods' => 'GET',
         'callback' => 'automatiza_tech_get_followup_meeting',
-        'permission_callback' => '__return_true', // N8N llama sin autenticación
+        'permission_callback' => 'at_agenda_permiso_maquina',
         'args' => array(
             'id' => array(
                 'required' => true,
@@ -2180,7 +2185,7 @@ function automatiza_tech_register_followup_api_routes() {
     register_rest_route('automatiza-tech/v1', '/followup-meetings/(?P<id>\d+)/update-meet', array(
         'methods' => 'POST',
         'callback' => 'automatiza_tech_update_followup_meet_link',
-        'permission_callback' => '__return_true', // N8N llama sin autenticación
+        'permission_callback' => 'at_agenda_permiso_maquina',
         'args' => array(
             'id' => array(
                 'required' => true,
@@ -2195,7 +2200,7 @@ function automatiza_tech_register_followup_api_routes() {
     register_rest_route('automatiza-tech/v1', '/followup-meetings/(?P<id>\d+)/mark-whatsapp-sent', array(
         'methods' => 'POST',
         'callback' => 'automatiza_tech_mark_followup_whatsapp_sent',
-        'permission_callback' => '__return_true',
+        'permission_callback' => 'at_agenda_permiso_maquina',
         'args' => array(
             'id' => array(
                 'required' => true,
@@ -2210,7 +2215,7 @@ function automatiza_tech_register_followup_api_routes() {
     register_rest_route('automatiza-tech/v1', '/followup-meetings/check-event', array(
         'methods' => 'GET',
         'callback' => 'automatiza_tech_check_event_exists',
-        'permission_callback' => '__return_true',
+        'permission_callback' => 'at_agenda_permiso_maquina',
         'args' => array(
             'event_id' => array(
                 'required' => true,
@@ -2223,7 +2228,7 @@ function automatiza_tech_register_followup_api_routes() {
     register_rest_route('automatiza-tech/v1', '/followup-meetings/(?P<id>\d+)/confirm', array(
         'methods' => 'POST',
         'callback' => 'automatiza_tech_confirm_followup_attendance',
-        'permission_callback' => '__return_true', // N8N/WhatsApp llama sin autenticación
+        'permission_callback' => 'at_agenda_permiso_maquina',
         'args' => array(
             'id' => array(
                 'required' => true,
@@ -2238,7 +2243,7 @@ function automatiza_tech_register_followup_api_routes() {
     register_rest_route('automatiza-tech/v1', '/followup-meetings/(?P<id>\d+)/cancel', array(
         'methods' => 'POST',
         'callback' => 'automatiza_tech_cancel_followup_meeting',
-        'permission_callback' => '__return_true', // N8N/WhatsApp llama sin autenticación
+        'permission_callback' => 'at_agenda_permiso_maquina',
         'args' => array(
             'id' => array(
                 'required' => true,
@@ -2253,7 +2258,7 @@ function automatiza_tech_register_followup_api_routes() {
     register_rest_route('automatiza-tech/v1', '/followup-meetings/search', array(
         'methods' => 'GET',
         'callback' => 'automatiza_tech_search_followup_meeting',
-        'permission_callback' => '__return_true',
+        'permission_callback' => 'at_agenda_permiso_maquina',
         'args' => array(
             'email' => array(
                 'required' => true,
@@ -2274,7 +2279,7 @@ function automatiza_tech_register_followup_api_routes() {
     register_rest_route('automatiza-tech/v1', '/followup-meetings', array(
         'methods' => 'POST',
         'callback' => 'automatiza_tech_create_followup_meeting_api',
-        'permission_callback' => '__return_true',
+        'permission_callback' => 'at_agenda_permiso_maquina',
         'args' => array(
             'name' => array(
                 'required' => true,
@@ -2331,7 +2336,7 @@ function automatiza_tech_register_followup_api_routes() {
     
     // Confirmar asistencia desde Email
     register_rest_route('automatiza-tech/v1', '/followup-meetings/email-action/confirm/(?P<id>\d+)', array(
-        'methods' => 'GET',
+        'methods' => array('GET', 'POST'),
         'callback' => 'automatiza_tech_followup_email_confirm',
         'permission_callback' => '__return_true'
     ));
@@ -2345,7 +2350,7 @@ function automatiza_tech_register_followup_api_routes() {
     
     // Cancelar desde Email
     register_rest_route('automatiza-tech/v1', '/followup-meetings/email-action/cancel/(?P<id>\d+)', array(
-        'methods' => 'GET',
+        'methods' => array('GET', 'POST'),
         'callback' => 'automatiza_tech_followup_email_cancel',
         'permission_callback' => '__return_true'
     ));
@@ -2534,7 +2539,8 @@ function automatiza_tech_create_followup_meeting_api($request) {
     
     if (!$availability_check['available']) {
         $conflict_type = $availability_check['conflict_type'] === 'demo' ? 'DEMO' : 'reunión de seguimiento';
-        error_log('followup-meetings: horario ocupado: ' . (string) $availability_check['conflict_details']);
+        // Solo el tipo y el id del conflicto: nunca nombre ni correo de otra persona.
+        error_log('followup-meetings: horario ocupado tipo=' . (string) $availability_check['conflict_type'] . ' id=' . (int) ($availability_check['conflict_id'] ?? 0));
         return new WP_Error(
             'slot_taken', 
             'Este horario ya está ocupado por una ' . $conflict_type . '. Por favor selecciona otro horario.', 
@@ -2666,7 +2672,7 @@ function automatiza_tech_search_followup_meeting($request) {
     
     return new WP_REST_Response(array(
         'success' => true,
-        'meeting' => array(
+        'meeting' => at_agenda_recortar_busqueda(array(
             'id' => $meeting->id,
             'client_name' => $meeting->client_name,
             'client_email' => $meeting->client_email,
@@ -2676,7 +2682,7 @@ function automatiza_tech_search_followup_meeting($request) {
             'meeting_time' => $meeting->meeting_time,
             'meet_link' => $meeting->meet_link,
             'status' => $meeting->status
-        )
+        ))
     ), 200);
 }
 
@@ -2701,7 +2707,7 @@ function automatiza_tech_get_followup_meeting($request) {
         ), 404);
     }
     
-    return new WP_REST_Response(array(
+    return new WP_REST_Response(at_agenda_recortar_reunion(array(
         'id' => $meeting->id,
         'client_name' => $meeting->client_name,
         'client_email' => $meeting->client_email,
@@ -2716,7 +2722,7 @@ function automatiza_tech_get_followup_meeting($request) {
         // 28-oct-2026: el reagendamiento por WhatsApp conserva el vínculo de la reunión (inc/wa-contexto/followup.php).
         'contrato_id' => isset($meeting->contrato_id) ? (int) $meeting->contrato_id : 0,
         'propuesta_id' => isset($meeting->propuesta_id) ? (int) $meeting->propuesta_id : 0
-    ), 200);
+    )), 200);
 }
 
 /**
@@ -2890,12 +2896,12 @@ function automatiza_tech_check_event_exists($request) {
     
     $exists = (intval($exists_followup) > 0 || intval($exists_demo) > 0);
     
-    return new WP_REST_Response(array(
+    return new WP_REST_Response(at_agenda_recortar_evento(array(
         'exists' => $exists,
         'event_id' => $event_id,
         'in_followups' => intval($exists_followup) > 0,
         'in_demos' => intval($exists_demo) > 0
-    ), 200);
+    )), 200);
 }
 
 /**
@@ -2993,9 +2999,13 @@ add_action('wp_ajax_followup_create_calendar_event', 'automatiza_tech_create_cal
 function automatiza_tech_followup_email_confirm($request) {
     global $wpdb;
     $table_name = $wpdb->prefix . 'automatiza_followup_meetings';
-    
+
     $meeting_id = (int) $request['id'];
-    
+
+    if (!at_agenda_guardia_enlace($request, $meeting_id, 'confirm')) {
+        exit;
+    }
+
     // Obtener reunión
     $meeting = $wpdb->get_row($wpdb->prepare(
         "SELECT * FROM $table_name WHERE id = %d",
@@ -3022,6 +3032,18 @@ function automatiza_tech_followup_email_confirm($request) {
         exit;
     }
     
+    // Solo un POST confirma. El GET muestra un botón: un prefetch del correo no confirma nada.
+    if (strtoupper((string) $request->get_method()) !== 'POST') {
+        $fecha_previa = date('d/m/Y', strtotime($meeting->meeting_date));
+        $form_confirmar = '<form method="post" action="' . esc_url(at_agenda_url_firmada($meeting_id, 'confirm', AT_AGENDA_PAGINA_TTL)) . '" style="margin:0 0 16px;">'
+            . '<button type="submit" class="btn" style="border:0;cursor:pointer;font-family:inherit;">✅ Confirmar mi asistencia</button></form>';
+        automatiza_tech_render_followup_action_page($logo_src, $site_title, $home_url,
+            '¿Confirmas tu asistencia?',
+            'Hola <strong>' . esc_html($meeting->client_name) . '</strong>, tu reunión es el ' . esc_html($fecha_previa) . ' a las ' . esc_html($meeting->meeting_time) . ' hrs.',
+            'info', $form_confirmar);
+        exit;
+    }
+
     // Confirmar asistencia
     $wpdb->update(
         $table_name,
@@ -3037,12 +3059,12 @@ function automatiza_tech_followup_email_confirm($request) {
     
     automatiza_tech_render_followup_action_page($logo_src, $site_title, $home_url,
         '¡Asistencia Confirmada!',
-        "Gracias <strong>{$meeting->client_name}</strong>, tu asistencia ha sido confirmada.<br><br>
+        "Gracias <strong>" . esc_html($meeting->client_name) . "</strong>, tu asistencia ha sido confirmada.<br><br>
          <div style='background: #f0f4ff; padding: 15px; border-radius: 8px; margin: 15px 0; text-align: left;'>
-            <p style='margin: 5px 0;'><strong>📋 Proyecto:</strong> " . ($meeting->meeting_subject ?: 'Reunión de Seguimiento') . "</p>
+            <p style='margin: 5px 0;'><strong>📋 Proyecto:</strong> " . esc_html($meeting->meeting_subject ?: 'Reunión de Seguimiento') . "</p>
             <p style='margin: 5px 0;'><strong>📅 Fecha:</strong> {$fecha_formateada}</p>
-            <p style='margin: 5px 0;'><strong>🕐 Hora:</strong> {$meeting->meeting_time} hrs</p>
-            <p style='margin: 5px 0;'><strong>📍 Enlace:</strong> " . ($meeting->meet_link ?: 'Te llegará por correo') . "</p>
+            <p style='margin: 5px 0;'><strong>🕐 Hora:</strong> " . esc_html($meeting->meeting_time) . " hrs</p>
+            <p style='margin: 5px 0;'><strong>📍 Enlace:</strong> " . esc_html($meeting->meet_link ?: 'Te llegará por correo') . "</p>
          </div>
          ¡Te esperamos! 🚀",
         'success');
@@ -3057,8 +3079,13 @@ function automatiza_tech_followup_email_cancel($request) {
     $table_name = $wpdb->prefix . 'automatiza_followup_meetings';
     
     $meeting_id = (int) $request['id'];
-    $confirmed = $request->get_param('confirmed'); // Si viene ?confirmed=1 entonces procesar
-    
+    // Solo un POST cancela. El GET (también con ?confirmed=1) muestra la pantalla de confirmación: un prefetch del correo no cancela nada.
+    $es_post = strtoupper((string) $request->get_method()) === 'POST';
+
+    if (!at_agenda_guardia_enlace($request, $meeting_id, 'cancel')) {
+        exit;
+    }
+
     $meeting = $wpdb->get_row($wpdb->prepare(
         "SELECT * FROM $table_name WHERE id = %d",
         $meeting_id
@@ -3084,14 +3111,14 @@ function automatiza_tech_followup_email_cancel($request) {
         exit;
     }
     
-    // Si NO viene confirmación, mostrar página de confirmación
-    if ($confirmed !== '1') {
+    // Si no es un POST, mostrar la página de confirmación
+    if (!$es_post) {
         $fecha_formateada = date('d/m/Y', strtotime($meeting->meeting_date));
-        $confirm_url = home_url("/wp-json/automatiza-tech/v1/followup-meetings/email-action/cancel/{$meeting_id}?confirmed=1");
-        $reschedule_url = home_url("/wp-json/automatiza-tech/v1/followup-meetings/email-action/reschedule/{$meeting_id}");
+        $confirm_url = at_agenda_url_firmada($meeting_id, 'cancel', AT_AGENDA_PAGINA_TTL);
+        $reschedule_url = at_agenda_url_firmada($meeting_id, 'reschedule', AT_AGENDA_PAGINA_TTL);
         
         echo '<!DOCTYPE html>
-        <html lang="' . get_bloginfo('language') . '">
+        <html lang="' . esc_attr(get_bloginfo('language')) . '">
         <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -3134,7 +3161,9 @@ function automatiza_tech_followup_email_cancel($request) {
                     <p style="font-size: 14px; color: #666;">Esta acción no se puede deshacer. Si prefieres, puedes reagendar la reunión para otra fecha.</p>
                     
                     <div class="btn-container">
-                        <a href="' . esc_url($confirm_url) . '" class="btn btn-danger">❌ Sí, cancelar definitivamente</a>
+                        <form method="post" action="' . esc_url($confirm_url) . '" style="margin:0;">
+                            <button type="submit" class="btn btn-danger" style="width:100%;border:0;cursor:pointer;font-family:inherit;">❌ Sí, cancelar definitivamente</button>
+                        </form>
                         <a href="' . esc_url($reschedule_url) . '" class="btn btn-primary">🔄 Prefiero reagendar</a>
                         <a href="' . esc_url($home_url) . '" class="btn btn-secondary">← Volver al inicio</a>
                     </div>
@@ -3145,7 +3174,7 @@ function automatiza_tech_followup_email_cancel($request) {
         exit;
     }
     
-    // Si viene confirmed=1, proceder con la cancelación
+    // POST: proceder con la cancelación
     $wpdb->update(
         $table_name,
         array(
@@ -3191,7 +3220,7 @@ function automatiza_tech_followup_email_cancel($request) {
     
     automatiza_tech_render_followup_action_page($logo_src, $site_title, $home_url,
         'Reunión Cancelada',
-        "Lamentamos que no puedas asistir, <strong>{$meeting->client_name}</strong>.<br><br>
+        "Lamentamos que no puedas asistir, <strong>" . esc_html($meeting->client_name) . "</strong>.<br><br>
          Entendemos que surgen imprevistos. Te invitamos a seguir visitando nuestro sitio y, cuando estés listo, 
          volver a coordinar una reunión para continuar conversando sobre tu proyecto.<br><br>
          ¡Esperamos verte pronto!",
@@ -3205,9 +3234,17 @@ function automatiza_tech_followup_email_cancel($request) {
 function automatiza_tech_followup_email_reschedule($request) {
     global $wpdb;
     $table_name = $wpdb->prefix . 'automatiza_followup_meetings';
-    
+
     $meeting_id = (int) $request['id'];
-    
+
+    if (!at_agenda_guardia_enlace($request, $meeting_id, 'reschedule')) {
+        exit;
+    }
+    // Firma que la página reenvía al guardar el nuevo horario (solo dígitos y hexadecimales).
+    $firma_e = preg_replace('/\D/', '', (string) $request->get_param('e'));
+    $firma_t = preg_replace('/[^0-9a-f]/', '', (string) $request->get_param('t'));
+    $json_seguro = JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT;
+
     $meeting = $wpdb->get_row($wpdb->prepare(
         "SELECT * FROM $table_name WHERE id = %d",
         $meeting_id
@@ -3236,7 +3273,7 @@ function automatiza_tech_followup_email_reschedule($request) {
     // Mostrar formulario de reagendamiento
     ?>
     <!DOCTYPE html>
-    <html lang="<?php echo get_bloginfo('language'); ?>">
+    <html lang="<?php echo esc_attr(get_bloginfo('language')); ?>">
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -3299,7 +3336,7 @@ function automatiza_tech_followup_email_reschedule($request) {
 
                 <div id="message-box"></div>
 
-                <a href="<?php echo esc_url(home_url('/wp-json/automatiza-tech/v1/followup-meetings/email-action/cancel/' . $meeting_id)); ?>" 
+                <a href="<?php echo esc_url(at_agenda_url_firmada($meeting_id, 'cancel', AT_AGENDA_PAGINA_TTL)); ?>" 
                    class="btn btn-danger" 
                    onclick="return confirm('¿Estás seguro de que deseas cancelar definitivamente la reunión?');">
                    ❌ Cancelar Reunión Definitivamente
@@ -3388,7 +3425,7 @@ function automatiza_tech_followup_email_reschedule($request) {
                 fetch('/wp-json/automatiza-tech/v1/followup-meetings/reschedule', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ meeting_id: meetingId, date: date, time: time })
+                    body: JSON.stringify({ meeting_id: meetingId, date: date, time: time, e: <?php echo json_encode($firma_e, $json_seguro); ?>, t: <?php echo json_encode($firma_t, $json_seguro); ?> })
                 })
                 .then(response => response.json())
                 .then(data => {
@@ -3435,7 +3472,16 @@ function automatiza_tech_followup_reschedule_api($request) {
     if (!$meeting_id || !$new_date || !$new_time) {
         return array('success' => false, 'message' => 'Faltan datos para reagendar');
     }
-    
+
+    $enlace = at_agenda_evaluar_enlace($meeting_id, 'reschedule', $params['e'] ?? '', $params['t'] ?? '');
+    if ($enlace['estado'] === 'sin_firma_en_gracia') {
+        error_log("agenda-rutas: reagendado sin firma aceptado en gracia id={$meeting_id}");
+    }
+    if (!$enlace['permitir']) {
+        error_log("agenda-rutas: reagendado rechazado estado={$enlace['estado']} id={$meeting_id}");
+        return new WP_REST_Response(array('success' => false, 'message' => 'Este enlace venció o ya no es válido. Escríbenos a contacto@automatizatech.cl.'), 403);
+    }
+
     // Verificar que la reunión existe
     $meeting = $wpdb->get_row($wpdb->prepare(
         "SELECT * FROM $table_name WHERE id = %d",
@@ -3754,14 +3800,14 @@ function automatiza_tech_send_followup_reschedule_email($meeting_id, $new_date, 
 /**
  * Helper para renderizar página de acción de seguimiento
  */
-function automatiza_tech_render_followup_action_page($logo_src, $site_title, $home_url, $title, $message, $type = 'info') {
+function automatiza_tech_render_followup_action_page($logo_src, $site_title, $home_url, $title, $message, $type = 'info', $extra_html = '') {
     $header_color = '#1e40af';
     if ($type === 'success') $header_color = '#06d6a0';
     if ($type === 'warning') $header_color = '#fca311';
     if ($type === 'error') $header_color = '#dc3545';
     
     echo '<!DOCTYPE html>
-    <html lang="' . get_bloginfo('language') . '">
+    <html lang="' . esc_attr(get_bloginfo('language')) . '">
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -3786,6 +3832,7 @@ function automatiza_tech_render_followup_action_page($logo_src, $site_title, $ho
             <div class="content">
                 <h2>' . $title . '</h2>
                 <p>' . $message . '</p>
+                ' . $extra_html . '
                 <a href="' . esc_url($home_url) . '" class="btn">Volver al Inicio</a>
             </div>
         </div>

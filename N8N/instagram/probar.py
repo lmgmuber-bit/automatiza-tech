@@ -143,7 +143,7 @@ def primera_respuesta():
     r1 = turno(g, c, '¿Qué tipo de negocios pueden beneficiarse del diagnóstico?')
     t1 = (r1 or {}).get('body', {}).get('content', '')
     ok('?' in t1 and 'negocio' in t1.lower(), 'primera respuesta: pregunta qué negocio tiene', t1[:300])
-    ok(not re.search(r'agend|reserv', t1, re.I), 'primera respuesta: todavía no invita a agendar', t1[:300])
+    ok(not re.search(r'agend|te invito|coordinemos|cuándo te acomoda', t1, re.I), 'primera respuesta: todavía no invita a agendar', t1[:300])
     r2 = turno(g, c, 'Tengo una pastelería y vendo por Instagram')
     t2 = (r2 or {}).get('body', {}).get('content', '')
     ok(t2 and 'agendar' not in (r2 or {}).get('herramientas', []), 'primera respuesta: con el rubro responde y no agenda solo', t2[:300])

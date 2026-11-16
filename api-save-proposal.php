@@ -5,6 +5,7 @@
 require_once('wp-load.php');
 require_once __DIR__ . '/at-rate-limit.php';
 require_once __DIR__ . '/at-webhook-verify.php';
+require_once __DIR__ . '/at-texto.php';
 
 header('Content-Type: application/json');
 
@@ -55,10 +56,10 @@ if (!$data) {
     exit;
 }
 
-$client_email = sanitize_email($data['client_email']);
-$transcript = sanitize_textarea_field($data['transcript']);
-$gamma_prompt = $data['gamma_prompt']; // Mantener formato original
-$system_prompt = $data['system_prompt']; // Mantener formato original
+$client_email = sanitize_email(at_texto($data['client_email'] ?? null));
+$transcript = sanitize_textarea_field(at_texto($data['transcript'] ?? null));
+$gamma_prompt = at_texto($data['gamma_prompt'] ?? null); // Mantener formato original
+$system_prompt = at_texto($data['system_prompt'] ?? null); // Mantener formato original
 
 // Generar ID único para enlaces (más seguro que el ID autoincremental para URLs públicas)
 $unique_id = wp_generate_password(12, false);
@@ -88,5 +89,6 @@ if ($inserted) {
         'presentation_url' => $base_url . '/ver-presentacion.php?id=' . $unique_id
     ]);
 } else {
-    echo json_encode(['error' => 'Database insert failed', 'db_error' => $wpdb->last_error]);
+    error_log('api-save-proposal: fallo al guardar: ' . $wpdb->last_error);
+    echo json_encode(['error' => 'internal_error']);
 }

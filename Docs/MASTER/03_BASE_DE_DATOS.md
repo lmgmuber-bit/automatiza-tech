@@ -295,7 +295,7 @@ Histórico de prompts ejecutados (debugging IA).
 | `setup-takeovers.php` | + `takeovers` |
 | `setup-n8n-workflows-table.php` | + `n8n_workflows` (catálogo) |
 | `setup-ai-usage-log.php` | + `ai_usage_log` |
-| `setup-contracts-db.php` | + `wp_automatiza_contracts` (clave `AT_SETUP_2026`) |
+| `setup-contracts-db.php` | Retirado. `wp_automatiza_contracts` se crea con el `CREATE TABLE` documentado en `Docs/MASTER/09_MODULO_CONTRATOS.md` |
 | `migrate-clients-add-portal.php` | + `api_key`, `portal_enabled` en `omnichannel_clients` |
 | `add-message-status-cols.php` | + `delivered_at`, `read_at` en `messages` |
 | `add-conversation-tags.php` | + `tags` en `conversations` |

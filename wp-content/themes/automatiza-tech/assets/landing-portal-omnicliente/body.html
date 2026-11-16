@@ -10,6 +10,7 @@
       </a>
       <sc-if data-when="isDesktop">
         <nav style="display:flex;align-items:center;gap:34px">
+          {{MENU_SERVICIOS}}
           <a href="#planes" style="font-size:14px;font-weight:500;color:var(--text-3);transition:color .2s" data-hover="color:var(--text)">Planes</a>
           <a href="#faq" style="font-size:14px;font-weight:500;color:var(--text-3);transition:color .2s" data-hover="color:var(--text)">Preguntas</a>
           <a href="{{HOME_URL}}#rubros" style="font-size:14px;font-weight:500;color:var(--text-3);transition:color .2s" data-hover="color:var(--text)">Casos por rubro</a>
@@ -33,6 +34,7 @@
     </div>
     <sc-if data-when="menuOpen">
       <div style="padding:8px 18px 20px;display:flex;flex-direction:column;gap:2px;background:var(--menu-bg);border-bottom:1px solid var(--bd2)">
+        {{MENU_SERVICIOS_MOVIL}}
         <a href="#planes" data-act="closeMenu" style="padding:13px 12px;font-weight:600;color:var(--text-2);border-radius:8px">Planes</a>
         <a href="#faq" data-act="closeMenu" style="padding:13px 12px;font-weight:600;color:var(--text-2);border-radius:8px">Preguntas</a>
         <a href="{{HOME_URL}}#rubros" data-act="closeMenu" style="padding:13px 12px;font-weight:600;color:var(--text-2);border-radius:8px">Casos por rubro</a>
@@ -203,6 +205,8 @@
   </section>
 
   <!-- ================= FOOTER ================= -->
+  {{OTROS_SERVICIOS}}
+
   <footer style="border-top:1px solid var(--bd1);background:var(--bg)">
     <div style="max-width:1200px;margin:0 auto;padding:56px 28px 38px;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr));gap:38px">
       <div style="max-width:320px">
@@ -226,6 +230,7 @@
           <a href="#contacto" data-act="openModal" data-modal-mode="demo" style="font-size:14px;color:var(--text-3)" data-hover="color:var(--text)">Agenda una demo</a>
           <a href="https://wa.me/56927002984?text=Hola%20AutomatizaTech%2C%20quiero%20informaci%C3%B3n%20sobre%20el%20Portal%20OmniCliente" target="_blank" rel="noopener noreferrer" style="font-size:14px;color:var(--text-3)" data-hover="color:var(--text)">WhatsApp</a>
           <span style="font-size:14px;color:var(--text-3)">automatizatech.cl</span>
+          {{PREFERENCIAS_COOKIES}}
         </div>
       </div>
     </div>

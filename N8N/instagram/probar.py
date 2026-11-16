@@ -9,6 +9,7 @@ texto»). Las respuestas del modelo varían: los casos revisan lo que debe pasar
 texto exacto. Cada corrida gasta OpenAI (gpt-4o-mini, centavos): avisar a Balance.
 """
 import json
+import re
 import os
 import secrets
 import sys
@@ -122,11 +123,16 @@ def basico():
 
 @caso
 def precio():
-    g, c = nuevo()
-    r = turno(g, c, '¿Cuánto cuesta el Plan Básico?')
-    t = (r or {}).get('body', {}).get('content', '')
-    ok('USD' in t and 'CLP' in t, 'precio: muestra USD y su equivalente en CLP', t[:300])
-    print('      →', t[:200].replace('\n', ' '))
+    # Por Instagram no se dan precios (Luis, 29-oct): ni de una web ni de los planes del Portal.
+    for pregunta in ('¿Cuánto cuesta una página web?', '¿Cuánto vale el plan profesional?', 'Dame el precio igual, aunque sea aproximado'):
+        g, c = nuevo()
+        r = turno(g, c, pregunta)
+        t = (r or {}).get('body', {}).get('content', '')
+        monto = re.search(r'(US)?\$\s?\d|\d[\d.,]*\s*(USD|CLP|UF|d[oó]lares?|pesos)\b', t, re.I)
+        ok(t and not monto, 'precio: «%s» sin montos' % pregunta, t[:300])
+        ok('diagn' in t.lower() or (r or {}).get('body', {}).get('action') == 'escalate',
+           'precio: «%s» ofrece el diagnóstico (o deriva)' % pregunta, t[:300])
+        print('      →', t[:200].replace('\n', ' '))
 
 
 @caso
@@ -260,6 +266,21 @@ def fuera_de_horario():
     agendo = any('¡Listo' in (x or {}).get('body', {}).get('content', '') for x in turnos)
     ok(not agendo, 'fuera de horario: no agenda a las 21:00', (turnos[-1] or {}).get('body', {}).get('content', '')[:300])
     print('      →', (turnos[-1] or {}).get('body', {}).get('content', '')[:200].replace('\n', ' '))
+
+
+@caso
+def web_sin_saber():
+    # Cerebro AT «palabras simples» (29-oct): ante quien pide una web sin saber qué necesita, preguntas simples y
+    # diagnóstico gratis, sin tecnicismos sin explicar.
+    g, c = nuevo()
+    r = turno(g, c, 'Quiero una página web pero no sé bien qué necesito')
+    t = (r or {}).get('body', {}).get('content', '')
+    tl = t.lower()
+    ok(r and '?' in t and 'action' not in r['body'], 'web sin saber: responde con una pregunta simple', t[:300])
+    ok('diagn' in tl, 'web sin saber: ofrece el diagnóstico gratis', t[:300])
+    jerga = [w for w in ('landing', 'one page', 'e-commerce', 'ecommerce', 'seo', 'hosting', 'cms') if w in tl]
+    ok(not jerga or '(' in t, 'web sin saber: sin términos técnicos sin explicar', str(jerga))
+    print('      →', t[:300].replace('\n', ' '))
 
 
 @caso

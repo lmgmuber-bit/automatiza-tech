@@ -19,6 +19,7 @@ require_once __DIR__ . '/omnichannel-controller.php';
 require_once __DIR__ . '/omnichannel-atfinance-controller.php';
 require_once __DIR__ . '/omnichannel-ig-insights-controller.php';
 require_once __DIR__ . '/omnichannel-ig-comments-controller.php';
+require_once __DIR__ . '/omnichannel-meta-ads-controller.php';
 require_once __DIR__ . '/at-rate-limit.php';
 require_once __DIR__ . '/at-mime-check.php';
 
@@ -39,6 +40,7 @@ $iginsights = new OmniIgInsightsController($controller);
 $iginsights->maybe_create_tables(); // ídem: tablas de Métricas IG
 $igcomments = new OmniIgCommentsController($controller);
 $igcomments->maybe_create_tables(); // ídem: registro de respuestas a comentarios
+$metaads = new OmniMetaAdsController(); // anuncios de Meta: sin tablas, caché en una opción
 
 // Parse request
 $method = $_SERVER['REQUEST_METHOD'];
@@ -473,7 +475,7 @@ try {
             send_json(['url' => $rd_upload['url'], 'file' => basename($rd_upload['file'])], 201);
         }
 
-        // POST reel-diario/media-create — body {video_url, caption?, media_type?, channel_id?}.
+        // POST reel-diario/media-create — body {video_url, caption?, media_type?, channel_id?, trial?}.
         // Crea el contenedor de Instagram y devuelve creation_id sin hacer polling bloqueante.
         // Imágenes (23-oct): {image_url, media_type: IMAGE|STORIES|CAROUSEL_ITEM, caption?}.
         // Carrusel: {media_type: CAROUSEL, children: [creation_id, ...] o "id,id", caption?}.
@@ -508,7 +510,9 @@ try {
             if (!$rd_channel_id) {
                 send_json(['error' => 'Falta channel_id (o define REEL_DIARIO_CHANNEL_ID en wp-config-secrets.php)'], 400);
             }
-            $result = $controller->create_instagram_media_container($rd_channel_id, $rd_video_url, $rd_caption, $rd_media_type);
+            // trial (14-nov-2026): MANUAL | SS_PERFORMANCE publica el reel como «Reel de prueba»; vacío = reel normal.
+            $rd_trial = sanitize_text_field($body['trial'] ?? '');
+            $result = $controller->create_instagram_media_container($rd_channel_id, $rd_video_url, $rd_caption, $rd_media_type, $rd_trial);
             send_json($result, isset($result['error']) ? 502 : 201);
         }
 
@@ -639,6 +643,11 @@ try {
         if (($segments[1] ?? '') === 'sync' && $method === 'POST') {
             $igm_result = $iginsights->sync($igm_channel_id, false);
             send_json($igm_result, empty($igm_result['ok']) ? 502 : 200);
+        }
+
+        // GET ig-metrics/ads — anuncios pagados de Meta (solo lectura; usa la caché de 30 min, sin forzar).
+        if (($segments[1] ?? '') === 'ads' && $method === 'GET' && !isset($segments[2])) {
+            send_json($metaads->get_overview(false));
         }
 
         send_json(['error' => 'Ruta ig-metrics no encontrada'], 404);
@@ -1324,6 +1333,16 @@ try {
                 }
                 if (!isset($segments[2]) && $method === 'GET') {
                     send_json($iginsights->get_overview($igi_channel_id, $_GET['days'] ?? 30, $_GET['posts_limit'] ?? 50));
+                }
+                break;
+
+            // Admin: anuncios pagados de Meta (Marketing IG → Anuncios). sync relee ahora (mín. 2 min entre lecturas).
+            case 'meta-ads':
+                if (($segments[2] ?? '') === 'sync' && $method === 'POST') {
+                    send_json($metaads->get_overview(true));
+                }
+                if (!isset($segments[2]) && $method === 'GET') {
+                    send_json($metaads->get_overview(false));
                 }
                 break;
 

@@ -85,7 +85,7 @@
 | MFA en backoffice WP no configurado | Media | Plugin TFA pendiente |
 | Algunos `error_log(print_r($_POST))` históricos | Baja | CI los flagea; limpieza incremental |
 | Sin WAF externo (Cloudflare) | Media | Phase 1 hardening |
-| `setup-contracts-db.php` con clave simple `AT_SETUP_2026` | Baja | Combinado con `at-maintenance-guard` y `.htaccess` es aceptable |
+| `setup-contracts-db.php` con clave simple | Baja | Resuelto: el script se retiró; el esquema queda documentado |
 | `XML-RPC` bloqueado | OK | ✅ |
 
 ### Hallazgos de operación

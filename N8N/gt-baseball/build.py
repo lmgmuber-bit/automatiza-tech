@@ -225,7 +225,7 @@ const whatsapp = __WHATSAPP__;
 // Pago: el siguiente paso va en un recuadro arriba de cada correo; los datos para pagar salen de gt-config.json.
 const PAGO = __PAGO__;
 const metodo = (Array.isArray(PAGO.metodos) ? PAGO.metodos : []).find(m => m.id === x.pago_metodo) || null;
-// Monto de la forma de pago elegida (por pago móvil, en bolívares a la tasa oficial); si no trae, el general.
+// Monto de la forma de pago elegida (por pago móvil, en bolívares; la tasa se consulta con la administración); si no trae, el general.
 const montoPago = (metodo && metodo.monto) || PAGO.monto || '';
 const montoFila = montoPago ? fila('Monto a pagar', montoPago) : '';
 const recuadro = c => `<div style="margin:14px 10px 4px;padding:12px 14px;border-radius:8px;background:#fff7e6;border:1px solid #f4c46a;font-size:14px;line-height:1.5;color:#1f2937">${c}</div>`;

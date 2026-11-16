@@ -461,7 +461,10 @@ class ContractService {
             'monthly_amount'=>$a['monthly_amount'],'currency'=>$a['currency'],'created_by'=>$a['created_by'],
         ));
         $id = (int) $wpdb->insert_id;
-        if (!$id) return new WP_Error('insert_failed', $wpdb->last_error);
+        if (!$id) {
+            error_log('ContractService: fallo al crear el contrato: ' . $wpdb->last_error);
+            return new WP_Error('insert_failed', 'No se pudo crear el contrato.');
+        }
 
         // Render PDF preliminar (sin firmas)
         $pdf_path = self::render_pdf($id);

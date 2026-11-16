@@ -342,21 +342,25 @@ function cb_create_plan_acceptance(array $party, array $input, string $by): arra
 
     $pdo = cb_pdo();
     $now = gmdate('Y-m-d H:i:s');
-    $token = cb_opaque_token(16);
+    $expira = gmdate('Y-m-d H:i:s', time() + $days * 86400);
     $pdo->beginTransaction();
     try {
         $pdo->prepare('UPDATE cc_plan_acceptances SET status=\'revoked\', revoked_at=?, updated_at=? WHERE party_id=? AND status=\'pending\'')
             ->execute([$now, $now, $partyId]);
+        // El token se calcula con el id (cb_acceptance_token_calculado), que recién existe después del INSERT: la
+        // fila nace con un hash al azar que nadie conoce y en la misma transacción recibe el del token calculado.
         $stmt = $pdo->prepare('INSERT INTO cc_plan_acceptances
             (party_id, party_public_slug, party_admin_label, public_token_hash, status, plan_code, plan_summary_json, client_name, client_email, client_phone,
              legal_version, legal_text_sha256, expires_at, created_at, updated_at, created_by)
             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)');
         $stmt->execute([
-            $partyId, $publicSlug, (string) ($party['admin_label'] ?? ''), cb_hash_token($token), 'pending', $servicePlan,
+            $partyId, $publicSlug, (string) ($party['admin_label'] ?? ''), cb_hash_token(cb_opaque_token(16)), 'pending', $servicePlan,
             json_encode($summary, JSON_UNESCAPED_UNICODE), $clientName, $clientEmail, $clientPhone !== '' ? $clientPhone : null,
-            $bundle['version'], $bundle['sha256'], gmdate('Y-m-d H:i:s', time() + $days * 86400), $now, $now, $by,
+            $bundle['version'], $bundle['sha256'], $expira, $now, $now, $by,
         ]);
         $id = (int) $pdo->lastInsertId();
+        $token = cb_acceptance_token_calculado($id, $expira);
+        $pdo->prepare('UPDATE cc_plan_acceptances SET public_token_hash=? WHERE id=?')->execute([cb_hash_token($token), $id]);
         $pdo->commit();
     } catch (Throwable $e) {
         if ($pdo->inTransaction()) {
@@ -370,6 +374,48 @@ function cb_create_plan_acceptance(array $party, array $input, string $by): arra
 function cb_acceptance_public_url(string $token): string
 {
     return cb_public_base_url() . '/aceptar-plan.php?t=' . rawurlencode($token);
+}
+
+/**
+ * El token de firma de una aceptación: calculado, no al azar.
+ *
+ * Luis (30-oct-2026): «una vez que se genera el enlace… no puedo verlo otra vez». Antes el token era al azar y se
+ * guardaba solo su hash, así que el enlace existía en claro una sola vez. Ahora sale de un HMAC con la clave del
+ * servidor sobre el id y el vencimiento, igual que el enlace fijo de los papás (cb_rsvp_firma_papas): en la base
+ * sigue quedando solo el hash —una copia de la base sola no da ningún enlace—, y el admin lo vuelve a calcular cuando
+ * quiera. Rotar cambia el vencimiento y con eso el token, así que emitir uno nuevo sigue anulando el anterior.
+ * 32 hexadecimales, la forma que exige aceptar-plan.php.
+ */
+function cb_acceptance_token_calculado(int $id, string $expiresAt): string
+{
+    return substr(cb_hmac($id . '|' . $expiresAt, 'aceptacion-firma'), 0, 32);
+}
+
+/**
+ * El mensaje para pedir la firma por WhatsApp. Uno solo para Aceptaciones y para los correos de la ficha
+ * (cb_envio_texto_whatsapp), así los dos dicen lo mismo.
+ */
+function cb_acceptance_texto_whatsapp(array $row, string $festejado, string $url): string
+{
+    $pila = explode(' ', trim((string) ($row['client_name'] ?? '')))[0];
+    return ($pila !== '' ? 'Hola ' . $pila . '!' : '¡Hola!')
+        . ' Antes de la fiesta de ' . $festejado . ' necesitamos que firmes los Términos y '
+        . "Condiciones. Son dos minutos: revisas el resumen del plan, marcas tres casillas y firmas con el dedo.\n\n"
+        . $url . "\n\n"
+        . 'El enlace es personal y de un solo uso. — CumpleClick';
+}
+
+/**
+ * El enlace de firma vigente de una aceptación, para volver a mostrarlo en el admin; null si no corresponde
+ * (firmada, revocada, vencida) o si se emitió antes del 30-oct-2026 con un token al azar, que no se puede reconstruir.
+ */
+function cb_acceptance_enlace_vigente(array $row): ?string
+{
+    if ((string) ($row['status'] ?? '') !== 'pending' || empty($row['expires_at']) || cb_acceptance_is_expired($row)) {
+        return null;
+    }
+    $token = cb_acceptance_token_calculado((int) $row['id'], (string) $row['expires_at']);
+    return hash_equals((string) $row['public_token_hash'], cb_hash_token($token)) ? cb_acceptance_public_url($token) : null;
 }
 
 function cb_acceptance_receipt_url(string $receiptToken): string
@@ -456,9 +502,15 @@ function cb_acceptance_rotar_token(int $id): ?string
         $ventana = strtotime((string) $row['expires_at']) - strtotime((string) $row['created_at']);
         if ($ventana > 86400) { $dias = (int) round($ventana / 86400); }
     }
-    $token = cb_opaque_token(16);
+    $expira = gmdate('Y-m-d H:i:s', time() + $dias * 86400);
+    // El token sale del vencimiento: si cae en el mismo segundo que el actual, se corre uno para que el enlace
+    // nuevo sea de verdad otro y el anterior quede anulado.
+    if ($expira === (string) $row['expires_at']) {
+        $expira = gmdate('Y-m-d H:i:s', strtotime($expira . ' UTC') + 1);
+    }
+    $token = cb_acceptance_token_calculado($id, $expira);
     $ok = cb_pdo()->prepare('UPDATE cc_plan_acceptances SET public_token_hash=?, expires_at=?, updated_at=? WHERE id=? AND status=\'pending\'')
-        ->execute([cb_hash_token($token), gmdate('Y-m-d H:i:s', time() + $dias * 86400), gmdate('Y-m-d H:i:s'), $id]);
+        ->execute([cb_hash_token($token), $expira, gmdate('Y-m-d H:i:s'), $id]);
     return $ok ? cb_acceptance_public_url($token) : null;
 }
 

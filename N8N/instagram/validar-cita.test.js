@@ -68,5 +68,25 @@ intentar('día sin atención', () => { r = revisar({ isFullDay: true, reason: 'D
   ok(r.ok === false && /no atendemos/.test(r.result), 'día sin atención: no agenda', r); });
 intentar('vacía', () => ok(revisar({}).ok === false, 'respuesta vacía de la agenda: no agenda'));
 
+// Sin precios por Instagram (Luis, 29-oct): el precio se define en el diagnóstico gratis y en la propuesta.
+const principal = JSON.parse(fs.readFileSync(path.join(__dirname, 'agente-tech-instagram.json'), 'utf8'));
+ok(!principal.nodes.some(n => n.name === 'Tipo de cambio'), 'sin precios: ya no se pide el tipo de cambio');
+ok(!JSON.stringify(principal.connections).includes('Tipo de cambio'), 'sin precios: ninguna conexión al tipo de cambio');
+const respJs = principal.nodes.find(n => n.name === 'Preparar respuesta').parameters.jsCode;
+const conv = { conversation_id: 5, channel_id: 2, callback_token: 'x'.repeat(64), callback_url: 'https://automatizatech.cl/x', prueba: true };
+const responder = (output, pasos = []) => new Function('$', '$json', respJs)(() => ({ first: () => ({ json: conv }) }),
+  { output, intermediateSteps: pasos })[0].json.body;
+for (const t of ['El Plan Básico cuesta $99 USD al mes.', 'Sale aprox. $97.503 CLP.', 'Son US$ 199 mensuales.',
+  'El valor es 199 USD.', 'Cuesta 2,5 UF.', 'Te sale $150.000 pesos.', 'Unos 300 dólares al mes.']) {
+  r = responder(t);
+  ok(!/\d/.test(r.content.replace(/\d+ a \d+ minutos/, '')) && /diagn/.test(r.content), 'filtro de precio: «' + t + '» se reemplaza por el diagnóstico', r);
+}
+for (const t of ['El diagnóstico dura de 15 a 30 minutos por Google Meet.', '¿Te acomoda el martes 3 de noviembre a las 11:00?',
+  'Tenemos 3 planes: Básico, Profesional y Enterprise.', 'Escríbeme tu WhatsApp, por ejemplo +56 9 1234 5678.']) {
+  ok(responder(t).content === t, 'filtro de precio: «' + t.slice(0, 40) + '…» no se toca');
+}
+r = responder('Cuesta $99 USD.', [{ action: { tool: 'derivar_a_persona', toolInput: { motivo: 'precio' } } }]);
+ok(r.action === 'escalate' && !/\$\s?\d/.test(r.content), 'filtro de precio: también en la despedida de una derivación', r);
+
 console.log(fallas ? `\n${fallas} FALLAS` : '\nTODO OK');
 process.exit(fallas ? 1 : 0);

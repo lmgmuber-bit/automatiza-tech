@@ -25,6 +25,16 @@ calla('Hola, gracias por tu mensaje! Elige una opción:\n1️⃣ Ver catálogo\n
 calla('Respuesta automática: estamos fuera de horario. Escribe 1 para ventas\n2 para soporte', 'respuesta automática + menú');
 calla('Thank you for your message! This is an automated reply, we will get back to you as soon as possible.', 'en inglés');
 calla('GRACIAS POR ESCRIBIRNOS, LE RESPONDEREMOS LO ANTES POSIBLE', 'en mayúsculas y sin tildes');
+// Texto real de la conversación 29 (15-nov).
+calla('¡Hola! Gracias por ponerte en contacto con nosotros. Hemos recibido tu mensaje y agradecemos tu interés.', 'conversación 29 (real)');
+// Publicidad masiva de plantilla, como la conversación 27: título en negrita, saludo con el nombre vacío y texto largo.
+const relleno = '\n• Ahorro de tiempo en tus procesos contables.\n• Reportes al día para tomar mejores decisiones.\n• Cumplimiento tributario sin sorpresas.\n• Más control del flujo de caja de tu empresa.';
+calla('*Empresa X | Top 9 beneficios de la gestión financiera y contable* 💪🏻\nHola , ¿Cómo estás?\nTe comparto los beneficios de trabajar con nosotros:' + relleno + relleno, 'publicidad masiva con título y nombre vacío');
+
+// Personas reales con rasgos parecidos: no se callan.
+pasa('Hola , quiero saber cuánto demora una web', 'persona que escribe «Hola ,» en un mensaje corto');
+pasa('*Urgente* necesito un sistema de reservas para mi spa, ¿me ayudan?', 'persona que usa negrita en un mensaje corto');
+pasa('Gracias por ponerte en contacto conmigo tan rápido, ¿cómo seguimos?', 'agradece el contacto sin voz de negocio');
 
 // Personas reales: nunca se callan.
 pasa('Hola, ¿qué tipo de negocios pueden beneficiarse del diagnóstico?', 'pregunta del anuncio');

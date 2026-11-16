@@ -158,8 +158,8 @@ def prefiere_investigar():
     turno(g, c, '¿Qué tipo de negocios pueden beneficiarse del diagnóstico?')
     r = turno(g, c, 'No gracias, prefiero investigar por mi cuenta primero')
     t = (r or {}).get('body', {}).get('content', '')
-    ok(re.search(r'automatizatech\.cl|gtbaseball\.com|@automatizatech', t, re.I), 'investigar: ofrece algo para mirar', t[:300])
-    ok(not re.search(r'agend', t, re.I), 'investigar: no insiste con la agenda', t[:300])
+    ok(re.search(r'automatizatech\.cl|@automatizatech', t, re.I), 'investigar: ofrece algo para mirar', t[:300])
+    ok('gtbaseball' not in t.lower(), 'investigar: no cita casos de clientes sin autorización', t[:300])
     print('      →', t[:220].replace('\n', ' '))
 
 

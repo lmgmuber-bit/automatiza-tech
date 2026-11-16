@@ -614,7 +614,7 @@
     return estado.comprobante ? 'adjunto' : 'despues';
   }
 
-  // Monto de cada forma de pago (por pago móvil, en bolívares a la tasa oficial); si no trae, el general.
+  // Monto de cada forma de pago (por pago móvil, en bolívares; la tasa se consulta con la administración); si no trae, el general.
   function montoDe(m) { return (m && m.monto) || PAGO.monto || ''; }
 
   function filaDato(etiqueta, valor, copiar) {

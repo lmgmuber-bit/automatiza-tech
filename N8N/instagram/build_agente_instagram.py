@@ -97,11 +97,10 @@ return [{ json: { texto: textos.join('\n').slice(0, 3000), mensajes: textos.leng
 """
 
 JS_ENTRADA = r"""
-// Entrada del agente: el texto, el tipo de cambio (el prompt web usa $json.rate), la fecha de hoy en Chile y,
-// si la persona llegó desde un comentario, qué comentó y qué le enviamos por privado.
+// Entrada del agente: el texto, la fecha de hoy en Chile y, si la persona llegó desde un comentario, qué comentó y qué
+// le enviamos por privado. Sin tipo de cambio: por Instagram no se dan precios (Luis, 29-oct).
 const v = $('Validar').first().json;
 const texto = $('Unir textos').first().json.texto;
-const rate = Number(($json || {}).rate) || 0;
 const ahora = DateTime.now().setZone('ZONA').setLocale('es');
 const dias = [];
 for (let i = 0; i < 8; i++) {
@@ -116,7 +115,7 @@ if (v.contexto && v.contexto.palabra) {
     + ' el diagnóstico gratis aquí mismo. No le repitas el mensaje que ya le enviamos.';
 }
 return [{ json: {
-  chatInput: texto, rate, igsid: v.igsid, prueba: v.prueba,
+  chatInput: texto, igsid: v.igsid, prueba: v.prueba,
   ahora_txt: ahora.toFormat("cccc d 'de' LLLL 'de' yyyy, HH:mm"), dias_txt: dias.join('; '), contexto_txt: ctx,
 } }];
 """.replace('ZONA', ZONA)
@@ -130,6 +129,13 @@ if (txt.length > 990) {
   const corte = txt.slice(0, 990);
   const p = Math.max(corte.lastIndexOf('. '), corte.lastIndexOf('\n'));
   txt = (p > 500 ? corte.slice(0, p + 1) : corte).trim();
+}
+// Por Instagram no se dan precios (Luis, 29-oct): si igual sale un monto, se reemplaza por la invitación al diagnóstico.
+const MONTO = /(US)?\$\s?\d|\d[\d.,]*\s*(USD|CLP|UF|d[oó]lares?|pesos|lucas)\b|\b(USD|CLP|UF)\s?\d/i;
+if (MONTO.test(txt)) {
+  txt = 'El valor depende de lo que necesites: no es lo mismo una página web que un sistema a medida o una app. '
+    + 'Lo vemos juntos en el diagnóstico gratis, una videollamada corta por Google Meet donde definimos el alcance y el precio. '
+    + '¿Te gustaría agendarlo?';
 }
 let motivo = null;
 for (const s of ($json.intermediateSteps || [])) {
@@ -173,9 +179,13 @@ def prompt_instagram():
     """Bloque del canal con la personalidad común de Tech Instagram (N8N/cerebro-at/personalidad-instagram.md)."""
     bloque = leer(AQUI, 'prompt-canal-instagram.md').strip()
     personalidad = leer(CEREBRO, 'personalidad-instagram.md').strip()
-    if bloque.count('{{PERSONALIDAD_INSTAGRAM}}') != 1 or not personalidad.startswith('### '):
-        raise SystemExit('falta la marca {{PERSONALIDAD_INSTAGRAM}} o la personalidad de Instagram del Cerebro AT')
-    return bloque.replace('{{PERSONALIDAD_INSTAGRAM}}', personalidad)
+    if bloque.count('{{PERSONALIDAD_INSTAGRAM}}') != 1 or bloque.count('{{REGLA_PRECIOS}}') != 1 \
+            or not personalidad.startswith('### '):
+        raise SystemExit('falta una marca del bloque del canal o la personalidad de Instagram del Cerebro AT')
+    # La regla «sin precios» vive en personalidad-instagram.md (Eje, 29-oct). La del canal es solo de respaldo, por si se
+    # aplica con una copia del cerebro que todavía no la trae; así nunca queda duplicada ni ausente.
+    respaldo = '' if 'nunca das precios' in personalidad else leer(AQUI, 'regla-precios-respaldo.md')
+    return bloque.replace('{{PERSONALIDAD_INSTAGRAM}}', personalidad).replace('{{REGLA_PRECIOS}}', respaldo)
 
 
 def validacion_at():
@@ -236,8 +246,6 @@ def flujo_principal():
               {'operation': 'get', 'propertyName': 'rafaga', 'key': '=ig:rafaga:{{ ' + k + ' }}', 'keyType': 'list', 'options': {}}),
         redis('ig-vaciar', 'Vaciar la ráfaga', [1980, 120], {'operation': 'delete', 'key': '=ig:rafaga:{{ ' + k + ' }}'}),
         code('ig-unir', 'Unir textos', [2200, 120], JS_UNIR),
-        nodo('ig-cambio', 'Tipo de cambio', 'n8n-nodes-base.httpRequest', 4.1, [2420, 120],
-             {'url': WP + '/exchange-rate', 'options': {'timeout': 10000}}, onError='continueRegularOutput'),
         code('ig-entrada', 'Preparar entrada', [2640, 120], JS_ENTRADA),
         nodo('ig-agente', 'Agente IA - Tech Instagram', '@n8n/n8n-nodes-langchain.agent', 1.8, [2880, 120],
              {'promptType': 'define', 'text': '={{ $json.chatInput }}',
@@ -287,8 +295,8 @@ def flujo_principal():
         ('Anotar en la ráfaga', 'Marcar el último', 0), ('Marcar el último', 'Esperar 6 s', 0),
         ('Esperar 6 s', 'Leer el último', 0), ('Leer el último', '¿Es el último?', 0),
         ('¿Es el último?', 'Leer la ráfaga', 0), ('Leer la ráfaga', 'Vaciar la ráfaga', 0),
-        ('Vaciar la ráfaga', 'Unir textos', 0), ('Unir textos', 'Tipo de cambio', 0),
-        ('Tipo de cambio', 'Preparar entrada', 0), ('Preparar entrada', 'Agente IA - Tech Instagram', 0),
+        ('Vaciar la ráfaga', 'Unir textos', 0), ('Unir textos', 'Preparar entrada', 0),
+        ('Preparar entrada', 'Agente IA - Tech Instagram', 0),
         ('Agente IA - Tech Instagram', 'Preparar respuesta', 0), ('Preparar respuesta', '¿Es prueba?', 0),
         ('¿Es prueba?', 'Responder al Portal', 1),
         ('¿Ya avisamos?', '¿Sin aviso reciente?', 0), ('¿Sin aviso reciente?', 'Recordar el aviso', 0),

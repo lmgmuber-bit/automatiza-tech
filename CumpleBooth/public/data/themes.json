@@ -2043,6 +2043,300 @@
       "musicaHint": "Cuna suave",
       "transition": "none"
     },
+    "casa-munecas": {
+      "nombre": "Casa de Muñecas",
+      "vozPropia": true,
+      "guiaSinRegalos": true,
+      "franquicia": "La casa de muñecas de Gabby",
+      "publico": "mixto",
+      "diploma": "Invitada de honor de la Casa de Muñecas",
+      "colors": {
+        "accent": "#D6409F",
+        "accentSoft": "#FBE3F1",
+        "yellow": "#3FC1BC",
+        "ink": "#4A2156",
+        "bgLight1": "#FFF5FB",
+        "bgLight2": "#F1E6FB",
+        "dark1": "#7B3A9E",
+        "dark2": "#4E2066",
+        "dark3": "#F4B3D8"
+      },
+      "confetti": [
+        "#D6409F",
+        "#9B6BE0",
+        "#3FC1BC",
+        "#F4B3D8",
+        "#FFFFFF",
+        "#FFD45E"
+      ],
+      "videos": {
+        "welcome": "welcome-casa-munecas.mp4",
+        "despedida": "despedida-casa-munecas.mp4"
+      },
+      "grupal": {
+        "fondo": "fondo-grupal.jpg",
+        "frameBox": {
+          "x": 0.0889,
+          "y": 0.0891,
+          "w": 0.8333,
+          "h": 0.3333
+        },
+        "titulo": "La foto de todos"
+      },
+      "asomate": {
+        "fondo": "asomate/fondo.jpg",
+        "personajes": {
+          "gabby": {
+            "w": 695,
+            "h": 1384,
+            "arriba": 0,
+            "pies": 1383,
+            "izq": 0,
+            "der": 694,
+            "cx": 319.0,
+            "cy": 439.0,
+            "rx": 168.0,
+            "ry": 192.0
+          },
+          "pandy-paws": {
+            "w": 837,
+            "h": 1289,
+            "arriba": 0,
+            "pies": 1288,
+            "izq": 0,
+            "der": 836,
+            "cx": 450.0,
+            "cy": 529.0,
+            "rx": 268.0,
+            "ry": 240.0
+          },
+          "cakey": {
+            "w": 719,
+            "h": 894,
+            "arriba": 0,
+            "pies": 893,
+            "izq": 0,
+            "der": 718,
+            "cx": 373.0,
+            "cy": 327.0,
+            "rx": 205.0,
+            "ry": 215.0
+          },
+          "mercat": {
+            "w": 891,
+            "h": 1042,
+            "arriba": 0,
+            "pies": 1041,
+            "izq": 0,
+            "der": 890,
+            "cx": 425.0,
+            "cy": 392.0,
+            "rx": 248.0,
+            "ry": 215.0
+          },
+          "kitty-fairy": {
+            "w": 1031,
+            "h": 1131,
+            "arriba": 0,
+            "pies": 1130,
+            "izq": 0,
+            "der": 1030,
+            "cx": 541.0,
+            "cy": 433.0,
+            "rx": 205.0,
+            "ry": 210.0
+          },
+          "dj-catnip": {
+            "w": 783,
+            "h": 1462,
+            "arriba": 0,
+            "pies": 1461,
+            "izq": 0,
+            "der": 782,
+            "cx": 366.0,
+            "cy": 460.0,
+            "rx": 210.0,
+            "ry": 205.0
+          }
+        },
+        "boton": "🎀 Asómate a la casa de muñecas",
+        "titulo": "¿Con quién te quieres asomar?"
+      },
+      "personajes": [
+        {
+          "emoji": "🎀",
+          "name": "Gabby",
+          "img": "gabby.jpg",
+          "game": [
+            {
+              "kind": "ritmo",
+              "label": "¡Baila en la casa de muñecas!",
+              "image": "fondo-banner.jpg",
+              "lanes": 4,
+              "seconds": 15
+            },
+            {
+              "kind": "fichas",
+              "label": "¡Arma la imagen!",
+              "image": "puzzle-gabby.jpg",
+              "cols": 3,
+              "filas": 3
+            },
+            {
+              "kind": "copos",
+              "label": "¡Atrapa las sorpresas!",
+              "emojis": [
+                "🎀",
+                "🐱",
+                "💖",
+                "⭐"
+              ],
+              "seconds": 15
+            }
+          ]
+        },
+        {
+          "emoji": "🐼",
+          "name": "Pandy Paws",
+          "img": "pandy-paws.jpg",
+          "game": [
+            {
+              "kind": "fichas",
+              "label": "¡Arma la imagen!",
+              "image": "puzzle-pandy-paws.jpg",
+              "cols": 3,
+              "filas": 3
+            },
+            {
+              "kind": "copos",
+              "label": "¡Atrapa las sorpresas!",
+              "emojis": [
+                "🐼",
+                "🎀",
+                "⭐",
+                "💖"
+              ],
+              "seconds": 15
+            }
+          ]
+        },
+        {
+          "emoji": "🧁",
+          "name": "Cakey",
+          "img": "cakey.jpg",
+          "game": [
+            {
+              "kind": "fichas",
+              "label": "¡Arma la imagen!",
+              "image": "puzzle-cakey.jpg",
+              "cols": 3,
+              "filas": 3
+            },
+            {
+              "kind": "copos",
+              "label": "¡Atrapa las sorpresas!",
+              "emojis": [
+                "🧁",
+                "🍓",
+                "🍰",
+                "⭐"
+              ],
+              "seconds": 15
+            }
+          ]
+        },
+        {
+          "emoji": "🧜",
+          "name": "MerCat",
+          "img": "mercat.jpg",
+          "game": [
+            {
+              "kind": "fichas",
+              "label": "¡Arma la imagen!",
+              "image": "puzzle-mercat.jpg",
+              "cols": 3,
+              "filas": 3
+            },
+            {
+              "kind": "copos",
+              "label": "¡Atrapa las sorpresas!",
+              "emojis": [
+                "🫧",
+                "🐚",
+                "🐟",
+                "💎"
+              ],
+              "seconds": 15
+            }
+          ]
+        },
+        {
+          "emoji": "🧚",
+          "name": "Kitty Fairy",
+          "img": "kitty-fairy.jpg",
+          "game": [
+            {
+              "kind": "fichas",
+              "label": "¡Arma la imagen!",
+              "image": "puzzle-kitty-fairy.jpg",
+              "cols": 3,
+              "filas": 3
+            },
+            {
+              "kind": "copos",
+              "label": "¡Atrapa las sorpresas!",
+              "emojis": [
+                "🌸",
+                "🦋",
+                "✨",
+                "🌷"
+              ],
+              "seconds": 15
+            }
+          ]
+        },
+        {
+          "emoji": "🎧",
+          "name": "DJ Catnip",
+          "img": "dj-catnip.jpg",
+          "game": [
+            {
+              "kind": "fichas",
+              "label": "¡Arma la imagen!",
+              "image": "puzzle-dj-catnip.jpg",
+              "cols": 3,
+              "filas": 3
+            },
+            {
+              "kind": "copos",
+              "label": "¡Atrapa las sorpresas!",
+              "emojis": [
+                "🎵",
+                "🎶",
+                "🎧",
+                "⭐"
+              ],
+              "seconds": 15
+            }
+          ]
+        }
+      ],
+      "frameBox": {
+        "x": 0.1204,
+        "y": 0.0958,
+        "w": 0.7722,
+        "h": 0.45
+      },
+      "fullGame": {
+        "kind": "concierto3d",
+        "stage": "neon-arena",
+        "label": "¡El Show de la Casa de Muñecas 3D!",
+        "seconds": 24,
+        "image": "fondo-banner.jpg"
+      },
+      "musicaHint": "Música alegre de casa de muñecas",
+      "transition": "none"
+    },
     "baby-osito": {
       "nombre": "Osito de Bienvenida",
       "vozPropia": true,

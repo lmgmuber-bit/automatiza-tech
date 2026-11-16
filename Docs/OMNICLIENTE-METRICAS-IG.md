@@ -323,3 +323,122 @@ PROD eran iguales a `main` (md5 sin cambios desde el cotejo de la tarde).
 
 **No verificado:** la vista Marketing IG con una sesión de admin en PROD (se probó en local contra la misma API; en PROD se comprobó
 que el portal sirve el bundle nuevo y que la API responde).
+
+## 11. Anuncios de Meta (pestaña «Anuncios», rama `claude/portal-metricas-anuncios`)
+
+> Estado: **EN PROD desde el 5-nov-2026**, con autorización de Luis (evidencia en §11.6). Dueño: Eje. Pedido de Luis, 4-nov-2026,
+> tras publicar los dos primeros anuncios de mensajes desde Business Suite.
+
+**Por qué hacía falta.** Métricas IG lee `graph.instagram.com` con el token de Instagram Login: trae lo orgánico de las publicaciones
+del perfil. Los anuncios creados con un video subido (no «promocionar publicación») no están en `me/media`, y sus resultados (gasto,
+conversaciones) solo salen de la Marketing API en `graph.facebook.com` con el permiso `ads_read`
+([Insights API](https://developers.facebook.com/docs/marketing-api/insights)). Ese token es distinto del de Instagram.
+
+### 11.1 Cómo funciona
+
+```
+Portal (admin) ─ GET admin/meta-ads ────────┐   POST admin/meta-ads/sync = releer ahora (mín. 2 min)
+Agentes ─ GET ig-metrics/ads (X-IG-Metrics-Secret) ┴─ OmniMetaAdsController::get_overview()
+     └─ caché de 30 min en la opción omni_meta_ads_cache; si venció, 4 GET a graph.facebook.com:
+          act_<id>                         nombre, moneda y estado de la cuenta
+          act_<id>/ads                     anuncios con fechas del conjunto y textos del creativo
+          act_<id>/insights level=ad       resultados de toda la vida de cada anuncio (date_preset=maximum)
+          act_<id>/insights time_increment=1  gasto, alcance y conversaciones por día, últimos 30 días
+```
+
+- **Solo lectura.** Únicamente GET; no crea, pausa ni cambia anuncios ni presupuestos. El token va en la cabecera
+  `Authorization: Bearer`, nunca en la URL, y no se guarda en la caché (probado).
+- **Sin tablas ni cron.** Meta conserva los resultados de cada anuncio hasta 37 meses, así que no hace falta guardar tomas como en
+  Métricas IG. Si una lectura falla, se sigue mostrando lo último bueno con su fecha y el aviso del fallo.
+- **Frenos:** caché de 30 min; el botón no relee antes de 2 min; candado atómico (`add_option`) contra lecturas simultáneas; si Meta
+  responde límite (4, 17, 32, 613, 80000, 80004 o «too many calls»), una hora sin llamadas, ni forzando.
+- **Si Meta rechaza un campo** (código 100, pasa al cambiar de versión) se reintenta con un juego más chico.
+- **Versión de la Graph API:** `AT_META_ADS_GRAPH_VERSION`, si no `AT_CAPI_GRAPH_VERSION` (v25.0 al 28-oct), si no v25.0.
+
+**Qué se muestra por anuncio:** estado, fechas, gasto (en la moneda de la cuenta, **sin IVA**), impresiones, alcance, reproducciones
+(acción `video_view`, 3 s), ThruPlays (`video_thruplay_watched_actions`), conversaciones iniciadas
+(`onsite_conversion.messaging_conversation_started_7d`) y costo por conversación. Un valor que Meta no entregó es `null` («—»), nunca 0.
+Los totales suman los anuncios: el alcance sumado cuenta dos veces a quien vio dos anuncios.
+
+**Por comprobar con la cuenta real** (inferido de la documentación, no confirmado): que el tipo de acción de conversaciones de los
+anuncios «Recibir más mensajes» hacia Instagram Direct sea `onsite_conversion.messaging_conversation_started_7d`, y que `video_view`
+y `video_thruplay_watched_actions` lleguen con estos nombres en v25.0. Si no, la columna sale «—» y no se inventa.
+
+### 11.2 Configuración (wp-config.php, antes de `wp-settings.php`)
+
+| Constante | Qué es | Secreto |
+|---|---|---|
+| `AT_META_ADS_TOKEN` | Token con `ads_read` sobre la cuenta «AutomatizaTech Ads» | **Sí**: nunca en el repo, el chat ni un log |
+| `AT_META_AD_ACCOUNT_ID` | Id de la cuenta publicitaria, con o sin `act_` (está en Business Suite → Configuración → Cuentas publicitarias) | No, pero no se escribe en este repo |
+| `AT_META_ADS_GRAPH_VERSION` | Opcional, p. ej. `v25.0` | No |
+
+Sin las dos primeras, la pestaña dice «Falta conectar la cuenta publicitaria» y no llama a Meta. Para agentes, `ig-metrics/ads` usa el
+mismo `X-IG-Metrics-Secret` (también solo lectura) y nunca fuerza la relectura.
+
+### 11.3 Pruebas
+
+```bash
+php tests/meta-ads/meta-ads-wp-test.php                               # 33 casos con un WordPress mínimo en memoria
+AT_WP_LOAD=<wp-load.php local> php tests/meta-ads/meta-ads-wp-test.php  # los mismos contra el WordPress local
+```
+
+Marketing API simulada: ninguna llamada sale a Meta. Cubren sin configuración, lectura y formato, caché, freno de 2 min, token vencido
+con datos anteriores, sin permiso, límite con pausa, campo rechazado, tachado de tokens en mensajes y que el token no quede en la caché.
+La pestaña se revisó en el navegador con respuestas simuladas (claro, oscuro, celular de 375 px sin desborde, y el estado sin
+configurar). **No probado:** contra la cuenta real (falta el token) ni con una sesión de admin en PROD.
+
+### 11.4 Paso manual de Luis: el token
+
+Dos caminos; recomendamos el **A** porque no vence. Las rutas de botones son de la documentación y del panel de hoy, sin verificar
+paso a paso:
+
+- **A · Usuario del sistema (no vence).** Business Suite → Configuración → Usuarios → **Usuarios del sistema** → Agregar (rol
+  Empleado) → **Asignar activos** → Cuentas publicitarias → AutomatizaTech Ads con permiso de **ver rendimiento** → **Generar token**:
+  elegir la app de AutomatizaTech, marcar solo `ads_read`, caducidad «Nunca». Exige control total del portfolio comercial (el 4-nov
+  una solicitud de acceso a la configuración quedó pendiente: revisarlo primero) y que la app esté conectada al portfolio.
+- **B · Token de Luis (60 días).** developers.facebook.com → Herramientas → Explorador de la API Graph → app de AutomatizaTech →
+  permiso `ads_read` → Generar → «Herramienta de token de acceso» → ampliar a largo plazo. Vence a los 60 días: la pestaña pasa a
+  «El token de anuncios venció» y hay que repetirlo.
+
+Luego Luis guarda el token en el archivo de claves con la etiqueta `AT META ADS TOKEN`. Con su autorización, Claude lo pone en
+`wp-config.php` de PROD con un script que no lo imprime (igual que `AT_IG_METRICS_SECRET`, §10).
+
+### 11.5 Despliegue a PROD (pendiente, con OK de Luis)
+
+| Orden | Local | Destino en PROD | Clase |
+|---|---|---|---|
+| 0 | — | Respaldo de `api-omnichannel.php` y `omnicliente/index.html` en `~/respaldos/` | OBLIGATORIO |
+| 0b | — | Cotejar por md5 que `api-omnichannel.php` y `omnicliente/index.html` de PROD son los de `main` (PROD puede tener cambios de otras sesiones) | OBLIGATORIO |
+| 1 | `omnichannel-meta-ads-controller.php` | `public_html/` | OBLIGATORIO, antes que la API (si no, fatal) |
+| 2 | `api-omnichannel.php` | `public_html/` | OBLIGATORIO |
+| 3 | `define('AT_META_ADS_TOKEN', …)` y `define('AT_META_AD_ACCOUNT_ID', …)` | `public_html/wp-config.php` | OBLIGATORIO para ver datos (sin ellas, la pestaña avisa) |
+| 4 | `omnicliente/assets/*` nuevos (19 `.js` y 1 `.css`) | `public_html/omnicliente/assets/` | OBLIGATORIO, antes del `index.html` |
+| 5 | `omnicliente/index.html` | `public_html/omnicliente/index.html` | OBLIGATORIO, al final |
+
+No subir: `tests/meta-ads/*`, `client-portal-omnichannel/` (fuente), `node_modules/`. El build cambia el nombre de todos los bundles
+porque cambió el de íconos; su contenido es el mismo salvo Marketing IG (cotejado sin los nombres de archivo).
+
+**Verificación desde afuera:** `GET ig-metrics/ads` sin cabecera 403 y con la credencial 200 con `ads_status`; `admin/meta-ads` sin
+sesión 403; la pestaña muestra los dos anuncios del 4-nov. **Reversa:** subir de nuevo `api-omnichannel.php` y el `index.html` del
+respaldo; el controlador nuevo puede quedar (nadie lo carga) y la opción `omni_meta_ads_cache` se puede borrar.
+
+### 11.6 Despliegue del 5-nov-2026 (evidencia)
+
+- **Token:** usuario del sistema «Portal AT lectura» del portfolio automatizatech.cl, con la cuenta publicitaria asignada solo con
+  «Ver rendimiento» y token sin vencimiento con solo `ads_read`. Lo creó Luis y lo guardó en el archivo de claves (`AT META ADS TOKEN`).
+  Antes de subir se probó en modo lectura contra Meta: cuenta en CLP y 4 anuncios con sus cifras.
+- **Cotejo previo:** `api-omnichannel.php` de PROD era igual a `main` (LF) y `omnicliente/index.html` igual byte a byte; el controlador
+  no existía.
+- **Respaldo:** `~/respaldos/meta-ads-antes-20261105/` (`api-omnichannel.php`, `index.html`, `wp-config.php` 600).
+- **Subido** con nombre temporal, `php -l`, renombrado y md5 cotejado: el controlador, la API (LF), 19 bundles nuevos de
+  `omnicliente/assets/` y al final `index.html`. `wp-config.php`: dos constantes antes de `wp-settings.php`, `php -l` antes de reemplazar,
+  permisos 644 conservados; el valor nunca se mostró.
+- **Verificado desde afuera:** `ig-metrics/ads` sin cabecera 403 y con la credencial 200 `status: ok`; `admin/meta-ads` sin sesión 403; el
+  portal y los 4 archivos que referencia, 200. La respuesta no contiene el token (las cadenas `EAAAA` que aparecen son parámetros de las
+  URL de miniaturas de Meta).
+- **Hallazgos con la cuenta real:** Meta deja `ACTIVE` a anuncios ya terminados (dos de diciembre de 2025): la vista los marca
+  «Terminado» por la fecha. Al 5-nov los dos anuncios nuevos no tenían todavía el tipo de acción de conversaciones (0 conversaciones),
+  así que sigue sin confirmarse ese nombre.
+
+**No verificado:** la pestaña con una sesión de admin en PROD (la ve Luis).
+

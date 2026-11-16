@@ -105,15 +105,16 @@ try {
     
     echo json_encode($response, JSON_UNESCAPED_UNICODE);
 
-} catch (Exception $e) {
+} catch (\Throwable $e) {
     // Limpiar cualquier output buffering pendiente
     while (ob_get_level()) { ob_end_clean(); }
     header('Content-Type: application/json; charset=utf-8');
     
+    error_log('api-chat-proxy: excepcion: ' . get_class($e) . ': ' . $e->getMessage());
     http_response_code(500);
     echo json_encode([
-        'error' => $e->getMessage(),
-        'reply' => 'Error interno del servidor: ' . $e->getMessage()
+        'error' => 'internal_error',
+        'reply' => 'Error interno del servidor.'
     ], JSON_UNESCAPED_UNICODE);
 }
 ?>

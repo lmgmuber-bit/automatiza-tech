@@ -7233,7 +7233,8 @@ class AutomatizaTech_CRM_AI {
         curl_close($ch);
         
         if ($curl_error) {
-            wp_send_json_success(['respuesta' => "Error técnico (Conexión): " . $curl_error]); 
+            error_log('crm-ai-completo: error de conexion: ' . $curl_error);
+            wp_send_json_success(['respuesta' => 'Error técnico de conexión.']);
         }
         
         $json = json_decode($result, true);
@@ -7514,7 +7515,8 @@ class AutomatizaTech_CRM_AI {
             if ($result !== false) {
                 wp_send_json_success('Elemento actualizado.');
             } else {
-                wp_send_json_error('Error al actualizar en BD: ' . $wpdb->last_error);
+                error_log('crm-ai-completo: ' . $wpdb->last_error);
+                wp_send_json_error('Error al actualizar en BD.');
             }
         } else {
             wp_send_json_error('Fuente de datos desconocida.');
@@ -7581,7 +7583,8 @@ class AutomatizaTech_CRM_AI {
 
         $inserted = $wpdb->insert($table_name, $data);
         if (!$inserted) {
-            wp_send_json_error('Error al guardar en base de datos: ' . $wpdb->last_error);
+            error_log('crm-ai-completo: ' . $wpdb->last_error);
+            wp_send_json_error('Error al guardar en base de datos.');
         }
 
         $meeting_id = $wpdb->insert_id;

@@ -126,7 +126,7 @@ Build deployado del portal (output de `npm run build` desde `client-portal-omnic
 
 | Archivo | Propósito |
 |---------|-----------|
-| `setup-contracts-db.php` | Crea tabla `wp_automatiza_contracts` (clave `AT_SETUP_2026`) |
+| `setup-contracts-db.php` | Retirado. La tabla `wp_automatiza_contracts` se crea con el `CREATE TABLE` documentado en `Docs/MASTER/09_MODULO_CONTRATOS.md` |
 | `contract-service.php` | Clase central `ContractService` (CRUD + flujo firmas) |
 | `contract-mailer.php` | Clase `ContractMailer` (4 tipos de correo) |
 | `create-contract.php` | API endpoint POST (admin only) |

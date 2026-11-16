@@ -19,6 +19,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
+require_once ABSPATH . 'at-texto.php';
 require_once __DIR__ . '/proposals-flow.php';
 
 /**
@@ -119,11 +120,11 @@ function automatiza_proposals_rest_update(WP_REST_Request $request) {
     }
 
     $update = [];
-    if (isset($params['gamma_prompt_text']) && trim((string) $params['gamma_prompt_text']) !== '') {
-        $update['gamma_prompt_text'] = sanitize_textarea_field($params['gamma_prompt_text']);
+    if (trim(at_texto($params['gamma_prompt_text'] ?? null)) !== '') {
+        $update['gamma_prompt_text'] = sanitize_textarea_field(at_texto($params['gamma_prompt_text']));
     }
-    if (isset($params['system_prompt_text']) && trim((string) $params['system_prompt_text']) !== '') {
-        $update['system_prompt_text'] = sanitize_textarea_field($params['system_prompt_text']);
+    if (trim(at_texto($params['system_prompt_text'] ?? null)) !== '') {
+        $update['system_prompt_text'] = sanitize_textarea_field(at_texto($params['system_prompt_text']));
     }
 
     if (empty($update)) {
@@ -201,25 +202,26 @@ function automatiza_proposals_rest_create(WP_REST_Request $request) {
     if ($errores) {
         return new WP_Error('at_payload_invalido', implode('; ', $errores), ['status' => 422]);
     }
-    $email = sanitize_email((string) ($p['client_email'] ?? ''));
+    $email = sanitize_email(at_texto($p['client_email'] ?? null));
     $renderer = 'https://n8n-propuesta-renderer.kchiba.easypanel.host/p/' . $uid . '/index.html';
     $ok = $wpdb->insert($t, [
         'client_email'       => $email,
         'unique_link_id'     => $uid,
-        'transcript_text'    => (string) ($p['transcript'] ?? ''),
+        'transcript_text'    => at_texto($p['transcript'] ?? null),
         'gamma_prompt_text'  => wp_json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
-        'system_prompt_text' => (string) ($p['system_prompt'] ?? ''),
+        'system_prompt_text' => at_texto($p['system_prompt'] ?? null),
         'gamma_iframe_url'   => $renderer,
         'n8n_chat_url'       => 'https://n8n-n8n.kchiba.easypanel.host/webhook/demo-dinamico/chat',
-        'client_name'        => sanitize_text_field((string) $payload['client_name']),
-        'company_name'       => sanitize_text_field((string) $payload['company_name']),
-        'phone'              => sanitize_text_field((string) ($p['phone'] ?? '')),
+        'client_name'        => sanitize_text_field(at_texto($payload['client_name'] ?? null)),
+        'company_name'       => sanitize_text_field(at_texto($payload['company_name'] ?? null)),
+        'phone'              => sanitize_text_field(at_texto($p['phone'] ?? null)),
         'status'             => 'borrador',
         'flujo'              => 'v3',
         'created_at'         => current_time('mysql'),
     ]);
     if (!$ok) {
-        return new WP_Error('at_insert_failed', $wpdb->last_error, ['status' => 500]);
+        error_log('rest-proposals: fallo al guardar: ' . $wpdb->last_error);
+        return new WP_Error('at_insert_failed', 'internal_error', ['status' => 500]);
     }
     $id = (int) $wpdb->insert_id;
     return new WP_REST_Response([
@@ -273,7 +275,8 @@ function automatiza_proposals_rest_state_set(WP_REST_Request $request) {
         $update['gamma_prompt_text'] = wp_json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     }
     if ($wpdb->update($t, $update, ['id' => $id]) === false) {
-        return new WP_Error('at_update_failed', $wpdb->last_error, ['status' => 500]);
+        error_log('rest-proposals: fallo al actualizar: ' . $wpdb->last_error);
+        return new WP_Error('at_update_failed', 'internal_error', ['status' => 500]);
     }
     $row = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$t} WHERE id = %d", $id));
     return new WP_REST_Response(automatiza_proposals_state_out($row), 200);

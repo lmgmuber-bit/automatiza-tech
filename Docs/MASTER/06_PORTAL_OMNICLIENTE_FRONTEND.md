@@ -28,6 +28,14 @@ tomas, lo dice en pantalla. Los agentes (Claqueta) leen lo mismo en `ig-metrics/
 Ruta, formato JSON, estados, pasos manuales de Luis y lista para PROD: **`Docs/OMNICLIENTE-METRICAS-IG.md`**.
 `ChannelsView.jsx` muestra el estado del token con `has_bot_token`.
 
+## 📣 Marketing IG → Anuncios (EN PROD desde el 2026-11-05)
+
+`MarketingIgView.jsx` tiene dos pestañas: **Orgánico** (lo anterior) y **Anuncios** (`MetaAdsPanel.jsx`). Anuncios lee
+`admin/meta-ads` (`omnichannel-meta-ads-controller.php`): Marketing API de Meta con un token de solo lectura (`ads_read`, usuario
+del sistema «Portal AT lectura»), caché de 30 min, sin tablas ni cron. Muestra gasto sin IVA, conversaciones iniciadas, costo por
+conversación, alcance, reproducciones, gasto por día y una tabla por anuncio. Los agentes leen lo mismo en `ig-metrics/ads`.
+Configuración, pruebas, despliegue y evidencia: **`Docs/OMNICLIENTE-METRICAS-IG.md` §11**.
+
 ---
 
 ## 🎯 Propósito

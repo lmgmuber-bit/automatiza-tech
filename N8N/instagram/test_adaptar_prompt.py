@@ -1,4 +1,5 @@
-"""Pruebas de adaptar_prompt() y prompt_instagram() sin red: python -I -X utf8 N8N/instagram/test_adaptar_prompt.py"""
+"""Pruebas de adaptar_prompt(), prompt_instagram() y las salidas del flujo de herramientas, sin red:
+python -I -X utf8 N8N/instagram/test_adaptar_prompt.py"""
 import os
 import sys
 
@@ -72,6 +73,16 @@ try:
         os.rmdir(tmp)
 finally:
     build.CEREBRO = dir_original
+
+# Sub-workflow de herramientas: n8n devuelve la salida «sí» (main[0]) del último nodo. Un IF cuya salida «no» queda suelta
+# termina sin respuesta y el agente no recibe el motivo (02-nov: celular con un dígito de más). Toda salida «no» va conectada.
+herr = build.flujo_herramientas()
+for n in herr['nodes']:
+    if n['type'] == 'n8n-nodes-base.if':
+        salidas = herr['connections'].get(n['name'], {}).get('main', [])
+        ok(len(salidas) > 1 and bool(salidas[1]), 'herramientas: la salida «no» de «%s» está conectada' % n['name'])
+destinos = {d['node'] for s in herr['connections'].get('¿Cita válida?', {}).get('main', [])[1:] for d in s}
+ok(destinos == {'Rechazo'}, 'herramientas: «¿Cita válida?» rechazada devuelve el motivo en «Rechazo» %s' % sorted(destinos))
 
 print('\n%d FALLAS' % fallas if fallas else '\nTODO OK')
 sys.exit(1 if fallas else 0)

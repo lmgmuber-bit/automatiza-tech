@@ -100,6 +100,16 @@ conversaciones 5 y 7 siguen asignadas.
 - `agendar` revisa la agenda real del día antes de crear la cita (nodos «Agenda del día» → «Revisar hora»): no agenda en feriados, días sin atención, fuera de horario ni en horas tomadas, y agenda con un solo «sí».
 - **Pendiente de Eje:** el sub-workflow compartido `PejBgr2LZQSAbbBy` solo revisa choques con otras citas, no feriados ni horario. Instagram ya lo cubre con su propia revisión; la web y WhatsApp agendan por ese mismo sub-workflow. Lo natural es revisar `check-availability` dentro del sub-workflow, antes de «Create Event», y así cubrir los tres canales.
 
+## Rechazos que llegan al asistente (03-nov, EN PROD con el OK de Luis)
+
+- **Caso real del 02-nov:** una persona volvió al día siguiente y dio sus datos. El asistente recordaba la conversación (la memoria dura 30 días), pero su celular de Chile traía un dígito de más. «Validar cita» lo rechazó bien, pero la salida «no» de «¿Cita válida?» no iba conectada a nada.
+- **Qué pasaba:** el sub-workflow terminaba sin respuesta y el agente solo recibía «The workflow did not return a response». Le decía «sigo teniendo problemas para agendar» en vez de pedirle el número bien escrito. La persona se cansó y pidió hablar con una persona. Lo mismo pasaba con «¿Hora libre?» cuando la hora estaba tomada o era fuera de horario.
+- **Por qué no lo vimos antes:** n8n devuelve la salida «sí» del último nodo, así que una salida «no» suelta termina vacía. Las ejecuciones salían en verde (ARGOS no avisa) y las pruebas solo miraban que no se agendara. No miraban que el motivo llegara al agente.
+- **Arreglo:** las dos salidas «no» van al nodo «Rechazo», que devuelve el motivo.
+- **Pruebas que lo cubren:**
+  - `test_adaptar_prompt.py` exige que toda salida «no» del flujo de herramientas esté conectada.
+  - El caso `telefono_largo` de `probar.py` exige que «agendar» pase por «Rechazo» y que el asistente pida corregir el número.
+
 ## Después
 
 - Clasificar en frío, tibio, caliente o «no califica» y avisar al instante cuando llega uno caliente.

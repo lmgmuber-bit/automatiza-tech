@@ -420,7 +420,7 @@ add_action('rest_api_init', function () {
     register_rest_route('automatiza-tech/v1', '/leads', array(
         'methods' => 'POST',
         'callback' => 'automatiza_tech_save_lead',
-        'permission_callback' => '__return_true' // Endpoint público (validar origen si es necesario)
+        'permission_callback' => 'at_agenda_permiso_maquina' // Solo n8n la llama (el formulario web pasa por n8n); X-AT-Secret, modo aviso o exigir
     ));
 
     // Endpoint para verificar disponibilidad (Check Availability)
@@ -825,7 +825,13 @@ function automatiza_tech_save_lead($request) {
     }
 
     $lead_id = (int) $wpdb->insert_id;
-    do_action('automatiza_tech_lead_guardado', $lead_id, $data); // Lead por CAPI (inc/meta-capi/), 28-oct-2026
+    // Lead por CAPI (inc/meta-capi/), 28-oct-2026. Solo con la credencial de n8n: aunque la ruta esté en modo
+    // «aviso», una agenda que no viene de n8n nunca se cuenta como Lead en Meta (16-nov-2026).
+    if (function_exists('at_agenda_credencial_valida') && at_agenda_credencial_valida($request)) {
+        do_action('automatiza_tech_lead_guardado', $lead_id, $data);
+    } else {
+        error_log('leads: agenda guardada sin credencial de n8n, no se envia a Meta lead_id=' . $lead_id);
+    }
     if (function_exists('automatiza_tech_home_premium_store_lead_attribution')) {
         automatiza_tech_home_premium_store_lead_attribution($lead_id, $params);
     }

@@ -24,7 +24,7 @@ $citas = rutas_de(raiz() . '/wp-content/mu-plugins/api-appointments-management.p
 $agenda = rutas_de($tema . '/admin-followup-meetings.php');
 
 $de_maquina_api = ['/leads/reminders(?:', '/leads/reminders-wa(?:', '/leads/reminders-8pm', '/leads/reminders-8am', '/leads/reminders-wa-8pm', '/leads/reminders-wa-8am',
-	'/leads/update-reminder-daily/', '/leads/update-reminder-wa-daily/', '/leads/update-reminder/(?P', '/leads/update-reminder-wa/(?P', '/leads/confirm-attendance/', '/leads/check-event', 'mark-whatsapp-sent'];
+	'/leads/update-reminder-daily/', '/leads/update-reminder-wa-daily/', '/leads/update-reminder/(?P', '/leads/update-reminder-wa/(?P', '/leads/confirm-attendance/', '/leads/check-event', 'mark-whatsapp-sent', "/leads 'POST'"];
 $maquina = array_keys(array_filter($api, fn($v) => $v === 'maquina'));
 foreach ($de_maquina_api as $frag) {
 	$hit = array_filter($maquina, fn($k) => strpos($k, $frag) !== false);
@@ -33,7 +33,7 @@ foreach ($de_maquina_api as $frag) {
 comprobar(count($maquina) === count($de_maquina_api), 'api-endpoints: solo esas rutas son de aviso (' . count($maquina) . ')', implode(' | ', $maquina));
 $siempre_api = array_keys(array_filter($api, fn($v) => $v === 'siempre'));
 comprobar(count($siempre_api) === 1 && strpos($siempre_api[0], '/leads/update-reminder ') === 0, 'api-endpoints (siempre): /leads/update-reminder sin id', implode(' | ', $siempre_api));
-foreach (['/leads', '/exchange-rate', '/check-availability', '/check-limit', '/leads/action', '/leads/reschedule'] as $r) {
+foreach (['/exchange-rate', '/check-availability', '/check-limit', '/leads/action', '/leads/reschedule'] as $r) {
 	$hit = array_filter($api, fn($v, $k) => preg_match('#^' . preg_quote($r, '#') . ' #', $k), ARRAY_FILTER_USE_BOTH);
 	comprobar($hit && count(array_filter($hit, fn($v) => $v !== 'publica')) === 0, "api-endpoints (publico): $r");
 }

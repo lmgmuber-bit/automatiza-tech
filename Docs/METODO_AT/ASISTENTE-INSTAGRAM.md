@@ -13,7 +13,7 @@ Responde los directos de @automatizatech.cl las 24 horas, con el criterio del ag
   lead en el CRM con origen **Instagram** y correo de confirmación.
 - **Deriva a una persona** cuando la piden, hay un reclamo, es un cliente que pide seguimiento o piden algo a medida. Se despide
   («Le avisé a Luis, te va a responder por aquí mismo»), deja de responder en esa conversación y llega un correo
-  «Instagram: <nombre> quiere hablar contigo» a lgonzalez@automatizatech.cl y lmgm.030@gmail.com.
+  «Instagram: <nombre> quiere hablar contigo» a los dos correos de derivación del canal (`custom_functions_json.derivacion` del canal 2).
 - **Sabe de dónde viene la persona**: si comentó una palabra clave (MÉTODO, SPA…), el asistente recibe la palabra y el privado que
   le enviamos, y entiende que «quiero agendar» responde a «agenda tu diagnóstico gratis».
 - Si mandan varios mensajes seguidos, espera 6 segundos y responde una vez a todos. Audios, fotos y stickers: «Por ahora leo solo texto».

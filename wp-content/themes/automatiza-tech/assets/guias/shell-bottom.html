@@ -1,0 +1,135 @@
+  <!-- ================= FOOTER ================= -->
+  <footer style="border-top:1px solid var(--bd1);background:var(--bg)">
+    <div style="max-width:1200px;margin:0 auto;padding:56px 28px 38px;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr));gap:38px">
+      <div style="max-width:320px">
+        <div style="display:flex;align-items:center;gap:11px;margin-bottom:18px">
+          <img src="assets/at-logo.png" alt="AutomatizaTech" style="width:36px;height:36px;object-fit:contain">
+          <span style="font-family:'Space Grotesk';font-weight:600;font-size:18px;color:var(--text)">Automatiza<span style="color:#2dd4bf">Tech</span></span>
+        </div>
+        <p style="font-size:13.5px;line-height:1.6;color:var(--text-faint)">Asistentes inteligentes, automatización y desarrollo a medida para negocios que no se detienen.</p>
+      </div>
+      <div>
+        <h4 style="font-family:'JetBrains Mono';font-size:11px;font-weight:500;letter-spacing:.14em;color:var(--label);margin-bottom:18px">EXPLORA</h4>
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <a href="{{HOME_URL}}" style="font-size:14px;color:var(--text-3)" data-hover="color:var(--text)">Inicio</a>
+          <a href="{{HOME_URL}}#soluciones" style="font-size:14px;color:var(--text-3)" data-hover="color:var(--text)">Todas las soluciones</a>
+          {{GUIAS_PIE}}
+          <a href="{{HOME_URL}}#planes" style="font-size:14px;color:var(--text-3)" data-hover="color:var(--text)">Planes Portal OmniCliente</a>
+        </div>
+      </div>
+      <div>
+        <h4 style="font-family:'JetBrains Mono';font-size:11px;font-weight:500;letter-spacing:.14em;color:var(--label);margin-bottom:18px">CONTACTO</h4>
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <a href="#contacto" data-act="openModal" style="font-size:14px;color:var(--text-3)" data-hover="color:var(--text)">Agenda tu diagnóstico</a>
+          <a href="https://wa.me/56927002984?text=Hola%20AutomatizaTech%2C%20quiero%20informaci%C3%B3n%20sobre%20automatizaci%C3%B3n" target="_blank" rel="noopener noreferrer" style="font-size:14px;color:var(--text-3)" data-hover="color:var(--text)">WhatsApp</a>
+          <span style="font-size:14px;color:var(--text-3)">automatizatech.cl</span>
+          {{PREFERENCIAS_COOKIES}}
+        </div>
+      </div>
+    </div>
+    <div style="max-width:1200px;margin:0 auto;padding:22px 28px 42px;border-top:1px solid var(--bd1);display:flex;flex-wrap:wrap;gap:12px;justify-content:space-between;align-items:center">
+      <span style="font-family:'JetBrains Mono';font-size:11.5px;letter-spacing:.04em;color:var(--text-faint)">© 2026 AUTOMATIZATECH · TECNOLOGÍA DIGITAL PREMIUM</span>
+      <span style="font-family:'JetBrains Mono';font-size:11.5px;letter-spacing:.04em;color:var(--text-faint)">HECHO EN CHILE</span>
+    </div>
+  </footer>
+
+  <!-- ================= MODAL AGENDAR ================= -->
+  <sc-if data-when="modalOpen">
+    <div data-act="closeModal" style="position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(4,8,16,.72);backdrop-filter:blur(6px)">
+      <div id="at-modal-box" role="dialog" aria-modal="true" aria-labelledby="at-modal-title" data-act="stopProp" style="position:relative;width:min(760px,100%);max-height:92vh;overflow:auto;background:var(--surface);border:1px solid var(--bd2);border-radius:20px;box-shadow:0 40px 100px -30px rgba(0,0,0,.8)">
+        <div style="position:relative;display:flex;align-items:center;gap:13px;padding:20px 22px;background:linear-gradient(120deg,rgba(45,212,191,.12),var(--surface));border-bottom:1px solid var(--bd1)">
+          <img src="assets/tech-avatar.png" alt="Tech" style="width:44px;height:44px;border-radius:50%;object-fit:cover;border:1px solid rgba(45,212,191,.4)"/>
+          <div style="line-height:1.3">
+            <div id="at-modal-title" style="font-family:'Space Grotesk';font-weight:600;font-size:17px;color:var(--text)">Agenda tu diagnóstico gratis</div>
+            <div id="at-modal-sub" style="font-size:12.5px;color:var(--text-3)">15 a 30 min, sin costo, te ayuda Tech</div>
+          </div>
+          <button data-act="closeModal" aria-label="Cerrar" style="margin-left:auto;background:var(--ov2);border:none;border-radius:9px;width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text-3)">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+          </button>
+        </div>
+
+        <sc-if data-when="scheduled">
+          <div style="max-width:440px;margin:0 auto;padding:40px 26px;text-align:center">
+            <span style="display:inline-flex;align-items:center;justify-content:center;width:64px;height:64px;border-radius:50%;background:rgba(52,211,153,.12);border:1px solid rgba(52,211,153,.35);margin-bottom:20px"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span>
+            <h3 style="font-family:'Space Grotesk';font-weight:600;font-size:22px;color:var(--text);margin-bottom:10px">¡Solicitud recibida!</h3>
+            <p style="font-size:14.5px;line-height:1.6;color:var(--text-2);max-width:320px;margin:0 auto 24px">Tech revisó tu solicitud. Te contactaremos muy pronto por WhatsApp o correo para confirmar tu diagnóstico.</p>
+            <button data-act="closeModal" style="font-family:'Space Grotesk';font-size:15px;font-weight:600;color:#061018;background:#2dd4bf;border:none;padding:14px 30px;border-radius:11px;cursor:pointer">Listo</button>
+          </div>
+        </sc-if>
+        <sc-if data-when="notScheduled">
+        <form data-act-submit="submitDemo" class="at-form" style="padding:22px">
+          <div role="tablist" aria-label="Tipo de sesión" class="at-f-full" style="display:flex;gap:6px;padding:4px;background:var(--surface-2);border:1px solid var(--bd2);border-radius:12px">
+            <button type="button" role="tab" data-act="setMode" data-mode="diagnostico" id="at-mode-diag" aria-selected="true" style="flex:1;padding:10px;border:none;border-radius:9px;cursor:pointer;font-family:'Space Grotesk';font-weight:600;font-size:13.5px;background:#2dd4bf;color:#061018;transition:background .2s,color .2s">Diagnóstico</button>
+            <button type="button" role="tab" data-act="setMode" data-mode="demo" id="at-mode-demo" aria-selected="false" style="flex:1;padding:10px;border:none;border-radius:9px;cursor:pointer;font-family:'Space Grotesk';font-weight:600;font-size:13.5px;background:transparent;color:var(--text-2);transition:background .2s,color .2s">Demo en vivo</button>
+          </div>
+          <input type="hidden" name="intent" id="at-intent" value="diagnostico"/>
+          <input type="hidden" name="lead_source" value="guias"/>
+          <input type="hidden" name="page" id="at-utm-page" value=""/>
+          <input type="hidden" name="utm_source" id="at-utm-source" value=""/>
+          <input type="hidden" name="utm_medium" id="at-utm-medium" value=""/>
+          <input type="hidden" name="utm_campaign" id="at-utm-campaign" value=""/>
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <label style="font-family:'JetBrains Mono';font-size:10px;letter-spacing:.1em;color:var(--text-faint)">NOMBRE Y NEGOCIO</label>
+            <input required name="nombre_negocio" placeholder="Ej: María, Café Aurora" style="background:var(--surface-2);border:1px solid var(--bd2);border-radius:10px;padding:12px 14px;font-family:'Manrope';font-size:14px;color:var(--text);outline:none"/>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <label style="font-family:'JetBrains Mono';font-size:10px;letter-spacing:.1em;color:var(--text-faint)">WHATSAPP</label>
+            <div style="display:flex;gap:8px;width:100%">
+              <select name="country_code" id="at-country-code" class="at-cc" aria-label="Código de país" style="flex:0 0 auto;width:142px;min-width:0;background:var(--surface-2);border:1px solid var(--bd2);border-radius:10px;padding:12px 10px;font-family:'Manrope';font-size:13.5px;color:var(--text);outline:none;cursor:pointer">
+                <option value="+56" selected>🇨🇱 Chile (+56)</option>
+                <option value="+54">🇦🇷 Argentina (+54)</option>
+                <option value="+57">🇨🇴 Colombia (+57)</option>
+                <option value="+52">🇲🇽 México (+52)</option>
+                <option value="+51">🇵🇪 Perú (+51)</option>
+                <option value="+593">🇪🇨 Ecuador (+593)</option>
+                <option value="+598">🇺🇾 Uruguay (+598)</option>
+                <option value="+58">🇻🇪 Venezuela (+58)</option>
+                <option value="+1">🇺🇸 USA/CA (+1)</option>
+                <option value="+34">🇪🇸 España (+34)</option>
+              </select>
+              <input required name="whatsapp" type="tel" inputmode="tel" autocomplete="tel-national" minlength="8" maxlength="15" placeholder="9 1234 5678" style="flex:1 1 0;min-width:0;background:var(--surface-2);border:1px solid var(--bd2);border-radius:10px;padding:12px 14px;font-family:'Manrope';font-size:14px;color:var(--text);outline:none"/>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <label style="font-family:'JetBrains Mono';font-size:10px;letter-spacing:.1em;color:var(--text-faint)">CORREO</label>
+            <input required type="email" name="correo" placeholder="tu@correo.cl" style="background:var(--surface-2);border:1px solid var(--bd2);border-radius:10px;padding:12px 14px;font-family:'Manrope';font-size:14px;color:var(--text);outline:none"/>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <label style="font-family:'JetBrains Mono';font-size:10px;letter-spacing:.1em;color:var(--text-faint)">¿QUÉ QUIERES VER?</label>
+            <select name="interes" id="at-modal-interes" style="background:var(--surface-2);border:1px solid var(--bd2);border-radius:10px;padding:12px 14px;font-family:'Manrope';font-size:14px;color:var(--text);outline:none">
+              <option>Diagnóstico gratis (recomendado)</option>
+              <option>Demo del portal omnicliente</option>
+              <option>Asistente inteligente / chatbot</option>
+              <option>Sitio web premium</option>
+              <option>App o sistema a medida</option>
+            </select>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <label style="font-family:'JetBrains Mono';font-size:10px;letter-spacing:.1em;color:var(--text-faint)">FECHA</label>
+            <input required type="date" name="fecha" id="at-fecha" class="at-date" autocomplete="off" style="background:var(--surface-2);border:1px solid var(--bd2);border-radius:10px;padding:11px 14px;font-family:'Manrope';font-size:14px;color:var(--text);outline:none"/>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <label style="font-family:'JetBrains Mono';font-size:10px;letter-spacing:.1em;color:var(--text-faint)">HORA</label>
+            <div id="at-slots" style="display:flex;flex-wrap:wrap;gap:7px;min-height:42px;align-items:center">
+              <span style="font-size:12.5px;color:var(--text-faint)">Elige una fecha para ver horarios disponibles.</span>
+            </div>
+            <input type="hidden" name="scheduled_time" id="at-scheduled-time" value=""/>
+            <input type="hidden" name="franja" id="at-franja" value=""/>
+          </div>
+          <label style="display:flex;align-items:flex-start;gap:9px;font-size:12.5px;line-height:1.5;color:var(--text-3);cursor:pointer">
+            <input type="checkbox" name="privacy_accept" required value="1" style="margin-top:2px;accent-color:#2dd4bf;width:16px;height:16px;flex-shrink:0"/>
+            <span>He leído y acepto la <a href="/privacidad/" target="_blank" rel="noopener" style="color:var(--accent-text);text-decoration:underline">Política de Privacidad</a> *</span>
+          </label>
+          <label style="display:flex;align-items:flex-start;gap:9px;font-size:12.5px;line-height:1.5;color:var(--text-faint);cursor:pointer">
+            <input type="checkbox" name="marketing_optin" value="1" style="margin-top:2px;accent-color:#2dd4bf;width:16px;height:16px;flex-shrink:0"/>
+            <span>Quiero recibir novedades y ofertas de AutomatizaTech (opcional)</span>
+          </label>          <button type="submit" class="at-f-full" style="display:flex;align-items:center;justify-content:center;gap:9px;font-family:'Space Grotesk';font-size:15.5px;font-weight:600;color:#061018;background:#2dd4bf;border:none;padding:15px;border-radius:12px;cursor:pointer;box-shadow:0 12px 30px -16px rgba(45,212,191,.7);transition:background .2s" data-hover="background:var(--accent-2)">Confirmar agendamiento
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+          </button>
+          <span class="at-f-full" style="text-align:center;font-size:11.5px;color:var(--text-faint)">Sin compromiso · respondemos el mismo día hábil</span>
+        </form>
+        </sc-if>
+      </div>
+    </div>
+  </sc-if>
+</div>

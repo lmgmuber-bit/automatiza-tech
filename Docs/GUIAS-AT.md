@@ -15,7 +15,20 @@ Sección de contenido propia del sitio: un listado en `https://automatizatech.cl
 
 Lo que la plantilla agrega sola: migas (Inicio › Guías › título), fechas de publicación y actualización con `<time datetime>`, el autor con su biografía, el botón «Agenda tu diagnóstico gratis» (abre el modal de agenda) y los datos estructurados `Article` + `BreadcrumbList`. La fecha de actualización es la de la última edición guardada.
 
-La biografía del autor vive en `inc/guias/puras.php` (`at_guias_autor()`). **Pendiente de aprobación de Luis antes de publicar la primera guía.**
+La biografía del autor vive en `inc/guias/puras.php` (`at_guias_autor()`). Luis la aprobó el 17-nov-2026 con «fundador de AutomatizaTech».
+
+## Estado: EN PROD desde el 17-nov-2026 (11:21)
+
+Subido por Eje con el OK de Luis, con `C:/Users/luis_/respaldos/deploy-scripts/2026-11-17-guias/deploy_guias.py` (commit `c4f3671`, 30 archivos). Antes de subir, se comparó cada archivo con PROD: los 30 eran iguales a la base `87a3b6e` o nuevos. Después del despliegue se hizo `wp rewrite flush` y se purgó LiteSpeed. La verificación HTTP desde afuera dio 39 de 39 comprobaciones en OK:
+
+- **`/guias/`:** responde 200, muestra el estado vacío, va con `noindex` y tiene un solo `<title>` y un solo canonical.
+- **Portada y seis landings:** el enlace «Guías» está, no queda ningún marcador sin reemplazar, hay un solo `<title>`, no se carga Phosphor y los cuatro títulos nuevos están.
+- **Navegador:** el modal de agenda abre con Turnstile y en 390 px de ancho no hay scroll horizontal.
+
+La landing de apps móviles no tiene página asignada en PROD: su plantilla se subió, pero no se ve.
+
+- **Respaldo:** `~/respaldos/guias-antes-20261117-112123.tar.gz`.
+- **Para volver atrás:** `deploy_guias.py rollback 20261117-112123`. Restaura los modificados, quita los nuevos, hace flush y purga.
 
 ## Mientras no haya guías
 
@@ -39,7 +52,7 @@ Subir en este orden (los de arriba no dependen de los de abajo; `functions.php` 
 | 10 | `assets/landing-automatizacion/body.html` y `assets/landing-sistemas-medida/body.html` (primer párrafo con las frases nuevas) | OBLIGATORIO para los títulos |
 | — | `tests/guias/*`, `tests/seo-tecnico/ganchos-test.php`, `Docs/GUIAS-AT.md` | OPCIONAL, no se suben a PROD |
 
-Los archivos 6 y 7 van juntos: un `body.html` con el marcador sin su plantilla nueva deja `{{GUIAS_PIE}}` visible en el pie. `functions.php` en PROD está adelantado respecto del repo (ver `CLAUDE.md`): **no subir el de este repo completo**, solo agregar la línea
+Los archivos 6 y 7 van juntos: un `body.html` con el marcador sin su plantilla nueva deja `{{GUIAS_PIE}}` visible en el pie. El 17-nov, el `functions.php` de PROD era igual al de la base `87a3b6e`, así que se subió el de la rama. Si vuelve a divergir, no subas el archivo completo: agrega solo la línea
 `require_once get_template_directory() . '/inc/guias/cargar.php';` después de la de `inc/seo-tecnico/cargar.php`.
 
 Después de subir: **`wp rewrite flush`** (o wp-admin › Ajustes › Enlaces permanentes › Guardar). Sin eso `/guias/` da 404. El código además lo hace una vez solo (opción `at_guias_rewrite`), pero se deja como paso explícito.

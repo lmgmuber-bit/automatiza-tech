@@ -23,6 +23,7 @@ $body = str_replace('{{HOME_URL}}', esc_url(home_url('/')), $body);
 require_once get_template_directory() . '/inc/at-servicios.php';
 $body = str_replace('{{OTROS_SERVICIOS}}', at_otros_servicios_html('automatizacion-negocios-whatsapp-crm'), $body);
 $body = str_replace('{{PREFERENCIAS_COOKIES}}', at_preferencias_cookies_html(), $body);
+$body = str_replace('{{GUIAS_PIE}}', at_guias_pie_html(), $body);
 // Menú «Servicios» del encabezado (escritorio y celular) + su cierre al hacer clic afuera.
 $body = str_replace('{{MENU_SERVICIOS}}', at_menu_servicios_html('automatizacion-negocios-whatsapp-crm'), $body);
 $body = str_replace('{{MENU_SERVICIOS_MOVIL}}', at_menu_servicios_movil_html('automatizacion-negocios-whatsapp-crm'), $body);
@@ -38,12 +39,12 @@ $canonical = home_url('/automatizacion-negocios-whatsapp-crm/');
 <head>
 <meta charset="<?php bloginfo('charset'); ?>">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Automatización de Negocios: WhatsApp, CRM, Agenda y Reportes | AutomatizaTech</title>
-<meta name="description" content="Conectamos WhatsApp, CRM, agenda y pagos en un solo sistema. Automatización de procesos para PyMEs en Chile. Diagnóstico gratis.">
+<title>Automatización de procesos: WhatsApp, CRM, agenda y reportes | AutomatizaTech</title>
+<meta name="description" content="Automatización de procesos para pymes en Chile: conectamos WhatsApp, CRM, agenda y pagos en un solo sistema. Diagnóstico gratis.">
 <link rel="canonical" href="<?php echo esc_url($canonical); ?>">
 <meta property="og:type" content="website">
-<meta property="og:title" content="Automatización de Negocios: WhatsApp, CRM, Agenda y Reportes | AutomatizaTech">
-<meta property="og:description" content="Conectamos WhatsApp, CRM, agenda y pagos en un solo sistema. Diagnóstico gratis.">
+<meta property="og:title" content="Automatización de procesos: WhatsApp, CRM, agenda y reportes | AutomatizaTech">
+<meta property="og:description" content="Automatización de procesos: conectamos WhatsApp, CRM, agenda y pagos en un solo sistema. Diagnóstico gratis.">
 <meta property="og:url" content="<?php echo esc_url($canonical); ?>">
 <link rel="icon" type="image/svg+xml" href="<?php echo esc_url($at_img); ?>/favicon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">

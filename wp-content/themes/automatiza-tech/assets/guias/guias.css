@@ -1,0 +1,88 @@
+/* Guías de AutomatizaTech (/guias/): se suma a at-home.css y usa sus variables (tema oscuro y claro). */
+.at-guias{font-family:'Manrope',system-ui,sans-serif;color:var(--text)}
+.gu-salto{position:absolute;left:-9999px;top:8px;z-index:200;background:#2dd4bf;color:#061018;padding:10px 16px;border-radius:8px;font-weight:600}
+.gu-salto:focus{left:12px}
+.gu-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.gu-main{display:block;padding:clamp(28px,5vw,64px) 0 clamp(56px,8vw,110px)}
+.gu-wrap{max-width:1200px;margin:0 auto;padding:0 28px}
+.gu-wrap--lectura{max-width:800px}
+.at-guias a:focus-visible,.at-guias summary:focus-visible,.at-guias button:focus-visible{outline:2px solid var(--accent-2);outline-offset:3px;border-radius:6px}
+
+.gu-migas ol{list-style:none;margin:0 0 26px;padding:0;display:flex;flex-wrap:wrap;align-items:center;gap:6px;font-size:13.5px;color:var(--text-3)}
+.gu-migas li{display:inline-flex;align-items:center;gap:6px;min-width:0}
+.gu-migas a{display:inline-flex;align-items:center;gap:6px;color:var(--text-2)}
+.gu-migas a:hover{color:var(--text);text-decoration:underline}
+.gu-migas [aria-current]{color:var(--text);font-weight:600;overflow-wrap:anywhere}
+.gu-sep{font-size:12px;color:var(--text-faint)}
+
+.gu-etiqueta{display:inline-flex;align-items:center;gap:9px;font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:500;letter-spacing:.18em;color:var(--label)}
+.gu-cab h1{margin:16px 0 0;font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:clamp(30px,4.6vw,48px);line-height:1.1;letter-spacing:-.028em;color:var(--text);text-wrap:balance;overflow-wrap:anywhere}
+.gu-lead{margin:18px 0 0;font-size:clamp(16.5px,1.7vw,19px);line-height:1.62;color:var(--text-2);max-width:62ch;text-wrap:pretty}
+.gu-meta{margin:22px 0 0;display:flex;flex-wrap:wrap;gap:8px 22px;font-size:13.5px;color:var(--text-3)}
+.gu-meta span{display:inline-flex;align-items:center;gap:7px}
+.gu-meta i{font-size:16px;color:var(--label)}
+.gu-portada{margin:30px 0 0}
+.gu-portada img{width:100%;height:auto;border-radius:16px;border:1px solid var(--bd2);display:block}
+
+/* Cuerpo de la guía */
+.gu-cuerpo{margin-top:36px;font-size:17px;line-height:1.75;color:var(--text-2);overflow-wrap:anywhere}
+.gu-cuerpo>*+*{margin-top:1.1em}
+.gu-cuerpo h2{margin-top:2em;font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:clamp(24px,3vw,30px);line-height:1.2;letter-spacing:-.02em;color:var(--text)}
+.gu-cuerpo h3{margin-top:1.6em;font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:21px;line-height:1.25;color:var(--text)}
+.gu-cuerpo a{color:var(--accent-text);text-decoration:underline;text-underline-offset:3px}
+.gu-cuerpo a:hover{color:var(--text)}
+.gu-cuerpo ul,.gu-cuerpo ol{padding-left:1.4em}
+.gu-cuerpo li+li{margin-top:.45em}
+.gu-cuerpo strong{color:var(--text)}
+.gu-cuerpo blockquote{margin-left:0;padding:4px 0 4px 20px;border-left:3px solid var(--accent-2);color:var(--text-2)}
+.gu-cuerpo img,.gu-cuerpo figure{max-width:100%;height:auto;border-radius:12px}
+.gu-cuerpo table{width:100%;border-collapse:collapse;font-size:15px;display:block;overflow-x:auto}
+.gu-cuerpo th,.gu-cuerpo td{padding:10px 12px;border:1px solid var(--bd2);text-align:left}
+.gu-cuerpo th{background:var(--surface-2);color:var(--text)}
+
+/* Autor */
+.gu-autor{margin-top:48px;display:flex;gap:16px;align-items:flex-start;padding:22px;background:var(--surface);border:1px solid var(--bd2);border-radius:16px}
+.gu-autor-ico{flex:none;font-size:44px;color:var(--accent-2)}
+.gu-autor h2{margin:0;font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:18px;color:var(--text)}
+.gu-autor p{margin:6px 0 0;font-size:14.5px;line-height:1.6;color:var(--text-2)}
+
+/* CTA */
+.gu-cta{margin-top:28px;padding:clamp(24px,4vw,38px);background:linear-gradient(120deg,rgba(45,212,191,.12),var(--surface));border:1px solid var(--bd2);border-radius:18px}
+.gu-cta h2{margin:0;display:flex;align-items:center;gap:11px;font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:clamp(21px,2.6vw,27px);line-height:1.2;color:var(--text)}
+.gu-cta h2 i{color:var(--accent-2)}
+.gu-cta p{margin:12px 0 22px;font-size:16px;line-height:1.6;color:var(--text-2);max-width:56ch}
+
+/* Botones */
+.gu-btn{display:inline-flex;align-items:center;gap:10px;font-family:'Space Grotesk',sans-serif;font-size:15.5px;font-weight:600;color:#061018;background:#2dd4bf;padding:15px 24px;border-radius:11px;box-shadow:0 12px 30px -16px rgba(45,212,191,.7);transition:transform .2s,background .2s;text-decoration:none;min-height:48px}
+.gu-btn:hover{transform:translateY(-2px);background:var(--accent-2)}
+.gu-btn--suave{margin-top:auto;padding:11px 18px;min-height:44px;font-size:14.5px;background:transparent;color:var(--accent-text);border:1px solid var(--bd3);box-shadow:none}
+.gu-btn--suave:hover{background:var(--ov2);color:var(--text)}
+.gu-btn i{font-size:18px}
+
+/* Listado */
+.gu-lista{list-style:none;margin:44px 0 0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,320px),1fr));gap:18px}
+.gu-tarjeta article{height:100%;display:flex;flex-direction:column;gap:12px;padding:22px;background:var(--surface);border:1px solid var(--bd2);border-radius:16px;transition:border-color .25s,transform .25s}
+.gu-tarjeta article:hover{border-color:rgba(45,212,191,.45);transform:translateY(-2px)}
+.gu-tarjeta-img img{width:100%;height:auto;aspect-ratio:16/9;object-fit:cover;border-radius:10px;display:block}
+.gu-tarjeta h2{margin:0;font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:20px;line-height:1.25;letter-spacing:-.015em;overflow-wrap:anywhere}
+.gu-tarjeta h2 a{color:var(--text)}
+.gu-fecha{margin:0;display:inline-flex;align-items:center;gap:7px;font-size:13px;color:var(--text-3)}
+.gu-extracto{margin:0;font-size:15px;line-height:1.6;color:var(--text-2)}
+.gu-paginas{margin-top:36px}
+.gu-paginas .page-numbers{display:inline-flex;align-items:center;justify-content:center;min-width:44px;min-height:44px;margin:0 3px;border:1px solid var(--bd2);border-radius:10px;color:var(--text-2)}
+.gu-paginas .current{background:#2dd4bf;color:#061018;border-color:#2dd4bf;font-weight:600}
+.gu-ico-prev{transform:scaleX(-1)}
+
+/* Estado vacío */
+.gu-vacio{margin-top:44px;text-align:center;padding:clamp(36px,6vw,64px) 24px;background:var(--surface);border:1px dashed var(--bd3);border-radius:20px}
+.gu-vacio-ico{font-size:46px;color:var(--accent-2)}
+.gu-vacio h2{margin:16px 0 0;font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:clamp(22px,3vw,28px);color:var(--text)}
+.gu-vacio p{margin:12px auto 26px;max-width:46ch;font-size:16px;line-height:1.6;color:var(--text-2)}
+
+@media (max-width:520px){
+	.gu-wrap{padding:0 16px}
+	.gu-autor{flex-direction:column}
+	.gu-cuerpo{font-size:16.5px}
+	.gu-btn{width:100%;justify-content:center;text-align:center}
+}
+@media (prefers-reduced-motion:reduce){.gu-btn,.gu-tarjeta article{transition:none}.gu-btn:hover,.gu-tarjeta article:hover{transform:none}}

@@ -27,6 +27,7 @@ $body = str_replace('{{HOME_URL}}', esc_url(home_url('/')), $body);
 require_once get_template_directory() . '/inc/at-servicios.php';
 $body = str_replace('{{OTROS_SERVICIOS}}', at_otros_servicios_html('asistentes-inteligentes-ia-whatsapp'), $body);
 $body = str_replace('{{PREFERENCIAS_COOKIES}}', at_preferencias_cookies_html(), $body);
+$body = str_replace('{{GUIAS_PIE}}', at_guias_pie_html(), $body);
 // Menú «Servicios» del encabezado (escritorio y celular) + su cierre al hacer clic afuera.
 $body = str_replace('{{MENU_SERVICIOS}}', at_menu_servicios_html('asistentes-inteligentes-ia-whatsapp'), $body);
 $body = str_replace('{{MENU_SERVICIOS_MOVIL}}', at_menu_servicios_movil_html('asistentes-inteligentes-ia-whatsapp'), $body);
@@ -42,11 +43,11 @@ $canonical = home_url('/asistentes-inteligentes-ia-whatsapp/');
 <head>
 <meta charset="<?php bloginfo('charset'); ?>">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Asistente Inteligente con IA para WhatsApp e Instagram | AutomatizaTech</title>
-<meta name="description" content="Chatbot con inteligencia artificial que responde, agenda y vende 24/7 en WhatsApp e Instagram. Implementación en Chile, diagnóstico gratis para tu negocio.">
+<title>Chatbot de WhatsApp con IA para empresas en Chile | AutomatizaTech</title>
+<meta name="description" content="Chatbot de WhatsApp con IA para empresas en Chile: responde, agenda y vende 24/7 en WhatsApp e Instagram. Implementación en Chile y diagnóstico gratis.">
 <link rel="canonical" href="<?php echo esc_url($canonical); ?>">
 <meta property="og:type" content="website">
-<meta property="og:title" content="Asistente Inteligente con IA para WhatsApp e Instagram | AutomatizaTech">
+<meta property="og:title" content="Chatbot de WhatsApp con IA para empresas en Chile | AutomatizaTech">
 <meta property="og:description" content="Chatbot con IA que responde, agenda y vende 24/7 en WhatsApp e Instagram. Diagnóstico gratis.">
 <meta property="og:url" content="<?php echo esc_url($canonical); ?>">
 <link rel="icon" type="image/svg+xml" href="<?php echo esc_url($at_img); ?>/favicon.svg">
@@ -59,7 +60,7 @@ $canonical = home_url('/asistentes-inteligentes-ia-whatsapp/');
 {
   "@context": "https://schema.org",
   "@type": "Service",
-  "serviceType": "Asistente virtual con inteligencia artificial para WhatsApp e Instagram",
+  "serviceType": "Chatbot de WhatsApp con inteligencia artificial para empresas (asistente virtual en WhatsApp e Instagram)",
   "provider": {
     "@type": "LocalBusiness",
     "name": "AutomatizaTech",

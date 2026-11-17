@@ -31,6 +31,7 @@ $body = str_replace('assets/', $at_img . '/', $body);
 // Pie: enlace «Preferencias de cookies» (reabre el aviso del mu-plugin at-consentimiento).
 require_once $at_dir . '/inc/at-servicios.php';
 $body = str_replace('{{PREFERENCIAS_COOKIES}}', at_preferencias_cookies_html(), $body);
+$body = str_replace('{{GUIAS_PIE}}', at_guias_pie_html(), $body);
 // Menú «Servicios» del encabezado (escritorio y celular) + su cierre al hacer clic afuera.
 $body = str_replace('{{MENU_SERVICIOS}}', at_menu_servicios_html(''), $body);
 $body = str_replace('{{MENU_SERVICIOS_MOVIL}}', at_menu_servicios_movil_html(''), $body);

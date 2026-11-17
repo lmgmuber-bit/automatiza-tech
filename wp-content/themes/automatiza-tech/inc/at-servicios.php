@@ -79,6 +79,31 @@ function at_preferencias_cookies_html(): string {
 }
 
 /**
+ * Enlace «Guías» (16-nov-2026): va junto al menú «Servicios» en el encabezado y en el menú del celular
+ * de la portada y de todas las landings, porque las dos funciones de abajo lo agregan a su salida.
+ * El ícono es Phosphor 2.1.1 alojado en el tema (assets/vendor/phosphor); su CSS lo carga inc/guias/cargar.php.
+ */
+function at_guias_url(): string {
+    return esc_url(home_url('/guias/'));
+}
+
+function at_menu_guias_html(): string {
+    return '<a href="' . at_guias_url() . '" class="at-guias-enlace" style="display:inline-flex;align-items:center;gap:6px;font-size:14px;font-weight:500;color:var(--text-3);transition:color .2s" data-hover="color:var(--text)">'
+        . '<i class="ph ph-book-open" aria-hidden="true" style="font-size:16px"></i>Guías</a>';
+}
+
+function at_menu_guias_movil_html(): string {
+    return '<a href="' . at_guias_url() . '" data-act="closeMenu" style="display:flex;align-items:center;gap:10px;padding:13px 12px;font-weight:600;color:var(--text-2);border-radius:8px">'
+        . '<i class="ph ph-book-open" aria-hidden="true" style="font-size:18px"></i>Guías</a>';
+}
+
+/** Enlace «Guías» del pie (marcador {{GUIAS_PIE}} en el body.html de cada página). */
+function at_guias_pie_html(): string {
+    return '<a href="' . at_guias_url() . '" style="display:inline-flex;align-items:center;gap:8px;font-size:14px;color:var(--text-3)" data-hover="color:var(--text)">'
+        . '<i class="ph ph-book-open" aria-hidden="true" style="font-size:15px"></i>Guías</a>';
+}
+
+/**
  * Menú «Servicios» del encabezado (12-nov-2026, pedido de Luis): reemplaza el enlace «Soluciones».
  * Escritorio: lista desplegable con <details> (funciona sin JS y con teclado). $actual marca la página abierta.
  */
@@ -96,7 +121,8 @@ function at_menu_servicios_html(string $actual = ''): string {
         . '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>'
         . 'Servicios <svg class="at-ms-flecha" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></summary>'
         . '<div style="position:absolute;top:calc(100% + 14px);left:50%;transform:translateX(-50%);width:300px;padding:8px;background:var(--surface);border:1px solid var(--bd2);border-radius:14px;box-shadow:0 24px 60px -24px rgba(0,0,0,.6);z-index:70">'
-        . $items . $todas . '</div></details>';
+        . $items . $todas . '</div></details>'
+        . at_menu_guias_html();
 }
 
 /** Menú del celular: grupo «Servicios» desplegable dentro del menú hamburguesa. */
@@ -109,7 +135,8 @@ function at_menu_servicios_movil_html(string $actual = ''): string {
     }
     return '<details class="at-ms-movil"><summary style="list-style:none;display:flex;align-items:center;justify-content:space-between;padding:13px 12px;font-weight:600;color:var(--text-2);border-radius:8px;cursor:pointer">Servicios'
         . '<svg class="at-ms-flecha" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></summary>'
-        . '<div style="padding:2px 0 8px 10px;border-left:1px solid var(--bd2);margin-left:12px">' . $items . '</div></details>';
+        . '<div style="padding:2px 0 8px 10px;border-left:1px solid var(--bd2);margin-left:12px">' . $items . '</div></details>'
+        . at_menu_guias_movil_html();
 }
 
 /** Estilos y cierre del menú (clic afuera o Escape). Va al final del <body>, fuera de los sc-if. */

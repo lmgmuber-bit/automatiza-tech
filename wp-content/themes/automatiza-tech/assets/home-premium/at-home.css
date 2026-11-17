@@ -181,3 +181,5 @@ a.at-cl-card:hover .at-cl-logo img{transform:scale(1.04)}
 .at-form-espera{margin:0;text-align:center;font-size:13px;line-height:1.45;color:var(--text-2)}
 .at-form-espera[hidden]{display:none}
 @media (prefers-reduced-motion:reduce){.at-spin{animation-duration:2.4s}}
+/* Pestañas del modal de agenda (Diagnóstico | Demo | Seguimiento, 17-nov-2026): en pantallas angostas sin ícono, para que las tres quepan en una línea. */
+@media (max-width:420px){.at-tab-modo svg{display:none}.at-tab-modo{white-space:nowrap;font-size:12.5px !important}}

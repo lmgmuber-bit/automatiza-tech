@@ -12,7 +12,7 @@ function at_guias_autor(): array {
 	return [
 		'nombre' => 'Luis Miguel González',
 		'url'    => AT_GUIAS_BASE . '/',
-		'bio'    => 'Luis Miguel González encabeza AutomatizaTech, un equipo chileno de estrategia, diseño, desarrollo e IA. Ayuda a pymes de Chile a conectar WhatsApp, CRM, agenda y pagos, y a construir sitios y sistemas a medida.',
+		'bio'    => 'Luis Miguel González es fundador de AutomatizaTech, un equipo chileno de estrategia, diseño, desarrollo e IA. Ayuda a pymes de Chile a conectar WhatsApp, CRM, agenda y pagos, y a construir sitios y sistemas a medida.',
 	];
 }
 

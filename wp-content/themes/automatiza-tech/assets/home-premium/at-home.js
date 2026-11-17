@@ -198,6 +198,11 @@
         setFormMessage(form, 'error', 'Elige fecha y hora disponible para agendar.');
         return;
       }
+      var tsToken = window.atTurnstile ? window.atTurnstile.token(form) : '';
+      if (window.atTurnstile && window.atTurnstile.activo() && !tsToken) {
+        setFormMessage(form, 'error', window.atTurnstile.FALTA);
+        return;
+      }
       // 'YYYY-MM-DD' ordena lexicográficamente igual que por fecha.
       if (scheduledDate < todayISO()) {
         setFormMessage(form, 'error', 'Solo puedes agendar desde hoy en adelante. Elige otra fecha.');
@@ -277,6 +282,7 @@
             body: JSON.stringify({
               action: 'saveLead',
               sessionId: payload.session_id,
+              turnstileToken: tsToken,
               leadData: {
                 name: payload.name,
                 email: payload.email,
@@ -301,6 +307,7 @@
           });
         })
         .then(function (r) {
+          if (r.status === 403 && window.atTurnstile) throw new Error(window.atTurnstile.RECHAZO);
           if (!r.ok) throw new Error('No pudimos registrar la cita. Intenta nuevamente.');
           return r.text();
         })
@@ -331,6 +338,8 @@
         })
         .finally(function () {
           form.__enviando = false;
+          // El token sirve una sola vez: casilla nueva para la próxima cita (o el reintento).
+          if (window.atTurnstile) window.atTurnstile.reiniciar(form);
           form.removeAttribute('aria-busy');
           if (espera) { espera.textContent = ''; espera.hidden = true; }
           if (submit) {
@@ -369,6 +378,10 @@
     document.querySelectorAll('[data-act-submit]').forEach(function (el) {
       var fn = H[el.getAttribute('data-act-submit')];
       if (fn) el.addEventListener('submit', fn);
+      // Casilla anti-robot (Turnstile) sobre el botón de agendar; n8n rechaza la cita sin token válido.
+      if (window.atTurnstile && el.getAttribute('data-act-submit') === 'submitDemo') {
+        window.atTurnstile.enForm(el, el.querySelector('[type="submit"]'));
+      }
     });
     document.querySelectorAll('[data-hover]').forEach(function (el) {
       var hov = el.getAttribute('data-hover');

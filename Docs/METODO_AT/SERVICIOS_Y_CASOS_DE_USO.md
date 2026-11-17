@@ -38,6 +38,7 @@ flowchart TD
 | Portal OmniCliente | Múltiples canales, bots y agentes | Atención organizada | SLA/tiempo de respuesta |
 | Marketing digital | Buen servicio sin demanda estable | Leads medibles y crecimiento | CAC/ROAS/conversión |
 | Asesoría tecnológica | Herramientas dispersas y prioridades confusas | Roadmap de inversión | Ahorro/impacto ejecutado |
+| Posicionamiento SEO, web y en buscadores con IA | Negocio con sitio que Google y ChatGPT no muestran o muestran mal | Ser encontrado y elegido en búsquedas | Clics y consultas orgánicas, reseñas |
 
 ## 1. Sitio web premium o a medida
 
@@ -250,6 +251,35 @@ flowchart LR
 
 Entregables: diagnóstico ejecutivo, procesos, inventario tecnológico, riesgos, oportunidades, arquitectura, roadmap, presupuesto, proveedores y acompañamiento.
 
+## 11. Posicionamiento SEO, web y en buscadores con IA (incluye ChatGPT Business Hub)
+
+Servicio formal de AT desde el 16-nov-2026 (decisión de Luis). Lo ejecutamos hoy en automatizatech.cl y lo supervisamos en los proyectos de clientes (dueño interno: Faro, el SEO de AT). Fuente de lo hecho: bóveda `10-Projects/2026-11-05-AT-Estrategia-SEO-Google.md` y `10-Projects/2026-11-16-SEO-Supervision-Proyectos.md`; estándar `Shared-Tools/Estandar-Visibilidad-Web-IA.md`; guía técnica `Docs/SEO-TECNICO-AUTOMATIZATECH.md`.
+
+**Ejemplo:** pyme con sitio propio que no aparece cuando la buscan, con fichas duplicadas o sin reseñas, y que no sabe si ChatGPT la conoce.
+
+```mermaid
+flowchart LR
+    A["Auditoría técnica y de contenido"] --> B["SEO técnico: título, canonical, sitemap, robots"]
+    B --> C["Search Console + GA4 con consentimiento"]
+    C --> D["Perfil de Empresa de Google + reseñas"]
+    D --> E["ChatGPT Business Hub y búsqueda con IA"]
+    E --> F["Contenido: guías por palabra clave"]
+    F --> G["Informe semanal contra línea base"]
+```
+
+Qué incluye (lo que ya hacemos, lista de revisión de Faro):
+1. Un título, descripción y canonical por página; dominio con y sin `www` resuelto con 301.
+2. Sitemap y robots.txt con política para IA (buscadores sí, entrenamiento no, salvo decisión del cliente); `llms.txt` opcional.
+3. Search Console verificado, sitemap enviado y validaciones al día.
+4. GA4 solo con consentimiento, evento de lead o llamada como evento clave y filtro de tráfico interno.
+5. Google Ads: conversión importada y campañas medidas (si el cliente invierte en anuncios).
+6. Perfil de Empresa de Google verificado y enlace para pedir reseñas.
+7. **ChatGPT Business Hub** (`chatgpt.com/business-hub`, beta de OpenAI desde el 10-nov-2026): perfil del negocio en ChatGPT. Hoy permite crear perfiles de negocios en línea; un local físico solo puede reclamar fichas existentes en EE. UU. Publicar exige verificar el dominio (registro TXT) y la identidad del dueño con Persona, que hace el propio cliente. AT lo publicó para sí el 16-nov-2026.
+8. Contenido: guías y páginas por palabra clave con datos del Planificador de Google Ads (ej. sección `/guias/` de AT).
+9. Informe semanal contra una línea base.
+
+**Qué no prometemos:** posiciones en Google, apariciones o citas en ChatGPT u otros buscadores con IA, ni plazos de indexación: dependen de Google y OpenAI. Separamos lo técnico listo, lo indexado y lo observado (estándar de visibilidad web IA). Precios: los define Luis por caso; no se publican sin su OK.
+
 ## Paquetes frecuentes
 
 ```mermaid
@@ -281,6 +311,7 @@ flowchart TD
 | Portal OmniCliente | Canales/equipo/SLA | Configuración e integraciones | Permisos, mensajes, takeover | Tickets, errores, consumo |
 | Marketing | Oferta, ICP y medición | Activos, campañas, tracking | Eventos, atribución, calidad lead | Optimización mensual |
 | Asesoría | Auditoría y objetivos | Roadmap y arquitectura | Validación ejecutiva | Acompañamiento |
+| Posicionamiento SEO/IA | Auditoría técnica, palabras clave y línea base | SEO técnico, fichas (Google, ChatGPT Business Hub) y contenido | Search Console, GA4 y verificación desde afuera | Informe semanal y contenido nuevo |
 
 ## Regla comercial
 

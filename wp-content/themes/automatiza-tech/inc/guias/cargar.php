@@ -36,9 +36,9 @@ function at_guias_es_pagina(): bool {
 	return is_post_type_archive('guia') || is_singular('guia');
 }
 
-/** Íconos Phosphor 2.1.1 alojados en el tema: en las guías y en todas las páginas con el menú de AT (el enlace «Guías» lleva ícono). */
+/** Íconos Phosphor 2.1.1 alojados en el tema: solo en las páginas de guías (el enlace «Guías» del menú va en SVG). */
 add_action('wp_head', function () {
-	if (!at_guias_es_pagina() && !is_page_template(at_seo_plantillas_propias())) { return; }
+	if (!at_guias_es_pagina()) { return; }
 	$d = get_template_directory_uri() . '/assets/vendor/phosphor/2.1.1';
 	echo '<link rel="preload" href="' . esc_url($d . '/Phosphor.woff2') . '" as="font" type="font/woff2" crossorigin>' . "\n";
 	echo '<link rel="stylesheet" href="' . esc_url($d . '/phosphor.css') . '">' . "\n";

@@ -81,7 +81,8 @@ function at_preferencias_cookies_html(): string {
 /**
  * Enlace «Guías» (16-nov-2026): va junto al menú «Servicios» en el encabezado y en el menú del celular
  * de la portada y de todas las landings, porque las dos funciones de abajo lo agregan a su salida.
- * El ícono es Phosphor 2.1.1 alojado en el tema (assets/vendor/phosphor); su CSS lo carga inc/guias/cargar.php.
+ * El ícono va en SVG en línea, con el mismo trazo que los del menú «Servicios»: así ninguna página baja la fuente de
+ * íconos solo por este enlace (Phosphor queda para las páginas de guías).
  */
 function at_guias_url(): string {
     return esc_url(home_url('/guias/'));
@@ -89,18 +90,18 @@ function at_guias_url(): string {
 
 function at_menu_guias_html(): string {
     return '<a href="' . at_guias_url() . '" class="at-guias-enlace" style="display:inline-flex;align-items:center;gap:6px;font-size:14px;font-weight:500;color:var(--text-3);transition:color .2s" data-hover="color:var(--text)">'
-        . '<i class="ph ph-book-open" aria-hidden="true" style="font-size:16px"></i>Guías</a>';
+        . '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 4h6a4 4 0 0 1 4 4v13a3 3 0 0 0-3-3H2z"/><path d="M22 4h-6a4 4 0 0 0-4 4v13a3 3 0 0 1 3-3h7z"/></svg>Guías</a>';
 }
 
 function at_menu_guias_movil_html(): string {
     return '<a href="' . at_guias_url() . '" data-act="closeMenu" style="display:flex;align-items:center;gap:10px;padding:13px 12px;font-weight:600;color:var(--text-2);border-radius:8px">'
-        . '<i class="ph ph-book-open" aria-hidden="true" style="font-size:18px"></i>Guías</a>';
+        . '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 4h6a4 4 0 0 1 4 4v13a3 3 0 0 0-3-3H2z"/><path d="M22 4h-6a4 4 0 0 0-4 4v13a3 3 0 0 1 3-3h7z"/></svg>Guías</a>';
 }
 
 /** Enlace «Guías» del pie (marcador {{GUIAS_PIE}} en el body.html de cada página). */
 function at_guias_pie_html(): string {
     return '<a href="' . at_guias_url() . '" style="display:inline-flex;align-items:center;gap:8px;font-size:14px;color:var(--text-3)" data-hover="color:var(--text)">'
-        . '<i class="ph ph-book-open" aria-hidden="true" style="font-size:15px"></i>Guías</a>';
+        . '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 4h6a4 4 0 0 1 4 4v13a3 3 0 0 0-3-3H2z"/><path d="M22 4h-6a4 4 0 0 0-4 4v13a3 3 0 0 1 3-3h7z"/></svg>Guías</a>';
 }
 
 /**

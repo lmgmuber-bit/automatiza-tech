@@ -438,7 +438,7 @@ class InvoicePDFFPDF extends FPDF {
             $this->SetX(15);
             $this->SetFont('Arial', 'I', 9);
             $this->SetTextColor($this->gray_color[0], $this->gray_color[1], $this->gray_color[2]);
-            $this->Cell(180, 6, utf8_to_latin1('* Resumen internacional - No aplica IVA chileno'), 0, 1, 'R');
+            $this->Cell(180, 6, utf8_to_latin1('* Cliente en el extranjero. El tratamiento del IVA se indica en el documento tributario.'), 0, 1, 'R');
             $this->Ln(2);
         }
         

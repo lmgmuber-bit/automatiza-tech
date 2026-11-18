@@ -34,6 +34,7 @@ $body = str_replace('{{HOME_URL}}', esc_url(home_url('/')), $body);
 require_once get_template_directory() . '/inc/at-servicios.php';
 $body = str_replace('{{OTROS_SERVICIOS}}', at_otros_servicios_html((string) $at_slug_actual), $body);
 $body = str_replace('{{PREFERENCIAS_COOKIES}}', at_preferencias_cookies_html(), $body);
+$body = str_replace('{{GUIAS_PIE}}', at_guias_pie_html(), $body);
 // Menú «Servicios» del encabezado (escritorio y celular) + su cierre al hacer clic afuera.
 $body = str_replace('{{MENU_SERVICIOS}}', at_menu_servicios_html((string) $at_slug_actual), $body);
 $body = str_replace('{{MENU_SERVICIOS_MOVIL}}', at_menu_servicios_movil_html((string) $at_slug_actual), $body);

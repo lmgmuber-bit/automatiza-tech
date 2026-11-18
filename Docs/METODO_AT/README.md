@@ -17,6 +17,7 @@ Esta carpeta documenta cómo AutomatizaTech diagnostica, propone, ejecuta, entre
 - [Orden de la ficha CRM](./CRM-FICHA-ORDEN.md): AT-CRM-001, presentación local de Plan y Entregables, validación y archivos de entrega; revisión pendiente.
 - [Retomar prospectos](./RETOMAR-PROSPECTOS.md): AT-RETOMAR-001, guía local de operación, límites, bajas y entrega FTP/renderer/n8n; revisión B y autorización de PROD/piloto pendientes.
 - [Prototipos de Claude Design y demos](./PROTOTIPOS-Y-DEMOS.md): publicar un export en `automatizatech.cl/demos/<rubro>/`, arreglo móvil obligatorio, advertencia de alcohol y video de recorrido para WhatsApp.
+- [Medición de Meta por servidor (CAPI) y casilla anti-robot (Turnstile) para un cliente](./GUIA-CAPI-Y-TURNSTILE-CLIENTES.md): paso a paso con los errores del 16-nov-2026 y fuentes oficiales; primero Turnstile, después la CAPI.
 - [Flujo cliente end-to-end](../FLUJO_CLIENTE_END_TO_END.md): inventario histórico de capacidades existentes, faltantes y automatizaciones propuestas.
 - [Prompt final de Claude Orquestador](../ORCHESTRATION/CLAUDE_ORCHESTRATOR_PROMPT_FINAL.md): contexto autónomo para iniciar o recuperar al orquestador principal.
 

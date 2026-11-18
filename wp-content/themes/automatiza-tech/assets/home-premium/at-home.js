@@ -53,6 +53,13 @@
       title: 'Agenda tu demo en vivo',
       sub: 'Te mostramos el portal y los asistentes funcionando',
       interes: 'Demo del portal omnicliente'
+    },
+    // Pedido de Luis (17-nov-2026): los clientes agendan su reunión de seguimiento. n8n revisa por teléfono
+    // y correo si es cliente o tiene propuesta; si no, la agenda como diagnóstico (y cuenta como lead).
+    seguimiento: {
+      title: 'Agenda tu reunión de seguimiento',
+      sub: 'Si ya eres cliente, elige el día y la hora; usa el WhatsApp y el correo con que trabajas con nosotros',
+      interes: 'Reunión de seguimiento (ya soy cliente)'
     }
   };
   function applyMode() {
@@ -62,7 +69,7 @@
     var intent = document.getElementById('at-intent'); if (intent) intent.value = state.modalMode;
     var sel = document.getElementById('at-modal-interes');
     if (sel) { for (var i = 0; i < sel.options.length; i++) { if (sel.options[i].text === m.interes) { sel.selectedIndex = i; break; } } }
-    var diag = document.getElementById('at-mode-diag'), demo = document.getElementById('at-mode-demo');
+    var diag = document.getElementById('at-mode-diag'), demo = document.getElementById('at-mode-demo'), seg = document.getElementById('at-mode-seg');
     function paint(btn, on) {
       if (!btn) return;
       btn.setAttribute('aria-selected', on ? 'true' : 'false');
@@ -71,6 +78,26 @@
     }
     paint(diag, state.modalMode === 'diagnostico');
     paint(demo, state.modalMode === 'demo');
+    paint(seg, state.modalMode === 'seguimiento');
+  }
+
+  // Texto del panel «¡Solicitud recibida!» según cómo quedó la cita. El de diagnóstico es el que trae cada plantilla.
+  function mensajeExito(tipo) {
+    var panel = document.querySelector('sc-if[data-when="scheduled"]');
+    if (!panel) return;
+    var h = panel.querySelector('h3'), p = panel.querySelector('p');
+    if (!h || !p) return;
+    if (!panel.hasAttribute('data-h-orig')) { panel.setAttribute('data-h-orig', h.textContent); panel.setAttribute('data-p-orig', p.textContent); }
+    if (tipo === 'seguimiento') {
+      h.textContent = '¡Reunión de seguimiento agendada!';
+      p.textContent = 'Te llegará la invitación con el enlace de la reunión a tu correo. Si necesitas cambiarla, respóndenos por WhatsApp.';
+    } else if (tipo === 'rebajado') {
+      h.textContent = '¡Te agendamos un diagnóstico!';
+      p.textContent = 'No encontramos ese WhatsApp y correo entre nuestros clientes, así que dejamos tu hora como diagnóstico gratis. Si ya trabajas con nosotros, escríbenos por WhatsApp y lo ajustamos.';
+    } else {
+      h.textContent = panel.getAttribute('data-h-orig');
+      p.textContent = panel.getAttribute('data-p-orig');
+    }
   }
 
   // Capture UTM + landing path into the hidden form fields (no PII).
@@ -198,6 +225,11 @@
         setFormMessage(form, 'error', 'Elige fecha y hora disponible para agendar.');
         return;
       }
+      var tsToken = window.atTurnstile ? window.atTurnstile.token(form) : '';
+      if (window.atTurnstile && window.atTurnstile.activo() && !tsToken) {
+        setFormMessage(form, 'error', window.atTurnstile.FALTA);
+        return;
+      }
       // 'YYYY-MM-DD' ordena lexicográficamente igual que por fecha.
       if (scheduledDate < todayISO()) {
         setFormMessage(form, 'error', 'Solo puedes agendar desde hoy en adelante. Elige otra fecha.');
@@ -277,6 +309,9 @@
             body: JSON.stringify({
               action: 'saveLead',
               sessionId: payload.session_id,
+              turnstileToken: tsToken,
+              // El subflujo de agenda ya distingue 'Seguimiento' (lo usa el bot de WhatsApp); sin esto agenda como demo.
+              appointmentType: intent === 'seguimiento' ? 'Seguimiento' : undefined,
               leadData: {
                 name: payload.name,
                 email: payload.email,
@@ -301,11 +336,31 @@
           });
         })
         .then(function (r) {
+          if (r.status === 403 && window.atTurnstile) throw new Error(window.atTurnstile.RECHAZO);
           if (!r.ok) throw new Error('No pudimos registrar la cita. Intenta nuevamente.');
           return r.text();
         })
-        .then(function () {
-          track('lead_submit', { intent: intent, interest: interest, lead_temperature: leadTemperature });
+        .then(function (texto) {
+          var resp = {};
+          try { resp = JSON.parse(texto) || {}; } catch (e) {}
+          if (Array.isArray(resp)) resp = resp[0] || {};
+          // Seguimiento de un cliente: no es un lead (ni para Meta ni para Google). Si n8n no lo reconoció como
+          // cliente, lo agendó como diagnóstico y sí cuenta como lead.
+          // Si n8n no dice el tipo (respuesta vieja u horario rechazado), no se cuenta como lead: mejor perder una
+          // conversión que contar como lead a un cliente.
+          var esSeguimiento = intent === 'seguimiento' && resp.appointmentType !== 'Demo';
+          var rebajado = intent === 'seguimiento' && resp.appointmentType === 'Demo';
+          mensajeExito(esSeguimiento ? (resp.appointmentType === 'Seguimiento' ? 'seguimiento' : 'diagnostico') : (rebajado ? 'rebajado' : 'diagnostico'));
+          if (esSeguimiento) {
+            track('seguimiento_agendado', { intent: intent, confirmado: resp.appointmentType === 'Seguimiento' });
+            exito = true;
+            setState({ scheduled: true });
+            form.reset();
+            fillUtm();
+            applyMode();
+            return;
+          }
+          track('lead_submit', { intent: rebajado ? 'diagnostico' : intent, interest: interest, lead_temperature: leadTemperature });
           // Cita registrada: avisa a Meta (solo si la persona aceptó cookies; ver mu-plugin at-consentimiento).
           if (window.atLead) { window.atLead('Agenda diagnóstico (portada)', { email: payload.email, fecha: payload.scheduled_date, hora: payload.scheduled_time }); }
           // Atribución WP-side por session_id (fire-and-forget; no bloquea el éxito).
@@ -331,6 +386,8 @@
         })
         .finally(function () {
           form.__enviando = false;
+          // El token sirve una sola vez: casilla nueva para la próxima cita (o el reintento).
+          if (window.atTurnstile) window.atTurnstile.reiniciar(form);
           form.removeAttribute('aria-busy');
           if (espera) { espera.textContent = ''; espera.hidden = true; }
           if (submit) {
@@ -369,6 +426,10 @@
     document.querySelectorAll('[data-act-submit]').forEach(function (el) {
       var fn = H[el.getAttribute('data-act-submit')];
       if (fn) el.addEventListener('submit', fn);
+      // Casilla anti-robot (Turnstile) sobre el botón de agendar; n8n rechaza la cita sin token válido.
+      if (window.atTurnstile && el.getAttribute('data-act-submit') === 'submitDemo') {
+        window.atTurnstile.enForm(el, el.querySelector('[type="submit"]'));
+      }
     });
     document.querySelectorAll('[data-hover]').forEach(function (el) {
       var hov = el.getAttribute('data-hover');
@@ -549,6 +610,9 @@
     // Tráfico pagado (utm_*) va directo al contenido: la intro de 4.4s
     // destruye el LCP y quema presupuesto de ads en rebotes.
     try { if (/[?&]utm_/.test(location.search)) return; } catch (e) {}
+    // Decisión de Luis (17-nov-2026, propuesta de Faro): solo en la portada. En landings y guías quien llega
+    // desde Google busca ese contenido, y la capa de 4,4 s se lo tapaba y atrasaba el LCP de escritorio.
+    try { if (location.pathname !== '/') return; } catch (e) {}
     // Decisión de Luis (12-nov-2026): en celular no se muestra (tapaba la pantalla; lo principal aparecía a los 7,7 s en red lenta).
     try { if (window.matchMedia && window.matchMedia('(max-width: 767px), (pointer: coarse) and (max-width: 1024px)').matches) return; } catch (e) {}
     // Premium UX: play the brand intro only once per browser session, so

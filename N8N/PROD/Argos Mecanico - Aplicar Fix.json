@@ -6,7 +6,10 @@
       "name": "Execute Workflow Trigger",
       "type": "n8n-nodes-base.executeWorkflowTrigger",
       "typeVersion": 1.2,
-      "position": [0, 0],
+      "position": [
+        0,
+        0
+      ],
       "parameters": {
         "inputSource": "jsonExample",
         "jsonExample": "{\n  \"workflow_id\": \"abc123\",\n  \"node_name\": \"HTTP Request\",\n  \"node_parameters\": {}\n}"
@@ -17,7 +20,10 @@
       "name": "Leer Workflow Real",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [220, 0],
+      "position": [
+        220,
+        0
+      ],
       "parameters": {
         "method": "GET",
         "url": "=https://n8n-n8n.kchiba.easypanel.host/api/v1/workflows/{{ $json.workflow_id }}",
@@ -25,7 +31,10 @@
         "nodeCredentialType": "httpHeaderAuth"
       },
       "credentials": {
-        "httpHeaderAuth": { "id": "Syp8IlSVK9atiNSD", "name": "AT n8n Self API" }
+        "httpHeaderAuth": {
+          "id": "Syp8IlSVK9atiNSD",
+          "name": "AT n8n Self API"
+        }
       }
     },
     {
@@ -33,10 +42,13 @@
       "name": "Aplicar Cambio (merge)",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [440, 0],
+      "position": [
+        440,
+        0
+      ],
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "const real = $input.first().json;\nconst trigger = $('Execute Workflow Trigger').first().json;\nconst node_name = trigger.node_name;\nlet node_parameters = trigger.node_parameters;\nif (typeof node_parameters === 'string') {\n  try { node_parameters = JSON.parse(node_parameters); } catch (e) {\n    return [{ json: { found: false, workflow_id: trigger.workflow_id, node_name, error: 'node_parameters no es JSON valido: ' + e.message } }];\n  }\n}\nconst workflow_id = trigger.workflow_id;\n\nconst SETTINGS_WHITELIST = ['saveDataErrorExecution','saveDataSuccessExecution','saveManualExecutions','saveExecutionProgress','executionTimeout','timezone','errorWorkflow','executionOrder'];\n\nlet found = false;\nconst nodes = (real.nodes || []).map(n => {\n  if (n.name === node_name) {\n    found = true;\n    return { ...n, parameters: node_parameters };\n  }\n  return n;\n});\n\nconst settings = {};\nfor (const key of SETTINGS_WHITELIST) {\n  if (real.settings && Object.prototype.hasOwnProperty.call(real.settings, key)) {\n    settings[key] = real.settings[key];\n  }\n}\n\nreturn [{ json: {\n  found,\n  workflow_id,\n  node_name,\n  nodeCountBefore: (real.nodes || []).length,\n  nodeCountAfter: nodes.length,\n  body: { name: real.name, nodes, connections: real.connections, settings }\n} }];"
+        "jsCode": "// Guardias de ARGOS Mecánico (Eje, 20-nov-2026). Mismo texto se inyecta en n8n.\n// --- 1) Error externo (para «¿Error externo?» en el flujo principal)\nfunction esErrorExterno(e) {\n  const t = ((e.error_message || '') + ' ' + (e.error_stack || '')).toLowerCase();\n  const patrones = ['gateway timed out', 'gateway timeout', 'bad gateway', 'service unavailable', 'temporarily unavailable',\n    'too big', 'too large', 'file size', 'payload too large', 'quota', 'rate limit', 'too many requests',\n    'econnreset', 'etimedout', 'econnrefused', 'enotfound', 'socket hang up', 'timed out', 'timeout',\n    'insufficient', 'credit balance', 'billing', 'status code 429', 'status code 502', 'status code 503', 'status code 504'];\n  return patrones.find(p => t.includes(p)) || null;\n}\n\n// --- 2) y 3) Revisión del cambio (para «Aplicar Cambio (merge)» en el subflujo)\nfunction saltoEnExpresion(v) {\n  if (typeof v === 'string') {\n    if (!v.startsWith('=')) return false;\n    return v.split('{{').slice(1).some(seg => seg.split('}}')[0].includes('\\n'));\n  }\n  if (Array.isArray(v)) return v.some(saltoEnExpresion);\n  if (v && typeof v === 'object') return Object.values(v).some(saltoEnExpresion);\n  return false;\n}\nfunction vacio(v) { return v === undefined || v === null || v === '' || (typeof v === 'object' && Object.keys(v).length === 0); }\nfunction revisarCambio(viejo, nuevo, versiones, ahoraMs) {\n  if (!nuevo || typeof nuevo !== 'object' || Array.isArray(nuevo)) return 'node_parameters debe ser un objeto.';\n  const borrados = Object.keys(viejo || {}).filter(k => !vacio(viejo[k]) && !(k in nuevo));\n  if (borrados.length) return 'El cambio borra parámetros que existían (' + borrados.join(', ') + '). Requiere revisión humana.';\n  for (const k of ['resource', 'operation']) {\n    if (viejo && k in viejo && nuevo[k] !== viejo[k]) return 'El cambio modifica «' + k + '» (' + viejo[k] + ' → ' + nuevo[k] + '): es un cambio de diseño, no de configuración. Requiere revisión humana.';\n  }\n  if (saltoEnExpresion(nuevo)) return 'El cambio deja un salto de línea real dentro de {{ }} (usar \\\\n). No se aplica.';\n  if (!Array.isArray(versiones)) return 'No se pudo leer el historial de versiones del flujo; por seguridad no se aplica.';\n  const seisHoras = 6 * 3600 * 1000;\n  const recientes = versiones.filter(v => ahoraMs - Date.parse(v.createdAt) < seisHoras).length;\n  if (recientes >= 3) return 'El flujo ya tuvo ' + recientes + ' cambios en las últimas 6 h: tope de ARGOS Mecánico. Requiere revisión humana.';\n  return null;\n}\n\n\nconst real = $('Leer Workflow Real').first().json;\nconst _hist = $input.first().json || {};\nconst _versiones = Array.isArray(_hist.data) ? _hist.data : null;\nconst trigger = $('Execute Workflow Trigger').first().json;\nconst node_name = trigger.node_name;\nlet node_parameters = trigger.node_parameters;\nif (typeof node_parameters === 'string') {\n  try { node_parameters = JSON.parse(node_parameters); } catch (e) {\n    return [{ json: { found: false, workflow_id: trigger.workflow_id, node_name, error: 'node_parameters no es JSON valido: ' + e.message } }];\n  }\n}\nconst workflow_id = trigger.workflow_id;\nconst _viejo = ((real.nodes || []).find(n => n.name === node_name) || {}).parameters;\nif (_viejo) {\n  const _motivo = revisarCambio(_viejo, node_parameters, _versiones, Date.now());\n  if (_motivo) { return [{ json: { found: false, guardia: true, workflow_id, node_name, error: 'ARGOS (guardia): ' + _motivo } }]; }\n}\n\nconst SETTINGS_WHITELIST = ['saveDataErrorExecution','saveDataSuccessExecution','saveManualExecutions','saveExecutionProgress','executionTimeout','timezone','errorWorkflow','executionOrder'];\n\nlet found = false;\nconst nodes = (real.nodes || []).map(n => {\n  if (n.name === node_name) {\n    found = true;\n    return { ...n, parameters: node_parameters };\n  }\n  return n;\n});\n\nconst settings = {};\nfor (const key of SETTINGS_WHITELIST) {\n  if (real.settings && Object.prototype.hasOwnProperty.call(real.settings, key)) {\n    settings[key] = real.settings[key];\n  }\n}\n\nreturn [{ json: {\n  found,\n  workflow_id,\n  node_name,\n  nodeCountBefore: (real.nodes || []).length,\n  nodeCountAfter: nodes.length,\n  body: { name: real.name, nodes, connections: real.connections, settings }\n} }];"
       }
     },
     {
@@ -44,15 +56,27 @@
       "name": "Nodo Encontrado?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
-      "position": [660, 0],
+      "position": [
+        660,
+        0
+      ],
       "parameters": {
         "conditions": {
-          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 2 },
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
           "conditions": [
             {
               "leftValue": "={{ $json.found }}",
               "rightValue": true,
-              "operator": { "type": "boolean", "operation": "true", "singleValue": true }
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
             }
           ],
           "combinator": "and"
@@ -64,7 +88,10 @@
       "name": "Aplicar PUT",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [880, -80],
+      "position": [
+        880,
+        -80
+      ],
       "parameters": {
         "method": "PUT",
         "url": "=https://n8n-n8n.kchiba.easypanel.host/api/v1/workflows/{{ $json.workflow_id }}",
@@ -75,7 +102,10 @@
         "jsonBody": "={{ JSON.stringify($json.body) }}"
       },
       "credentials": {
-        "httpHeaderAuth": { "id": "Syp8IlSVK9atiNSD", "name": "AT n8n Self API" }
+        "httpHeaderAuth": {
+          "id": "Syp8IlSVK9atiNSD",
+          "name": "AT n8n Self API"
+        }
       }
     },
     {
@@ -83,27 +113,117 @@
       "name": "Error Nodo No Encontrado",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
-      "position": [880, 80],
+      "position": [
+        880,
+        80
+      ],
       "parameters": {
         "mode": "manual",
         "assignments": {
           "assignments": [
-            { "id": "e1", "name": "success", "type": "boolean", "value": false },
-            { "id": "e2", "name": "error", "type": "string", "value": "=El nodo '{{ $json.node_name }}' no existe en el workflow real. Usa 'Leer Workflow' para ver los nombres exactos de los nodos antes de intentar modificar." }
+            {
+              "id": "e1",
+              "name": "success",
+              "type": "boolean",
+              "value": false
+            },
+            {
+              "id": "e2",
+              "name": "error",
+              "type": "string",
+              "value": "={{ $json.guardia ? $json.error : \"El nodo '\" + $json.node_name + \"' no existe en el workflow real. Usa 'Leer Workflow' para ver los nombres exactos de los nodos antes de intentar modificar.\" }}"
+            }
           ]
         },
         "options": {}
       }
+    },
+    {
+      "id": "6520202f-8d31-4e0b-a54b-5902dfe773ec",
+      "name": "Historial del flujo",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput",
+      "position": [
+        420,
+        160
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "={{ 'https://n8n-n8n.kchiba.easypanel.host/api/v1/workflows/' + $('Execute Workflow Trigger').first().json.workflow_id + '/history' }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth"
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "Syp8IlSVK9atiNSD",
+          "name": "AT n8n Self API"
+        }
+      }
     }
   ],
   "connections": {
-    "Execute Workflow Trigger": { "main": [[{ "node": "Leer Workflow Real", "type": "main", "index": 0 }]] },
-    "Leer Workflow Real": { "main": [[{ "node": "Aplicar Cambio (merge)", "type": "main", "index": 0 }]] },
-    "Aplicar Cambio (merge)": { "main": [[{ "node": "Nodo Encontrado?", "type": "main", "index": 0 }]] },
+    "Execute Workflow Trigger": {
+      "main": [
+        [
+          {
+            "node": "Leer Workflow Real",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Leer Workflow Real": {
+      "main": [
+        [
+          {
+            "node": "Historial del flujo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aplicar Cambio (merge)": {
+      "main": [
+        [
+          {
+            "node": "Nodo Encontrado?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
     "Nodo Encontrado?": {
       "main": [
-        [{ "node": "Aplicar PUT", "type": "main", "index": 0 }],
-        [{ "node": "Error Nodo No Encontrado", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Aplicar PUT",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Error Nodo No Encontrado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Historial del flujo": {
+      "main": [
+        [
+          {
+            "node": "Aplicar Cambio (merge)",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     }
   },

@@ -36,7 +36,7 @@
 
 | Archivo | Tipo | Acceso |
 |---------|------|--------|
-| `setup-contracts-db.php` | Setup tabla | GET `?key=AT_SETUP_2026` |
+| `setup-contracts-db.php` | Retirado: el esquema se crea con el `CREATE TABLE` de la sección «Esquema de la tabla» (abajo) | n/a |
 | `contract-service.php` | Clase `ContractService` | Interno |
 | `contract-mailer.php` | Clase `ContractMailer` | Interno |
 | `create-contract.php` | API POST | Logged + `edit_posts` |
@@ -167,3 +167,58 @@ graph TD
 3. **Recordatorios automáticos** si cliente no firma en X días (cron N8N).
 4. **API de revocación** — endpoint para cancelar contrato firmado (con razón).
 5. **Versionado de templates** — guardar versión exacta del template usado al crear.
+
+## Esquema de la tabla
+
+El script de instalación se retiró. La tabla `automatiza_contracts` (con el prefijo de WordPress delante) se crea ejecutando este `CREATE TABLE`, por ejemplo con `dbDelta()` desde WP-CLI o un script local. Es el esquema base; el código del módulo puede añadir columnas posteriores con sus propias migraciones.
+
+```sql
+CREATE TABLE automatiza_contracts (
+    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    client_id BIGINT UNSIGNED NULL,
+    project_id BIGINT UNSIGNED NULL,
+    proposal_id BIGINT UNSIGNED NULL,
+    contract_number VARCHAR(40) NOT NULL,
+    type ENUM('soporte','servicios','sla','nda','handover') DEFAULT 'soporte',
+    template_id VARCHAR(80) DEFAULT 'soporte_v2',
+    placeholders LONGTEXT NOT NULL,
+    pdf_url VARCHAR(500) NULL,
+    signed_pdf_url VARCHAR(500) NULL,
+    status ENUM('draft','at_pending','at_signed','sent','viewed','signed','expired','cancelled') DEFAULT 'draft',
+    sign_token CHAR(64) NOT NULL,
+    at_review_token CHAR(64) NULL,
+    document_hash CHAR(64) NULL,
+    signed_document_hash CHAR(64) NULL,
+    sent_at DATETIME NULL,
+    viewed_at DATETIME NULL,
+    signed_at DATETIME NULL,
+    expires_at DATETIME NULL,
+    at_signer_user_id BIGINT UNSIGNED NULL,
+    at_signer_name VARCHAR(160) NULL,
+    at_signer_rut VARCHAR(20) NULL,
+    at_signer_email VARCHAR(160) NULL,
+    at_signer_ip VARCHAR(45) NULL,
+    at_signed_at DATETIME NULL,
+    at_signature_method ENUM('canvas','image_upload') NULL,
+    at_signature_image_url VARCHAR(500) NULL,
+    signer_name VARCHAR(160) NULL,
+    signer_rut VARCHAR(20) NULL,
+    signer_email VARCHAR(160) NULL,
+    signer_ip VARCHAR(45) NULL,
+    signer_user_agent VARCHAR(400) NULL,
+    signature_method ENUM('canvas','image_upload','advanced') NULL,
+    signature_image_url VARCHAR(500) NULL,
+    starts_at DATE NULL,
+    ends_at DATE NULL,
+    monthly_amount DECIMAL(12,2) NULL,
+    currency CHAR(3) DEFAULT 'CLP',
+    created_by BIGINT UNSIGNED NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE KEY uniq_token (sign_token),
+    UNIQUE KEY uniq_number (contract_number),
+    KEY idx_client (client_id, status),
+    KEY idx_status (status, sent_at)
+) DEFAULT CHARSET=utf8mb4;
+```

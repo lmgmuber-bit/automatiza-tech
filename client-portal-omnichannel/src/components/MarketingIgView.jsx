@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Instagram, Eye, Users, Heart, Activity, RefreshCw, AlertTriangle, Info,
-  CheckCircle2, XCircle, ExternalLink, Film, Image as ImageIcon, Layers, Clock, Table, BarChart3,
+  CheckCircle2, XCircle, ExternalLink, Film, Image as ImageIcon, Layers, Clock, Table, BarChart3, Megaphone,
 } from 'lucide-react';
 import { getIgInsights, syncIgInsights, formatChileDateTime } from '../api';
+import MetaAdsPanel from './MetaAdsPanel';
 
 /*
  * Marketing IG — métricas reales de Instagram de @automatizatech.cl.
@@ -364,6 +365,8 @@ export default function MarketingIgView() {
   const [syncNote, setSyncNote] = useState('');
   const [metric, setMetric] = useState('views');
   const [showTable, setShowTable] = useState(false);
+  // Orgánico (métricas de Instagram) o Anuncios (pagados, Marketing API de Meta).
+  const [tab, setTab] = useState('organic');
 
   const load = useCallback(async (d) => {
     setLoading(true);
@@ -416,6 +419,22 @@ export default function MarketingIgView() {
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
+            <div className="flex gap-1 p-1 rounded-full bg-white/15 ring-1 ring-white/20" role="tablist" aria-label="Tipo de métricas">
+              {[{ id: 'organic', label: 'Orgánico', Icon: Instagram }, { id: 'ads', label: 'Anuncios', Icon: Megaphone }].map(t => (
+                <button
+                  key={t.id}
+                  role="tab"
+                  aria-selected={tab === t.id}
+                  onClick={() => setTab(t.id)}
+                  className={`flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold transition-all ${
+                    tab === t.id ? 'bg-white text-pink-700 shadow' : 'text-white/85 hover:bg-white/10'
+                  }`}
+                >
+                  <t.Icon size={13} aria-hidden="true" /> {t.label}
+                </button>
+              ))}
+            </div>
+            {tab === 'organic' && (<>
             <div className="flex gap-1 p-1 rounded-full bg-white/15 ring-1 ring-white/20" role="group" aria-label="Periodo">
               {PERIODS.map(p => (
                 <button
@@ -437,12 +456,19 @@ export default function MarketingIgView() {
             >
               <RefreshCw size={14} className={syncing ? 'animate-spin' : ''} /> {syncing ? 'Tomando…' : 'Actualizar ahora'}
             </button>
+            </>)}
           </div>
         </div>
-        {syncNote && <p className="relative mt-3 text-xs text-white/90">{syncNote}</p>}
+        {syncNote && tab === 'organic' && <p className="relative mt-3 text-xs text-white/90">{syncNote}</p>}
       </div>
 
-      <div className={`px-6 -mt-5 pb-8 space-y-6 transition-opacity ${loading && data ? 'opacity-60' : ''}`}>
+      {tab === 'ads' && (
+        <div className="px-6 pt-6 pb-8">
+          <MetaAdsPanel />
+        </div>
+      )}
+
+      <div className={`px-6 -mt-5 pb-8 space-y-6 transition-opacity ${loading && data ? 'opacity-60' : ''} ${tab === 'ads' ? 'hidden' : ''}`}>
         {error && (
           <div className={`rounded-2xl p-4 ring-1 ${TONES.red}`}>
             <p className="font-bold text-sm">No se pudieron cargar las métricas</p>

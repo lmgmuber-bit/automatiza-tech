@@ -19,6 +19,14 @@ $body = @file_get_contents($at_dir . '/assets/landing-sistemas-medida/body.html'
 if ($body === false) { $body = '<!-- landing-sistemas-medida: body.html missing -->'; }
 $body = str_replace('assets/', $at_img . '/', $body);
 $body = str_replace('{{HOME_URL}}', esc_url(home_url('/')), $body);
+require_once get_template_directory() . '/inc/at-servicios.php';
+$body = str_replace('{{OTROS_SERVICIOS}}', at_otros_servicios_html('sistemas-a-medida-chile'), $body);
+$body = str_replace('{{PREFERENCIAS_COOKIES}}', at_preferencias_cookies_html(), $body);
+$body = str_replace('{{GUIAS_PIE}}', at_guias_pie_html(), $body);
+// Menú «Servicios» del encabezado (escritorio y celular) + su cierre al hacer clic afuera.
+$body = str_replace('{{MENU_SERVICIOS}}', at_menu_servicios_html('sistemas-a-medida-chile'), $body);
+$body = str_replace('{{MENU_SERVICIOS_MOVIL}}', at_menu_servicios_movil_html('sistemas-a-medida-chile'), $body);
+$body .= at_menu_servicios_extras();
 
 $css_ver = @filemtime($at_dir . '/assets/home-premium/at-home.css') ?: '1';
 $js_ver  = @filemtime($at_dir . '/assets/home-premium/at-home.js') ?: '1';
@@ -30,12 +38,12 @@ $canonical = home_url('/sistemas-a-medida-chile/');
 <head>
 <meta charset="<?php bloginfo('charset'); ?>">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Sistemas y Software a Medida para tu Negocio en Chile | AutomatizaTech</title>
-<meta name="description" content="Cuando lo estándar no alcanza, desarrollamos el software exacto que tu operación necesita. Sistemas a medida en Chile. Diagnóstico gratis.">
+<title>Desarrollo de software a medida en Chile | AutomatizaTech</title>
+<meta name="description" content="Desarrollo de software a medida en Chile: cuando lo estándar no alcanza, desarrollamos el sistema exacto que tu operación necesita. Diagnóstico gratis.">
 <link rel="canonical" href="<?php echo esc_url($canonical); ?>">
 <meta property="og:type" content="website">
-<meta property="og:title" content="Sistemas y Software a Medida para tu Negocio en Chile | AutomatizaTech">
-<meta property="og:description" content="Cuando lo estándar no alcanza, desarrollamos el software exacto que necesitas. Diagnóstico gratis.">
+<meta property="og:title" content="Desarrollo de software a medida en Chile | AutomatizaTech">
+<meta property="og:description" content="Desarrollo de software a medida en Chile: el sistema exacto que necesitas cuando lo estándar no alcanza. Diagnóstico gratis.">
 <meta property="og:url" content="<?php echo esc_url($canonical); ?>">
 <link rel="icon" type="image/svg+xml" href="<?php echo esc_url($at_img); ?>/favicon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -47,7 +55,7 @@ $canonical = home_url('/sistemas-a-medida-chile/');
 {
   "@context": "https://schema.org",
   "@type": "Service",
-  "serviceType": "Desarrollo de sistemas y software a medida",
+  "serviceType": "Desarrollo de software a medida (sistemas a medida)",
   "provider": {
     "@type": "LocalBusiness",
     "name": "AutomatizaTech",

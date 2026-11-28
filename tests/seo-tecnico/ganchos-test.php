@@ -10,14 +10,15 @@ function remove_action($h, $f, $p = 10) { global $quitados; $quitados[] = "{$h}:
 function correr($h, ...$a) { global $ganchos; foreach ($ganchos[$h] ?? [] as $f) { $a[0] = $f(...$a); } return $a[0] ?? null; }
 
 // Estado simulado de la página pedida.
-$plantilla = ''; $autor = false; $categoria = 0; $singular = 0; $tipo = 'page';
+$archivo = ''; $plantilla = ''; $autor = false; $categoria = 0; $singular = 0; $tipo = 'page';
 $publicadas = ['post' => ['hola-mundo' => 1], 'page' => ['pagina-ejemplo' => 2, 'validar-factura' => 3, 'asistentes' => 9]];
 function is_page_template($lista) { global $plantilla; return in_array($plantilla, (array) $lista, true); }
 function get_page_by_path($slug, $o, $tipo) { global $publicadas; $id = $publicadas[$tipo][$slug] ?? 0; return $id ? (object) ['ID' => $id] : null; }
 function get_option($k) { return $k === 'default_category' ? 1 : null; }
 function is_author() { global $autor; return $autor; }
 function is_category($id) { global $categoria; return $categoria === $id; }
-function is_singular() { global $singular; return $singular > 0; }
+function is_singular($t = '') { global $singular, $tipo; return $singular > 0 && ($t === '' || $t === $tipo); }
+function is_post_type_archive($t = '') { global $archivo; return $archivo === $t; }
 function get_queried_object_id() { global $singular; return $singular; }
 function get_post_type() { global $tipo; return $tipo; }
 function home_url($p = '') { return 'https://automatizatech.cl' . $p; }
@@ -34,6 +35,16 @@ $quitados = []; $plantilla = 'template-home-premium.php'; correr('template_redir
 ok(count($quitados) === 2, 'home: igual');
 $quitados = []; $plantilla = ''; correr('template_redirect');
 ok($quitados === [], 'página común (header.php): WordPress sigue a cargo del <title> y el canonical');
+
+// Guías: archivo /guias/ y entradas también llevan su propio <title> y canonical
+$quitados = []; $archivo = 'guia'; correr('template_redirect');
+ok(count($quitados) === 2, 'archivo de guías: WordPress no imprime su <title> ni su canonical');
+$quitados = []; $archivo = ''; $singular = 50; $tipo = 'guia'; correr('template_redirect');
+ok(count($quitados) === 2, 'una guía: igual');
+$singular = 0; $tipo = 'page';
+ok(correr('wp_sitemaps_posts_query_args', [], 'guia') === [], 'sitemap: las guías no se excluyen');
+$robots = correr('wp_robots', []);
+ok(!isset($robots['noindex']), 'robots: una guía publicada no lleva noindex');
 
 // Sitemap
 ok(correr('wp_sitemaps_add_provider', 'P', 'users') === false, 'sin sitemap de usuarios');
@@ -61,9 +72,7 @@ $r = correr('robots_txt', $nucleo, '1');
 ok(substr_count($r, 'Sitemap:') === 1, 'robots.txt: un solo Sitemap');
 ok(strpos($r, "\nLLMS:") === false, 'robots.txt: sin LLMS:');
 ok(strpos($r, 'User-agent: OAI-SearchBot') !== false && strpos($r, 'User-agent: Claude-SearchBot') !== false, 'robots.txt: grupo de búsqueda con IA');
-ok(preg_match("/User-agent: Google-Extended
-Disallow: \/
-/", $r) === 1, 'robots.txt: entrenamiento bloqueado (decisión de Luis)');
+ok(strpos($r, "User-agent: Google-Extended\nDisallow: /\n") !== false, 'robots.txt: entrenamiento bloqueado (decisión de Luis)');
 ok(correr('robots_txt', "User-agent: *\nDisallow: /\n", '0') === "User-agent: *\nDisallow: /\n", 'sitio no público: robots.txt intacto');
 echo "\n--- robots.txt resultante ---\n{$r}";
 

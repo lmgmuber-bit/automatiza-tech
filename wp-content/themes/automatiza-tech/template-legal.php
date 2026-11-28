@@ -91,6 +91,7 @@ body.at-legal{margin:0;background:var(--bg);color:var(--text2);font-family:'Manr
     <span>&copy; <?php echo date('Y'); ?> AutomatizaTech SpA · RUT 78.363.717-0 · Providencia, Chile</span>
     <span>
         <a href="<?php echo esc_url(home_url('/')); ?>">Inicio</a>
+        <a href="<?php echo esc_url(home_url('/cookies/')); ?>" data-at-cookies style="display:inline-flex;align-items:center;gap:6px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1111.2 3a4 4 0 004.3 4.5 4 4 0 005.5 5.3z"/><path d="M8.5 11.5h.01M12 16h.01M15.5 12.5h.01"/></svg>Preferencias de cookies</a>
         <a href="mailto:contacto@automatizatech.cl">contacto@automatizatech.cl</a>
     </span>
 </footer>

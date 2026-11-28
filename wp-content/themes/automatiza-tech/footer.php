@@ -1,3 +1,4 @@
+<?php defined('ABSPATH') || exit; ?>
     <footer id="colophon" class="site-footer">
         <div class="container">
             <div class="footer-content">
@@ -6,17 +7,11 @@
                     <h3>Automatiza Tech</h3>
                     <p>Automatización y tecnología digital premium para hacer crecer tu negocio: asistentes inteligentes, automatización, sitios premium, apps y sistemas a medida.</p>
                     <div class="social-links">
-                        <a href="https://www.facebook.com/automatizatech.cl" target="_blank" rel="noopener" title="Facebook">
+                        <a href="https://www.facebook.com/profile.php?id=61584793150484" target="_blank" rel="noopener" title="Facebook" aria-label="Facebook">
                             <i class="fab fa-facebook"></i>
                         </a>
-                        <a href="https://www.instagram.com/automatizatech.cl/" target="_blank" rel="noopener" title="Instagram">
+                        <a href="https://www.instagram.com/automatizatech.cl/" target="_blank" rel="noopener" title="Instagram" aria-label="Instagram">
                             <i class="fab fa-instagram"></i>
-                        </a>
-                        <a href="https://www.linkedin.com/company/automatizatech" target="_blank" rel="noopener" title="LinkedIn">
-                            <i class="fab fa-linkedin"></i>
-                        </a>
-                        <a href="https://www.twitter.com/automatizatech.cl" target="_blank" rel="noopener" title="Twitter">
-                            <i class="fab fa-twitter"></i>
                         </a>
                     </div>
                 </div>
@@ -53,6 +48,10 @@
                         <li>
                             <i class="fas fa-envelope"></i>
                             <a href="mailto:contacto@automatizatech.cl">contacto@automatizatech.cl</a>
+                        </li>
+                        <li>
+                            <i class="fas fa-phone" aria-hidden="true"></i>
+                            <a href="tel:+56927002984">+56 9 2700 2984</a>
                         </li>
                         <li>
                             <i class="fab fa-whatsapp"></i>
@@ -615,6 +614,14 @@
             });
         }
 
+        // Casilla anti-robot (Turnstile): n8n rechaza la cita sin un token válido.
+        var tsToken = window.atTurnstile ? window.atTurnstile.token(form) : '';
+        if (window.atTurnstile && window.atTurnstile.activo() && !tsToken) {
+            showMsg(false, '❌ ' + window.atTurnstile.FALTA);
+            unlockAgendaButton();
+            return;
+        }
+
         var canUseChatFlow =
             typeof AutomatizaAIChat !== 'undefined' &&
             !!AutomatizaAIChat &&
@@ -645,6 +652,7 @@
                 var payload = {
                     action: 'saveLead',
                     sessionId: getAgendaSessionId(),
+                    turnstileToken: tsToken,
                     leadData: {
                         name: String(name || '').trim(),
                         email: String(email || '').trim(),
@@ -664,6 +672,9 @@
                 });
             })
             .then(function(resp){
+                if (resp.status === 403 && window.atTurnstile) {
+                    throw new Error(window.atTurnstile.RECHAZO);
+                }
                 if (!resp.ok) {
                     throw new Error('Error al conectar con el servidor de agendamiento');
                 }
@@ -710,11 +721,14 @@
             .then(function(successMessage){
                 showMsg(true, '✅ ' + successMessage);
                 form.reset();
+                if (window.atTurnstile) { window.atTurnstile.reiniciar(form); }
                 resetAgendaTimeSelect('-- Selecciona fecha primero --', true);
                 setTimeout(closeAgendaModal, 3500);
             })
             .catch(function(err){
                 showMsg(false, '❌ ' + (err && err.message ? err.message : 'Error al agendar la cita.'));
+                // El token sirve una sola vez: se pide una casilla nueva para el próximo intento.
+                if (window.atTurnstile) { window.atTurnstile.reiniciar(form); }
                 unlockAgendaButton();
             });
 
@@ -756,6 +770,12 @@
     var am = document.getElementById('agenda-modal');
     if (pm) pm.addEventListener('click', function(e){ if(e.target===this) closePromoModal(); });
     if (am) am.addEventListener('click', function(e){ if(e.target===this) closeAgendaModal(); });
+    // Casilla anti-robot sobre el botón de la ventana de agenda (se dibuja al abrirla).
+    function montarTurnstileAgenda(){
+        var f = document.getElementById('agenda-modal-form');
+        if (window.atTurnstile && f) { window.atTurnstile.enForm(f, document.getElementById('agenda-msg')); }
+    }
+    if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', montarTurnstileAgenda); } else { montarTurnstileAgenda(); }
 
     // Mostrar promo-modal en home hasta un máximo de 25 veces (contador en localStorage)
     if (isHome) {

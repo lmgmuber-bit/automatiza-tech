@@ -136,6 +136,42 @@ def precio():
 
 
 @caso
+def primera_respuesta():
+    # Conversación 28 (anuncio de Meta, 15-nov): a la pregunta general, primero pregunta qué negocio tiene; no lista
+    # rubros ni invita a agendar en el mismo mensaje. Con el rubro, da un ejemplo y recién ahí ofrece el diagnóstico.
+    g, c = nuevo()
+    r1 = turno(g, c, '¿Qué tipo de negocios pueden beneficiarse del diagnóstico?')
+    t1 = (r1 or {}).get('body', {}).get('content', '')
+    ok('?' in t1 and 'negocio' in t1.lower(), 'primera respuesta: pregunta qué negocio tiene', t1[:300])
+    ok(not re.search(r'agend|te invito|coordinemos|cuándo te acomoda', t1, re.I), 'primera respuesta: todavía no invita a agendar', t1[:300])
+    r2 = turno(g, c, 'Tengo una pastelería y vendo por Instagram')
+    t2 = (r2 or {}).get('body', {}).get('content', '')
+    ok(t2 and 'agendar' not in (r2 or {}).get('herramientas', []), 'primera respuesta: con el rubro responde y no agenda solo', t2[:300])
+    for i, t in enumerate((t1, t2), 1):
+        print('      %d →' % i, t[:220].replace('\n', ' '))
+
+
+@caso
+def prefiere_investigar():
+    # Conversación 28: «No gracias, prefiero investigar por mi cuenta». No se despide en seco: ofrece algo liviano.
+    g, c = nuevo()
+    turno(g, c, '¿Qué tipo de negocios pueden beneficiarse del diagnóstico?')
+    r = turno(g, c, 'No gracias, prefiero investigar por mi cuenta primero')
+    t = (r or {}).get('body', {}).get('content', '')
+    ok(re.search(r'automatizatech\.cl|@automatizatech', t, re.I), 'investigar: ofrece algo para mirar', t[:300])
+    ok(not re.search(r'funerari|vitolio|xcaps|cumpleclick', t, re.I), 'investigar: solo cita los casos autorizados (PetsGo, GT Baseball)', t[:300])
+    print('      →', t[:220].replace('\n', ' '))
+
+
+@caso
+def bot_de_otro_negocio():
+    # Conversación 29: la respuesta automática de otro negocio no se contesta (filtro en «Validar»).
+    g, c = nuevo()
+    r = turno(g, c, '¡Hola! Gracias por escribirnos. En este momento no estamos disponibles, te responderemos a la brevedad.')
+    ok(r is None, 'bot de otro negocio: no contesta', json.dumps(r, ensure_ascii=False)[:300])
+
+
+@caso
 def fuera_de_tema():
     g, c = nuevo()
     r = turno(g, c, 'Dame una receta de pan amasado')

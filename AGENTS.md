@@ -54,6 +54,8 @@ Las credenciales viven **fuera del repo**, en `C:\Users\luis_\OneDrive\Documento
 Para planificar, cotizar, ejecutar, entregar o retomar trabajo con clientes, leer `Docs/METODO_AT/README.md`. Las fuentes canónicas son `Docs/METODO_AT/APLICACION_DEL_METODO_AT.md` y `Docs/METODO_AT/SERVICIOS_Y_CASOS_DE_USO.md`. Para marketing, nichos y contenido de Instagram/Reels, usar `Docs/MARKETING/2026-07-22-AT-ESTUDIO-NICHOS-Y-ESTRATEGIA-REELS-INSTAGRAM.md`. Distinguir siempre capacidades actuales comprobadas de trabajo en curso y roadmap.
 
 Demos de prototipos para prospectos (desde el 2026-09-28, `https://automatizatech.cl/demos/<rubro>/`): método en `Docs/METODO_AT/PROTOTIPOS-Y-DEMOS.md` (404 propio en `.htaccess`, React local con `window.__resources`, arreglo móvil obligatorio, advertencia sanitaria en rubros con alcohol, video de recorrido). Antes de tocar precios o reaprobar una propuesta v3, leer «Precios, reaprobación y enlaces» en `Docs/METODO_AT/PROPUESTAS-FLUJO-V3.md`. Lo propio de cada cliente vive en la bóveda (`10-Projects/<Cliente>/README.md`), nunca en este repo público.
+
+**Propuestas comerciales: una sola plantilla (regla de Luis, 2026-09-23).** Toda propuesta de cliente se arma con la plantilla del `propuesta-renderer` (la misma estructura y controles que la propuesta de referencia; cuál es, en la bóveda privada): no se vuelve a Gamma ni se diseña una presentación nueva. Procedimiento, campos del JSON, fotos alojadas (no el CDN de Higgsfield) y el paso de **Guardar** en el panel para que el chatbot funcione: `Docs/METODO_AT/PROPUESTAS-PLANTILLA-UNICA.md`.
 <!-- AT-METHOD:END -->
 
 <!-- AT-VIDEO-RULES:START -->
@@ -64,7 +66,7 @@ Estas reglas aplican a cualquier video, Reel Diario, Reel programado, comercial,
 1. Logo AT obligatorio: usar solo el logo real de referencia de AutomatizaTech, en la esquina superior izquierda. Tamaño y opacidad (decisión de Luis del 2026-10-20, para todos los videos de AutomatizaTech; reemplaza el antiguo «máximo 4 % del ancho, opacidad 35-45 %»): 96 px de ancho en un cuadro de 1080 px (≈9 % del ancho) y 60 % de opacidad, igual que la v6 del Guion 0 aprobada por Luis. Nunca ubicarlo al centro, nunca hacerlo más grande que eso, nunca inventar un logo generico ni variar el diseno. Si la herramienta generativa no respeta el tamano o fidelidad, agregar/corregir el overlay real en post con ffmpeg.
 2. Texto visible en espanol de Chile: todo texto en pantalla, interfaces, chats, emails, notificaciones, botones, calendarios, dashboards y celulares debe pedirse en espanol (Chile), nunca en ingles. Si Veo/Flow deforma texto menor, no regenerar solo por eso si la pieza es publicable; pero el prompt siempre debe pedir espanol.
 3. Antes de generar o publicar, revisar prompts de video para confirmar que incluyan estas reglas. Si un prompt contradice estas reglas, corregirlo primero.
-4. Cierre estándar AT para Reels: desde 2026-07-14, agregar una sola vez al final del Reel principal el clip completo `N8N/reel-diario-media-worker/assets/outro-at-10s.mp4` (~10s, 720x1280, con audio y CTA `Agenda tu diagnóstico gratis en automatizatech.cl`). Estructura final: `parte_1 + parte_2 + outro-at-10s.mp4`. No insertar el cierre entre partes ni dentro del bonus/Story. No usar el recorte de 3.2s porque puede cortar el logo; el banner turquesa anterior queda prohibido salvo instruccion expresa de Luis.
+4. Cierre de los Reels (decisión de Luis del 2026-10-23, reiterada el 2026-11-13 y el 2026-11-21): **ya no se usa el `outro-at-10s.mp4` en ningún Reel ni video de AutomatizaTech.** Cada pieza termina con una escena corta propia, de unos 3 a 11 s, que lleva una pregunta para que comenten, «Escríbenos», el logo AT y dos vías: Mensaje directo y automatizatech.cl. La pregunta, la escena y el fondo cambian en cada pieza. El «Agenda tu diagnóstico gratis en automatizatech.cl» va en el texto del post, no en el video. Detalle y control de entrega en la skill `at-video-studio` (`references/control-de-entrega.md`). 🔴 El worker del Reel Diario (`N8N/reel-diario-media-worker/server.mjs`) todavía agrega ese outro por defecto: hay que quitarlo antes de reactivar el Reel Diario. El banner turquesa anterior sigue prohibido salvo instrucción expresa de Luis.
 5. Log de publicaciones Reel Diario: n8n Plan B debe actualizar el CSV existente `IG-AT/Reel-Diario/Reel-Diario-Log-Publicaciones.csv` (`file_id=1NpJf8VVTiqcN5LdGFfLdi0T9qQ9iGCRw`) con update real del mismo archivo. No crear CSVs duplicados. Registrar intentos reales de publicación, fallos y rechazos QA; no registrar skips como `already_published`, `fresh_lock` o `folder_not_found`.
 6. Videos de recorrido para un prospecto (no son Reels, regla de Luis del 2026-09-29): logo AT visible arriba a la izquierda y **cierre propio** que dice «Agenda tu llamada de seguimiento para aclarar dudas», nunca el `outro-at-10s.mp4` (trae «diagnóstico» grabado). Método en `Docs/METODO_AT/PROTOTIPOS-Y-DEMOS.md`.
 
@@ -84,21 +86,23 @@ Este proyecto tiene dos skills de ventas. Invocarlas cuando el usuario trabaje c
 
 ### Skill 1 — at-gamma-proposal
 **Cuándo:** datos de reunión con prospecto nuevo.
-**Triggers:** "generar propuesta gamma", "nueva propuesta cliente", "propuesta gamma"
-**Genera:** Gamma prompt (8 slides) + chatbot system prompt + prompt de diseño visual
-**Instrucciones:** `.github/skills/at-gamma-proposal/SKILL.md` (Copilot) o `C:\Users\luis_\.codex\skills\at-gamma-proposal\SKILL.md` (Codex)
+**Triggers:** "generar propuesta", "nueva propuesta cliente", "at propuesta" (`at-propuesta` es alias)
+**Genera:** JSON de la plantilla única del `propuesta-renderer` + chatbot system prompt (+ prompt de diseño si aplica). El nombre es histórico: **ya no genera prompts de Gamma**. El camino normal es el flujo automático v3 (`Docs/METODO_AT/PROPUESTAS-FLUJO-V3.md`); la skill sirve para armar o ajustar a mano.
+**Instrucciones:** una sola copia desde el 2026-10-10, `C:\Users\luis_\.agents\skills\at-gamma-proposal\SKILL.md`, enlazada desde Claude, Codex y OpenCode; `.github/skills/at-gamma-proposal/SKILL.md` es idéntica (Copilot). Cambiar las dos a la vez.
 
 ### Skill 2 — at-proposal-refiner
 **Cuándo:** propuesta ya guardada en el sistema (tiene edit_id).
 **Triggers:** "refinar propuesta", "mejorar prompt gamma", "actualizar prompts"
-**Flujo:** historial llamada + Gamma → GET API → evalúa → refina → POST → Output 3 diseño
-**Instrucciones:** `.github/skills/at-proposal-refiner/SKILL.md` (Copilot) o `C:\Users\luis_\.codex\skills\at-proposal-refiner\SKILL.md` (Codex)
+**Flujo:** historial llamada + presentación del renderer (`ver-presentacion.php?id=`) → GET API → evalúa → refina (v3: comentarios para «Pedir cambios» en el panel, porque `POST /prompts` responde 409; antiguas: `/prompts` y re-render con el mismo `unique_id`) → Output 3 diseño
+**Instrucciones:** una sola copia desde el 2026-10-10 (AT-INT-PROP-002), `C:\Users\luis_\.agents\skills\at-proposal-refiner\SKILL.md`, enlazada desde Claude, Codex y OpenCode; `.github/skills/at-proposal-refiner/SKILL.md` es idéntica (Copilot). Cambiar las dos a la vez. El secreto `X-AT-Secret` se lee por su etiqueta en el archivo de claves; la variable de Windows `AT_REST_SECRET_PROD` está vencida desde la rotación del 26-ago.
 
 ### API del pipeline
 ```
-GET/POST https://automatizatech.cl/?rest_route=/automatiza-tech/v1/proposal/{ID}/prompts
-Header: X-AT-Secret: <secret>  (wp-config.php del servidor — no exponer)
+GET      https://automatizatech.cl/?rest_route=/automatiza-tech/v1/proposal/{ID}/state    (payload, flujo, status)
+GET/POST https://automatizatech.cl/?rest_route=/automatiza-tech/v1/proposal/{ID}/prompts  (POST: solo propuestas antiguas; v3 = 409)
+Header: X-AT-Secret: <secret>  (AT_REST_SECRET del wp-config.php del servidor — leer por etiqueta, no exponer)
 ```
+La referencia de la bóveda (`automatizatech-pipeline.md`) y su carpeta `Global-Skills/` todavía describen Gamma (pendiente registrado el 2026-10-10); ante una diferencia, prevalecen las skills de `~/.agents/skills` y las guías `Docs/METODO_AT/PROPUESTAS-*.md`.
 
 ### Referencia completa
 `C:\Users\luis_\Documents\Codex\AI-Memory-Vault\30-Agent-Protocols\automatizatech-pipeline.md`

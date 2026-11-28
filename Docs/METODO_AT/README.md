@@ -9,6 +9,7 @@ Esta carpeta documenta cómo AutomatizaTech diagnostica, propone, ejecuta, entre
 ## Documentos
 
 - [Aplicación del Método AT](./APLICACION_DEL_METODO_AT.md): recorrido común del cliente, seis pasos, roles, gates y soporte.
+- [Propuestas: una sola plantilla](./PROPUESTAS-PLANTILLA-UNICA.md): regla y procedimiento para armar toda propuesta con el `propuesta-renderer` (láminas, precios en CLP, fotos, chatbot).
 - [Servicios y casos de uso](./SERVICIOS_Y_CASOS_DE_USO.md): catálogo de servicios, selección de solución, ejemplos, entregables, métricas y diagramas.
 - [Propuestas: flujo automático v3](./PROPUESTAS-FLUJO-V3.md): de la transcripción de Meet al envío, con revisión en el panel, fotos por rubro y reintentos.
 - [Plan de trabajo con carta Gantt](./PLAN-DE-TRABAJO.md): al firmar un contrato de servicios, borrador con IA, edición en la ficha del CRM, tabla de tiempos y versión final y, desde la Etapa 2 (EN PROD 01-oct), envío al cliente por correo o WhatsApp, `ver-plan.php` y agenda web de la llamada de seguimiento.
@@ -17,6 +18,7 @@ Esta carpeta documenta cómo AutomatizaTech diagnostica, propone, ejecuta, entre
 - [Orden de la ficha CRM](./CRM-FICHA-ORDEN.md): AT-CRM-001, presentación local de Plan y Entregables, validación y archivos de entrega; revisión pendiente.
 - [Retomar prospectos](./RETOMAR-PROSPECTOS.md): AT-RETOMAR-001, guía local de operación, límites, bajas y entrega FTP/renderer/n8n; revisión B y autorización de PROD/piloto pendientes.
 - [Prototipos de Claude Design y demos](./PROTOTIPOS-Y-DEMOS.md): publicar un export en `automatizatech.cl/demos/<rubro>/`, arreglo móvil obligatorio, advertencia de alcohol y video de recorrido para WhatsApp.
+- [Medición de Meta por servidor (CAPI) y casilla anti-robot (Turnstile) para un cliente](./GUIA-CAPI-Y-TURNSTILE-CLIENTES.md): paso a paso con los errores del 16-nov-2026 y fuentes oficiales; primero Turnstile, después la CAPI.
 - [Flujo cliente end-to-end](../FLUJO_CLIENTE_END_TO_END.md): inventario histórico de capacidades existentes, faltantes y automatizaciones propuestas.
 - [Prompt final de Claude Orquestador](../ORCHESTRATION/CLAUDE_ORCHESTRATOR_PROMPT_FINAL.md): contexto autónomo para iniciar o recuperar al orquestador principal.
 

@@ -2677,7 +2677,8 @@ class OmnichannelController {
             $this->audit_log('create', 'bot_template', $id, "Template creado: {$fields['template_name']}", null, $fields, $client_id);
             return ['id' => $id];
         }
-        return ['error' => 'Error al crear template: ' . $this->wpdb->last_error];
+        error_log('OmniController: error al crear template: ' . $this->wpdb->last_error);
+        return ['error' => 'Error al crear template.'];
     }
 
     public function update_bot_template($template_id, $data) {
@@ -2959,7 +2960,8 @@ class OmnichannelController {
                     'delivery_status' => 'failed',
                     'error_message'   => $ycloud['error'] ?? 'Error desconocido',
                 ], ['id' => $local['message_id']]);
-                $local['delivery_error'] = $ycloud['error'] ?? 'Error desconocido';
+                error_log('OmniController: fallo de entrega: ' . ($ycloud['error'] ?? 'Error desconocido'));
+                $local['delivery_error'] = 'No se pudo entregar el mensaje.';
             }
         } elseif ($conversation->channel_type === 'instagram' && !empty($conversation->external_contact_id)) {
             $ig = $this->send_instagram_message($channel_id, $conversation->external_contact_id, $content);
@@ -2968,7 +2970,8 @@ class OmnichannelController {
             if (!empty($ig['success'])) {
                 $local['delivered'] = true;
             } else {
-                $local['delivery_error'] = $ig['error'] ?? 'Error desconocido';
+                error_log('OmniController: fallo de entrega: ' . ($ig['error'] ?? 'Error desconocido'));
+                $local['delivery_error'] = 'No se pudo entregar el mensaje.';
             }
         }
 
@@ -3149,7 +3152,8 @@ class OmnichannelController {
                 'delivery_status' => 'failed',
                 'error_message'   => $response->get_error_message(),
             ], ['id' => $local['message_id']]);
-            $local['delivery_error'] = $response->get_error_message();
+            error_log('OmniController: fallo de entrega: ' . $response->get_error_message());
+            $local['delivery_error'] = 'No se pudo entregar el mensaje.';
             return $local;
         }
 
@@ -3170,7 +3174,8 @@ class OmnichannelController {
                 'delivery_status' => 'failed',
                 'error_message'   => substr($detail, 0, 500),
             ], ['id' => $local['message_id']]);
-            $local['delivery_error'] = substr($detail, 0, 500);
+            error_log('OmniController: fallo de entrega: ' . substr($detail, 0, 500));
+            $local['delivery_error'] = 'No se pudo entregar el mensaje.';
         }
 
         return $local;
@@ -3320,7 +3325,8 @@ class OmnichannelController {
         ]);
 
         if (is_wp_error($response)) {
-            return ['error' => $response->get_error_message()];
+            error_log('OmniController: fallo de red: ' . $response->get_error_message());
+            return ['error' => 'No se pudo contactar al servicio externo.'];
         }
 
         $resp_body = json_decode(wp_remote_retrieve_body($response), true);
@@ -3365,7 +3371,8 @@ class OmnichannelController {
         }
         $resp = wp_remote_request($url, $args);
         if (is_wp_error($resp)) {
-            return ['error' => $resp->get_error_message()];
+            error_log('OmniController: fallo de red: ' . $resp->get_error_message());
+            return ['error' => 'No se pudo contactar al servicio externo.'];
         }
         $code = (int) wp_remote_retrieve_response_code($resp);
         $json = json_decode(wp_remote_retrieve_body($resp), true);
@@ -3474,7 +3481,7 @@ class OmnichannelController {
      * Crea un contenedor de media de Instagram sin esperar el procesamiento.
      * Usado por n8n para evitar requests HTTP bloqueantes de varios minutos.
      */
-    public function create_instagram_media_container($channel_id, $video_url, $caption = '', $media_type = 'REELS') {
+    public function create_instagram_media_container($channel_id, $video_url, $caption = '', $media_type = 'REELS', $trial = '') {
         $channel = $this->get_instagram_channel_for_api($channel_id);
         if (!$channel) return ['error' => 'Canal no encontrado'];
         if (trim((string) $video_url) === '') return ['error' => 'Falta video_url'];
@@ -3486,6 +3493,13 @@ class OmnichannelController {
         ];
         if ($media_type === 'REELS' && $caption !== '') {
             $container_body['caption'] = $caption;
+        }
+        // Reel de prueba (14-nov-2026): se muestra primero solo a quienes no siguen la cuenta.
+        // MANUAL = se comparte con los seguidores a mano en la app; SS_PERFORMANCE = Instagram decide.
+        // Solo REELS; no se puede leer ni cambiar después por API.
+        $trial = strtoupper(trim((string) $trial));
+        if ($media_type === 'REELS' && in_array($trial, ['MANUAL', 'SS_PERFORMANCE'], true)) {
+            $container_body['trial_params'] = ['graduation_strategy' => $trial];
         }
 
         $create = $this->ig_api_request('POST', $channel, 'me/media', $container_body);
@@ -3500,6 +3514,7 @@ class OmnichannelController {
             'success'     => true,
             'creation_id' => (string) $create['data']['id'],
             'media_type'  => $media_type,
+            'trial'       => isset($container_body['trial_params']) ? $trial : '',
             'status_code' => 'CREATED',
         ];
     }
@@ -3977,7 +3992,8 @@ class OmnichannelController {
             $this->apply_ig_delivery($local['message_id'], $ig);
             $local['instagram'] = $ig;
             if (empty($ig['success'])) {
-                $local['delivery_error'] = $ig['error'] ?? 'Error desconocido';
+                error_log('OmniController: fallo de entrega: ' . ($ig['error'] ?? 'Error desconocido'));
+                $local['delivery_error'] = 'No se pudo entregar el mensaje.';
             }
         } elseif ($ch_type === 'instagram') {
             $local['instagram'] = ['error' => 'No hay IGSID de contacto en esta conversación'];
@@ -4577,7 +4593,8 @@ class OmnichannelController {
         $result = $this->wpdb->update($this->prefix . 'support_tickets', $update, ['id' => $ticket_id]);
 
         if ($result === false) {
-            return ['error' => 'Error al actualizar el ticket: ' . $this->wpdb->last_error];
+            error_log('OmniController: error al actualizar ticket: ' . $this->wpdb->last_error);
+            return ['error' => 'Error al actualizar el ticket.'];
         }
 
         $this->audit_log('update', 'ticket', $ticket_id, "Ticket {$ticket->ticket_number} actualizado: {$old_status} → " . ($update['status'] ?? $old_status), null, $update, $ticket->client_id);

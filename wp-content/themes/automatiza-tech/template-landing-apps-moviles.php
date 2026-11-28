@@ -7,6 +7,18 @@
  */
 if (!defined('ABSPATH')) { exit; }
 
+// SEO-2 (diagnóstico del 12-nov-2026): en PROD la página de WordPress con la dirección
+// /aplicaciones-web-a-medida/ (la que está en el sitemap) tiene asignada ESTA plantilla, así que
+// mostraba contenido de apps móviles bajo una dirección de «aplicaciones web» y un canonical a una
+// dirección que no existe. Para esa dirección se entrega la landing de aplicaciones web (misma
+// dirección, mismo título y mismo contenido). Cuando Eje asigne la plantilla «AT Landing -
+// Aplicaciones Web a Medida» a esa página en WordPress, este desvío deja de ejecutarse.
+$at_slug_actual = is_singular() ? get_post_field('post_name', get_queried_object_id()) : '';
+if ($at_slug_actual === 'aplicaciones-web-a-medida') {
+    require get_template_directory() . '/template-landing-apps-web.php';
+    return;
+}
+
 remove_action('wp_head', 'print_emoji_detection_script', 7);
 remove_action('wp_print_styles', 'print_emoji_styles');
 
@@ -19,12 +31,21 @@ $body = @file_get_contents($at_dir . '/assets/landing-apps-moviles/body.html');
 if ($body === false) { $body = '<!-- landing-apps-moviles: body.html missing -->'; }
 $body = str_replace('assets/', $at_img . '/', $body);
 $body = str_replace('{{HOME_URL}}', esc_url(home_url('/')), $body);
+require_once get_template_directory() . '/inc/at-servicios.php';
+$body = str_replace('{{OTROS_SERVICIOS}}', at_otros_servicios_html((string) $at_slug_actual), $body);
+$body = str_replace('{{PREFERENCIAS_COOKIES}}', at_preferencias_cookies_html(), $body);
+$body = str_replace('{{GUIAS_PIE}}', at_guias_pie_html(), $body);
+// Menú «Servicios» del encabezado (escritorio y celular) + su cierre al hacer clic afuera.
+$body = str_replace('{{MENU_SERVICIOS}}', at_menu_servicios_html((string) $at_slug_actual), $body);
+$body = str_replace('{{MENU_SERVICIOS_MOVIL}}', at_menu_servicios_movil_html((string) $at_slug_actual), $body);
+$body .= at_menu_servicios_extras();
 
 $css_ver = @filemtime($at_dir . '/assets/home-premium/at-home.css') ?: '1';
 $js_ver  = @filemtime($at_dir . '/assets/home-premium/at-home.js') ?: '1';
 $agenda_ver = @filemtime($at_dir . '/assets/home-premium/at-agenda.js') ?: '1';
 
-$canonical = home_url('/desarrollo-apps-moviles-chile/');
+// Canonical a la propia dirección de la página (nunca a una dirección que no exista).
+$canonical = is_singular() ? get_permalink() : home_url('/');
 ?><!DOCTYPE html>
 <html <?php language_attributes(); ?>>
 <head>

@@ -18,8 +18,9 @@ Fuente única del conocimiento, las reglas, la personalidad y la validación de 
 
 | Archivo | Qué es | Dónde termina |
 |---|---|---|
-| `cerebro-at.md` | Quién es Tech, quiénes somos, lo que ofrecemos hoy, el Método AT, el diagnóstico gratis, lo que publicamos en Instagram y los planes del Portal OmniCliente | Tramo «CEREBRO AT» del prompt web y del de WhatsApp; Instagram lo hereda del web |
+| `cerebro-at.md` | Quién es Tech, quiénes somos, lo que ofrecemos hoy, el Método AT, el diagnóstico gratis, lo que publicamos en Instagram y la regla de precios (siempre al final; los proyectos nunca llevan precio) | Tramo «CEREBRO AT» del prompt web y del de WhatsApp; Instagram lo hereda del web |
 | `reglas.md` | Temas permitidos y reglas de seguridad y privacidad | Tramo «REGLAS AT» del web y de WhatsApp; Instagram lo hereda |
+| `planes.md` | Planes del Portal OmniCliente con precio | Al final de la personalidad web y de la de WhatsApp. Instagram nunca da precios (Luis, 29-oct-2026); `sincronizar.py` se detiene si la copia simulada de Instagram trae «USD/mes» |
 | `personalidad-web.md` | Tech Web, el asesor de la vitrina | Tramo «PERSONALIDAD» del web, dentro de la parte que `aplicar.py` le quita a Instagram |
 | `personalidad-whatsapp.md` | Tech WhatsApp, el coordinador | Tramo «PERSONALIDAD» de WhatsApp |
 | `personalidad-instagram.md` | Tech Instagram, el cercano | Bloque del canal en `N8N/instagram/` (lo arma `build_agente_instagram.py`) |

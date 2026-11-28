@@ -19,6 +19,14 @@ $body = @file_get_contents($at_dir . '/assets/landing-sitios-premium/body.html')
 if ($body === false) { $body = '<!-- landing-sitios-premium: body.html missing -->'; }
 $body = str_replace('assets/', $at_img . '/', $body);
 $body = str_replace('{{HOME_URL}}', esc_url(home_url('/')), $body);
+require_once get_template_directory() . '/inc/at-servicios.php';
+$body = str_replace('{{OTROS_SERVICIOS}}', at_otros_servicios_html('sitios-web-premium-chile'), $body);
+$body = str_replace('{{PREFERENCIAS_COOKIES}}', at_preferencias_cookies_html(), $body);
+$body = str_replace('{{GUIAS_PIE}}', at_guias_pie_html(), $body);
+// Menú «Servicios» del encabezado (escritorio y celular) + su cierre al hacer clic afuera.
+$body = str_replace('{{MENU_SERVICIOS}}', at_menu_servicios_html('sitios-web-premium-chile'), $body);
+$body = str_replace('{{MENU_SERVICIOS_MOVIL}}', at_menu_servicios_movil_html('sitios-web-premium-chile'), $body);
+$body .= at_menu_servicios_extras();
 
 $css_ver = @filemtime($at_dir . '/assets/home-premium/at-home.css') ?: '1';
 $js_ver  = @filemtime($at_dir . '/assets/home-premium/at-home.js') ?: '1';
@@ -30,12 +38,12 @@ $canonical = home_url('/sitios-web-premium-chile/');
 <head>
 <meta charset="<?php bloginfo('charset'); ?>">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Sitios Web Premium para Negocios en Chile | AutomatizaTech</title>
-<meta name="description" content="Diseño de sitios web premium, rápidos y pensados para vender. Tu imagen digital a la altura de tu negocio. Diagnóstico gratis.">
+<title>Diseño y desarrollo web para pymes en Chile | AutomatizaTech</title>
+<meta name="description" content="Diseño y desarrollo web para pymes en Chile: sitios premium, rápidos y pensados para vender. Tu imagen digital a la altura de tu negocio. Diagnóstico gratis.">
 <link rel="canonical" href="<?php echo esc_url($canonical); ?>">
 <meta property="og:type" content="website">
-<meta property="og:title" content="Sitios Web Premium para Negocios en Chile | AutomatizaTech">
-<meta property="og:description" content="Diseño de sitios web premium, rápidos y pensados para vender. Diagnóstico gratis.">
+<meta property="og:title" content="Diseño y desarrollo web para pymes en Chile | AutomatizaTech">
+<meta property="og:description" content="Diseño y desarrollo web para pymes en Chile: sitios premium, rápidos y pensados para vender. Diagnóstico gratis.">
 <meta property="og:url" content="<?php echo esc_url($canonical); ?>">
 <link rel="icon" type="image/svg+xml" href="<?php echo esc_url($at_img); ?>/favicon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -47,7 +55,7 @@ $canonical = home_url('/sitios-web-premium-chile/');
 {
   "@context": "https://schema.org",
   "@type": "Service",
-  "serviceType": "Diseño y desarrollo de sitios web premium",
+  "serviceType": "Diseño y desarrollo web para pymes (sitios web premium)",
   "provider": {
     "@type": "LocalBusiness",
     "name": "AutomatizaTech",

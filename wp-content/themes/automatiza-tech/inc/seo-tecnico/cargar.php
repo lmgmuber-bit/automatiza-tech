@@ -11,9 +11,9 @@ function at_seo_bloquea_entrenamiento(): bool {
 	return true;
 }
 
-/** En las plantillas con <head> propio, WordPress no imprime un segundo <title> ni un segundo canonical. */
+/** En las plantillas con <head> propio (y en las guías, cuyas plantillas archive-guia.php y single-guia.php también lo traen), WordPress no imprime un segundo <title> ni un segundo canonical. */
 add_action('template_redirect', function () {
-	if (is_page_template(at_seo_plantillas_propias())) {
+	if (is_page_template(at_seo_plantillas_propias()) || is_post_type_archive('guia') || is_singular('guia')) {
 		remove_action('wp_head', '_wp_render_title_tag', 1);
 		remove_action('wp_head', 'rel_canonical');
 	}

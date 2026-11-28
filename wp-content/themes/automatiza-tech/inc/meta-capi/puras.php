@@ -59,6 +59,19 @@ function at_capi_action_source(string $source): string {
 }
 
 /**
+ * ¿Este canal cuenta como Lead? $ajuste es la opción at_capi_canales («instagram, whatsapp, web»). Vacío o sin ningún
+ * canal válido vuelve a «instagram, whatsapp»: la web queda fuera hasta que su formulario tenga Turnstile (16-nov-2026),
+ * porque el webhook público de n8n que usa crea agendas con la credencial de n8n.
+ */
+function at_capi_canal_cuenta(string $source, string $ajuste): bool {
+	$lista = array_values(array_filter(array_map(fn($c) => strtolower(trim($c)), explode(',', $ajuste)), fn($c) => $c !== ''));
+	if (!$lista) {
+		$lista = ['instagram', 'whatsapp'];
+	}
+	return in_array(strtolower(trim($source)), $lista, true);
+}
+
+/**
  * Cuerpo para POST /<pixel>/events, sin el token (lo agrega el envío). $lead trae las claves de /leads:
  * id, email, phone, source, scheduled_date, scheduled_time.
  */

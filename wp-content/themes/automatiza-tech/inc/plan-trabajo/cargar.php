@@ -25,3 +25,10 @@ require_once __DIR__ . '/vista.php';
 require_once __DIR__ . '/ajustes.php';
 require_once __DIR__ . '/panel.php';
 require_once __DIR__ . '/avance-panel.php';
+
+// Reseñas: módulos preparados antes de activar los flujos.
+require_once __DIR__ . '/resena-puras.php';
+require_once __DIR__ . '/resena-datos.php';
+require_once __DIR__ . '/resena-bajas.php';
+require_once __DIR__ . '/resena-correo.php';
+require_once __DIR__ . '/resena.php';

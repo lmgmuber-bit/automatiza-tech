@@ -1,6 +1,6 @@
 ﻿<?php
 /**
- * Generador de facturas en PDF usando FPDF
+ * Generador de resumen de contratación en PDF (no es documento tributario) usando FPDF
  * SoluciÃ³n 100% PHP, sin dependencias externas
  */
 
@@ -227,7 +227,7 @@ class InvoicePDFFPDF extends FPDF {
         $this->SetY(-12);
         $this->SetFont('Arial', '', 7);
         $this->SetTextColor($this->gray_color[0], $this->gray_color[1], $this->gray_color[2]);
-        $this->Cell(0, 3, utf8_to_latin1($company_name . ' - RUT: ' . $company_rut . ' - Factura válida para efectos tributarios'), 0, 1, 'C');
+        $this->Cell(0, 3, utf8_to_latin1($company_name . ' - RUT: ' . $company_rut . ' - Resumen interno. No es factura ni boleta del SII.'), 0, 1, 'C');
         $this->SetFont('Arial', 'I', 6);
         $this->Cell(0, 3, utf8_to_latin1('© ' . current_time('Y') . ' ' . $company_name . '. Todos los derechos reservados. Documento generado electrónicamente.'), 0, 0, 'C');
     }
@@ -257,11 +257,11 @@ class InvoicePDFFPDF extends FPDF {
     public function build() {
         // Datos de la factura en negrita sin cuadro (margen 15mm)
         $this->SetX(15);
-        $this->SetFont('Arial', 'B', 16);
+        $this->SetFont('Arial', 'B', 12);
         $this->SetTextColor($this->text_color[0], $this->text_color[1], $this->text_color[2]);
         
         // FACTURA + Número en la misma línea (sin fondo)
-        $this->Cell(110, 8, utf8_to_latin1('FACTURA N° ') . $this->invoice_number, 0, 0, 'L');
+        $this->Cell(110, 8, utf8_to_latin1('RESUMEN DE CONTRATACIÓN N° ') . $this->invoice_number, 0, 0, 'L');
         
         // Fecha al lado derecho (en negrita) - ancho 70mm para llegar al margen derecho
         $this->SetFont('Arial', 'B', 10);
@@ -438,7 +438,7 @@ class InvoicePDFFPDF extends FPDF {
             $this->SetX(15);
             $this->SetFont('Arial', 'I', 9);
             $this->SetTextColor($this->gray_color[0], $this->gray_color[1], $this->gray_color[2]);
-            $this->Cell(180, 6, utf8_to_latin1('* Factura internacional - No aplica IVA chileno'), 0, 1, 'R');
+            $this->Cell(180, 6, utf8_to_latin1('* Cliente en el extranjero. El tratamiento del IVA se indica en el documento tributario.'), 0, 1, 'R');
             $this->Ln(2);
         }
         
@@ -493,7 +493,7 @@ class InvoicePDFFPDF extends FPDF {
         $this->SetX(20);
         $this->SetFont('Arial', '', 8);
         $this->SetTextColor($this->gray_color[0], $this->gray_color[1], $this->gray_color[2]);
-        $this->MultiCell(160, 3, utf8_to_latin1('Este documento es válido como factura para efectos tributarios.'), 0, 'L');
+        $this->MultiCell(160, 3, utf8_to_latin1('Resumen interno. No constituye factura ni boleta electrónica del SII. El documento tributario se emite aparte.'), 0, 'L');
         
         $this->SetLineWidth(0.2);
         $this->Ln(15); // Mayor separación (de 5 a 15)

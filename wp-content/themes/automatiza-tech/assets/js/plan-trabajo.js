@@ -168,3 +168,11 @@
 
   window.atPlanTrabajo = { serializar: serializar, abrirPestanaPlan: abrirPestanaPlan };
 }());
+
+// La ficha general no abre pestañas por hash; reseñas conserva su propio destino tras admin-post.
+document.addEventListener('DOMContentLoaded', function () {
+  if (window.location.hash === '#tab-resena') {
+    var b = document.querySelector('.ficha-tab[data-target="tab-resena"]');
+    if (b) { b.click(); }
+  }
+});

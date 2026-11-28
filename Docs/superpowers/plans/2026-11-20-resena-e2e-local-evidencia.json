@@ -1,0 +1,1229 @@
+{
+  "owner": "Centinela-Codex",
+  "reviewer": "Eje (pendiente)",
+  "base_commit": "0afac2c",
+  "branch": "codex/resena-google-impl",
+  "runtime": {
+    "php": "8.5.0",
+    "wordpress": "7.1.2",
+    "mysql": "8.4.7",
+    "timezone": "America/Santiago",
+    "e2e_start": "2026-11-20T23:58:19-03:00",
+    "evidence_saved": "2026-11-21T00:03:36.961665-03:00"
+  },
+  "wp_test": {
+    "exit": 0,
+    "pass": 14,
+    "fail": 0,
+    "output": [
+      "PASS migración crea/verifica columnas e índices",
+      "PASS segunda migración idempotente",
+      "PASS proyecto_clave NOT NULL",
+      "PASS 4 procesos crean una sola identidad sin plan",
+      "PASS prueba aislada sin webhook",
+      "PASS real después de prueba no consume cupo previo",
+      "PASS no hay segundo envío inmediato",
+      "PASS vinculación concurrente conserva identidad, pruebas e invitación",
+      "PASS CAS ganador en MySQL",
+      "PASS MySQL rechaza revisión antigua",
+      "PASS guardado avance",
+      "PASS avance no borra intento",
+      "PASS REST sin clave 401",
+      "PASS callback inexistente rechazado",
+      "14 comprobaciones WP/MySQL, 0 fallas"
+    ]
+  },
+  "http_test": {
+    "exit": 0,
+    "pass": 7,
+    "fail": 0,
+    "output": [
+      "PASS GET /?rest_route=/at/v1/resena/pendientes HTTP 401",
+      "PASS POST /?rest_route=/at/v1/resena/proyecto/1/reclamar HTTP 401",
+      "PASS POST /?rest_route=/at/v1/resena/proyecto/1/resultado HTTP 401",
+      "PASS POST /?rest_route=/at/v1/resena/proyecto/1/autorizar-whatsapp HTTP 401",
+      "PASS POST /?rest_route=/at/v1/resena/baja HTTP 401",
+      "PASS GET /resena/ HTTP 404",
+      "PASS GET /resena/baja/ HTTP 400"
+    ]
+  },
+  "e2e": {
+    "date": "2026-11-20",
+    "checks": [
+      {
+        "name": "1 CRM cliente y plan",
+        "pass": true,
+        "ids": {
+          "crm": 2,
+          "plan": 2,
+          "proyecto": 2
+        },
+        "correo": "cliente@ejemplo.cl",
+        "telefono": "+56900000001"
+      },
+      {
+        "name": "2 marcar proyecto terminado",
+        "pass": true,
+        "http": 302,
+        "fecha": "2026-11-12",
+        "ahora": "2026-11-20T23:58:19-03:00",
+        "mensaje": "guardado"
+      },
+      {
+        "name": "2 permiso WhatsApp de fixture",
+        "pass": true,
+        "http": 302
+      },
+      {
+        "name": "3 sin enlace",
+        "pass": true,
+        "http_publico": 404,
+        "location": null,
+        "http_rest": 409,
+        "code": "resena_enlace",
+        "robots": "noindex, nofollow",
+        "referrer": "no-referrer"
+      },
+      {
+        "name": "4 redireccion Google exacta",
+        "pass": true,
+        "http": 302,
+        "location": "https://g.page/r/CeTySLmzF2BxEBM/review"
+      },
+      {
+        "name": "4 pendientes lista el proyecto (pedido literal)",
+        "pass": false,
+        "http": 200,
+        "respuesta": {
+          "pendientes": []
+        },
+        "elegibilidad": "historico"
+      },
+      {
+        "name": "4 reclamar REST automatico (pedido literal)",
+        "pass": false,
+        "http": 409,
+        "code": "resena_historico",
+        "efectos_capturados": 0
+      },
+      {
+        "name": "4 continuacion manual captura correo y webhook",
+        "pass": true,
+        "http": 302,
+        "mensaje": "registrado",
+        "correo": [
+          "cliente@ejemplo.cl"
+        ],
+        "webhook": [
+          {
+            "url": "https://n8n-n8n.kchiba.easypanel.host/webhook/at-resena-whatsapp",
+            "body": {
+              "proyecto_id": 2,
+              "intento_id": "f2cae0ba-b67a-45aa-9993-e7c1b06bffcf",
+              "modo": "real"
+            },
+            "secret_matches": true
+          }
+        ],
+        "estados": {
+          "correo": "aceptado",
+          "whatsapp": "en_curso"
+        }
+      },
+      {
+        "name": "4/5 autorizar WhatsApp real",
+        "pass": true,
+        "http": 200,
+        "destino": "+56900000001"
+      },
+      {
+        "name": "4/5 segundo despacho real",
+        "pass": true,
+        "http": 409,
+        "code": "resena_despacho_usado"
+      },
+      {
+        "name": "4/5 resultado idempotente real",
+        "pass": true,
+        "http": [
+          200,
+          200
+        ],
+        "estado": "aceptado",
+        "revision": [
+          "10",
+          "10"
+        ],
+        "historial": [
+          2,
+          2
+        ]
+      },
+      {
+        "name": "5 modo prueba solo destino QA",
+        "pass": true,
+        "http": 302,
+        "correo": [
+          "qa-resena@example.test"
+        ],
+        "destinos": {
+          "correo": "qa-resena@example.test",
+          "whatsapp": "+56900000002"
+        },
+        "cupo_antes": 1,
+        "cupo_despues": 1,
+        "cabeceras": [
+          [
+            "Content-Type: text/html; charset=UTF-8",
+            "Reply-To: contacto@automatizatech.cl"
+          ]
+        ]
+      },
+      {
+        "name": "4/5 autorizar WhatsApp prueba",
+        "pass": true,
+        "http": 200,
+        "destino": "+56900000002"
+      },
+      {
+        "name": "4/5 segundo despacho prueba",
+        "pass": true,
+        "http": 409,
+        "code": "resena_despacho_usado"
+      },
+      {
+        "name": "4/5 resultado idempotente prueba",
+        "pass": true,
+        "http": [
+          200,
+          200
+        ],
+        "estado": "aceptado",
+        "revision": [
+          "18",
+          "18"
+        ],
+        "historial": [
+          2,
+          2
+        ]
+      },
+      {
+        "name": "6 GET baja solo confirma",
+        "pass": true,
+        "http": 200,
+        "bajas_antes": 0,
+        "bajas_despues": 0
+      },
+      {
+        "name": "6 POST baja persiste",
+        "pass": true,
+        "http": 200,
+        "bajas": [
+          {
+            "email": "cliente@ejemplo.cl",
+            "telefono": "",
+            "canal": "correo",
+            "alcance": "resenas"
+          }
+        ]
+      },
+      {
+        "name": "6 nuevo reclamar REST sin canal tras baja",
+        "pass": true,
+        "http": 409,
+        "code": "resena_canales",
+        "efectos_capturados": 0
+      },
+      {
+        "name": "6 mismo proyecto reenvio excluye correo",
+        "pass": true,
+        "http": 302,
+        "mensaje": "registrado",
+        "correo_capturado": [],
+        "estados": {
+          "correo": "no_intentado",
+          "whatsapp": "en_curso"
+        }
+      },
+      {
+        "name": "4/5 autorizar WhatsApp real",
+        "pass": true,
+        "http": 200,
+        "destino": "+56900000001"
+      },
+      {
+        "name": "4/5 segundo despacho real",
+        "pass": true,
+        "http": 409,
+        "code": "resena_despacho_usado"
+      },
+      {
+        "name": "4/5 resultado idempotente real",
+        "pass": true,
+        "http": [
+          200,
+          200
+        ],
+        "estado": "aceptado",
+        "revision": [
+          "24",
+          "24"
+        ],
+        "historial": [
+          3,
+          3
+        ]
+      },
+      {
+        "name": "7 sin clave pendientes",
+        "pass": true,
+        "http": 401,
+        "code": "resena_no_autorizado"
+      },
+      {
+        "name": "7 sin clave baja",
+        "pass": true,
+        "http": 401,
+        "code": "resena_no_autorizado"
+      },
+      {
+        "name": "7 sin clave proyecto/2/reclamar",
+        "pass": true,
+        "http": 401,
+        "code": "resena_no_autorizado"
+      },
+      {
+        "name": "7 sin clave proyecto/2/resultado",
+        "pass": true,
+        "http": 401,
+        "code": "resena_no_autorizado"
+      },
+      {
+        "name": "7 sin clave proyecto/2/autorizar-whatsapp",
+        "pass": true,
+        "http": 401,
+        "code": "resena_no_autorizado"
+      },
+      {
+        "name": "7 sin clave 2/reclamar",
+        "pass": true,
+        "http": 401,
+        "code": "resena_no_autorizado"
+      },
+      {
+        "name": "7 sin clave 2/resultado",
+        "pass": true,
+        "http": 401,
+        "code": "resena_no_autorizado"
+      },
+      {
+        "name": "7 sin clave 2/autorizar-whatsapp",
+        "pass": true,
+        "http": 401,
+        "code": "resena_no_autorizado"
+      },
+      {
+        "name": "7 admin sin nonce",
+        "pass": true,
+        "http": 403,
+        "sin_mutacion": true
+      },
+      {
+        "name": "7 suscriptor con nonce sin manage_options",
+        "pass": true,
+        "http": 403,
+        "sin_mutacion": true
+      },
+      {
+        "name": "8 M4 fallido mas no_intentado devuelve cupo",
+        "pass": true,
+        "http": 302,
+        "estado": {
+          "correo": "fallido",
+          "whatsapp": "no_intentado"
+        },
+        "cupo": 0
+      },
+      {
+        "name": "8 M4 permite siguiente intento manual",
+        "pass": true,
+        "http": 302,
+        "intentos": 2,
+        "cupo": 0
+      }
+    ],
+    "pass": 32,
+    "fail": 2
+  },
+  "cleanup": {
+    "db": "zz_centinela_resena_01a1fbf9",
+    "e2e_exit": 1,
+    "owner": "centinela-codex",
+    "drop_exit": 0,
+    "http_stopped": true,
+    "http_port": 65309,
+    "scratch": "C:\\Users\\luis_\\AppData\\Local\\Temp\\zz_centinela_resena_01a1fbf9_20261120",
+    "wp_test_exit": 0,
+    "mysql_port": 65308,
+    "http_test_exit": 0,
+    "mysql_stopped": true,
+    "root": "C:/wamp64/www/automatiza-tech/.worktrees/guias",
+    "db_remaining": "0",
+    "mysql_pid": 12096,
+    "http_pid": 33172,
+    "session": "01a1fbf9-ed83-7641-891c-0426d186d0e9",
+    "process_ids_absent": true,
+    "ports_closed": true,
+    "scratch_removed": false,
+    "scratch_disposition": "PENDING: recursive removal rejected by automatic approval review: blocked by policy",
+    "aseo_init": "preserved: ruta ausente, ocupada o sin permiso",
+    "aseo_checkpoint_task_close": "preserved: ruta ausente, ocupada o sin permiso",
+    "scratch_inventory": [
+      {
+        "path": "capture.jsonl",
+        "bytes": 5983
+      },
+      {
+        "path": "db-remaining.txt",
+        "bytes": 8
+      },
+      {
+        "path": "e2e-sanitizado.json",
+        "bytes": 6876
+      },
+      {
+        "path": "e2e.py",
+        "bytes": 11373
+      },
+      {
+        "path": "e2e.stderr.txt",
+        "bytes": 0
+      },
+      {
+        "path": "e2e.stdout.txt",
+        "bytes": 7840
+      },
+      {
+        "path": "fixture.php",
+        "bytes": 4259
+      },
+      {
+        "path": "http-test.stderr.txt",
+        "bytes": 0
+      },
+      {
+        "path": "http-test.stdout.txt",
+        "bytes": 766
+      },
+      {
+        "path": "http.stderr.txt",
+        "bytes": 4918
+      },
+      {
+        "path": "http.stdout.txt",
+        "bytes": 0
+      },
+      {
+        "path": "install.stderr.txt",
+        "bytes": 1028
+      },
+      {
+        "path": "install.stdout.txt",
+        "bytes": 252
+      },
+      {
+        "path": "mysql.log",
+        "bytes": 10557
+      },
+      {
+        "path": "option.stderr.txt",
+        "bytes": 1028
+      },
+      {
+        "path": "option.stdout.txt",
+        "bytes": 38
+      },
+      {
+        "path": "router.php",
+        "bytes": 394
+      },
+      {
+        "path": "run-original-state.json",
+        "bytes": 590
+      },
+      {
+        "path": "run-state.json",
+        "bytes": 588
+      },
+      {
+        "path": "run.ps1",
+        "bytes": 4744
+      },
+      {
+        "path": "save-evidence.py",
+        "bytes": 1589
+      },
+      {
+        "path": "wp-test-noop.stdout.txt",
+        "bytes": 1152
+      },
+      {
+        "path": "wp-test-original.stdout.txt",
+        "bytes": 1078
+      },
+      {
+        "path": "wp-test.stderr.txt",
+        "bytes": 1028
+      },
+      {
+        "path": "wp-test.stdout.txt",
+        "bytes": 1152
+      },
+      {
+        "path": "data\\#ib_16384_0.dblwr",
+        "bytes": 4194304
+      },
+      {
+        "path": "data\\#ib_16384_1.dblwr",
+        "bytes": 12582912
+      },
+      {
+        "path": "data\\auto.cnf",
+        "bytes": 56
+      },
+      {
+        "path": "data\\ca-key.pem",
+        "bytes": 1705
+      },
+      {
+        "path": "data\\ca.pem",
+        "bytes": 1108
+      },
+      {
+        "path": "data\\client-cert.pem",
+        "bytes": 1108
+      },
+      {
+        "path": "data\\client-key.pem",
+        "bytes": 1705
+      },
+      {
+        "path": "data\\ibdata1",
+        "bytes": 12582912
+      },
+      {
+        "path": "data\\ib_buffer_pool",
+        "bytes": 3943
+      },
+      {
+        "path": "data\\mysql.ibd",
+        "bytes": 27262976
+      },
+      {
+        "path": "data\\mysql_upgrade_history",
+        "bytes": 125
+      },
+      {
+        "path": "data\\private_key.pem",
+        "bytes": 1705
+      },
+      {
+        "path": "data\\public_key.pem",
+        "bytes": 452
+      },
+      {
+        "path": "data\\server-cert.pem",
+        "bytes": 1108
+      },
+      {
+        "path": "data\\server-key.pem",
+        "bytes": 1705
+      },
+      {
+        "path": "data\\undo_001",
+        "bytes": 16777216
+      },
+      {
+        "path": "data\\undo_002",
+        "bytes": 16777216
+      },
+      {
+        "path": "site\\wp-load.php",
+        "bytes": 1292
+      },
+      {
+        "path": "data\\#innodb_redo\\#ib_redo10_tmp",
+        "bytes": 3276800
+      },
+      {
+        "path": "data\\#innodb_redo\\#ib_redo11_tmp",
+        "bytes": 3276800
+      },
+      {
+        "path": "data\\#innodb_redo\\#ib_redo12_tmp",
+        "bytes": 3276800
+      },
+      {
+        "path": "data\\#innodb_redo\\#ib_redo13_tmp",
+        "bytes": 3276800
+      },
+      {
+        "path": "data\\#innodb_redo\\#ib_redo14_tmp",
+        "bytes": 3276800
+      },
+      {
+        "path": "data\\#innodb_redo\\#ib_redo15_tmp",
+        "bytes": 3276800
+      },
+      {
+        "path": "data\\#innodb_redo\\#ib_redo16_tmp",
+        "bytes": 3276800
+      },
+      {
+        "path": "data\\#innodb_redo\\#ib_redo17_tmp",
+        "bytes": 3276800
+      },
+      {
+        "path": "data\\#innodb_redo\\#ib_redo18_tmp",
+        "bytes": 3276800
+      },
+      {
+        "path": "data\\#innodb_redo\\#ib_redo19_tmp",
+        "bytes": 3276800
+      },
+      {
+        "path": "data\\#innodb_redo\\#ib_redo20_tmp",
+        "bytes": 3276800
+      },
+      {
+        "path": "data\\#innodb_redo\\#ib_redo21_tmp",
+        "bytes": 3276800
+      },
+      {
+        "path": "data\\#innodb_redo\\#ib_redo22_tmp",
+        "bytes": 3276800
+      },
+      {
+        "path": "data\\#innodb_redo\\#ib_redo23_tmp",
+        "bytes": 3276800
+      },
+      {
+        "path": "data\\#innodb_redo\\#ib_redo24_tmp",
+        "bytes": 3276800
+      },
+      {
+        "path": "data\\#innodb_redo\\#ib_redo25_tmp",
+        "bytes": 3276800
+      },
+      {
+        "path": "data\\#innodb_redo\\#ib_redo26_tmp",
+        "bytes": 3276800
+      },
+      {
+        "path": "data\\#innodb_redo\\#ib_redo27_tmp",
+        "bytes": 3276800
+      },
+      {
+        "path": "data\\#innodb_redo\\#ib_redo28_tmp",
+        "bytes": 3276800
+      },
+      {
+        "path": "data\\#innodb_redo\\#ib_redo29_tmp",
+        "bytes": 3276800
+      },
+      {
+        "path": "data\\#innodb_redo\\#ib_redo30_tmp",
+        "bytes": 3276800
+      },
+      {
+        "path": "data\\#innodb_redo\\#ib_redo31_tmp",
+        "bytes": 3276800
+      },
+      {
+        "path": "data\\#innodb_redo\\#ib_redo32_tmp",
+        "bytes": 3276800
+      },
+      {
+        "path": "data\\#innodb_redo\\#ib_redo33_tmp",
+        "bytes": 3276800
+      },
+      {
+        "path": "data\\#innodb_redo\\#ib_redo34_tmp",
+        "bytes": 3276800
+      },
+      {
+        "path": "data\\#innodb_redo\\#ib_redo35_tmp",
+        "bytes": 3276800
+      },
+      {
+        "path": "data\\#innodb_redo\\#ib_redo36_tmp",
+        "bytes": 3276800
+      },
+      {
+        "path": "data\\#innodb_redo\\#ib_redo37_tmp",
+        "bytes": 3276800
+      },
+      {
+        "path": "data\\#innodb_redo\\#ib_redo38_tmp",
+        "bytes": 3276800
+      },
+      {
+        "path": "data\\#innodb_redo\\#ib_redo7",
+        "bytes": 3276800
+      },
+      {
+        "path": "data\\#innodb_redo\\#ib_redo8_tmp",
+        "bytes": 3276800
+      },
+      {
+        "path": "data\\#innodb_redo\\#ib_redo9_tmp",
+        "bytes": 3276800
+      },
+      {
+        "path": "data\\mysql\\general_log.CSM",
+        "bytes": 35
+      },
+      {
+        "path": "data\\mysql\\general_log.CSV",
+        "bytes": 0
+      },
+      {
+        "path": "data\\mysql\\general_log_214.sdi",
+        "bytes": 5972
+      },
+      {
+        "path": "data\\mysql\\slow_log.CSM",
+        "bytes": 35
+      },
+      {
+        "path": "data\\mysql\\slow_log.CSV",
+        "bytes": 0
+      },
+      {
+        "path": "data\\mysql\\slow_log_215.sdi",
+        "bytes": 12505
+      },
+      {
+        "path": "data\\performance_schema\\accounts_146.sdi",
+        "bytes": 6134
+      },
+      {
+        "path": "data\\performance_schema\\binary_log_trans_190.sdi",
+        "bytes": 13199
+      },
+      {
+        "path": "data\\performance_schema\\cond_instances_81.sdi",
+        "bytes": 3955
+      },
+      {
+        "path": "data\\performance_schema\\data_locks_161.sdi",
+        "bytes": 16110
+      },
+      {
+        "path": "data\\performance_schema\\data_lock_waits_162.sdi",
+        "bytes": 14643
+      },
+      {
+        "path": "data\\performance_schema\\error_log_82.sdi",
+        "bytes": 7639
+      },
+      {
+        "path": "data\\performance_schema\\events_errors_su_140.sdi",
+        "bytes": 7663
+      },
+      {
+        "path": "data\\performance_schema\\events_errors_su_141.sdi",
+        "bytes": 7664
+      },
+      {
+        "path": "data\\performance_schema\\events_errors_su_142.sdi",
+        "bytes": 8518
+      },
+      {
+        "path": "data\\performance_schema\\events_errors_su_143.sdi",
+        "bytes": 7694
+      },
+      {
+        "path": "data\\performance_schema\\events_errors_su_144.sdi",
+        "bytes": 6822
+      },
+      {
+        "path": "data\\performance_schema\\events_stages_cu_112.sdi",
+        "bytes": 11711
+      },
+      {
+        "path": "data\\performance_schema\\events_stages_hi_113.sdi",
+        "bytes": 11711
+      },
+      {
+        "path": "data\\performance_schema\\events_stages_hi_114.sdi",
+        "bytes": 11270
+      },
+      {
+        "path": "data\\performance_schema\\events_stages_su_115.sdi",
+        "bytes": 7695
+      },
+      {
+        "path": "data\\performance_schema\\events_stages_su_116.sdi",
+        "bytes": 8521
+      },
+      {
+        "path": "data\\performance_schema\\events_stages_su_117.sdi",
+        "bytes": 7666
+      },
+      {
+        "path": "data\\performance_schema\\events_stages_su_118.sdi",
+        "bytes": 7667
+      },
+      {
+        "path": "data\\performance_schema\\events_stages_su_119.sdi",
+        "bytes": 6820
+      },
+      {
+        "path": "data\\performance_schema\\events_statement_120.sdi",
+        "bytes": 38909
+      },
+      {
+        "path": "data\\performance_schema\\events_statement_121.sdi",
+        "bytes": 38909
+      },
+      {
+        "path": "data\\performance_schema\\events_statement_122.sdi",
+        "bytes": 38468
+      },
+      {
+        "path": "data\\performance_schema\\events_statement_123.sdi",
+        "bytes": 26261
+      },
+      {
+        "path": "data\\performance_schema\\events_statement_124.sdi",
+        "bytes": 27088
+      },
+      {
+        "path": "data\\performance_schema\\events_statement_125.sdi",
+        "bytes": 26232
+      },
+      {
+        "path": "data\\performance_schema\\events_statement_126.sdi",
+        "bytes": 26233
+      },
+      {
+        "path": "data\\performance_schema\\events_statement_127.sdi",
+        "bytes": 25385
+      },
+      {
+        "path": "data\\performance_schema\\events_statement_128.sdi",
+        "bytes": 32719
+      },
+      {
+        "path": "data\\performance_schema\\events_statement_129.sdi",
+        "bytes": 31346
+      },
+      {
+        "path": "data\\performance_schema\\events_statement_130.sdi",
+        "bytes": 6125
+      },
+      {
+        "path": "data\\performance_schema\\events_statement_131.sdi",
+        "bytes": 7847
+      },
+      {
+        "path": "data\\performance_schema\\events_transacti_132.sdi",
+        "bytes": 21447
+      },
+      {
+        "path": "data\\performance_schema\\events_transacti_133.sdi",
+        "bytes": 21447
+      },
+      {
+        "path": "data\\performance_schema\\events_transacti_134.sdi",
+        "bytes": 21006
+      },
+      {
+        "path": "data\\performance_schema\\events_transacti_135.sdi",
+        "bytes": 15786
+      },
+      {
+        "path": "data\\performance_schema\\events_transacti_136.sdi",
+        "bytes": 16613
+      },
+      {
+        "path": "data\\performance_schema\\events_transacti_137.sdi",
+        "bytes": 15757
+      },
+      {
+        "path": "data\\performance_schema\\events_transacti_138.sdi",
+        "bytes": 15758
+      },
+      {
+        "path": "data\\performance_schema\\events_transacti_139.sdi",
+        "bytes": 14910
+      },
+      {
+        "path": "data\\performance_schema\\events_waits_cur_83.sdi",
+        "bytes": 17384
+      },
+      {
+        "path": "data\\performance_schema\\events_waits_his_84.sdi",
+        "bytes": 17384
+      },
+      {
+        "path": "data\\performance_schema\\events_waits_his_85.sdi",
+        "bytes": 16943
+      },
+      {
+        "path": "data\\performance_schema\\events_waits_sum_86.sdi",
+        "bytes": 7666
+      },
+      {
+        "path": "data\\performance_schema\\events_waits_sum_87.sdi",
+        "bytes": 7996
+      },
+      {
+        "path": "data\\performance_schema\\events_waits_sum_88.sdi",
+        "bytes": 7694
+      },
+      {
+        "path": "data\\performance_schema\\events_waits_sum_89.sdi",
+        "bytes": 7665
+      },
+      {
+        "path": "data\\performance_schema\\events_waits_sum_90.sdi",
+        "bytes": 8520
+      },
+      {
+        "path": "data\\performance_schema\\events_waits_sum_91.sdi",
+        "bytes": 6819
+      },
+      {
+        "path": "data\\performance_schema\\file_instances_92.sdi",
+        "bytes": 7543
+      },
+      {
+        "path": "data\\performance_schema\\file_summary_by__93.sdi",
+        "bytes": 20467
+      },
+      {
+        "path": "data\\performance_schema\\file_summary_by__94.sdi",
+        "bytes": 25622
+      },
+      {
+        "path": "data\\performance_schema\\global_status_182.sdi",
+        "bytes": 3218
+      },
+      {
+        "path": "data\\performance_schema\\global_variables_185.sdi",
+        "bytes": 3221
+      },
+      {
+        "path": "data\\performance_schema\\hosts_147.sdi",
+        "bytes": 5280
+      },
+      {
+        "path": "data\\performance_schema\\host_cache_95.sdi",
+        "bytes": 25310
+      },
+      {
+        "path": "data\\performance_schema\\keyring_componen_192.sdi",
+        "bytes": 9509
+      },
+      {
+        "path": "data\\performance_schema\\keyring_keys_153.sdi",
+        "bytes": 4663
+      },
+      {
+        "path": "data\\performance_schema\\log_status_175.sdi",
+        "bytes": 4283
+      },
+      {
+        "path": "data\\performance_schema\\memory_summary_b_155.sdi",
+        "bytes": 12543
+      },
+      {
+        "path": "data\\performance_schema\\memory_summary_b_156.sdi",
+        "bytes": 11688
+      },
+      {
+        "path": "data\\performance_schema\\memory_summary_b_157.sdi",
+        "bytes": 11716
+      },
+      {
+        "path": "data\\performance_schema\\memory_summary_b_158.sdi",
+        "bytes": 11687
+      },
+      {
+        "path": "data\\performance_schema\\memory_summary_g_154.sdi",
+        "bytes": 10840
+      },
+      {
+        "path": "data\\performance_schema\\metadata_locks_160.sdi",
+        "bytes": 11897
+      },
+      {
+        "path": "data\\performance_schema\\mutex_instances_96.sdi",
+        "bytes": 5136
+      },
+      {
+        "path": "data\\performance_schema\\objects_summary__97.sdi",
+        "bytes": 7822
+      },
+      {
+        "path": "data\\performance_schema\\performance_time_98.sdi",
+        "bytes": 4293
+      },
+      {
+        "path": "data\\performance_schema\\persisted_variab_188.sdi",
+        "bytes": 3224
+      },
+      {
+        "path": "data\\performance_schema\\prepared_stateme_176.sdi",
+        "bytes": 35510
+      },
+      {
+        "path": "data\\performance_schema\\processlist_99.sdi",
+        "bytes": 8385
+      },
+      {
+        "path": "data\\performance_schema\\replication_appl_166.sdi",
+        "bytes": 8225
+      },
+      {
+        "path": "data\\performance_schema\\replication_appl_167.sdi",
+        "bytes": 4886
+      },
+      {
+        "path": "data\\performance_schema\\replication_appl_168.sdi",
+        "bytes": 19879
+      },
+      {
+        "path": "data\\performance_schema\\replication_appl_169.sdi",
+        "bytes": 27360
+      },
+      {
+        "path": "data\\performance_schema\\replication_appl_171.sdi",
+        "bytes": 6730
+      },
+      {
+        "path": "data\\performance_schema\\replication_appl_172.sdi",
+        "bytes": 4601
+      },
+      {
+        "path": "data\\performance_schema\\replication_asyn_173.sdi",
+        "bytes": 7243
+      },
+      {
+        "path": "data\\performance_schema\\replication_asyn_174.sdi",
+        "bytes": 5317
+      },
+      {
+        "path": "data\\performance_schema\\replication_conn_163.sdi",
+        "bytes": 46221
+      },
+      {
+        "path": "data\\performance_schema\\replication_conn_165.sdi",
+        "bytes": 24348
+      },
+      {
+        "path": "data\\performance_schema\\replication_grou_164.sdi",
+        "bytes": 9488
+      },
+      {
+        "path": "data\\performance_schema\\replication_grou_170.sdi",
+        "bytes": 12356
+      },
+      {
+        "path": "data\\performance_schema\\rwlock_instances_100.sdi",
+        "bytes": 5951
+      },
+      {
+        "path": "data\\performance_schema\\session_account__152.sdi",
+        "bytes": 4703
+      },
+      {
+        "path": "data\\performance_schema\\session_connect__151.sdi",
+        "bytes": 4695
+      },
+      {
+        "path": "data\\performance_schema\\session_status_183.sdi",
+        "bytes": 3219
+      },
+      {
+        "path": "data\\performance_schema\\session_variable_186.sdi",
+        "bytes": 3222
+      },
+      {
+        "path": "data\\performance_schema\\setup_actors_101.sdi",
+        "bytes": 6159
+      },
+      {
+        "path": "data\\performance_schema\\setup_consumers_102.sdi",
+        "bytes": 3261
+      },
+      {
+        "path": "data\\performance_schema\\setup_instrument_103.sdi",
+        "bytes": 7937
+      },
+      {
+        "path": "data\\performance_schema\\setup_meters_104.sdi",
+        "bytes": 4833
+      },
+      {
+        "path": "data\\performance_schema\\setup_metrics_105.sdi",
+        "bytes": 6951
+      },
+      {
+        "path": "data\\performance_schema\\setup_objects_106.sdi",
+        "bytes": 6406
+      },
+      {
+        "path": "data\\performance_schema\\setup_threads_107.sdi",
+        "bytes": 6890
+      },
+      {
+        "path": "data\\performance_schema\\socket_instances_148.sdi",
+        "bytes": 9110
+      },
+      {
+        "path": "data\\performance_schema\\socket_summary_b_149.sdi",
+        "bytes": 21670
+      },
+      {
+        "path": "data\\performance_schema\\socket_summary_b_150.sdi",
+        "bytes": 20485
+      },
+      {
+        "path": "data\\performance_schema\\status_by_accoun_178.sdi",
+        "bytes": 4919
+      },
+      {
+        "path": "data\\performance_schema\\status_by_host_179.sdi",
+        "bytes": 4065
+      },
+      {
+        "path": "data\\performance_schema\\status_by_thread_180.sdi",
+        "bytes": 4093
+      },
+      {
+        "path": "data\\performance_schema\\status_by_user_181.sdi",
+        "bytes": 4064
+      },
+      {
+        "path": "data\\performance_schema\\table_handles_159.sdi",
+        "bytes": 9649
+      },
+      {
+        "path": "data\\performance_schema\\table_io_waits_s_108.sdi",
+        "bytes": 32824
+      },
+      {
+        "path": "data\\performance_schema\\table_io_waits_s_109.sdi",
+        "bytes": 31958
+      },
+      {
+        "path": "data\\performance_schema\\table_lock_waits_110.sdi",
+        "bytes": 56631
+      },
+      {
+        "path": "data\\performance_schema\\threads_111.sdi",
+        "bytes": 23643
+      },
+      {
+        "path": "data\\performance_schema\\tls_channel_stat_191.sdi",
+        "bytes": 15893
+      },
+      {
+        "path": "data\\performance_schema\\users_145.sdi",
+        "bytes": 5279
+      },
+      {
+        "path": "data\\performance_schema\\user_defined_fun_189.sdi",
+        "bytes": 5791
+      },
+      {
+        "path": "data\\performance_schema\\user_variables_b_177.sdi",
+        "bytes": 4100
+      },
+      {
+        "path": "data\\performance_schema\\variables_by_thr_184.sdi",
+        "bytes": 4096
+      },
+      {
+        "path": "data\\performance_schema\\variables_info_187.sdi",
+        "bytes": 7960
+      },
+      {
+        "path": "data\\sys\\sys_config.ibd",
+        "bytes": 114688
+      },
+      {
+        "path": "site\\wp-admin\\admin-post.php",
+        "bytes": 2021
+      },
+      {
+        "path": "wpcontent\\mu-plugins\\centinela.php",
+        "bytes": 1763
+      },
+      {
+        "path": "wpcontent\\themes\\centinela\\index.php",
+        "bytes": 42
+      },
+      {
+        "path": "wpcontent\\themes\\centinela\\style.css",
+        "bytes": 38
+      }
+    ],
+    "aseo_backup": {
+      "task": "/root/aseo_resena",
+      "role": "at-aseo-codex",
+      "agent_uuid": "NOT_EXPOSED",
+      "disposition": "pending recoverable retirement",
+      "files": 198,
+      "directories": 12,
+      "approx_megabytes": 196.7,
+      "metadata_review_only": true
+    }
+  },
+  "harness_hashes": [
+    {
+      "path": "C:\\Users\\luis_\\AppData\\Local\\Temp\\zz_centinela_resena_01a1fbf9_20261120\\run.ps1",
+      "sha256": "13736957d062a35e2b4f725c2e3d230414480c02aceb66898d8a9624e4dc834c"
+    },
+    {
+      "path": "C:\\Users\\luis_\\AppData\\Local\\Temp\\zz_centinela_resena_01a1fbf9_20261120\\e2e.py",
+      "sha256": "d4bb0facf719964df50964fdb4786b25281fd68f4b5c56bea6a464495f614776"
+    },
+    {
+      "path": "C:\\Users\\luis_\\AppData\\Local\\Temp\\zz_centinela_resena_01a1fbf9_20261120\\fixture.php",
+      "sha256": "fa0734b88dc57c9d5c02e61d095c04505c91a3730fa0699c27128b67fb840d1e"
+    },
+    {
+      "path": "C:\\Users\\luis_\\AppData\\Local\\Temp\\zz_centinela_resena_01a1fbf9_20261120\\router.php",
+      "sha256": "ec35f464fd078077c5fdc61a12b028045d3155c6b69ec51493a030fec3aa7b4c"
+    },
+    {
+      "path": "C:\\Users\\luis_\\AppData\\Local\\Temp\\zz_centinela_resena_01a1fbf9_20261120\\site\\wp-load.php",
+      "sha256": "eed3778b98e481b18c7a6a13991b0b496b8c3eafbe1e8ecee480afca0dd64eb5"
+    },
+    {
+      "path": "C:\\Users\\luis_\\AppData\\Local\\Temp\\zz_centinela_resena_01a1fbf9_20261120\\wpcontent\\mu-plugins\\centinela.php",
+      "sha256": "1fed4dbc6ded816bef475d4814e31ddd60270a029e2c05e3bb94f8ef036528f7"
+    }
+  ],
+  "git": {
+    "branch": "codex/resena-google-impl",
+    "head": "0afac2c",
+    "add_exit": 128,
+    "commit": "NOT_RUN: index.lock Permission denied",
+    "staged": false,
+    "pushed": false,
+    "merged": false
+  },
+  "verification": {
+    "php_lint": "PASS",
+    "git_diff_check": "PASS",
+    "production_changed": false,
+    "graphify_update": "FAIL: WinError 5 Acceso denegado; CLI exit 0 is not success",
+    "peer_review": "PENDING: Eje"
+  }
+}

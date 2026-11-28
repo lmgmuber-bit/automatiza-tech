@@ -1996,6 +1996,7 @@ class AutomatizaTech_CRM_AI {
                         <button class="ficha-tab" data-target="tab-operacion">📜 Contratos y operación</button>
                         <?php if (is_array($cliente) && function_exists('at_pt_render_pestana') && current_user_can('manage_options')): ?>
                         <button class="ficha-tab" data-target="tab-plan">🗓️ Plan de trabajo</button>
+                        <?php if (($cliente['tipo'] ?? '') === 'cliente' && function_exists('at_rg_render_panel')): ?><button class="ficha-tab" data-target="tab-resena">⭐ Reseña</button><?php endif; ?>
                         <?php endif; ?>
                         <?php if (is_array($cliente) && function_exists('at_en_render_pestana') && current_user_can('manage_options')): ?>
                         <button class="ficha-tab" data-target="tab-entregables">📦 Entregables</button>
@@ -2260,6 +2261,9 @@ class AutomatizaTech_CRM_AI {
                     </div>
                     </div><!-- /tab-operacion -->
                     <?php if (is_array($cliente) && function_exists('at_pt_render_pestana') && current_user_can('manage_options')): ?>
+                    <?php if (($cliente['tipo'] ?? '') === 'cliente' && function_exists('at_rg_render_panel')): ?><div class="ficha-tab-content" id="tab-resena"><div class="ficha-card"><div class="ficha-card-body">
+                    <?php at_rg_render_panel((int) $cliente['id']); ?>
+                    </div></div></div><?php endif; ?>
                     <!-- Tab: Plan de trabajo (inc/plan-trabajo/panel.php) -->
                     <div class="ficha-tab-content" id="tab-plan">
                     <div class="ficha-card">

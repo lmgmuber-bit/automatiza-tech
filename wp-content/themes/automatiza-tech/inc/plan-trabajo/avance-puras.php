@@ -65,6 +65,7 @@ function at_av_normalizar(mixed $guardado): array {
 			$a[$k]['pedido_at'] = is_string($a[$k]['pedido_at']) ? $a[$k]['pedido_at'] : '';
 		}
 	}
+	if (is_array($guardado['termino'] ?? null)) { $a['termino'] = $guardado['termino']; }
 	return $a;
 }
 

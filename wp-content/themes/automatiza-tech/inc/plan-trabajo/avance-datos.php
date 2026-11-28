@@ -39,7 +39,9 @@ add_action('admin_init', 'at_av_migrar_esquema', 11);
 
 /** Avance del plan con todas sus claves (forma vacía si no hay, o si la columna todavía no existe). */
 function at_av_leer(object $fila): array {
-	return at_av_normalizar($fila->avance ?? null);
+	$a = at_av_normalizar($fila->avance ?? null);
+	if (function_exists('at_rg_termino_plan')) { $t = at_rg_termino_plan((int) $fila->id); if ($t !== null) { $a['termino'] = $t; } }
+	return $a;
 }
 
 /** Guarda el avance completo (normalizado). false sin la migración, si el plan no existe o si el JSON pasa de 1,5 MB. */

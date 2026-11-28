@@ -376,6 +376,12 @@ function at_cc_rest_estado_whatsapp(WP_REST_Request $r) {
 		$estado = is_array($e) && is_string($e['estado'] ?? null) ? sanitize_key($e['estado']) : '';
 		// Sin trim(): el wamid tiene que calzar tal cual (at_cc_wamid_valido() rechaza espacios y saltos).
 		$wamid = is_array($e) && is_string($e['wamid'] ?? null) ? $e['wamid'] : '';
+        // Reseñas resuelve el intento persistente y admite entrega/lectura, además de failed.
+        if (function_exists('at_rg_whatsapp_estado') && (string) get_option('at_resena_schema') === AT_RG_SCHEMA && at_cc_wamid_valido($wamid)) {
+            $codigo_resena = is_numeric($e['codigo'] ?? null) && (float) $e['codigo'] >= 0 && (float) $e['codigo'] <= 9999999 ? (int) $e['codigo'] : 0;
+            $resena = at_rg_whatsapp_estado($wamid, $estado, $codigo_resena);
+            if ($resena !== null) { $resena ? $avisados++ : $ignorados++; continue; }
+        }
 		if ($estado !== 'failed' || !at_cc_wamid_valido($wamid)) {
 			$ignorados++;
 			continue;
@@ -404,6 +410,16 @@ function at_cc_rest_estado_whatsapp(WP_REST_Request $r) {
 			// aparece, era de otro mensaje (p. ej. de ARGOS) y el transient vence solo. Para el bot sigue
 			// contando como ignorado.
 			set_transient(at_cc_clave_fallo_pendiente($wamid), ['codigo' => $codigo, 'titulo' => $titulo], 15 * MINUTE_IN_SECONDS);
+            // El resultado pudo indexarse entre el lookup inicial y este transient.
+            // Tras publicarlo, uno de los dos caminos verá necesariamente al otro.
+            if (function_exists('at_rg_whatsapp_estado') && (string) get_option('at_resena_schema') === AT_RG_SCHEMA) {
+                $resena = at_rg_whatsapp_estado($wamid, 'failed', $codigo);
+                if ($resena !== null) {
+                    if ($resena) { delete_transient(at_cc_clave_fallo_pendiente($wamid)); $avisados++; }
+                    else { $ignorados++; }
+                    continue;
+                }
+            }
 			$ignorados++;
 			continue;
 		}

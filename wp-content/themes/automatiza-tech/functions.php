@@ -1148,6 +1148,8 @@ function get_whatsapp_url($message = '') {
 require_once get_template_directory() . '/inc/seo-tecnico/cargar.php';
 require_once get_template_directory() . '/inc/medicion/cargar.php';
 require_once get_template_directory() . '/inc/prospeccion/cargar.php';
+// Casilla anti-robot (Cloudflare Turnstile) de los formularios de agenda; n8n revisa el token antes de guardar.
+require_once get_template_directory() . '/inc/at-turnstile.php';
 
 /**
  * Incluir archivos adicionales

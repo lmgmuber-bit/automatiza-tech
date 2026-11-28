@@ -126,6 +126,7 @@ function at_av_con_lo_ajeno(array $avance, array $fresco, bool $render_propio): 
 		$avance['render'] = $fresco['render'];
 		$avance['render_previa'] = $fresco['render_previa'];
 	}
+	if (array_key_exists('termino', $fresco)) { $avance['termino'] = $fresco['termino']; }
 	return $avance;
 }
 
@@ -575,6 +576,7 @@ function at_av_render_seccion(object $fila, int $crm_id): void {
 		echo '<div class="notice notice-warning inline"><p>Falta preparar la base para el avance: vuelve a entrar al escritorio de WordPress (la migración corre sola) y recarga esta pestaña.</p></div></section>';
 		return;
 	}
+	if (function_exists('at_rg_render_panel')) { at_rg_render_panel($crm_id, $id); }
 	$av = at_av_leer($fila);
 	$plan = at_pt_payload($fila);
 	$publicados = at_av_publicados($av);
@@ -790,4 +792,166 @@ function at_av_render_formulario(object $fila, int $crm_id, array $av, array $pl
 	return $h . '<p><button type="button" class="button at-av-nc-mas">＋ Agregar otra evidencia</button></p>'
 		. '<p><button type="submit" class="button button-primary">💾 Guardar como borrador</button>'
 		. ($editar !== '' ? ' <a class="button" href="' . esc_url($volver) . '">Cancelar</a>' : '') . '</p></form>';
+}
+
+/** Reseña: controles del proyecto. Comparte registro con la pestaña de CRM, incluso sin plan. */
+function at_rg_render_panel(int $crm_id, int $plan_id = 0): void {
+    if (!current_user_can('manage_options') || !function_exists('at_rg_proyecto')) { return; }
+    $c = at_rg_cliente($crm_id);
+    if (($c['tipo'] ?? '') !== 'cliente') { return; }
+    $f = at_rg_proyecto($crm_id, $plan_id, false);
+    echo '<section class="at-av" id="at-resena-' . $plan_id . '"><h3>⭐ Pedir reseña</h3>';
+    if ($f && at_rg_plan_reasignado($f)) { echo '<p>⛔ ' . esc_html(at_rg_error('plan_reasignado')->get_error_message()) . '</p></section>'; return; }
+    if (!$f && $plan_id) {
+        global $wpdb;
+        $ajeno = $wpdb->get_row($wpdb->prepare('SELECT * FROM ' . at_rg_tabla() . ' WHERE plan_id=%d', $plan_id));
+        if ($ajeno && (int) $ajeno->crm_id !== $crm_id) { echo '<p>⛔ ' . esc_html(at_rg_error('plan_reasignado')->get_error_message()) . '</p></section>'; return; }
+    }
+    if (!$f) {
+        global $wpdb;
+        $existentes = $wpdb->get_results($wpdb->prepare('SELECT * FROM ' . at_rg_tabla() . ' WHERE crm_id=%d ORDER BY id', $crm_id));
+        if ((string) get_option('at_resena_schema') !== AT_RG_SCHEMA || (!$plan_id && $existentes) || ($plan_id && (!( $plan = at_pt_plan($plan_id)) || (int) $plan->crm_cliente_id !== $crm_id))) {
+            echo '<p>Falta la migración o hay varios proyectos: abre el plan correspondiente para elegirlo.</p></section>'; return;
+        }
+        $f = (object) ['id' => 0, 'datos' => wp_json_encode(at_rg_vacio())];
+    }
+    try { $d = at_rg_datos($f); } catch (Throwable $e) { echo '<p>⛔ Registro ilegible: revisar la base sin borrar las marcas.</p></section>'; return; }
+    $c = at_rg_cliente($crm_id); $id = (int) $f->id;
+    $copia = at_rg_copia_oculta();
+    if ($copia !== '') {
+        $arroba = strrpos($copia, '@');
+        $local = substr($copia, 0, $arroba); $dominio = substr($copia, $arroba + 1);
+        echo '<p>✉️ Aviso interno activo: ' . esc_html(substr($local, 0, 2) . '***@' . $dominio) . '</p>';
+    } else { echo '<p>✉️ Aviso interno inactivo.</p>'; }
+    $telefono_resena = at_rg_telefono((string) ($c['telefono'] ?? ''));
+    if ($telefono_resena === '') { echo '<p>⚠️ WhatsApp no disponible: falta un teléfono E.164 válido (Chile: +569XXXXXXXX). El CRM no registra país; un número de nueve dígitos sin prefijo se rechaza. Guarda el código de país explícito; 569XXXXXXXX sí se normaliza.</p>'; }
+    else { echo '<p>📱 WhatsApp: ' . esc_html($telefono_resena) . '</p>'; }
+    $msg = $_GET['resena_msg'] ?? '';
+    if (is_string($msg) && $msg !== '') { echo '<p role="status">ℹ️ ' . esc_html(at_rg_mensaje_panel($msg)) . '</p>'; }
+    if (!at_rg_url_google((string) get_option('at_resena_google_url', ''))) { echo '<p><strong>⛔ Envío bloqueado: falta configurar el enlace de Google.</strong></p>'; }
+    if ($d['excluido']) { echo '<p>Excluido: ' . esc_html($d['motivo_exclusion']) . '</p>'; }
+    $recibida = !empty($d['resena_recibida']);
+    if ($recibida) { echo '<p>✅ Reseña recibida: ' . esc_html($d['resena_recibida']['fecha'] . ' · usuario #' . $d['resena_recibida']['por']) . '. No se envía nada más.</p>'; }
+    echo at_rg_form_inicio($id, $crm_id, $plan_id) . '<input type="hidden" name="operacion" value="' . ($recibida ? 'deshacer_resena' : 'resena_recibida') . '"><button class="button">' . ($recibida ? '↩️ Deshacer marca de reseña recibida' : '✅ Ya dejó su reseña') . '</button></form>';
+    $reales = at_rg_reales($d);
+    $fallidos = count(at_rg_fallidos_totales($d));
+    if ($fallidos >= 3) { echo '<p><strong>⛔ ' . esc_html(at_rg_error('limite_fallidos')->get_error_message()) . '</strong></p>'; }
+    elseif (!$reales && !empty($d['termino']['fecha'])) { echo '<p>🗓️ Se enviará el ' . esc_html(at_rg_fecha_envio($d['termino']['fecha'])) . ' (sujeto a elegibilidad y reloj activo).</p>'; }
+    foreach ($d['intentos'] as $i) {
+        echo '<p>' . esc_html(($i['modo'] === 'prueba' ? 'Prueba · ' : '') . $i['tipo'] . ' · ' . at_rg_estado($i) . ' · ' . $i['creado_at'] . ' (correo: ' . $i['correo']['estado'] . ' · WhatsApp: ' . $i['whatsapp']['estado'] . ')') . '</p>';
+        foreach (['correo','whatsapp'] as $canal) {
+            if ($i[$canal]['estado'] === 'desconocido') {
+                echo at_rg_form_inicio($id, $crm_id, $plan_id) . '<input type="hidden" name="operacion" value="liberar"><input type="hidden" name="intento_id" value="' . esc_attr($i['id']) . '"><input type="hidden" name="canal" value="' . esc_attr($canal) . '"><label>Resultado verificado <select name="verificado"><option value="aceptado">Aceptado por el proveedor</option><option value="fallido">Confirmado que no salió</option></select></label><label>Evidencia de revisión <input name="nota" required maxlength="500"></label><button class="button">🔓 Registrar revisión de ' . esc_html($canal) . '</button></form>';
+            }
+        }
+    }
+    foreach ($d['historial_escrito'] as $clave => $valor) { if ($valor !== true) { echo '<p>⚠️ Historial o aviso pendiente de revisión: ' . esc_html($clave . ' · ' . $valor) . '</p>'; } }
+    echo at_rg_form_inicio($id, $crm_id, $plan_id) . '<input type="hidden" name="operacion" value="termino"><label>Fecha real de término <input type="date" name="fecha" value="' . esc_attr($d['termino']['fecha'] ?? '') . '" required max="' . esc_attr(at_rg_ahora()->format('Y-m-d')) . '"></label><button class="button">🏁 Marcar proyecto terminado</button></form>';
+    if (!$reales && $d['termino']) { echo at_rg_form_inicio($id, $crm_id, $plan_id) . '<input type="hidden" name="operacion" value="deshacer"><button class="button">↩️ Deshacer término</button></form>'; }
+    echo at_rg_form_inicio($id, $crm_id, $plan_id) . '<input type="hidden" name="operacion" value="exclusion"><label><input type="checkbox" name="excluido" value="1" ' . checked($d['excluido'], true, false) . '> No pedir reseña en este proyecto</label><label>Motivo <select name="motivo"><option value="baja">Baja</option><option value="destinatario">Destinatario equivocado</option><option value="otro">Otro motivo objetivo</option></select></label><label>Justificación (ajena a la satisfacción) <input name="nota" maxlength="500" value="' . esc_attr(preg_replace('/^(baja|destinatario|otro): /', '', $d['motivo_exclusion'])) . '"></label><button class="button">💾 Guardar exclusión</button></form><p>No se usa para seleccionar opiniones positivas.</p>';
+    $p = $d['permiso'];
+    echo at_rg_form_inicio($id, $crm_id, $plan_id) . '<input type="hidden" name="operacion" value="permiso"><label><input type="checkbox" name="autorizado" value="1" ' . checked(!empty($p['autorizado']), true, false) . '> WhatsApp autorizado para estas invitaciones</label><label>Origen de la autorización explícita <input name="origen" maxlength="500" value="' . esc_attr($p['origen'] ?? '') . '"></label><label>Fecha <input type="date" name="fecha" value="' . esc_attr($p['fecha'] ?? '') . '"></label><button class="button">✅ Guardar permiso</button></form><p>El permiso se vincula al teléfono actual; una conversación sin autorización explícita no basta.</p>';
+    echo at_rg_form_inicio($id, $crm_id, $plan_id) . '<input type="hidden" name="operacion" value="baja"><label>Canal <select name="canal"><option value="todos">Correo y WhatsApp</option><option value="correo">Correo</option><option value="whatsapp">WhatsApp</option></select></label><label>Alcance <select name="alcance"><option value="resenas">Invitaciones a reseñar</option><option value="todo">Ninguna comunicación promocional</option></select></label><button class="button">✋ Registrar baja del destinatario</button></form>';
+    echo '<p>La baja total queda registrada para las comunicaciones promocionales. Su integración con Retomar y Prospección está pendiente.</p>';
+    $ctx_resena = at_rg_contexto($d, $c);
+    foreach (['prueba' => '🧪 Enviarme una prueba', 'enviar' => '✉️ Enviar ahora', 'reenviar' => '🔁 Volver a enviar la invitación'] as $op => $texto) {
+        $bloqueo = $ctx_resena === null ? 'consulta_bajas' : at_rg_elegibilidad($d, $c, $ctx_resena + ['manual'=>true, 'prueba'=>$op==='prueba', 'reenvio'=>$op==='reenviar', 'motivo'=>$op==='reenviar'?'Reparación objetiva':'' ], at_rg_ahora());
+        $disabled = $bloqueo !== '' ? ' disabled title="' . esc_attr(at_rg_error($bloqueo)->get_error_message()) . '"' : '';
+        echo at_rg_form_inicio($id, $crm_id, $plan_id) . '<input type="hidden" name="operacion" value="' . esc_attr($op) . '">' . ($op === 'reenviar' ? '<label>Motivo objetivo de reparación <input name="motivo" required maxlength="500"></label>' : '') . '<button class="button"' . $disabled . '>' . esc_html($texto) . '</button></form>';
+    }
+    echo '<p>Un solo reenvío automático para todos, a los 7 días desde la invitación tramitada, sin baja ni reseña recibida. El reenvío manual solo repara fallas: exige un motivo objetivo, que no puede ser una expectativa de opinión. Los fallos totales no consumen cupo: Enviar ahora vuelve a ser invitación, sin espera, y el automático puede retomarla si sigue elegible.</p>'
+        . '<p>⛔ Tope de 3 intentos reales totalmente fallidos por proyecto (actuales: ' . $fallidos . '); al tercero se bloquea y se reserva un solo aviso a Luis. Fallido + no_intentado es fallo total; aceptado, entregado, leido, en_curso o desconocido consumen cupo. Las pruebas no cuentan al tope ni consumen invitaciones reales.</p>'
+        . '<p>ℹ️ Se conservan hasta 20 pruebas por proyecto, sujetas al plazo de conservación; al alcanzar el tope se bloquean nuevas pruebas.</p>'
+        . '<p>ℹ️ Un resultado tardío válido puede pasar WhatsApp de desconocido a aceptado; no vuelve a enviar el mensaje.</p></section>';
+}
+function at_rg_form_inicio(int $id, int $crm = 0, int $plan = 0): string {
+    $nonce = $id ? 'at_rg_' . $id : 'at_rg_nuevo_' . $crm . '_' . $plan;
+    return '<form method="post" action="' . esc_url(admin_url('admin-post.php')) . '"><input type="hidden" name="action" value="at_rg_manage"><input type="hidden" name="proyecto_id" value="' . $id . '"><input type="hidden" name="crm_id" value="' . $crm . '"><input type="hidden" name="plan_id" value="' . $plan . '">' . wp_nonce_field($nonce, '_wpnonce', true, false);
+}
+function at_rg_campo_post(string $clave): string { $v = $_POST[$clave] ?? ''; return is_string($v) ? sanitize_text_field(wp_unslash($v)) : ''; }
+add_action('admin_post_at_rg_manage', 'at_rg_panel_accion');
+/** Resolver/crear/vincular solo después de permiso y nonce, también para identidades aún sin plan. */
+function at_rg_panel_proyecto(): object {
+    if (!current_user_can('manage_options')) { wp_die('Sin permiso.', '', ['response' => 403]); }
+    $id = absint(at_rg_campo_post('proyecto_id'));
+    if (!$id) {
+        $crm = absint(at_rg_campo_post('crm_id')); $plan = absint(at_rg_campo_post('plan_id'));
+        check_admin_referer('at_rg_nuevo_' . $crm . '_' . $plan);
+        if ((at_rg_cliente($crm)['tipo'] ?? '') !== 'cliente') { wp_die('La ficha debe ser de tipo cliente.', '', ['response' => 403]); }
+        $nuevo = at_rg_proyecto($crm, $plan); $id = $nuevo ? (int) $nuevo->id : 0;
+    } else { check_admin_referer('at_rg_' . $id); }
+    $f = at_rg_fila($id); if (!$f) { wp_die('Proyecto no encontrado.', '', ['response' => 404]); }
+    $crm = absint(at_rg_campo_post('crm_id')); $plan = absint(at_rg_campo_post('plan_id'));
+    if (($crm && $crm !== (int) $f->crm_id) || at_rg_plan_reasignado($f)) { wp_die(at_rg_error('plan_reasignado')->get_error_message(), '', ['response' => 409]); }
+    if ($plan) {
+        $p = at_pt_plan($plan);
+        if (!$p || (int) $p->crm_cliente_id !== (int) $f->crm_id || ($f->plan_id && (int) $f->plan_id !== $plan)) { wp_die('Proyecto no corresponde al plan.', '', ['response' => 409]); }
+        if (!$f->plan_id) {
+            $vinculado = at_rg_proyecto((int) $f->crm_id, $plan);
+            if (!$vinculado || (int) $vinculado->id !== (int) $f->id) { wp_die('No se pudo vincular el proyecto.', '', ['response' => 409]); }
+            $f = $vinculado;
+        }
+    }
+    if ((at_rg_cliente((int) $f->crm_id)['tipo'] ?? '') !== 'cliente') { wp_die('La ficha debe ser de tipo cliente.', '', ['response' => 403]); }
+    return $f;
+}
+function at_rg_panel_accion(): void {
+    $f = at_rg_panel_proyecto(); $id = (int) $f->id;
+    $c = at_rg_cliente((int) $f->crm_id);
+    if (($c['tipo'] ?? '') !== 'cliente') { wp_die('La ficha debe ser de tipo cliente.', '', ['response' => 403]); }
+    $op = at_rg_campo_post('operacion'); $msg = 'no_guardado';
+    if (in_array($op, ['enviar','reenviar','prueba'], true)) {
+        $desde = at_rg_ahora()->modify('-1 minute')->format(DATE_ATOM);
+        $r = at_rg_reclamar($id, ['manual' => true, 'prueba' => $op === 'prueba', 'reenvio' => $op === 'reenviar', 'motivo' => at_rg_campo_post('motivo')]);
+        if ($op !== 'prueba' && !is_wp_error($r)) { at_rg_pedir_resumen($desde, 'manual'); }
+        $msg = is_wp_error($r) ? $r->get_error_code() : 'registrado';
+    } elseif ($op === 'baja') {
+        $ok = at_rg_baja_guardar((string) ($c['email'] ?? ''), (string) ($c['telefono'] ?? ''), at_rg_campo_post('canal'), at_rg_campo_post('alcance'), 'panel', at_rg_campo_post('nota'));
+        if ($ok) { $msg = 'baja'; }
+    } else {
+        $fecha = at_rg_campo_post('fecha'); $nota = at_rg_campo_post('nota'); $origen = at_rg_campo_post('origen');
+        $ok = at_rg_cambiar($id, static function ($d) use ($op, $fecha, $nota, $origen, $c) {
+            if ($op === 'resena_recibida') {
+                if (empty($d['resena_recibida'])) { $d['resena_recibida'] = ['fecha' => at_rg_ahora()->format(DATE_ATOM), 'por' => get_current_user_id()]; }
+            } elseif ($op === 'deshacer_resena') {
+                $d['resena_recibida'] = [];
+            } elseif ($op === 'termino') {
+                if (!at_rg_fecha($fecha) || $fecha > at_rg_ahora()->format('Y-m-d') || at_rg_reales($d)) { return null; }
+                $d['termino'] = ['fecha' => $fecha, 'marcado_at' => at_rg_ahora()->format(DATE_ATOM), 'por' => get_current_user_id()];
+            } elseif ($op === 'deshacer') {
+                if (at_rg_reales($d)) { return null; } $d['termino'] = [];
+            } elseif ($op === 'exclusion') {
+                $excluir = at_rg_campo_post('excluido') === '1'; $motivo = at_rg_campo_post('motivo');
+                if ($excluir && (!in_array($motivo, ['baja','destinatario','otro'], true) || $nota === '' || mb_strlen($nota) > 500)) { return null; }
+                $d['excluido'] = $excluir; $d['motivo_exclusion'] = $excluir ? $motivo . ': ' . $nota : '';
+            } elseif ($op === 'permiso') {
+                $autorizado = at_rg_campo_post('autorizado') === '1'; $tel = at_rg_telefono((string) ($c['telefono'] ?? ''));
+                if ($autorizado && ($origen === '' || mb_strlen($origen) > 500 || !at_rg_fecha($fecha) || $fecha > at_rg_ahora()->format('Y-m-d') || $tel === '')) { return null; }
+                $d['permiso'] = ['autorizado' => $autorizado, 'origen' => $origen, 'fecha' => $fecha, 'telefono' => $tel, 'por' => get_current_user_id()];
+            } elseif ($op === 'liberar') {
+                $intento = at_rg_campo_post('intento_id'); $canal = at_rg_campo_post('canal'); $estado = at_rg_campo_post('verificado');
+                if ($nota === '' || mb_strlen($nota) > 500 || !in_array($canal, ['correo','whatsapp'], true) || !in_array($estado, ['aceptado','fallido'], true)) { return null; }
+                $encontrado = false;
+                foreach ($d['intentos'] as &$i) {
+                    if ($i['id'] === $intento && $i[$canal]['estado'] === 'desconocido') {
+                        $i[$canal]['estado'] = $estado; $i[$canal]['detalle'] = 'Revisión manual: ' . $nota;
+                        $i[$canal]['revision'] = ['por' => get_current_user_id(), 'at' => at_rg_ahora()->format(DATE_ATOM)]; $encontrado = true;
+                    }
+                } unset($i); if (!$encontrado) { return null; }
+            } else { return null; }
+            return $d;
+        });
+        if ($ok) { $msg = 'guardado'; at_rg_reflejar_termino($id); at_rg_observar($id); }
+    }
+    $url = add_query_arg(['page' => 'automatiza-crm-ficha', 'id' => (int) $f->crm_id, 'resena_msg' => $msg], admin_url('admin.php')) . '#tab-resena';
+    wp_safe_redirect($url); exit;
+}
+/** Solo códigos conocidos; el texto visible siempre pertenece al servidor. */
+function at_rg_mensaje_panel(string $codigo): string {
+    $mapa = ['no_guardado' => 'No se guardó: revisa los datos o hubo un cambio concurrente.',
+        'registrado' => 'Intento registrado. Revisa los estados de cada canal; aceptado no significa entregado.',
+        'baja' => 'Baja registrada para el destinatario; se respeta en todos sus proyectos.',
+        'guardado' => 'Guardado. Se conservaron todos los intentos y el cupo utilizado.'];
+    if (isset($mapa[$codigo])) { return $mapa[$codigo]; }
+    return str_starts_with($codigo, 'resena_') ? at_rg_error(substr($codigo, 7))->get_error_message() : $mapa['no_guardado'];
 }

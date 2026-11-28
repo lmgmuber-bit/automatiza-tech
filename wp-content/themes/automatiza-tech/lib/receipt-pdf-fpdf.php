@@ -1,6 +1,6 @@
 <?php
 /**
- * Generador de boletas en PDF usando FPDF
+ * Generador de comprobantes de pago en PDF usando FPDF
  * Solución 100% PHP, sin dependencias externas
  */
 
@@ -171,7 +171,7 @@ class ReceiptPDFFPDF extends FPDF {
         $this->SetY(-12);
         $this->SetFont('Arial', '', 7);
         $this->SetTextColor($this->gray_color[0], $this->gray_color[1], $this->gray_color[2]);
-        $this->Cell(0, 3, utf8_to_latin1($company_name . ' - RUT: ' . $company_rut . ' - Boleta válida para efectos tributarios'), 0, 1, 'C');
+        $this->Cell(0, 3, utf8_to_latin1($company_name . ' - RUT: ' . $company_rut . ' - Comprobante interno de pago. No es boleta ni factura del SII.'), 0, 1, 'C');
         $this->SetFont('Arial', 'I', 6);
         $this->Cell(0, 3, utf8_to_latin1('© ' . current_time('Y') . ' ' . $company_name . '. Todos los derechos reservados. Documento generado electrónicamente.'), 0, 0, 'C');
     }
@@ -208,11 +208,11 @@ class ReceiptPDFFPDF extends FPDF {
     
     public function build() {
         $this->SetX(15);
-        $this->SetFont('Arial', 'B', 16);
+        $this->SetFont('Arial', 'B', 12);
         $this->SetTextColor($this->text_color[0], $this->text_color[1], $this->text_color[2]);
         
-        // BOLETA ELECTRONICA
-        $this->Cell(110, 8, utf8_to_latin1('BOLETA N° ') . $this->receipt_number, 0, 0, 'L');
+        // COMPROBANTE DE PAGO (no es documento tributario)
+        $this->Cell(110, 8, utf8_to_latin1('COMPROBANTE DE PAGO N° ') . $this->receipt_number, 0, 0, 'L');
         
         $this->SetFont('Arial', 'B', 10);
         $this->Cell(70, 8, 'Fecha: ' . current_time('d/m/Y H:i'), 0, 1, 'R');
@@ -297,15 +297,27 @@ class ReceiptPDFFPDF extends FPDF {
             $qty = is_object($item) ? $item->quantity : $item['quantity'];
             $price = is_object($item) ? $item->price : $item['price'];
             
-            $this->SetX(15);
             $this->SetFillColor($index % 2 == 0 ? 250 : 255, $index % 2 == 0 ? 250 : 255, $index % 2 == 0 ? 250 : 255);
             $this->SetTextColor($this->text_color[0], $this->text_color[1], $this->text_color[2]);
             $this->SetFont('Arial', '', 10);
             $this->SetDrawColor(200, 200, 200);
-            $this->Cell(100, 12, utf8_to_latin1($name), 1, 0, 'L', true);
-            $this->Cell(40, 12, $qty, 1, 0, 'C', true);
+            // La descripción salta de línea y la fila crece con ella (antes era una sola línea de 100 mm y un texto
+            // largo se cortaba). Mínimo 12 mm, como antes; 5 mm por línea más 2 mm arriba y abajo.
+            $texto = utf8_to_latin1($name);
+            $lineas = $this->contar_lineas(98, $texto);
+            $alto = max(12, $lineas * 5 + 4);
+            if ($this->GetY() + $alto > $this->PageBreakTrigger) {
+                $this->AddPage();
+            }
+            $x = 15;
+            $y = $this->GetY();
+            $this->Rect($x, $y, 100, $alto, 'DF');
+            $this->SetXY($x + 1, $y + ($alto - $lineas * 5) / 2);
+            $this->MultiCell(98, 5, $texto, 0, 'L');
+            $this->SetXY($x + 100, $y);
+            $this->Cell(40, $alto, $qty, 1, 0, 'C', true);
             $this->SetFont('Arial', 'B', 10);
-            $this->Cell(40, 12, $this->format_currency($price * $qty), 1, 1, 'R', true);
+            $this->Cell(40, $alto, $this->format_currency($price * $qty), 1, 1, 'R', true);
             $total_items += ($price * $qty);
         }
         
@@ -313,27 +325,11 @@ class ReceiptPDFFPDF extends FPDF {
         
         if ($this->apply_iva) {
             $total_con_iva = $total_items;
-            $neto = round($total_con_iva / 1.19);
-            $iva = $total_con_iva - $neto;
-            
-            $this->SetDrawColor(200, 200, 200);
-            $this->SetLineWidth(0.2);
-            
+
             $this->SetX(15);
-            $this->SetFont('Arial', '', 10);
-            $this->SetTextColor($this->text_color[0], $this->text_color[1], $this->text_color[2]);
-            $this->Cell(100, 8, '', 0, 0);
-            $this->Cell(40, 8, 'Neto:', 0, 0, 'R');
-            $this->SetFont('Arial', 'B', 10);
-            $this->Cell(40, 8, $this->format_currency($neto), 0, 1, 'R');
-            
-            $this->SetX(15);
-            $this->SetFont('Arial', '', 10);
-            $this->Cell(100, 8, '', 0, 0);
-            $this->Cell(40, 8, 'IVA (19%):', 0, 0, 'R');
-            $this->SetFont('Arial', 'B', 10);
-            $this->Cell(40, 8, $this->format_currency($iva), 0, 1, 'R');
-            
+            $this->SetFont('Arial', 'I', 9);
+            $this->SetTextColor($this->gray_color[0], $this->gray_color[1], $this->gray_color[2]);
+            $this->Cell(180, 6, utf8_to_latin1('Total pagado, IVA incluido'), 0, 1, 'R');
             $this->Ln(2);
             $total_final = $total_con_iva;
         } else {
@@ -347,8 +343,8 @@ class ReceiptPDFFPDF extends FPDF {
         $this->SetFont('Arial', 'B', 14);
         $this->SetDrawColor($this->secondary_color[0], $this->secondary_color[1], $this->secondary_color[2]);
         $this->SetLineWidth(0.5);
-        $this->Cell(100, 12, '', 0, 0);
-        $this->Cell(40, 12, 'TOTAL:', 1, 0, 'R', true);
+        $this->Cell(80, 12, '', 0, 0);
+        $this->Cell(60, 12, 'TOTAL PAGADO:', 1, 0, 'R', true);
         $this->Cell(40, 12, $this->format_currency($total_final), 1, 1, 'R', true);
         
         $this->SetLineWidth(0.2);
@@ -370,7 +366,7 @@ class ReceiptPDFFPDF extends FPDF {
         $this->SetX(20);
         $this->SetFont('Arial', '', 8);
         $this->SetTextColor($this->gray_color[0], $this->gray_color[1], $this->gray_color[2]);
-        $this->MultiCell(160, 3, utf8_to_latin1('Este documento es válido como boleta para efectos tributarios.'), 0, 'L');
+        $this->MultiCell(160, 3, utf8_to_latin1('Comprobante interno de pago. No constituye boleta ni factura electrónica del SII. El documento tributario se emite aparte.'), 0, 'L');
         
         $this->SetLineWidth(0.2);
         $this->Ln(15);
@@ -378,7 +374,9 @@ class ReceiptPDFFPDF extends FPDF {
         $col_width = 60;
         $x_start = 15;
         $y_start = $this->GetY();
-        
+
+        // El RUT faltaba aquí: el pie decía «RUT:» vacío y PHP avisaba «Undefined variable $company_rut».
+        $company_rut = get_option('company_rut', '77.123.456-7');
         $company_email = get_option('company_email', 'contacto@automatizatech.cl');
         $company_phone = get_option('company_phone', '+56 9 2700 2984');
         $company_website = get_option('company_website', 'www.automatizatech.cl');
@@ -435,6 +433,56 @@ class ReceiptPDFFPDF extends FPDF {
         }
     }
     
+    /**
+     * Cuántas líneas ocupa $txt en un MultiCell de ancho $w con la fuente actual (el cálculo clásico de FPDF:
+     * corta en espacios y, si una palabra no cabe, en el carácter).
+     */
+    private function contar_lineas($w, $txt) {
+        $cw = $this->CurrentFont['cw'];
+        $wmax = ($w - 2 * $this->cMargin) * 1000 / $this->FontSize;
+        $s = str_replace("\r", '', (string) $txt);
+        $nb = strlen($s);
+        if ($nb > 0 && $s[$nb - 1] === "\n") {
+            $nb--;
+        }
+        $sep = -1;
+        $i = 0;
+        $j = 0;
+        $l = 0;
+        $nl = 1;
+        while ($i < $nb) {
+            $c = $s[$i];
+            if ($c === "\n") {
+                $i++;
+                $sep = -1;
+                $j = $i;
+                $l = 0;
+                $nl++;
+                continue;
+            }
+            if ($c === ' ') {
+                $sep = $i;
+            }
+            $l += isset($cw[$c]) ? $cw[$c] : 0;
+            if ($l > $wmax) {
+                if ($sep === -1) {
+                    if ($i === $j) {
+                        $i++;
+                    }
+                } else {
+                    $i = $sep + 1;
+                }
+                $sep = -1;
+                $j = $i;
+                $l = 0;
+                $nl++;
+            } else {
+                $i++;
+            }
+        }
+        return $nl;
+    }
+
     private function format_currency($amount) {
         if ($this->currency === 'CLP') {
             return '$' . number_format($amount, 0, ',', '.');

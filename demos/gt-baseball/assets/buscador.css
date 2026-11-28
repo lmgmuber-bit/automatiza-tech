@@ -1,0 +1,185 @@
+/* GT Baseball Academy · buscador privado de planillas (buscador/index.html). Usa las variables y componentes de
+ * styles.css (colores de los dos temas, botones, encabezado, pie); aquí va solo lo propio del buscador.
+ * En escritorio la lista es una tabla; bajo 900 px cada atleta es una tarjeta (las celdas llevan su etiqueta). */
+
+.pagina-buscador input[type=password], .pagina-buscador input[type=search], .pagina-buscador input[type=number],
+.pagina-buscador input[type=date] {
+  width: 100%; min-height: 48px; padding: 10px 14px; border-radius: 12px; border: 1.5px solid var(--borde);
+  background: var(--sup); color: var(--texto); font: 400 17px/1.3 var(--cuerpo);
+  appearance: none; -webkit-appearance: none; transition: border-color .2s ease, box-shadow .2s ease;
+}
+.pagina-buscador :is(input, select):focus { outline: none; border-color: var(--acento); box-shadow: 0 0 0 3px var(--chip); }
+.pagina-buscador select { min-height: 48px; background-position: calc(100% - 22px) 21px, calc(100% - 16px) 21px; }
+.pagina-buscador input[type=date] { color-scheme: inherit; }
+.pagina-buscador input[type=search]::-webkit-search-cancel-button { cursor: pointer; }
+:is(.acceso__ver, .filtros__mas summary, .atleta__mas summary, .archivo-link):focus-visible { outline: 3px solid var(--foco); outline-offset: 2px; }
+
+/* Casilla (recordar la clave, mostrar pruebas) */
+.casilla { display: flex; align-items: center; gap: 10px; min-height: 44px; cursor: pointer; font-weight: 500; }
+.casilla input { width: 22px; height: 22px; flex: none; accent-color: var(--oro); cursor: pointer; }
+.casilla input:focus-visible { outline: 3px solid var(--foco); outline-offset: 2px; }
+
+/* Clave de acceso */
+.acceso { display: grid; place-items: center; min-height: min(640px, 72dvh); padding: 24px 0 40px; }
+.acceso__caja {
+  width: 100%; max-width: 440px; padding: 28px 22px 24px; border-radius: 20px; text-align: left;
+  background: var(--sup); border: 1.5px solid var(--borde-suave); box-shadow: var(--sombra);
+}
+.acceso__ico { display: grid; place-items: center; width: 52px; height: 52px; margin: 0 0 14px; border-radius: 14px; background: var(--chip); color: var(--acento); }
+.acceso__ico .ico { width: 26px; height: 26px; }
+.acceso__titulo { margin: 0 0 8px; font: 700 clamp(2rem, 8vw, 2.4rem)/1 var(--titulos); text-transform: uppercase; }
+.acceso__texto { margin: 0 0 20px; color: var(--suave); }
+.acceso__label { display: block; margin: 0 0 8px; font-weight: 600; }
+.acceso__campo { position: relative; }
+.acceso__campo input { padding-right: 56px; }
+.acceso__ver {
+  position: absolute; top: 2px; right: 2px; bottom: 2px; width: 48px; display: grid; place-items: center;
+  border: 0; border-radius: 10px; background: transparent; color: var(--suave); cursor: pointer;
+}
+.acceso__ver:hover { color: var(--texto); }
+.acceso__campo input[aria-invalid="true"] { border-color: var(--error); }
+.acceso__error { margin: 6px 0 12px; min-height: 0; font-weight: 600; color: var(--error); }
+.acceso__error:empty { display: none; }
+.acceso__entrar { width: 100%; margin-top: 8px; }
+
+/* Cabeza de la lista */
+.lista { padding: 8px 0 32px; }
+.lista__cabeza { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 20px; margin: 8px 0 18px; }
+.lista__titulo { margin: 0; font: 700 clamp(2rem, 8vw, 2.6rem)/1 var(--titulos); text-transform: uppercase; outline: none; }
+.lista__cuenta { margin: 6px 0 0; color: var(--suave); font-weight: 500; }
+.lista__acciones { display: flex; flex-wrap: wrap; gap: 10px; }
+.lista__estado { margin: 6px 0 0; font-weight: 600; color: var(--suave); }
+.lista__estado:empty { display: none; }
+.lista__estado--error { color: var(--error); }
+.lista__estado--ok { color: var(--ok); }
+.lista__nota { display: flex; align-items: center; gap: 8px; margin: 0 0 14px; font-size: 14px; color: var(--tenue); }
+
+/* Filtros */
+.filtros { display: grid; gap: 12px; margin: 0 0 16px; }
+.filtros__busca { position: relative; }
+.filtros__busca > .ico { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--suave); pointer-events: none; }
+.pagina-buscador .filtros__busca input { min-height: 52px; padding-left: 46px; font-size: 18px; }
+.filtros__mas { border: 1.5px solid var(--borde-suave); border-radius: 16px; background: var(--sup); }
+.filtros__mas summary {
+  display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 10px 16px; border-radius: 16px;
+  cursor: pointer; font-weight: 600; list-style: none;
+}
+.filtros__mas summary::-webkit-details-marker { display: none; }
+.filtros__mas summary::after { content: ''; margin-left: auto; width: 9px; height: 9px; border-right: 2px solid var(--suave); border-bottom: 2px solid var(--suave); transform: rotate(45deg) translateY(-3px); transition: transform .2s ease; }
+.filtros__mas[open] summary::after { transform: rotate(-135deg) translateY(-2px); }
+.filtros__mas summary .ico { color: var(--acento); }
+.filtros__n { display: inline-grid; place-items: center; min-width: 24px; height: 24px; padding: 0 6px; border-radius: 999px; background: var(--oro); color: var(--oro-texto); font-size: 13px; font-weight: 700; }
+.filtros__grilla { display: grid; gap: 14px; padding: 4px 16px 8px; }
+.filtros__pie { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; padding: 0 16px 14px 8px; }
+.filtros__pie .boton--texto { min-height: 44px; }
+.filtros__mas .boton--texto .ico { fill: none; stroke: currentColor; }
+.filtro__sub { display: grid; gap: 4px; min-width: 0; }
+.filtro__sub > span { font-size: 13px; font-weight: 600; color: var(--suave); }
+.filtro { display: grid; gap: 6px; min-width: 0; margin: 0; padding: 0; border: 0; }
+.filtro > label, .filtro > legend { padding: 0; font-weight: 600; font-size: 15px; }
+.filtro--par { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px 10px; }
+.filtro--par > legend { grid-column: 1 / -1; margin-bottom: 6px; }
+.filtro--par input { min-width: 0; }
+/* Los campos de fecha tienen un ancho mínimo propio (~170 px): en celulares angostos van uno bajo el otro. */
+@media (max-width: 419px) { .filtro--fechas { grid-template-columns: minmax(0, 1fr); } }
+.filtro--casilla { align-self: end; }
+
+/* Chips de estado */
+.chip { display: inline-flex; align-items: center; gap: 6px; margin-top: 4px; padding: 3px 10px; border-radius: 999px; font-size: 13px; font-weight: 700; line-height: 1.4; }
+.chip--ok { background: var(--ok-fondo); color: var(--ok); }
+.chip--falta { background: var(--error-fondo); color: var(--error); }
+.chip--neutro { background: var(--sup-2); color: var(--suave); }
+.chip--prueba { margin: 0 0 0 8px; vertical-align: 2px; border: 1.5px dashed var(--acento); background: transparent; color: var(--acento); text-transform: uppercase; letter-spacing: .06em; font-size: 11px; }
+
+:root[data-theme="light"] .chip--ok { color: #05603a; }
+:root[data-theme="light"] .chip--falta { color: #912018; }
+
+/* Tabla / tarjetas */
+.tabla-caja { border-radius: 16px; }
+.tabla { width: 100%; border-collapse: separate; border-spacing: 0; }
+.tabla thead { display: none; }
+.tabla tr { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px 12px; margin: 0 0 12px; padding: 14px 16px; border-radius: 16px; background: var(--sup); border: 1.5px solid var(--borde-suave); }
+.tabla tr.es-prueba { border-style: dashed; }
+.tabla td { display: block; min-width: 0; padding: 0; }
+.tabla td[data-etiqueta]::before { content: attr(data-etiqueta); display: block; margin: 0 0 2px; font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--tenue); }
+.tabla td.col-atleta, .tabla td.col-archivos, .tabla td.col-pago { grid-column: 1 / -1; }
+/* En el celular la planilla va justo bajo el nombre: es lo que Jeffer viene a buscar. */
+.tabla td.col-atleta { order: -2; }
+.tabla td.col-archivos { order: -1; }
+.tabla td.col-pago { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; }
+.tabla td.col-pago::before { flex-basis: 100%; }
+.tabla td.col-pago .chip { margin-top: 0; }
+.tabla td.col-atleta::before { display: none; }
+.atleta__cabeza { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.atleta__textos { min-width: 0; }
+.atleta__foto {
+  position: relative; flex: none; width: 56px; height: 56px; display: grid; place-items: center; overflow: hidden;
+  border-radius: 14px; background: var(--sup-2); border: 1.5px solid var(--borde-suave); color: var(--tenue);
+}
+.atleta__foto img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.atleta__foto.con-foto { border-color: rgba(244, 169, 28, .5); }
+.atleta__foto.con-foto .ico { visibility: hidden; }
+.atleta__nombre { margin: 0; font: 700 22px/1.1 var(--titulos); text-transform: uppercase; letter-spacing: .01em; overflow-wrap: anywhere; }
+.atleta__doc { margin: 4px 0 0; color: var(--suave); font-variant-numeric: tabular-nums; }
+.atleta__mas { margin-top: 6px; }
+.atleta__mas summary { display: inline-flex; align-items: center; min-height: 44px; padding-right: 12px; cursor: pointer; color: var(--acento); font-weight: 600; font-size: 15px; }
+.atleta__datos { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 12px; margin: 6px 0 0; padding: 10px 12px; border-radius: 12px; background: var(--sup-2); font-size: 15px; }
+.atleta__datos dt { color: var(--tenue); font-weight: 600; }
+.atleta__datos dd { margin: 0; overflow-wrap: anywhere; }
+.pago__forma { margin: 0; font-weight: 600; }
+.col-edad, .col-posicion, .col-fecha { font-weight: 500; }
+.tabla td.col-archivos::before { display: none; }
+.archivo { width: 100%; }
+.archivos__mas { display: flex; flex-wrap: wrap; gap: 4px 16px; margin-top: 8px; }
+.archivo-link { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; color: var(--acento); font-weight: 600; font-size: 15px; text-decoration: none; }
+.archivo-link:hover { text-decoration: underline; }
+.archivo-link .ico { width: 18px; height: 18px; }
+.archivos__falta { margin: 0; color: var(--suave); font-weight: 500; }
+
+/* Sin resultados y páginas */
+.vacio { display: grid; justify-items: center; gap: 12px; padding: 40px 16px; border-radius: 16px; border: 1.5px dashed var(--borde-suave); text-align: center; color: var(--suave); }
+.vacio > .ico { width: 36px; height: 36px; color: var(--acento); }
+.vacio__titulo { margin: 0; font-weight: 600; color: var(--texto); }
+.paginas { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 18px 0 0; }
+.paginas__txt { margin: 0; color: var(--suave); font-weight: 600; font-variant-numeric: tabular-nums; }
+.paginas .boton:disabled { opacity: .45; cursor: not-allowed; }
+/* En celulares angostos las flechas quedan solas; el texto sigue para los lectores de pantalla. */
+@media (max-width: 399px) {
+  .paginas .boton { padding-inline: 14px; }
+  .paginas .boton span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+}
+
+@media (min-width: 600px) {
+  .filtros__grilla { grid-template-columns: 1fr 1fr; }
+  .archivo { width: auto; }
+}
+
+/* Escritorio: tabla de verdad */
+@media (min-width: 900px) {
+  .filtros__grilla { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .filtros__ver { display: none; }
+  .tabla td.col-atleta, .tabla td.col-archivos { order: 0; }
+  .tabla td.col-pago { display: table-cell; }
+  .tabla-caja { border: 1.5px solid var(--borde-suave); background: var(--sup); overflow: hidden; }
+  .tabla thead { display: table-header-group; }
+  .tabla tr { display: table-row; margin: 0; padding: 0; border: 0; border-radius: 0; background: none; }
+  .tabla th { padding: 12px 16px; text-align: left; font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--tenue); background: var(--sup-2); }
+  .tabla td { display: table-cell; padding: 14px 16px; vertical-align: top; border-top: 1px solid var(--borde-suave); }
+  .tabla td[data-etiqueta]::before { display: none; }
+  .tabla tr.es-prueba td { background: repeating-linear-gradient(135deg, transparent 0 12px, var(--chip) 12px 14px); }
+  .tabla tbody tr:hover td { background-color: var(--sup-2); }
+  .col-atleta { width: 34%; }
+  .col-edad, .col-fecha, .chip { white-space: nowrap; }
+  .col-archivos { width: 1%; white-space: nowrap; }
+  .archivos__mas { justify-content: flex-start; }
+}
+
+/* Descarga del listado en PDF: franja entre los filtros y la lista, con cuántos atletas lleva. */
+.exportar {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px;
+  margin: 0 0 14px; padding: 12px 14px 12px 16px; border-radius: 16px;
+  background: var(--sup); border: 1.5px solid var(--borde-suave);
+}
+.exportar__txt { margin: 0; font-weight: 600; color: var(--suave); }
+.exportar .boton[aria-busy="true"] { opacity: .7; cursor: progress; }
+@media (max-width: 520px) { .exportar .boton { width: 100%; } }

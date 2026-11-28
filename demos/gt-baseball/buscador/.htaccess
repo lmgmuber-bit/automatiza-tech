@@ -1,0 +1,8 @@
+# Buscador privado de planillas: que ningún buscador lo indexe y que el navegador no guarde la página.
+# Las cabeceras de seguridad (CSP, HSTS...) vienen del .htaccess de la raíz.
+<IfModule mod_headers.c>
+  Header set X-Robots-Tag "noindex, nofollow"
+  Header set Cache-Control "no-store"
+  # CSP propia, más estricta que la de la portada (sin Turnstile, sin estilos ni scripts en línea salvo el del tema; de cdnjs solo el archivo de jsPDF, que se pide con SRI al descargar el listado en PDF).
+  Header always set Content-Security-Policy "default-src 'self'; script-src 'self' 'sha256-/EvSLPL8JlnE0JXY8LCdD1Czy0eDOIrUG/q7Z5S4Y5g=' https://cdnjs.cloudflare.com/ajax/libs/jspdf/4.2.1/jspdf.umd.min.js; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src https://n8n-n8n.kchiba.easypanel.host; form-action 'self'; frame-ancestors 'none'; base-uri 'self'; object-src 'none'; upgrade-insecure-requests"
+</IfModule>

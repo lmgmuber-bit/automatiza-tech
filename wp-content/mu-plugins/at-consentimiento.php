@@ -1,0 +1,225 @@
+<?php
+/**
+ * Plugin Name: AT · Aviso de cookies y eventos de contacto
+ * Description: Aviso de cookies propio (Aceptar / Rechazar). Sin «Aceptar», PixelYourSite no activa ningún píxel. Lead de Meta y clic_whatsapp de GA4 solo con permiso.
+ * Version: 1.1.0
+ *
+ * Cómo se conecta con PixelYourSite (leído en su código, v11.4):
+ * - `pys_disable_by_gdpr` en true apaga todos los píxeles; aquí vale true mientras no exista la cookie `at_consentimiento=si`.
+ * - Con la opción «gdpr_ajax_enabled» activa, el JS de PixelYourSite pide ese valor por AJAX
+ *   (`pys_get_gdpr_filters_values`) antes de cargar los píxeles, así la caché de LiteSpeed no congela la decisión.
+ *   El filtro `pys_gdpr_ajax_enabled` solo actúa al guardar sus ajustes: la opción se activa una vez al desplegar.
+ * - Los eventos que PixelYourSite manda desde el servidor pasan por el mismo filtro, con la cookie de la petición.
+ */
+if (!defined('ABSPATH')) { exit; }
+
+/** Hay permiso solo si la persona pulsó «Aceptar». */
+function at_consent_otorgado(): bool {
+    $v = $_COOKIE['at_consentimiento'] ?? '';
+    return is_string($v) && $v === 'si';
+}
+
+add_filter('pys_disable_by_gdpr', function ($desactivado) {
+    return (bool) $desactivado || !at_consent_otorgado();
+});
+add_filter('pys_gdpr_ajax_enabled', '__return_true');
+
+/**
+ * Cookies propias de PixelYourSite (pys_*: primera visita, página de llegada, origen y sesión; además pbid): apagadas
+ * siempre (12-nov-2026). La Política de Cookies promete que sin permiso solo hay esenciales, y ese HTML pasa por la
+ * caché de LiteSpeed, así que no se puede decidir persona por persona. Los píxeles siguen funcionando con permiso,
+ * solo sin esos datos extra de origen. El filtro lo lee el plugin en `pys_cookie_domain_cookies_disabled()`.
+ */
+add_filter('pys_disable_all_cookie', '__return_true');
+
+add_action('wp_footer', 'at_consent_dibujar', 99);
+
+function at_consent_dibujar() {
+    if (is_admin() || wp_doing_ajax() || is_feed()) {
+        return;
+    }
+    $cookies = esc_url(home_url('/cookies/'));
+    $privacidad = esc_url(home_url('/privacidad/'));
+    ?>
+<div id="at-consent" class="at-consent" role="dialog" aria-modal="false" aria-labelledby="at-consent-titulo" aria-describedby="at-consent-texto" hidden>
+  <div class="at-consent__caja">
+    <p id="at-consent-titulo" class="at-consent__titulo">Cookies en AutomatizaTech</p>
+    <p id="at-consent-texto" class="at-consent__texto">Usamos cookies necesarias para que el sitio funcione y, solo si aceptas, cookies de medición (Google Analytics) y de publicidad (Google Ads y Meta). Puedes cambiar tu elección cuando quieras. <a href="<?php echo $cookies; ?>">Política de Cookies</a> · <a href="<?php echo $privacidad; ?>">Privacidad</a></p>
+    <div class="at-consent__botones">
+      <button type="button" class="at-consent__btn" data-at-consent="no">Rechazar</button>
+      <button type="button" class="at-consent__btn at-consent__btn--si" data-at-consent="si">Aceptar</button>
+    </div>
+  </div>
+</div>
+<style>
+.at-consent{position:fixed;left:16px;right:16px;bottom:16px;z-index:2147483000;display:flex;justify-content:center;font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.at-consent[hidden]{display:none}
+.at-consent__caja{max-width:720px;width:100%;background:#0f1d33;color:#f1f5f9;border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:16px 18px;box-shadow:0 12px 32px rgba(0,0,0,.35)}
+.at-consent__titulo{margin:0 0 4px;font-weight:700;font-size:15px;color:#fff}
+.at-consent__texto{margin:0 0 12px;font-size:14px;color:#cbd5e1}
+.at-consent__texto a{color:#5eead4;text-decoration:underline}
+.at-consent__botones{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap}
+.at-consent__btn{min-height:44px;min-width:120px;padding:10px 18px;border-radius:10px;border:1px solid #5eead4;background:transparent;color:#fff;font-family:inherit;font-size:14px;font-weight:600;line-height:1;cursor:pointer}
+.at-consent__btn--si{background:#14b8a6;border-color:#14b8a6;color:#04121f}
+.at-consent__btn:focus-visible{outline:3px solid #fde68a;outline-offset:2px}
+@media (max-width:480px){.at-consent{left:12px;right:12px;bottom:12px}.at-consent__btn{flex:1}}
+/* En pantallas anchas va abajo a la izquierda y más angosto: no tapa el botón del chat («Háblale a Tech») de la derecha. */
+@media (min-width:900px){.at-consent{left:24px;right:auto;bottom:24px;width:520px;justify-content:flex-start}.at-consent__btn{min-width:110px}}
+</style>
+<?php
+    // Huella del Lead (la misma que manda el servidor por CAPI): si el archivo no está, atLead avisa sin eventID.
+    $at_lead_id = __DIR__ . '/../themes/automatiza-tech/assets/js/at-lead-id.js';
+    if (is_readable($at_lead_id)) {
+        echo '<script>' . file_get_contents($at_lead_id) . "</script>\n";
+    }
+    ?>
+<script>
+(function () {
+  var NOMBRE = 'at_consentimiento', SEIS_MESES = 15552000;
+  function leer() {
+    var m = document.cookie.match(/(?:^|;\s*)at_consentimiento=(si|no)(?:;|$)/);
+    return m ? m[1] : null;
+  }
+  // La elección vive solo en la cookie (6 meses): al vencer, el aviso vuelve a preguntar (revisión de Toga, 13-nov-2026).
+  function guardar(v) {
+    document.cookie = NOMBRE + '=' + v + '; max-age=' + SEIS_MESES + '; path=/; SameSite=Lax' + (location.protocol === 'https:' ? '; Secure' : '');
+  }
+  // Quien decidió en el aviso anterior (localStorage) no vuelve a ver la pregunta, pero solo una vez:
+  // la copia se pasa a la cookie y se borra, para que el permiso venza a los 6 meses como dice la política.
+  try {
+    var previo = localStorage.getItem('at_cookie_consent');
+    if (previo !== null) {
+      if (!leer()) { if (previo === 'accepted') { guardar('si'); } else if (previo === 'rejected') { guardar('no'); } }
+      localStorage.removeItem('at_cookie_consent');
+    }
+  } catch (e) {}
+  // Al retirar el permiso se borran las cookies de medición y publicidad de este sitio (Google Analytics, Google Ads, Meta).
+  function borrarMedicion() {
+    var nombres = document.cookie.split(';').map(function (c) { return c.split('=')[0].trim(); })
+      .filter(function (n) { return /^(_ga|_ga_.+|_gid|_gcl_.+|_fbp|_fbc)$/.test(n); });
+    var host = location.hostname, dominios = ['', host, '.' + host, '.' + host.replace(/^www\./, '')];
+    nombres.forEach(function (n) {
+      dominios.forEach(function (d) {
+        document.cookie = n + '=; max-age=0; path=/' + (d ? '; domain=' + d : '');
+      });
+    });
+  }
+  var caja = document.getElementById('at-consent');
+  function abrir() { if (caja) { caja.hidden = false; } }
+  function decidir(v) {
+    var antes = leer();
+    guardar(v);
+    if (v === 'no') { borrarMedicion(); }
+    if (caja) { caja.hidden = true; }
+    // El píxel se decide al cargar la página: cambiar a «sí», o retirar un «sí», recarga una vez.
+    if (v === 'si' || antes === 'si') { location.reload(); }
+  }
+  if (caja) {
+    caja.addEventListener('click', function (e) {
+      var b = e.target.closest ? e.target.closest('[data-at-consent]') : null;
+      if (b) { decidir(b.getAttribute('data-at-consent')); }
+    });
+    if (!leer()) { abrir(); }
+  }
+  // Cualquier enlace con data-at-cookies reabre el aviso (por ejemplo, en el pie o en la Política de Cookies).
+  document.addEventListener('click', function (e) {
+    var a = e.target.closest ? e.target.closest('[data-at-cookies]') : null;
+    if (a) { e.preventDefault(); abrir(); }
+  });
+  window.atConsentimiento = { abrir: abrir, estado: leer };
+  // Delegación común a portada, landings y guías: no depende de cambiar su HTML.
+  // No instala otra etiqueta GA4: usa el gtag existente y revalida el permiso en cada clic.
+  if (!window.__atWhatsappClick) {
+    window.__atWhatsappClick = true;
+    function esWhatsapp(valor) {
+      if (!valor) { return false; }
+      if (/^whatsapp:\/\//i.test(valor.trim())) { return true; }
+      try {
+        var url = new URL(valor, location.href);
+        return /^(https?:)$/.test(url.protocol) && !url.username && !url.password &&
+          (url.hostname === 'wa.me' || url.hostname === 'api.whatsapp.com');
+      } catch (e) { return false; }
+    }
+    function abreWhatsapp(el) {
+      if (esWhatsapp(el.getAttribute('href')) || esWhatsapp(el.getAttribute('data-href'))) { return true; }
+      // Solo reconoce URLs literales en llamadas de navegación; nunca evalúa el onclick.
+      var codigo = el.getAttribute('onclick') || '';
+      var patron = /(?:\b(?:window\.)?open\s*\(\s*|\b(?:(?:window|document)\.)?location(?:\.href)?\s*=\s*|\b(?:(?:window|document)\.)?location\.(?:assign|replace)\s*\(\s*)(['"])([^'"]+)\1/g;
+      var m;
+      while ((m = patron.exec(codigo))) { if (esWhatsapp(m[2])) { return true; } }
+      return false;
+    }
+    // Vocabulario cerrado: no envía IDs, clases, atributos ni slugs arbitrarios que pudieran contener datos personales.
+    var secciones = ['contacto', 'servicios', 'soluciones', 'planes', 'faq', 'dolor', 'rubros',
+      'metodo', 'portal', 'casos', 'porque', 'quienes', 'otros-servicios', 'guias'];
+    function ubicacionWhatsapp(el) {
+      var dato = el.closest('[data-ubicacion]');
+      var valor = dato ? dato.getAttribute('data-ubicacion') : '';
+      if (['hero', 'pie', 'flotante', 'seccion'].indexOf(valor) !== -1 ||
+          (valor && valor.indexOf('seccion:') === 0 && secciones.indexOf(valor.slice(8)) !== -1)) { return valor; }
+      for (var n = el; n && n !== document.body && n !== document.documentElement; n = n.parentElement) {
+        if (/(?:^|[\s_-])(?:float(?:ing)?|flotante|fixed)(?:$|[\s_-])/i.test(n.getAttribute('class') || '') ||
+            (window.getComputedStyle && window.getComputedStyle(n).position === 'fixed')) { return 'flotante'; }
+      }
+      if (el.closest('footer')) { return 'pie'; }
+      var primera = document.querySelector('main section') || document.querySelector('section');
+      if (el.closest('[class*="hero"], #hero, #top') || (primera && primera.contains(el))) { return 'hero'; }
+      var seccion = el.closest('section, [role="region"]');
+      if (seccion) {
+        var nombres = [seccion.getAttribute('id') || ''].concat((seccion.getAttribute('class') || '').split(/\s+/));
+        for (var i = 0; i < nombres.length; i++) {
+          if (secciones.indexOf(nombres[i]) !== -1) { return 'seccion:' + nombres[i]; }
+        }
+      }
+      return 'seccion';
+    }
+    function servicioWhatsapp() {
+      var ruta = location.pathname || '/';
+      if (ruta === '/') { return 'portada'; }
+      var slug = ruta.split('/')[1];
+      if (slug === 'guias') { return 'guias'; }
+      var servicios = ['asistentes-inteligentes-ia-whatsapp', 'automatizacion-negocios-whatsapp-crm',
+        'sitios-web-premium-chile', 'aplicaciones-web-a-medida', 'sistemas-a-medida-chile',
+        'portal-omnicliente-precios'];
+      return servicios.indexOf(slug) !== -1 ? slug : 'sitio';
+    }
+    document.addEventListener('click', function (e) {
+      if (leer() !== 'si' || typeof window.gtag !== 'function') { return; }
+      var target = e.target;
+      if (target && target.nodeType !== 1) { target = target.parentElement; }
+      var el = target && target.closest ? target.closest('a,button') : null;
+      // Si hay button+a anidados, busca el que navega y envía una sola vez.
+      while (el && !abreWhatsapp(el)) { el = el.parentElement ? el.parentElement.closest('a,button') : null; }
+      if (!el) { return; }
+      try {
+        var params = { ubicacion: ubicacionWhatsapp(el), servicio: servicioWhatsapp(), transport_type: 'beacon' };
+        if (new URLSearchParams(location.search).get('ga_debug') === '1') { params.debug_mode = true; }
+        window.gtag('event', 'clic_whatsapp', params);
+      } catch (e) {} // Un bloqueo del medidor nunca debe interrumpir el enlace.
+    }, true);
+  }
+  // Avisa a Meta que llegó un contacto. Sin permiso o sin Pixel cargado, no hace nada.
+  // Con datos = {email, fecha, hora} manda el mismo eventID que el servidor (CAPI) y avisa una sola vez por correo
+  // en 30 días; la marca se guarda con la huella del correo, nunca con el correo.
+  var TREINTA_DIAS = 2592000000;
+  window.atLead = function (origen, datos) {
+    if (leer() !== 'si' || typeof window.fbq !== 'function') { return false; }
+    var params = { content_name: String(origen || 'sitio') };
+    function enviar(id) {
+      try { if (id) { window.fbq('track', 'Lead', params, { eventID: id }); } else { window.fbq('track', 'Lead', params); } } catch (e) {}
+    }
+    var L = window.AtLeadId;
+    if (!datos || !L) { enviar(''); return true; }
+    Promise.all([L.eventId(datos.email, datos.fecha, datos.hora), L.huellaCorreo(datos.email)]).then(function (r) {
+      var clave = r[1] ? 'at_lead_' + r[1].slice(0, 32) : '', hasta = 0;
+      try { hasta = clave ? Number(localStorage.getItem(clave)) || 0 : 0; } catch (e) {}
+      if (hasta > Date.now()) { return; }
+      enviar(r[0]);
+      try { if (clave) { localStorage.setItem(clave, String(Date.now() + TREINTA_DIAS)); } } catch (e) {}
+    }, function () { enviar(''); });
+    return true;
+  };
+})();
+</script>
+    <?php
+}

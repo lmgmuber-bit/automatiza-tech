@@ -49,6 +49,9 @@ if (!empty($invitation['expires_at']) && strtotime((string) $invitation['expires
 // dependen ya la narración y el vocabulario. `event_type` trae
 // 'child_birthday' por defecto, así que un cumpleaños no cambia nada.
 $esBabyShower = (string) ($invitation['event_type'] ?? 'child_birthday') === 'baby_shower';
+// Cumpleaños de adulto (AT-CUMPLECLICK-026): sin la voz de Alice (le habla a un niño), sin
+// capítulos de personajes y con un formulario de asistencia para adultos.
+$esAdulto = (string) ($invitation['event_type'] ?? '') === 'adult_birthday';
 
 $imageOutputs = cb_invitation_approved_outputs((int) $invitation['id'], 'personalized_image');
 if (!$imageOutputs) {
@@ -136,7 +139,32 @@ if (is_file($narrationPlaylistEndPath)) {
         . '?v=' . rawurlencode((string) filemtime($narrationPlaylistEndPath));
 }
 
-$themeData = is_array($themesData['themes'][$themeSlug] ?? null) ? $themesData['themes'][$themeSlug] : [];
+if ($esAdulto) {
+    // Las dos narraciones compartidas dicen «cumpleañero/a» con voz para niños.
+    // El inicio personalizado también es la voz de Alice: aunque haya uno aprobado
+    // (por ejemplo, de una invitación clonada), la invitación adulta solo suena
+    // con su video (CX-14, AT-CUMPLECLICK-026).
+    $narrationIntroUrl = '';
+    $narrationOutroUrl = '';
+    $narrationPlaylistEndUrl = '';
+}
+
+// Temática con voz propia (`vozPropia` en themes.json): la familia no quiere la voz de Alice, así
+// que los audios compartidos no suenan. Se usan los de `narracion-video/` de la temática si
+// existen; mientras no estén, la invitación va con música y sin voz (baby shower 24-oct-2026).
+// La narración de INICIO no se toca: es propia de cada invitación y se graba con la voz elegida.
+if (!empty($themesData['themes'][$themeSlug]['vozPropia']) && preg_match('/^[a-z0-9-]+$/', $themeSlug)) {
+    $vozDeLaTematica = static function (string $archivo) use ($themeSlug): string {
+        $ruta = __DIR__ . '/themes/' . $themeSlug . '/narracion-video/' . $archivo;
+        return is_file($ruta)
+            ? 'themes/' . rawurlencode($themeSlug) . '/narracion-video/' . rawurlencode($archivo) . '?v=' . rawurlencode((string) filemtime($ruta))
+            : '';
+    };
+    $narrationOutroUrl = $vozDeLaTematica('narracion-final.mp3');
+    $narrationPlaylistEndUrl = $vozDeLaTematica('narracion-playlist-final-' . $sufijoSexoBebe . '.mp3');
+}
+
+$themeData =is_array($themesData['themes'][$themeSlug] ?? null) ? $themesData['themes'][$themeSlug] : [];
 $colors = is_array($themeData['colors'] ?? null) ? $themeData['colors'] : [];
 $accent = (string) ($colors['accent'] ?? '#7C3AED');
 $yellow = (string) ($colors['yellow'] ?? '#FBBF24');
@@ -223,11 +251,59 @@ if ($esBabyShower && function_exists('cb_gift_list_public')) {
     }
 }
 $modoRegalos = function_exists('cb_gift_mode') ? cb_gift_mode($invitation) : 'list';
+// Regalos sugeridos del formulario de confirmación (Luis, 24-oct-2026: que escriban lo menos
+// posible). Un toque escribe el regalo; el servidor lo valida igual. La disponibilidad sale de
+// las mismas reglas del servidor, así que un único ya tomado o los pañales completos salen apagados.
+$sugerenciasRegalo = [];
+if ($esBabyShower && $modoRegalos === 'rsvp' && function_exists('cb_regalo_validar')) {
+    $ideas = ['Coche', 'Cuna', 'Corral', 'Silla de auto', 'Bañera', 'Mochila portabebé', 'Monitor', 'Silla de comer',
+        'Mudador', 'Esterilizador', 'Pañales', 'Ropa', 'Mantita', 'Toallitas húmedas', 'Kit de aseo', 'Gift card'];
+    foreach ($ideas as $idea) {
+        try {
+            $v = cb_regalo_validar((int) $invitation['id'], $idea);
+            $categoria = (string) ($v['categoria'] ?? cb_regalo_clasificar($idea)['categoria']);
+            $sugerenciasRegalo[] = ['texto' => $idea, 'disponible' => !empty($v['ok']), 'libre' => $categoria === 'libre'];
+        } catch (Throwable $e) {
+            error_log('CumpleClick sugerencias de regalo: ' . $e->getMessage());
+            $sugerenciasRegalo = [];
+            break;
+        }
+    }
+}
+// Guía al final (Luis, 24-oct-2026): quien no baja no ve el botón de confirmar. Si se queda quieto,
+// la página lo lleva hasta «Confirma tu asistencia» y esta voz le explica el botón y los regalos.
+// Solo en el modo de confirmar con regalo, porque esa voz habla del regalo; o en una temática cuya guía no lo
+// menciona (`guiaSinRegalos` en themes.json, Casa de Muñecas 29-oct-2026).
+$guiaSinRegalos = !empty($themeData['guiaSinRegalos']);
+$vozGuiaUrl = '';
+$vozGuiaRuta = __DIR__ . '/themes/' . $themeSlug . '/narracion-video/' . 'guia-confirmar.mp3';
+if (($modoRegalos === 'rsvp' || $guiaSinRegalos) && preg_match('/^[a-z0-9-]+$/', $themeSlug) && is_file($vozGuiaRuta)) {
+    $vozGuiaUrl = 'themes/' . rawurlencode($themeSlug) . '/narracion-video/guia-confirmar.mp3?v='
+        . rawurlencode((string) filemtime($vozGuiaRuta));
+}
+// «Gracias por confirmar, te esperamos» al confirmar: audio de la temática, si existe.
+$vozGraciasUrl = '';
+$vozGraciasArchivo = 'gracias-confirmar.mp3';
+$vozGraciasRuta = __DIR__ . '/themes/' . $themeSlug . '/narracion-video/' . $vozGraciasArchivo;
+if (preg_match('/^[a-z0-9-]+$/', $themeSlug) && is_file($vozGraciasRuta)) {
+    $vozGraciasUrl = 'themes/' . rawurlencode($themeSlug) . '/narracion-video/' . $vozGraciasArchivo
+        . '?v=' . rawurlencode((string) filemtime($vozGraciasRuta));
+}
 $aQuienRegalo = $hayNombreBebe ? ' a ' . $birthdayName : '';
 // El gancho nombra el problema del invitado, no la sección. Y ese problema
 // es otro en cada modo: con lista es "no sé qué regalar"; sin lista es "ya
 // sé lo que llevo, ¿dónde lo anoto para que nadie repita?".
-if ($modoRegalos === 'open') {
+$regalosReglas = '';
+if ($modoRegalos === 'rsvp') {
+    // Regalo validado: el invitado lo escribe al confirmar y el servidor
+    // impide repetidos. Acá solo se lee lo que ya llevan, sin nombres.
+    $regalosGancho = '¿Qué le vas a llevar' . $aQuienRegalo . '?';
+    $regalosBajada = 'Nos lo cuentas al confirmar. Así nadie repite.';
+    $regalosReglas = 'Coche, cuna y otros regalos grandes: uno por persona. Pañales: hasta 3 personas. Ropa, aseo, dinero o gift card: libre.';
+    $regalosBoton = '';
+    $regalosVacio = 'Todavía nadie anota su regalo.';
+    $regalosTomado = 'Ya lo traen';
+} elseif ($modoRegalos === 'open') {
     $regalosGancho = '¿Vas a llevarle algo' . $aQuienRegalo . '?';
     $regalosBajada = 'Anótalo acá y los demás lo van a ver. Así nadie lleva lo mismo.';
     $regalosBoton = 'Anotar lo que voy a llevar';
@@ -470,6 +546,31 @@ if (preg_match('/^[a-z0-9-]+$/', $themeSlug)) {
     }
 }
 
+// Intro propio de una fiesta: el video con el nombre de la persona festejada (Casa de Muñecas, 29-oct-2026).
+// Vive solo en el servidor, como la despedida propia (`themes/<tema>/invitation/intro-fiesta-<slug>.mp4`,
+// .gitignore). El slug lleva 96 bits al azar y el servidor web lo entrega con Range, que es lo que pide Safari
+// para un <video>; descargar-invitacion.php no lo hace. Si existe, reemplaza al intro genérico y la portada ya
+// no repite el video.
+$introPersonalizado = false;
+$slugFiesta = '';
+if (!empty($invitation['party_id']) && cb_storage_mode() === 'db' && preg_match('/^[a-z0-9-]+$/', $themeSlug)) {
+    $consultaSlug = cb_pdo()->prepare('SELECT public_slug FROM cc_parties WHERE id = ?');
+    $consultaSlug->execute([(int) $invitation['party_id']]);
+    $slugFiesta = (string) ($consultaSlug->fetchColumn() ?: '');
+}
+if ($slugFiesta !== '' && cb_valid_public_slug($slugFiesta)) {
+    $introFiestaRuta = __DIR__ . '/themes/' . $themeSlug . '/invitation/intro-fiesta-' . $slugFiesta . '.mp4';
+    if (is_file($introFiestaRuta)) {
+        $introFiestaBase = 'themes/' . rawurlencode($themeSlug) . '/invitation/intro-fiesta-' . rawurlencode($slugFiesta);
+        $themeIntroUrl = $introFiestaBase . '.mp4?v=' . rawurlencode((string) filemtime($introFiestaRuta));
+        $posterFiestaRuta = __DIR__ . '/themes/' . $themeSlug . '/invitation/intro-fiesta-' . $slugFiesta . '-poster.jpg';
+        $themeIntroPosterUrl = is_file($posterFiestaRuta)
+            ? $introFiestaBase . '-poster.jpg?v=' . rawurlencode((string) filemtime($posterFiestaRuta))
+            : $imageUrl;
+        $introPersonalizado = true;
+    }
+}
+
 // Fecha legible sin depender del locale del servidor, que en Hostinger y en
 // Windows no coinciden y dejaban la fecha en inglés o en formato ISO.
 $formatEventDate = static function (string $isoDate): array {
@@ -549,6 +650,8 @@ if ($themeSlug === 'hielo') {
     $heroKicker = 'El Reino de Hielo te invita a celebrar a:';
 } elseif ($themeSlug === 'baby-nube') {
     $heroKicker = 'Entre nubes y estrellas, te esperamos para recibir a:';
+} elseif ($themeSlug === 'baby-osito') {
+    $heroKicker = 'Con mucho amor, te esperamos para recibir a:';
 } elseif ($themeSlug === 'baby-safari') {
     $heroKicker = 'La manada se prepara para recibir a:';
 } elseif ($esBabyShower) {
@@ -645,6 +748,18 @@ $playlistOrdersByTheme = [
             'narracion' => 'despedida-baby-nube-' . $sufijoSexoBebe,
         ],
     ],
+    'baby-osito' => [
+        'invitation/capitulo-1-la-espera.mp4' => 'Hay esperas que se sienten distintas',
+        'invitation/capitulo-2-antes-de-nacer.mp4' => 'Todo empieza mucho antes de nacer',
+        'invitation/capitulo-3-alguien-te-espera.mp4' => 'Alguien ya te está esperando',
+        'invitation/capitulo-4-su-nombre.mp4' => $capituloNombre,
+        'invitation/capitulo-5-el-mundo-se-acomoda.mp4' => 'El mundo se acomoda para recibirte',
+        // La narración lleva género y el video no: un solo clip, tres voces.
+        'despedida-baby-osito.mp4' => [
+            'caption' => 'Ven a esperar con nosotros',
+            'narracion' => 'despedida-baby-osito-' . $sufijoSexoBebe,
+        ],
+    ],
     'baby-safari' => [
         'invitation/capitulo-1-la-espera.mp4' => 'Hay esperas que se sienten distintas',
         'invitation/capitulo-2-antes-de-nacer.mp4' => 'Todo empieza mucho antes de nacer',
@@ -727,6 +842,11 @@ $playlistOrdersByTheme = [
         'saludo-papa-marino.mp4' => 'Papá Marino enciende la música',
         'despedida-familia-canina.mp4' => '¡Te esperamos!',
     ],
+    /* Casa de Muñecas (29-oct-2026): el intro con el nombre es propio de cada fiesta (intro-fiesta-<slug>.mp4);
+       el recorrido solo cierra con la despedida de la temática, que no nombra a nadie. */
+    'casa-munecas' => [
+        'despedida-casa-munecas.mp4' => '¡Te esperamos!',
+    ],
 ];
 
 // Revision aislada de los saludos nuevos de Hielo. Solo se usa con
@@ -796,6 +916,10 @@ if ($isPreview) {
     $tieneCapitulos = preg_match('/^[a-z0-9-]+$/', $themeSlug) === 1
         && is_dir(__DIR__ . '/themes/' . $themeSlug . '/invitation/chapters');
     $planChapters = $tieneCapitulos ? '1' : 'auto';
+}
+if ($esAdulto && !$isPreview) {
+    // Los capítulos y la playlist son el recorrido de personajes de las temáticas infantiles.
+    $planChapters = 'none';
 }
 
 // Comparación de candidatos detrás del modo resuelto. La versión aprobada de
@@ -1099,7 +1223,11 @@ if (preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $eventDate, $m)) {
     }
 }
 $ogUrl = cb_invitation_pretty_url($token, $birthdayName);
-$ogImagen = cb_invitation_download_url($token, 'image') . '&preview=1';
+// La vista previa sale `public, max-age=86400` (el CDN la guarda un día) y WhatsApp guarda la suya por dirección:
+// la versión de la imagen aprobada va en la dirección para que corregir la lámina no deje la vieja en las tarjetas.
+$ogVersion = substr((string) ($imageOutputs[0]['file_sha256'] ?? ''), 0, 12);
+$ogImagen = cb_invitation_download_url($token, 'image') . '&preview=1'
+    . (preg_match('/^[a-f0-9]{12}$/', $ogVersion) ? '&v=' . $ogVersion : '');
 ?>
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="CumpleClick">
@@ -1142,6 +1270,12 @@ $cssVer = static function (string $rel): string {
   <?php if ($narrationOutroUrl !== ''): ?>
   <audio data-inv-narration-outro src="<?= $esc($narrationOutroUrl) ?>" preload="none"></audio>
   <?php endif; ?>
+  <?php if ($vozGraciasUrl !== ''): ?>
+  <audio data-inv-narration-gracias src="<?= $esc($vozGraciasUrl) ?>" preload="none"></audio>
+  <?php endif; ?>
+  <?php if ($vozGuiaUrl !== ''): ?>
+  <audio data-inv-narration-guia src="<?= $esc($vozGuiaUrl) ?>" preload="none"></audio>
+  <?php endif; ?>
   <?php if ($musicUrl !== '' || $narrationIntroUrl !== ''): ?>
   <button class="inv-audio-activate" type="button" data-inv-audio-activate hidden>Activar música y voz</button>
   <?php endif; ?>
@@ -1169,7 +1303,7 @@ $cssVer = static function (string $rel): string {
 </section>
 
 <?php if ($themeIntroUrl !== ''): ?>
-<section class='inv-theme-intro' data-inv-theme-intro role='dialog' aria-modal='true' aria-label='Intro de la invitación' aria-hidden='true' hidden>
+<section class='inv-theme-intro' data-inv-theme-intro<?php if ($introPersonalizado): ?> data-inv-theme-intro-personal<?php endif; ?> role='dialog' aria-modal='true' aria-label='Intro de la invitación' aria-hidden='true' hidden>
   <video class='inv-theme-intro-media' data-inv-theme-intro-video src='<?= $esc($themeIntroUrl) ?>'<?php if ($themeIntroPosterUrl !== ''): ?> poster='<?= $esc($themeIntroPosterUrl) ?>'<?php endif; ?> playsinline preload='metadata'></video>
   <div class='inv-theme-intro-shade' aria-hidden='true'></div>
   <?= cb_lockup_html('claro', 'inv-theme-intro-brand') ?>
@@ -1404,7 +1538,9 @@ $cssVer = static function (string $rel): string {
             if ($usaCierreCompartido) {
                 $narrationUrl = $narrationPlaylistEndUrl;
             } elseif (is_file($narrationPath)) {
-                $narrationUrl = 'themes/' . rawurlencode($themeSlug) . '/narracion-video/' . rawurlencode($narrationKey) . '.mp3';
+                // ?v= como las demás voces: una voz de capítulo se regraba con el mismo nombre (Casa de Muñecas, 30-oct).
+                $narrationUrl = 'themes/' . rawurlencode($themeSlug) . '/narracion-video/' . rawurlencode($narrationKey) . '.mp3'
+                    . '?v=' . rawurlencode((string) filemtime($narrationPath));
             }
             $encodedFilePath = implode('/', array_map('rawurlencode', explode('/', $fileName)));
             // ?v= por archivo: los clips se reemplazan CON EL MISMO NOMBRE
@@ -1557,13 +1693,16 @@ $cssVer = static function (string $rel): string {
     </figure>
     <?php else: ?>
     <figure class="inv-art-frame">
+      <?php // Adulto con video: la tarjeta va como póster del video, no repetida encima. ?>
+      <?php if (!($esAdulto && $hasVideo)): ?>
       <img class="inv-art" src="<?= $esc($imageUrl) ?>" alt="<?= $esc($tituloInvitacion) ?>" decoding="async">
-      <?php if ($hasVideo): ?>
+      <?php endif; ?>
+      <?php if ($hasVideo && !$introPersonalizado): ?>
       <?php /* Sin loop ni muted: el invitado lo inicia con un toque (gesto que
                ya permite el sonido) y al terminar la página avanza sola a los
                datos de la fiesta — un video de invitación se ve UNA vez, no en
                bucle mudo (pedido de Luis con la invitación de Luciano). */ ?>
-      <video class="inv-art-video" src="<?= $esc((string) $videoUrl) ?>" controls playsinline preload="metadata" data-inv-video-final></video>
+      <video class="inv-art-video" src="<?= $esc((string) $videoUrl) ?>" poster="<?= $esc($imageUrl) ?>" aria-label="<?= $esc($tituloInvitacion) ?>" controls playsinline preload="metadata" data-inv-video-final></video>
       <?php endif; ?>
     </figure>
     <?php endif; ?>
@@ -1643,20 +1782,23 @@ $cssVer = static function (string $rel): string {
         // vacía ES el estado normal al principio y hay que invitar a anotar.
         // En modo lista, vacía significa que los papás no cargaron nada, y
         // mostrar una sección hueca sería peor que no mostrarla. ?>
-  <?php if ($esBabyShower && ($regalos['total'] > 0 || $modoRegalos === 'open')): ?>
+  <?php if ($esBabyShower && ($regalos['total'] > 0 || $modoRegalos === 'open' || $modoRegalos === 'rsvp')): ?>
   <?php // "Para cuando llegue" — el nombre lo decidió Luis el 2026-08-25.
         // Se renderiza entero en el servidor: sin JS se ve igual, solo que
         // no se puede reservar, y eso es mejor que una sección vacía. ?>
   <section class="inv-gifts inv-reveal" data-inv-gifts data-inv-token="<?= $esc($token) ?>"
            data-inv-base="<?= $esc(rtrim((string) cb_public_base_url(), '/')) ?>/"
-           data-gifts-tomado="<?= $esc($regalosTomado) ?>">
+           data-gifts-tomado="<?= $esc($regalosTomado) ?>"<?= $modoRegalos === 'rsvp' ? ' data-gifts-rsvp' : '' ?>>
     <p class="inv-kicker">Para cuando llegue</p>
     <h2 class="inv-gifts-title"><?= $esc($regalosGancho) ?></h2>
     <p class="inv-gifts-lede"><?= $esc($regalosBajada) ?></p>
+    <?php if ($modoRegalos === 'rsvp'): ?>
+    <p class="inv-gifts-reglas"><?= $esc($regalosReglas) ?></p>
+    <?php endif; ?>
     <?php // El pulso de la lista, sin nombres. En modo abierto no hay un total
           // contra el cual medir, así que se cuenta lo anotado y ya. ?>
-    <p class="inv-gifts-count" data-gifts-count data-gifts-modo="<?= $esc($modoRegalos) ?>">
-      <?php if ($modoRegalos === 'open'): ?>
+    <p class="inv-gifts-count" data-gifts-count data-gifts-modo="<?= $esc($modoRegalos) ?>"<?= $modoRegalos === 'rsvp' && !$regalos['total'] ? ' hidden' : '' ?>>
+      <?php if ($modoRegalos === 'open' || $modoRegalos === 'rsvp'): ?>
       <?= $esc($regalos['total'] === 1 ? '1 cosa anotada' : $regalos['total'] . ' cosas anotadas') ?>
       <?php else: ?>
       <?= $esc($regalos['tomados'] . ' de ' . $regalos['total'] . ' ya tienen quien los lleve') ?>
@@ -1668,12 +1810,14 @@ $cssVer = static function (string $rel): string {
           // navegador encima rompe el tono justo en el único momento en que
           // el invitado hace algo. Sin JS queda oculto, porque sin JS no hay
           // reserva posible. ?>
+    <?php if ($modoRegalos !== 'rsvp'): ?>
     <div class="inv-gifts-yo" data-gifts-yo hidden>
       <label for="inv-gifts-nombre">Te anotamos como</label>
       <input id="inv-gifts-nombre" type="text" maxlength="80" autocomplete="name"
              placeholder="Tu nombre" data-gifts-nombre>
       <span class="inv-gifts-yo-nota">Solo lo ven los papás.</span>
     </div>
+    <?php endif; ?>
 
     <ul class="inv-gifts-list" data-gifts-list>
       <?php foreach ($regalos['items'] as $regalo): ?>
@@ -1685,7 +1829,7 @@ $cssVer = static function (string $rel): string {
           <?php endif; ?>
         </div>
         <?php // Nunca sale de acá quién lo tomó: ver lib.gifts.php. ?>
-        <?php if ($regalo['tomado']): ?>
+        <?php if ($regalo['tomado'] || $modoRegalos === 'rsvp'): ?>
         <span class="inv-gift-estado"><?= $esc($regalosTomado) ?></span>
         <?php else: ?>
         <button class="inv-gift-btn" type="button" data-gift-claim>Yo lo regalo</button>
@@ -1696,21 +1840,25 @@ $cssVer = static function (string $rel): string {
 
     <p class="inv-gifts-status" data-gifts-status role="status" aria-live="polite"></p>
 
-    <?php if ($modoRegalos === 'open' && !$regalos['items']): ?>
+    <?php if (($modoRegalos === 'open' || $modoRegalos === 'rsvp') && !$regalos['items']): ?>
     <p class="inv-gifts-vacio"><?= $esc($regalosVacio) ?></p>
     <?php endif; ?>
 
+    <?php if ($modoRegalos !== 'rsvp'): ?>
     <button class="inv-gifts-otro" type="button" data-gift-add hidden><?= $esc($regalosBoton) ?></button>
     <div class="inv-gifts-nuevo" data-gifts-nuevo hidden>
       <input type="text" maxlength="120" placeholder="¿Qué vas a regalar?" data-gifts-nuevo-titulo>
       <button class="inv-gift-btn" type="button" data-gifts-nuevo-ok>Agregarlo</button>
     </div>
+    <?php endif; ?>
     <?php // El costo de no tener cuentas se dice, no se esconde. ?>
+    <?php if ($modoRegalos !== 'rsvp'): ?>
     <p class="inv-gifts-nota" data-gifts-nota hidden>
       Lo que marques queda guardado en este navegador. Si borras sus datos, el
       regalo sigue reservado a tu nombre, pero ya no vas a poder liberarlo tú
       mismo: avísale a la familia y ellos lo sueltan.
     </p>
+    <?php endif; ?>
   </section>
   <?php endif; ?>
 
@@ -1761,7 +1909,7 @@ $cssVer = static function (string $rel): string {
     <p class="inv-share-status" data-share-status role="status" aria-live="polite"></p>
   </section>
 
-  <?php if ($eventProfile !== null): ?>
+  <?php if ($eventProfile !== null && !$esAdulto): ?>
   <section class="inv-finale inv-reveal" id="inv-protagonista">
     <p class="inv-kicker"><?= $esc($esBabyShower ? 'Antes del baby shower' : 'Antes de la fiesta') ?></p>
     <h2 class="inv-finale-title"><?= $esc($finaleTitulo) ?></h2>
@@ -1928,7 +2076,7 @@ $cssVer = static function (string $rel): string {
            data-inv-base="<?= $esc(rtrim((string) cb_public_base_url(), '/')) ?>/">
     <p class="inv-kicker">¿Nos acompañas?</p>
     <h2 class="inv-finale-title">Confirma tu asistencia</h2>
-    <p class="inv-finale-lede"><?= $esc($esBabyShower
+    <p class="inv-finale-lede"><?= $esc($esBabyShower || $esAdulto
         ? 'Dinos tu nombre y te guardamos un lugar.'
         : 'Cuéntanos quiénes vienen para recibirlos como estrellas.') ?></p>
     <button class="inv-button inv-rsvp-open" type="button" data-rsvp-open>
@@ -1936,19 +2084,53 @@ $cssVer = static function (string $rel): string {
     </button>
 
     <dialog class="inv-rsvp-dialog" data-rsvp-dialog aria-label="Confirmar asistencia">
-      <form data-rsvp-form>
+      <form data-rsvp-form<?= $esBabyShower && $modoRegalos === 'rsvp' ? ' data-rsvp-modo="rsvp" enctype="multipart/form-data"' : '' ?>>
         <h3 class="inv-rsvp-title">Confirma tu asistencia</h3>
         <label class="inv-rsvp-campo">
-          <span><?= $esc($esBabyShower ? 'Tu nombre' : 'Nombre del apoderado o familia') ?></span>
+          <span><?= $esc($esBabyShower || $esAdulto ? 'Tu nombre' : 'Nombre del apoderado o familia') ?></span>
           <input type="text" name="family_name" maxlength="120" required
-                 placeholder="<?= $esc($esBabyShower ? 'Ej: Carolina Díaz' : 'Ej: Familia Díaz / Carolina Díaz') ?>">
+                 placeholder="<?= $esc($esBabyShower || $esAdulto ? 'Ej: Carolina Díaz' : 'Ej: Familia Díaz / Carolina Díaz') ?>">
         </label>
         <?php if (!$esBabyShower): ?>
         <label class="inv-rsvp-campo">
-          <span>Nombre de los niños que vienen</span>
+          <span><?= $esc($esAdulto ? '¿Vienes con alguien? (opcional)' : 'Nombre de los niños que vienen') ?></span>
           <input type="text" name="guest_names" maxlength="400"
-                 placeholder="Ej: Emma y Lucas">
+                 placeholder="<?= $esc($esAdulto ? 'Ej: con Jorge' : 'Ej: Emma y Lucas') ?>">
         </label>
+        <?php endif; ?>
+        <?php if ($esBabyShower && $modoRegalos === 'rsvp'): ?>
+        <label class="inv-rsvp-campo">
+          <span>¿Qué regalo llevarás?</span>
+          <input type="text" name="gift" maxlength="120" required
+                 placeholder="Toca una idea o escribe el tuyo">
+        </label>
+        <?php if ($sugerenciasRegalo): ?>
+        <div class="inv-rsvp-sugerencias" data-rsvp-sugerencias role="group" aria-label="Ideas de regalo">
+          <?php foreach ($sugerenciasRegalo as $s): ?>
+          <button type="button" class="inv-rsvp-sug<?= $s['disponible'] ? '' : ' inv-rsvp-sug--tomado' ?>"
+                  data-rsvp-sug="<?= $esc($s['texto']) ?>" data-rsvp-sug-libre="<?= $s['libre'] ? '1' : '0' ?>"<?= $s['disponible'] ? '' : ' disabled aria-label="' . $esc($s['texto'] . ', ya lo traen') . '"' ?>><?= $esc($s['texto']) ?></button>
+          <?php endforeach; ?>
+        </div>
+        <?php endif; ?>
+        <fieldset class="inv-rsvp-campo inv-rsvp-equipo" data-rsvp-equipo>
+          <legend>¿De qué equipo eres?</legend>
+          <div class="inv-rsvp-equipos">
+            <label class="inv-rsvp-team">
+              <input type="radio" name="team" value="mama" required>
+              <span>Team Mamá</span>
+            </label>
+            <label class="inv-rsvp-team">
+              <input type="radio" name="team" value="papa" required>
+              <span>Team Papá</span>
+            </label>
+          </div>
+        </fieldset>
+        <div class="inv-rsvp-campo inv-rsvp-foto">
+          <span>¿Juegas a "¿Quién es este bebé?"? Sube una foto tuya de bebé (opcional). Solo se verá en la fiesta.</span>
+          <input type="file" id="inv-rsvp-foto" name="baby_photo" accept="image/*" data-rsvp-foto hidden>
+          <label for="inv-rsvp-foto" class="inv-button inv-button-ghost inv-rsvp-foto-btn">Elegir foto de bebé</label>
+          <img class="inv-rsvp-foto-prev" data-rsvp-foto-prev alt="Vista previa de tu foto de bebé" hidden>
+        </div>
         <?php endif; ?>
         <p class="inv-rsvp-error" data-rsvp-error hidden>No pudimos guardar tu confirmación. Inténtalo de nuevo.</p>
         <div class="inv-rsvp-acciones">
@@ -1961,7 +2143,23 @@ $cssVer = static function (string $rel): string {
         <h3 class="inv-rsvp-title">¡Asistencia confirmada!</h3>
         <p><?= $esc($esBabyShower
             ? 'Gracias por avisar. ¡Nos vemos en el baby shower!'
-            : '¡La familia ya sabe que vienen! Nos vemos en la fiesta.') ?></p>
+            : ($esAdulto ? '¡Te esperamos! Nos vemos en la fiesta.' : '¡La familia ya sabe que vienen! Nos vemos en la fiesta.')) ?></p>
+        <p class="inv-rsvp-ok-regalo" data-rsvp-ok-regalo hidden></p>
+        <?php
+        // Luis (30-oct-2026): quien acaba de confirmar está contento con la invitación; es el momento de invitarlo a
+        // seguir a CumpleClick. La cuenta sale de data/marca.json (Admin → Marca); sin cuenta, no se muestra nada.
+        $marcaIg = cb_marca();
+        if (($marcaIg['instagram_url'] ?? '') !== ''):
+        ?>
+        <div class="inv-rsvp-ig">
+          <p class="inv-rsvp-ig-titulo">¿Te gustó esta invitación?</p>
+          <p class="inv-rsvp-ig-texto">Síguenos en Instagram y mira más fiestas como esta.</p>
+          <a class="inv-rsvp-ig-boton" data-rsvp-ig href="<?= $esc($marcaIg['instagram_url']) ?>" target="_blank" rel="noopener">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="0.6" fill="currentColor"/></svg>
+            Seguir a <?= $esc($marcaIg['instagram'] ?? 'CumpleClick') ?>
+          </a>
+        </div>
+        <?php endif; ?>
         <button class="inv-button inv-button-ghost" type="button" data-rsvp-cerrar>Cerrar</button>
       </div>
     </dialog>

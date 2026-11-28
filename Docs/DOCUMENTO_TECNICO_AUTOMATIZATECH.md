@@ -441,7 +441,14 @@ Los mu-plugins se cargan ANTES que el tema. WordPress los ejecuta automáticamen
 |---|---|
 | `at_services_v2` | Catálogo servicios (USD/CLP, features JSON) |
 | `at_service_categories` | Categorías de servicios |
-| `at_receipts` | Boletas generadas |
+| `automatiza_tech_receipts` | Boletas generadas (`inc/receipts-module.php`) |
+| `automatiza_tech_invoices` | Facturas generadas (`inc/contact-form.php`) |
+
+#### Boletas y facturas: notas de operación (2026-10-02)
+
+- **`download_token`:** desde el ajuste de seguridad A2.1 (junio 2026), cada boleta y factura nueva guarda un código aleatorio que protege la descarga de su PDF (`validar-boleta.php` / `validar-factura.php` lo piden). La columna la creaba solo de forma perezosa la página de validación, y en PROD nunca se había creado: desde junio toda boleta o factura nueva fallaba con «Unknown column 'download_token'». El 01-oct se agregó a mano en las dos tablas (`VARCHAR(64) DEFAULT NULL` + índice), con respaldo `~/respaldos/boletas-facturas-antes-20261001-141555.sql`. Un sitio nuevo o local que no tenga la columna repite el error: agregarla antes de generar documentos.
+- **PDF de la boleta (`lib/receipt-pdf-fpdf.php`, 02-oct):** la descripción de cada ítem salta de línea y la fila crece con ella (antes era una celda de una línea y el texto largo se cortaba), y el pie muestra el RUT de la empresa (antes «RUT:» vacío). Respaldo `~/respaldos/receipt-pdf-fpdf.php.antes-20261002-082148`.
+- **Respaldo de la base en Hostinger:** `wp db export` no funciona (PHP tiene `exec` desactivado); usar `mysqldump` por SSH con los datos de `wp config get`.
 
 ### Grupo Seguridad
 | Tabla | Propósito |

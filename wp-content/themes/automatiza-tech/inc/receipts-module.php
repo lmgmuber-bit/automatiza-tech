@@ -1,7 +1,7 @@
 <?php
 /**
  * Automatiza Tech - Receipts Module
- * Módulo para generar boletas con items parametrizables
+ * Módulo para generar comprobantes de pago (no tributarios) con items parametrizables
  */
 
 if (!defined('ABSPATH')) {
@@ -59,8 +59,8 @@ class AutomatizaTechReceipts {
     
     public function add_admin_menu() {
         add_menu_page(
-            'Generador de Boletas',
-            'Boletas',
+            'Generador de comprobantes de pago',
+            'Comprobantes de pago',
             'manage_options',
             'automatiza-tech-receipts',
             array($this, 'render_admin_page'),
@@ -76,11 +76,12 @@ class AutomatizaTechReceipts {
         $receipts = $wpdb->get_results("SELECT * FROM {$this->table_name} WHERE status = 'active' ORDER BY created_at DESC LIMIT 50");
         ?>
         <div class="wrap">
-            <h1>Generador de Boletas Electrónicas</h1>
-            <p>Genera boletas con items parametrizables, valida con QR y guarda un registro.</p>
+            <h1>Generador de comprobantes de pago</h1>
+            <div class="notice notice-warning inline"><p><strong>Esto no es un documento tributario.</strong> La boleta o factura se emite en sii.cl por cada cobro.</p></div>
+            <p>Genera comprobantes de pago con items parametrizables, valida con QR y guarda un registro.</p>
             
             <div class="receipts-container">
-                <h2>Nueva Boleta</h2>
+                <h2>Nuevo comprobante</h2>
                 <form id="receipt-generator-form">
                     
                     <h3>Datos del Cliente</h3>
@@ -103,7 +104,7 @@ class AutomatizaTechReceipts {
                         </tr>
                     </table>
                     
-                    <h3>Items de la Boleta</h3>
+                    <h3>Ítems del comprobante</h3>
                     <table class="widefat striped" id="items-table">
                         <thead>
                             <tr>
@@ -134,13 +135,13 @@ class AutomatizaTechReceipts {
                     <div style="margin-top: 20px; text-align: right;">
                         <input type="hidden" name="action" value="generate_receipt">
                         <input type="hidden" name="nonce" value="<?php echo wp_create_nonce('generate_receipt_nonce'); ?>">
-                        <button type="submit" class="button button-primary button-large" id="generate-btn">Generar Boleta</button>
+                        <button type="submit" class="button button-primary button-large" id="generate-btn">Generar comprobante</button>
                     </div>
                 </form>
                 
                 <div id="result-area" style="margin-top: 20px; display: none;">
                     <div class="notice notice-success inline">
-                        <p><strong>¡Boleta generada con éxito!</strong></p>
+                        <p><strong>¡Comprobante generado con éxito!</strong></p>
                         <p>
                             <a href="#" id="download-link" class="button button-primary" target="_blank">📥 Descargar PDF</a>
                             <a href="#" id="validate-link" class="button" target="_blank">🔍 Ver Validación</a>
@@ -150,11 +151,11 @@ class AutomatizaTechReceipts {
             </div>
 
             <div class="receipts-history">
-                <h2>Historial de Boletas (Últimas 50)</h2>
+                <h2>Historial de comprobantes (Últimas 50)</h2>
                 <table class="widefat striped">
                     <thead>
                         <tr>
-                            <th>N° Boleta</th>
+                            <th>N° comprobante</th>
                             <th>Fecha</th>
                             <th>Cliente</th>
                             <th>Total</th>
@@ -165,7 +166,7 @@ class AutomatizaTechReceipts {
                     <tbody>
                         <?php if (empty($receipts)): ?>
                             <tr>
-                                <td colspan="6">No hay boletas generadas aún.</td>
+                                <td colspan="6">No hay comprobantes generados aún.</td>
                             </tr>
                         <?php else: ?>
                             <?php foreach ($receipts as $receipt): 
@@ -173,7 +174,7 @@ class AutomatizaTechReceipts {
                                 $validation_url = site_url('validar-boleta.php?id=' . $receipt->receipt_number);
                             ?>
                             <tr>
-                                <td data-label="N° Boleta"><strong><?php echo esc_html($receipt->receipt_number); ?></strong></td>
+                                <td data-label="N° comprobante"><strong><?php echo esc_html($receipt->receipt_number); ?></strong></td>
                                 <td data-label="Fecha"><?php echo date('d/m/Y H:i', strtotime($receipt->created_at)); ?></td>
                                 <td data-label="Cliente">
                                     <?php echo esc_html($receipt->client_name); ?><br>
@@ -564,18 +565,18 @@ class AutomatizaTechReceipts {
                     type: 'POST',
                     data: $(this).serialize(),
                     success: function(response) {
-                        btn.prop('disabled', false).text('Generar Boleta');
+                        btn.prop('disabled', false).text('Generar comprobante');
                         if (response.success) {
                             $('#download-link').attr('href', response.data.pdf_url);
                             $('#validate-link').attr('href', response.data.validation_url);
                             $('#result-area').slideDown();
-                            alert('Boleta generada correctamente.');
+                            alert('Comprobante generado correctamente.');
                         } else {
                             alert('Error: ' + response.data);
                         }
                     },
                     error: function(xhr, status, error) {
-                        btn.prop('disabled', false).text('Generar Boleta');
+                        btn.prop('disabled', false).text('Generar comprobante');
                         console.error('AJAX Error:', xhr);
                         
                         var msg = 'Error de conexión.';
@@ -649,11 +650,11 @@ class AutomatizaTechReceipts {
             }
             
             // Generar nÃºmero de boleta secuencial o basado en fecha
-            // Formato: BOL-YYYYMMDD-XXXX
+            // Formato: CP-YYYYMMDD-XXXX (los BOL- anteriores siguen validando)
             global $wpdb;
             $today = date('Ymd');
             $count = $wpdb->get_var("SELECT COUNT(*) FROM {$this->table_name} WHERE DATE(created_at) = CURDATE()") + 1;
-            $receipt_number = 'BOL-' . $today . '-' . str_pad($count, 4, '0', STR_PAD_LEFT);
+            $receipt_number = 'CP-' . $today . '-' . str_pad($count, 4, '0', STR_PAD_LEFT);
             
             // Preparar datos para PDF
             $client_data = (object) array(
@@ -661,7 +662,7 @@ class AutomatizaTechReceipts {
                 'email' => $client_email,
                 'phone' => $client_phone,
                 'tax_id' => $client_tax_id,
-                'country' => 'CL' // Asumimos CL para boletas
+                'country' => 'CL' // Asumimos CL para comprobantes
             );
             
             // Items a objetos para compatibilidad con clase PDF
@@ -720,7 +721,7 @@ class AutomatizaTechReceipts {
                 throw new Exception('Error guardando en BD: ' . $wpdb->last_error);
             }
             
-            // Enviar Correo con la boleta adjunta
+            // Enviar Correo con el comprobante adjunto
             // Envolvemos en try/catch para evitar falla total si falla el mail (común en local)
             $email_sent = false;
             try {
@@ -741,12 +742,12 @@ class AutomatizaTechReceipts {
 
         } catch (Throwable $e) {
             error_log('Receipt Gen Critical Error: ' . $e->getMessage());
-            wp_send_json_error('Error del Servidor: ' . $e->getMessage());
+            wp_send_json_error('Error del servidor.');
         }
     }
     
     /**
-     * Enviar correo con boleta adjunta
+     * Enviar correo con comprobante adjunto
      */
     private function send_receipt_email($client_data, $items, $receipt_number, $total, $pdf_path) {
         $to = $client_data->email;
@@ -754,7 +755,7 @@ class AutomatizaTechReceipts {
             return false;
         }
 
-        $subject = "Tu Boleta Electrónica {$receipt_number} - AutomatizaTech";
+        $subject = "Tu comprobante de pago {$receipt_number} - AutomatizaTech";
         
         // Estilos y Colores
         $bg_color = "#f5f8fa";
@@ -777,21 +778,21 @@ class AutomatizaTechReceipts {
         // Contenido Principal
         $message .= '<div style="padding:40px 30px;">';
         $message .= '<p style="color:'.$text_color.';font-size:16px;line-height:1.5;margin-top:0;">Hola <strong>' . $client_data->name . '</strong>,</p>';
-        $message .= '<p style="color:'.$text_color.';font-size:16px;line-height:1.5;">Adjunto encontrarás tu <strong>Boleta Electrónica</strong> correspondiente a los servicios contratados.</p>';
+        $message .= '<p style="color:'.$text_color.';font-size:16px;line-height:1.5;">Adjunto encontrarás tu <strong>comprobante de pago</strong> por los servicios contratados. Es un comprobante interno y no es una boleta ni una factura electrónica del SII: el documento tributario se envía aparte.</p>';
         
-        // Resumen de la Boleta
+        // Resumen del comprobante
         $message .= '<div style="background-color:#f8f9fa;border-radius:8px;padding:20px;margin:25px 0;">';
         $message .= '<table style="width:100%;border-collapse:collapse;">';
-        $message .= '<tr><td style="padding:5px 0;color:#666;font-size:14px;">N° Boleta:</td><td style="padding:5px 0;text-align:right;font-weight:bold;color:#333;">' . $receipt_number . '</td></tr>';
+        $message .= '<tr><td style="padding:5px 0;color:#666;font-size:14px;">N° comprobante:</td><td style="padding:5px 0;text-align:right;font-weight:bold;color:#333;">' . $receipt_number . '</td></tr>';
         $message .= '<tr><td style="padding:5px 0;color:#666;font-size:14px;">Fecha:</td><td style="padding:5px 0;text-align:right;font-weight:bold;color:#333;">' . date('d/m/Y') . '</td></tr>';
-        $message .= '<tr><td style="padding:10px 0 0 0;border-top:1px solid #eee;color:#333;font-weight:bold;">Total:</td><td style="padding:10px 0 0 0;border-top:1px solid #eee;text-align:right;font-weight:bold;color:'.$primary_color.';font-size:18px;">$' . number_format($total, 0, ',', '.') . '</td></tr>';
+        $message .= '<tr><td style="padding:10px 0 0 0;border-top:1px solid #eee;color:#333;font-weight:bold;">Total pagado:</td><td style="padding:10px 0 0 0;border-top:1px solid #eee;text-align:right;font-weight:bold;color:'.$primary_color.';font-size:18px;">$' . number_format($total, 0, ',', '.') . '</td></tr>';
         $message .= '</table>';
         $message .= '</div>';
         
         // Botón de Acción
         $validation_url = site_url('validar-boleta.php?id=' . $receipt_number);
         $message .= '<div style="text-align:center;margin-top:30px;">';
-        $message .= '<a href="' . $validation_url . '" style="display:inline-block;background-color:'.$primary_color.';color:#ffffff;text-decoration:none;padding:12px 30px;border-radius:50px;font-weight:bold;box-shadow:0 4px 6px rgba(0,150,199,0.2);">Ver Boleta en Línea</a>';
+        $message .= '<a href="' . $validation_url . '" style="display:inline-block;background-color:'.$primary_color.';color:#ffffff;text-decoration:none;padding:12px 30px;border-radius:50px;font-weight:bold;box-shadow:0 4px 6px rgba(0,150,199,0.2);">Validar comprobante</a>';
         $message .= '</div>';
         
         $message .= '</div>'; // Fin padding content

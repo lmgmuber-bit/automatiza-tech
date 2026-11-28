@@ -26,6 +26,14 @@ Correr en este orden, desde `arte/`:
 6. `python carteles-por-medida.py` — las cuatro hojas en las medidas de acrílico
    (`salida/por-medida/`).
 7. `python empaquetar.py` — la carpeta que se sube a `app/brand/carteles/`.
+8. `python cartel-feria.py` — cartel A4 para la mesa de una feria (hecho para la Mini Feria de
+   Emprendedores del Paseo Dieciochero, 26-sep-2026): tres pasos, cinta de precio de lanzamiento, los
+   tres planes, QR grandes de WhatsApp (sin número impreso) e Instagram, y abajo `@Cumple_Click ·
+   cumpleclick.com`. Sale PDF + PNG 300 ppp + `-previa.jpg`.
+9. `python whatsapp-logo.py` — imagen cuadrada 1080×1080 con solo el logo sobre fondo de marca y el
+   Instagram y el sitio web al pie, para acompañar un texto por WhatsApp.
+10. `python whatsapp-sigueme.py` — la misma idea pero con el texto de "sígueme en Instagram" dentro
+    (1080×1350), por si se quiere mandar una sola imagen.
 
 ## Foto grupal — `arte/marco9.py`
 

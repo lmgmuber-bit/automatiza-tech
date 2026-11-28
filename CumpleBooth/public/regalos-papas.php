@@ -42,8 +42,11 @@ if (!$invalido && ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     $id = (int) ($_POST['id'] ?? 0);
     $aviso = '';
 
+    $modoActual = cb_gift_mode(cb_load_invitation_by_id($invitationId) ?: []);
     try {
-        if ($accion === 'agregar') {
+        if ($modoActual === 'rsvp' && !in_array($accion, ['ocultar', 'mostrar'], true)) {
+            $aviso = 'modo_confirmacion'; // en este modo los invitados dicen su regalo al confirmar
+        } elseif ($accion === 'agregar') {
             $r = cb_gift_add($invitationId, [
                 'title' => $_POST['titulo'] ?? '',
                 'notes' => $_POST['nota'] ?? '',
@@ -81,6 +84,7 @@ if (!$invalido) {
     $modo = cb_gift_mode($inv ?: []);
 }
 $esAbierto = $modo === 'open';
+$esRsvp = $modo === 'rsvp';
 $regalos = $invalido ? [] : cb_gift_list_for_parents((int) $acceso['invitation_id']);
 $disponibles = 0;
 foreach ($regalos as $g) {
@@ -98,10 +102,11 @@ $AVISOS = [
     'falta_titulo' => 'Escribe qué es antes de agregarlo.',
     'tomado_no_se_oculta' => 'Ese ya lo tomó alguien, así que no se puede ocultar.',
     'error' => 'No pudimos guardar el cambio. Inténtalo de nuevo.',
+    'modo_confirmacion' => 'Acá los invitados dicen su regalo al confirmar: solo puedes ocultar uno para liberarlo.',
 ];
 $aviso = (string) ($_GET['aviso'] ?? '');
 $avisoTexto = $AVISOS[$aviso] ?? '';
-$avisoMalo = in_array($aviso, ['falta_titulo', 'tomado_no_se_oculta', 'error', 'extremo'], true);
+$avisoMalo = in_array($aviso, ['falta_titulo', 'tomado_no_se_oculta', 'error', 'extremo', 'modo_confirmacion'], true);
 ?>
 <!doctype html>
 <html lang="es-CL">
@@ -111,7 +116,7 @@ $avisoMalo = in_array($aviso, ['falta_titulo', 'tomado_no_se_oculta', 'error', '
   <meta name="robots" content="noindex,nofollow,noarchive">
   <?php $ccBarra = cb_theme_meta_color((string) ($acceso['theme_slug'] ?? '')); ?>
   <?php if ($ccBarra !== ''): ?><meta name="theme-color" content="<?= $esc($ccBarra) ?>"><?php endif; ?>
-  <title><?= $invalido ? 'Enlace no disponible' : ($esAbierto ? 'Los regalos' : 'Lista de regalos') ?> · CumpleClick</title>
+  <title><?= $invalido ? 'Enlace no disponible' : (($esAbierto || $esRsvp) ? 'Los regalos' : 'Lista de regalos') ?> · CumpleClick</title>
   <link rel="icon" href="brand/cumpleclick-mark.svg" type="image/svg+xml">
   <style>
     /* Baloo 2 local, nunca CDN: si no, la tipografía de la marca cambia de
@@ -225,18 +230,21 @@ $avisoMalo = in_array($aviso, ['falta_titulo', 'tomado_no_se_oculta', 'error', '
   <?php // El mismo token abre el tablero de predicciones. ?>
   <nav class="otra-pantalla" aria-label="Pantallas de los papás">
     <a href="<?= $esc(cb_prediction_board_url($token)) ?>">Ver las predicciones</a>
-    <span aria-current="page"><?= $esAbierto ? 'Los regalos' : 'La lista de regalos' ?></span>
+    <span aria-current="page"><?= ($esAbierto || $esRsvp) ? 'Los regalos' : 'La lista de regalos' ?></span>
   </nav>
 
   <?php // En modo abierto no hay lista, así que llamarla así confunde. ?>
-  <h1><?= $esAbierto ? 'Los regalos' : 'La lista de regalos' ?><?= $nombreBebe !== '' ? ' de ' . $esc($nombreBebe) : '' ?></h1>
-  <p class="lede"><?= $esAbierto
+  <h1><?= ($esAbierto || $esRsvp) ? 'Los regalos' : 'La lista de regalos' ?><?= $nombreBebe !== '' ? ' de ' . $esc($nombreBebe) : '' ?></h1>
+  <p class="lede"><?= $esRsvp
+    ? 'Los invitados te dicen qué llevan al confirmar.'
+    : ($esAbierto
     ? 'No hay lista: cada invitado anota lo que va a llevar y todos lo ven, para que nadie repita. Acá miras lo que van anotando.'
-    : 'Agrega lo que necesitan. Los invitados van a ir eligiendo de acá, y cada uno queda marcado para que nadie lleve lo mismo.'
+    : 'Agrega lo que necesitan. Los invitados van a ir eligiendo de acá, y cada uno queda marcado para que nadie lleve lo mismo.')
   ?></p>
 
   <?php // El interruptor va arriba de todo porque cambia el sentido de lo que
         // viene abajo: en modo abierto los papás no cargan nada, miran. ?>
+  <?php if (!$esRsvp): ?>
   <section class="caja">
     <h2>Cómo funcionan los regalos</h2>
     <div class="modos">
@@ -258,11 +266,13 @@ $avisoMalo = in_array($aviso, ['falta_titulo', 'tomado_no_se_oculta', 'error', '
     </div>
     <p class="agrego" style="margin-top:10px">Cambiar de modo no borra nada de lo ya anotado.</p>
   </section>
+  <?php endif; ?>
 
   <?php if ($avisoTexto !== ''): ?>
   <p class="aviso<?= $avisoMalo ? ' malo' : '' ?>" role="status"><?= $esc($avisoTexto) ?></p>
   <?php endif; ?>
 
+  <?php if (!$esRsvp): ?>
   <section class="caja">
     <h2><?= $esAbierto ? 'Agregar algo de todos modos' : 'Agregar un regalo' ?></h2>
     <?php if ($esAbierto): ?>
@@ -285,9 +295,10 @@ $avisoMalo = in_array($aviso, ['falta_titulo', 'tomado_no_se_oculta', 'error', '
       <div><button class="btn" type="submit">Agregarlo</button></div>
     </form>
   </section>
+  <?php endif; ?>
 
   <h2 style="margin:30px 0 12px;color:var(--dark1);font-size:1.05rem;font-weight:800">
-    <?php if ($esAbierto): ?>
+    <?php if ($esAbierto || $esRsvp): ?>
     <?= count($regalos) ?> anotado<?= count($regalos) === 1 ? '' : 's' ?> por los invitados
     <?php else: ?>
     <?= count($regalos) ?> en la lista · <?= $disponibles ?> sin dueño todavía
@@ -296,7 +307,7 @@ $avisoMalo = in_array($aviso, ['falta_titulo', 'tomado_no_se_oculta', 'error', '
 
   <?php if (!$regalos): ?>
   <div class="vacio">
-    <?= $esAbierto
+    <?= ($esAbierto || $esRsvp)
       ? 'Todavía no anotó nadie. La sección ya aparece en la invitación, invitando a anotar.'
       : 'Todavía no hay nada. Agrega el primero acá arriba — sin al menos un regalo, la sección no aparece en la invitación.'
     ?>
@@ -320,6 +331,7 @@ $avisoMalo = in_array($aviso, ['falta_titulo', 'tomado_no_se_oculta', 'error', '
       <p class="agrego">Oculto — no se ve en la invitación</p>
       <?php endif; ?>
 
+      <?php if (!$esRsvp): ?>
       <div class="fila">
         <form method="post">
           <input type="hidden" name="t" value="<?= $esc($token) ?>">
@@ -330,21 +342,22 @@ $avisoMalo = in_array($aviso, ['falta_titulo', 'tomado_no_se_oculta', 'error', '
           <button class="mini" type="submit">Guardar</button>
         </form>
       </div>
+      <?php endif; ?>
       <div class="fila">
-        <?php foreach ([['arriba', 'Subir'], ['abajo', 'Bajar']] as [$acc, $rotulo]): ?>
+        <?php if (!$esRsvp): foreach ([['arriba', 'Subir'], ['abajo', 'Bajar']] as [$acc, $rotulo]): ?>
         <form method="post" style="flex:0 0 auto">
           <input type="hidden" name="t" value="<?= $esc($token) ?>">
           <input type="hidden" name="accion" value="<?= $acc ?>">
           <input type="hidden" name="id" value="<?= (int) $g['id'] ?>">
           <button class="mini" type="submit"><?= $rotulo ?></button>
         </form>
-        <?php endforeach; ?>
-        <?php if (!$tomado): ?>
+        <?php endforeach; endif; ?>
+        <?php if (!$tomado || $esRsvp): ?>
         <form method="post" style="flex:0 0 auto">
           <input type="hidden" name="t" value="<?= $esc($token) ?>">
           <input type="hidden" name="accion" value="<?= $oculto ? 'mostrar' : 'ocultar' ?>">
           <input type="hidden" name="id" value="<?= (int) $g['id'] ?>">
-          <button class="mini" type="submit"><?= $oculto ? 'Volver a mostrar' : 'Ocultar' ?></button>
+          <button class="mini" type="submit"><?= $oculto ? 'Volver a mostrar' : ($esRsvp ? 'Ocultar (libera el regalo)' : 'Ocultar') ?></button>
         </form>
         <?php endif; ?>
       </div>

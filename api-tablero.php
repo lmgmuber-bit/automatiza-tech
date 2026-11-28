@@ -1,4 +1,10 @@
 <?php
+define('AT_BOARD_API_VERSION', '8.3.0');
+define('AT_BOARD_SCHEMA_VERSION', '8.3.0');
+define('AT_BOARD_ATTACHMENT_MAX_BYTES', 2097152);
+define('AT_BOARD_ATTACHMENT_MAX_PER_TASK', 5);
+header('X-AT-Board-API-Version: ' . AT_BOARD_API_VERSION);
+
 $origenes_permitidos = array(
     'https://automatizatech.cl',
     'https://www.automatizatech.cl',
@@ -23,6 +29,24 @@ if (isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] === 'OPTIONS
 define('WP_USE_THEMES', false);
 require_once(dirname(__FILE__) . '/wp-load.php');
 
+// Algunas instalaciones AT no cargan wp-config-secrets.php desde wp-config.php.
+// Cargarlo solo si falta el token del tablero. El handler evita que constantes
+// legacy duplicadas contaminen la respuesta JSON con warnings HTML.
+$cfg = ABSPATH . 'wp-config-secrets.php';
+$cfg_existe = is_file($cfg);
+$cfg_legible = $cfg_existe && is_readable($cfg);
+if (!defined('AT_BOARD_TOKEN') && $cfg_legible) {
+        set_error_handler(function ($severity, $message) {
+            if (($severity === E_WARNING || $severity === E_NOTICE)
+                && strpos($message, 'already defined') !== false) {
+                return true;
+            }
+            return false;
+        });
+        include $cfg;
+        restore_error_handler();
+}
+
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store, no-cache, must-revalidate');
 header('X-Content-Type-Options: nosniff');
@@ -30,7 +54,15 @@ header('X-Frame-Options: DENY');
 
 if (!defined('AT_BOARD_TOKEN') || empty(AT_BOARD_TOKEN)) {
     http_response_code(500);
-    echo json_encode(array('ok' => false, 'error' => 'AT_BOARD_TOKEN no definido en wp-config-secrets.php'));
+    echo json_encode(array(
+        'ok' => false,
+        'error' => 'token_not_configured',
+        'diagnostic' => array(
+            'api_version' => AT_BOARD_API_VERSION,
+            'secrets_exists' => $cfg_existe,
+            'secrets_readable' => $cfg_legible,
+        ),
+    ));
     exit;
 }
 
@@ -56,6 +88,7 @@ global $wpdb;
 $prefix = $wpdb->prefix;
 $tBoard = $prefix . 'omnichannel_at_board';
 $tInt = $prefix . 'omnichannel_at_internas';
+$tAttachments = $prefix . 'omnichannel_at_attachments';
 
 $metodo = $_SERVER['REQUEST_METHOD'];
 $input = json_decode(file_get_contents('php://input'), true);
@@ -107,6 +140,76 @@ function limpiarServicios($v) {
     return $s !== '' ? $s : null;
 }
 
+function asegurarTablaAdjuntos($tabla) {
+    global $wpdb;
+    $existe = $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $tabla));
+    if ($existe === $tabla && get_option('at_board_schema_version') === AT_BOARD_SCHEMA_VERSION) {
+        return true;
+    }
+    require_once ABSPATH . 'wp-admin/includes/upgrade.php';
+    $charset_collate = $wpdb->get_charset_collate();
+    $sql = "CREATE TABLE {$tabla} (
+        id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+        at_id VARCHAR(40) NOT NULL,
+        tipo VARCHAR(3) NOT NULL DEFAULT 'int',
+        filename VARCHAR(191) NOT NULL,
+        mime_type VARCHAR(50) NOT NULL,
+        file_size INT UNSIGNED NOT NULL,
+        contenido LONGBLOB NOT NULL,
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (id),
+        KEY idx_task (tipo, at_id),
+        KEY idx_created (created_at)
+    ) {$charset_collate};";
+    dbDelta($sql);
+    $existe = $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $tabla));
+    if ($existe === $tabla) {
+        update_option('at_board_schema_version', AT_BOARD_SCHEMA_VERSION, false);
+        return true;
+    }
+    error_log('[AT Board] No se pudo crear tabla de adjuntos: ' . $wpdb->last_error);
+    return false;
+}
+
+function metaAdjunto($row) {
+    return array(
+        'id' => intval(is_array($row) ? $row['id'] : $row->id),
+        'at_id' => is_array($row) ? $row['at_id'] : $row->at_id,
+        'tipo' => is_array($row) ? $row['tipo'] : $row->tipo,
+        'filename' => is_array($row) ? $row['filename'] : $row->filename,
+        'mime_type' => is_array($row) ? $row['mime_type'] : $row->mime_type,
+        'file_size' => intval(is_array($row) ? $row['file_size'] : $row->file_size),
+        'created_at' => is_array($row) ? $row['created_at'] : $row->created_at,
+    );
+}
+
+if (!asegurarTablaAdjuntos($tAttachments)) {
+    responder(false, null, 'attachments_table_unavailable', 503);
+}
+
+$accion = '';
+if (isset($_GET['accion'])) $accion = limpiar($_GET['accion'], 30, '');
+elseif (isset($_POST['accion'])) $accion = limpiar($_POST['accion'], 30, '');
+elseif (isset($input['accion'])) $accion = limpiar($input['accion'], 30, '');
+
+if ($metodo === 'GET' && $accion === 'attachment') {
+    $attachment_id = isset($_GET['id']) ? absint($_GET['id']) : 0;
+    if (!$attachment_id) responder(false, null, 'attachment_id_required', 400);
+    $adjunto = $wpdb->get_row($wpdb->prepare(
+        "SELECT id, filename, mime_type, file_size, contenido FROM {$tAttachments} WHERE id = %d",
+        $attachment_id
+    ));
+    if (!$adjunto) responder(false, null, 'attachment_not_found', 404);
+    $extensiones = array('image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp');
+    if (!isset($extensiones[$adjunto->mime_type])) responder(false, null, 'attachment_invalid_mime', 415);
+    header('Content-Type: ' . $adjunto->mime_type);
+    header('Content-Length: ' . intval($adjunto->file_size));
+    header('Content-Disposition: inline; filename="attachment-' . intval($adjunto->id) . '.' . $extensiones[$adjunto->mime_type] . '"');
+    header('Cache-Control: private, no-store, max-age=0');
+    echo $adjunto->contenido;
+    exit;
+}
+
 if ($metodo === 'GET') {
     $tablaBoardExiste = $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $tBoard));
     $tablaInternasExiste = $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $tInt));
@@ -127,17 +230,95 @@ if ($metodo === 'GET') {
         }
     }
     $rowsI = $wpdb->get_results("SELECT at_id, titulo, asignado_a AS asignadoA, tipo, estado, prioridad, DATE_FORMAT(ultima,'%Y-%m-%d') AS ultima, notas FROM {$tInt} ORDER BY FIELD(estado,'progress','todo','review','wait','blocked','backlog','done'), prioridad, at_id", ARRAY_A);
+    $adjuntosMeta = $wpdb->get_results("SELECT id, at_id, tipo, filename, mime_type, file_size, created_at FROM {$tAttachments} ORDER BY created_at, id", ARRAY_A);
+    $adjuntosPorTarea = array('cli' => array(), 'int' => array());
+    if (is_array($adjuntosMeta)) {
+        foreach ($adjuntosMeta as $adjuntoMeta) {
+            $tipoAdjunto = $adjuntoMeta['tipo'] === 'cli' ? 'cli' : 'int';
+            $idTarea = $adjuntoMeta['at_id'];
+            if (!isset($adjuntosPorTarea[$tipoAdjunto][$idTarea])) $adjuntosPorTarea[$tipoAdjunto][$idTarea] = array();
+            $adjuntosPorTarea[$tipoAdjunto][$idTarea][] = metaAdjunto($adjuntoMeta);
+        }
+    }
+    foreach ($clientes as &$cliente) {
+        $cliente['adjuntos'] = isset($adjuntosPorTarea['cli'][$cliente['at_id']]) ? $adjuntosPorTarea['cli'][$cliente['at_id']] : array();
+    }
+    unset($cliente);
     if (is_array($rowsI)) {
         foreach ($rowsI as &$rowI) {
             if ($rowI['estado'] === 'active') $rowI['estado'] = 'progress';
+            $rowI['adjuntos'] = isset($adjuntosPorTarea['int'][$rowI['at_id']]) ? $adjuntosPorTarea['int'][$rowI['at_id']] : array();
         }
         unset($rowI);
     }
-    responder(true, array('version' => 'v8', 'clientes' => $clientes, 'internas' => is_array($rowsI) ? $rowsI : array()));
+    responder(true, array('version' => 'v8.3', 'clientes' => $clientes, 'internas' => is_array($rowsI) ? $rowsI : array()));
 }
 
 if ($metodo === 'POST') {
-    $accion = limpiar(isset($input['accion']) ? $input['accion'] : '', 20, 'upsert');
+    if ($accion === 'upload_attachment') {
+        $tipoAdjunto = limpiar(isset($_POST['tipo']) ? $_POST['tipo'] : '', 3, 'int');
+        $idTarea = limpiar(isset($_POST['at_id']) ? $_POST['at_id'] : '', 40, '');
+        if ($tipoAdjunto !== 'int') responder(false, null, 'attachments_only_for_internal_tasks', 400);
+        if ($idTarea === '') responder(false, null, 'at_id_required', 400);
+        $tareaExiste = $wpdb->get_var($wpdb->prepare("SELECT id FROM {$tInt} WHERE at_id = %s", $idTarea));
+        if (!$tareaExiste) responder(false, null, 'task_not_found', 404);
+        $cantidad = intval($wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$tAttachments} WHERE tipo = %s AND at_id = %s", 'int', $idTarea)));
+        if ($cantidad >= AT_BOARD_ATTACHMENT_MAX_PER_TASK) responder(false, null, 'attachment_limit_reached', 409);
+        if (!isset($_FILES['imagen']) || !is_array($_FILES['imagen'])) responder(false, null, 'image_required', 400);
+        $archivo = $_FILES['imagen'];
+        $uploadError = isset($archivo['error']) ? intval($archivo['error']) : UPLOAD_ERR_NO_FILE;
+        if (in_array($uploadError, array(UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE), true)) {
+            responder(false, null, 'attachment_size_invalid', 413);
+        }
+        if ($uploadError !== UPLOAD_ERR_OK) responder(false, null, 'upload_failed', 400);
+        $tamano = isset($archivo['size']) ? intval($archivo['size']) : 0;
+        if ($tamano < 1 || $tamano > AT_BOARD_ATTACHMENT_MAX_BYTES) responder(false, null, 'attachment_size_invalid', 413);
+        $temporal = isset($archivo['tmp_name']) ? $archivo['tmp_name'] : '';
+        if ($temporal === '' || !is_uploaded_file($temporal)) responder(false, null, 'invalid_upload_source', 400);
+        $finfo = function_exists('finfo_open') ? finfo_open(FILEINFO_MIME_TYPE) : false;
+        $mime = $finfo ? finfo_file($finfo, $temporal) : '';
+        if ($finfo) finfo_close($finfo);
+        $permitidos = array(
+            'image/jpeg' => array('jpg', 'jpeg'),
+            'image/png' => array('png'),
+            'image/webp' => array('webp'),
+        );
+        $nombre = sanitize_file_name(isset($archivo['name']) ? $archivo['name'] : 'imagen');
+        $extension = strtolower(pathinfo($nombre, PATHINFO_EXTENSION));
+        if (!isset($permitidos[$mime]) || !in_array($extension, $permitidos[$mime], true)) {
+            responder(false, null, 'attachment_mime_invalid', 415);
+        }
+        $contenido = file_get_contents($temporal);
+        if ($contenido === false || strlen($contenido) !== $tamano) responder(false, null, 'attachment_read_failed', 500);
+        $insertado = $wpdb->insert($tAttachments, array(
+            'at_id' => $idTarea,
+            'tipo' => 'int',
+            'filename' => limpiar($nombre, 191, 'imagen.' . $extension),
+            'mime_type' => $mime,
+            'file_size' => $tamano,
+            'contenido' => $contenido,
+        ), array('%s', '%s', '%s', '%s', '%d', '%s'));
+        if (!$insertado || $wpdb->last_error) {
+            error_log('[AT Board] Error DB adjunto: ' . $wpdb->last_error);
+            responder(false, null, 'db_error', 500);
+        }
+        $meta = $wpdb->get_row($wpdb->prepare("SELECT id, at_id, tipo, filename, mime_type, file_size, created_at FROM {$tAttachments} WHERE id = %d", $wpdb->insert_id));
+        responder(true, metaAdjunto($meta));
+    }
+
+    if ($accion === 'delete_attachment') {
+        $attachment_id = isset($input['attachment_id']) ? absint($input['attachment_id']) : 0;
+        if (!$attachment_id) responder(false, null, 'attachment_id_required', 400);
+        $existeAdjunto = $wpdb->get_var($wpdb->prepare("SELECT id FROM {$tAttachments} WHERE id = %d", $attachment_id));
+        if (!$existeAdjunto) responder(false, null, 'attachment_not_found', 404);
+        $borrado = $wpdb->delete($tAttachments, array('id' => $attachment_id), array('%d'));
+        if ($borrado === false || $wpdb->last_error) {
+            error_log('[AT Board] Error al eliminar adjunto: ' . $wpdb->last_error);
+            responder(false, null, 'db_error', 500);
+        }
+        responder(true, array('attachment_id' => $attachment_id, 'accion' => 'delete'));
+    }
+
     $tipo = limpiar(isset($input['tipo']) ? $input['tipo'] : '', 10, 'cli');
     if (!in_array($tipo, array('cli', 'int'), true)) responder(false, null, 'tipo invalido', 400);
     $at_id = limpiar(isset($input['at_id']) ? $input['at_id'] : '', 40, '');

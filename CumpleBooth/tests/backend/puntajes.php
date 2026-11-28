@@ -8,6 +8,7 @@
  * prueba falla y explica por qué.
  */
 
+require __DIR__ . '/_aislamiento-local.php';
 $raiz = dirname(__DIR__, 2);
 require_once $raiz . '/public/lib.php';
 
@@ -41,15 +42,16 @@ require_once $raiz . '/public/lib.puntajes.php';
 echo "Posiciones\n";
 
 // ---------- El catálogo de juegos ----------
-igual('hay cinco juegos registrados', 5, count(cb_juegos()));
-igual('hielo tiene dos juegos', ['reino-hielo', 'festival'], array_keys(cb_juegos_de_tema('hielo')));
-igual('spidey tiene dos juegos', ['aracnida', 'impulso'], array_keys(cb_juegos_de_tema('spidey')));
+igual('hay ocho juegos registrados (Chile en Volantín, 26-09)', 8, count(cb_juegos()));
+igual('hielo tiene tres juegos', ['reino-hielo', 'festival', 'aurora'], array_keys(cb_juegos_de_tema('hielo')));
+igual('spidey tiene tres juegos', ['aracnida', 'impulso', 'circuito'], array_keys(cb_juegos_de_tema('spidey')));
 igual('una temática sin juegos devuelve vacío', [], cb_juegos_de_tema('carreras'));
 
 // `spidey` y `heroes` son dos temáticas DISTINTAS del admin aunque compartan el mundo 3D, y
 // es fácil confundirlas: los recursos arácnidos viven en `temas/heroes/` dentro del motor.
 // Meter un juego de Spidey en `heroes` lo haría aparecer en Misión 3D, que es otra fiesta.
 igual('heroes NO hereda los juegos de spidey', ['mision'], array_keys(cb_juegos_de_tema('heroes')));
+igual('fiestas-patrias ofrece Chile en Volantín', ['volantin'], array_keys(cb_juegos_de_tema('fiestas-patrias')));
 foreach (cb_juegos() as $id => $j) {
     ok("el juego $id declara nombre y temática", ($j['nombre'] ?? '') !== '' && ($j['tema'] ?? '') !== '');
 }

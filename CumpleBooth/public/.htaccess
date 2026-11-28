@@ -53,7 +53,8 @@
   # heurística sobre Last-Modified y sigue pidiendo el bundle viejo tras un
   # deploy: la tablet queda con una versión anterior aunque el servidor ya tenga
   # la nueva. Los assets llevan hash en el nombre, así que sí se cachean fuerte.
-  <FilesMatch "^index\.html$">
+  # feria.html (selector de la feria, 26-09) tiene el mismo problema: sin esto las tablets seguían en la versión anterior.
+  <FilesMatch "^(index|feria)\.html$">
     Header always set Cache-Control "no-cache, must-revalidate"
   </FilesMatch>
   <FilesMatch "\.(js|css|woff2?)$">

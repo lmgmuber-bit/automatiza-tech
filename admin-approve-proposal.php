@@ -17,55 +17,60 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['proposal_id'])) {
         wp_die('Token de seguridad inválido');
     }
     $id = intval($_POST['proposal_id']);
-    $client_name = sanitize_text_field($_POST['client_name']);
-    $company_name = sanitize_text_field($_POST['company_name']);
-    $gamma_url = esc_url_raw($_POST['gamma_url']);
-    $n8n_url = esc_url_raw($_POST['n8n_url']);
-    
-    // Manejo de PDF
-    $pdf_path = '';
-    if (!empty($_FILES['pdf_file']['name'])) {
-        if ( ! function_exists( 'wp_handle_upload' ) ) {
-            require_once( ABSPATH . 'wp-admin/includes/file.php' );
+    $row_actual = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$table_name} WHERE id = %d", $id));
+
+    if ($row_actual && function_exists('at_propuesta_puede_enviarse') && !at_propuesta_puede_enviarse($row_actual->flujo, (string) $row_actual->status)) {
+        $message = '<div class="alert alert-danger">Esta propuesta solo se puede enviar cuando esté <strong>lista</strong> (versión final verificada).</div>';
+    } else {
+        $client_name = sanitize_text_field($_POST['client_name']);
+        $company_name = sanitize_text_field($_POST['company_name']);
+        $gamma_url = esc_url_raw($_POST['gamma_url']);
+        $n8n_url = esc_url_raw($_POST['n8n_url']);
+
+        // Manejo de PDF
+        $pdf_path = '';
+        if (!empty($_FILES['pdf_file']['name'])) {
+            if ( ! function_exists( 'wp_handle_upload' ) ) {
+                require_once( ABSPATH . 'wp-admin/includes/file.php' );
+            }
+            $uploadedfile = $_FILES['pdf_file'];
+            $upload_overrides = array( 'test_form' => false );
+            $movefile = wp_handle_upload( $uploadedfile, $upload_overrides );
+
+            if ( $movefile && ! isset( $movefile['error'] ) ) {
+                $pdf_path = $movefile['url']; // Guardamos la URL pública
+                $pdf_file_path = $movefile['file']; // Ruta física para adjuntar al mail
+            } else {
+                $message = '<div class="alert alert-danger">Error al subir PDF: ' . $movefile['error'] . '</div>';
+            }
         }
-        $uploadedfile = $_FILES['pdf_file'];
-        $upload_overrides = array( 'test_form' => false );
-        $movefile = wp_handle_upload( $uploadedfile, $upload_overrides );
 
-        if ( $movefile && ! isset( $movefile['error'] ) ) {
-            $pdf_path = $movefile['url']; // Guardamos la URL pública
-            $pdf_file_path = $movefile['file']; // Ruta física para adjuntar al mail
-        } else {
-            $message = '<div class="alert alert-danger">Error al subir PDF: ' . $movefile['error'] . '</div>';
+        // Actualizar BD
+        $update_data = [
+            'client_name' => $client_name,
+            'company_name' => $company_name,
+            'gamma_iframe_url' => $gamma_url,
+            'n8n_chat_url' => $n8n_url,
+            'status' => 'sent'
+        ];
+        if ($pdf_path) {
+            $update_data['pdf_path'] = $pdf_path;
         }
-    }
 
-    // Actualizar BD
-    $update_data = [
-        'client_name' => $client_name,
-        'company_name' => $company_name,
-        'gamma_iframe_url' => $gamma_url,
-        'n8n_chat_url' => $n8n_url,
-        'status' => 'sent'
-    ];
-    if ($pdf_path) {
-        $update_data['pdf_path'] = $pdf_path;
-    }
+        $wpdb->update($table_name, $update_data, ['id' => $id]);
 
-    $wpdb->update($table_name, $update_data, ['id' => $id]);
+        // Obtener datos actualizados para el email
+        $proposal = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$table_name} WHERE id = %d", $id));
 
-    // Obtener datos actualizados para el email
-    $proposal = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$table_name} WHERE id = %d", $id));
-    
-    // --- ENVIAR EMAIL ---
-    $to = $proposal->client_email;
-    $subject = "Propuesta de Automatización Inteligente - $company_name";
-    
-    $link_presentacion = get_site_url() . '/ver-presentacion.php?id=' . $proposal->unique_link_id;
-    $link_demo = get_site_url() . '/ver-demo.php?id=' . $proposal->unique_link_id;
+        // --- ENVIAR EMAIL ---
+        $to = $proposal->client_email;
+        $subject = "Propuesta de Automatización Inteligente - $company_name";
 
-    // Template HTML
-    $body = "
+        $link_presentacion = get_site_url() . '/ver-presentacion.php?id=' . $proposal->unique_link_id;
+        $link_demo = get_site_url() . '/ver-demo.php?id=' . $proposal->unique_link_id;
+
+        // Template HTML
+        $body = "
     <html>
     <head>
         <style>
@@ -107,18 +112,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['proposal_id'])) {
     </html>
     ";
 
-    $headers = array('Content-Type: text/html; charset=UTF-8');
-    $attachments = array();
-    if (isset($pdf_file_path) && file_exists($pdf_file_path)) {
-        $attachments[] = $pdf_file_path;
-    }
+        $headers = array('Content-Type: text/html; charset=UTF-8');
+        $attachments = array();
+        if (isset($pdf_file_path) && file_exists($pdf_file_path)) {
+            $attachments[] = $pdf_file_path;
+        }
 
-    $sent = wp_mail($to, $subject, $body, $headers, $attachments);
+        $sent = wp_mail($to, $subject, $body, $headers, $attachments);
 
-    if ($sent) {
-        $message = '<div class="alert alert-success">Propuesta actualizada y correo enviado a ' . $to . '</div>';
-    } else {
-        $message = '<div class="alert alert-warning">Propuesta guardada, pero falló el envío del correo. Revise la configuración SMTP.</div>';
+        if ($sent) {
+            $message = '<div class="alert alert-success">Propuesta actualizada y correo enviado a ' . $to . '</div>';
+        } else {
+            $message = '<div class="alert alert-warning">Propuesta guardada, pero falló el envío del correo. Revise la configuración SMTP.</div>';
+        }
     }
 }
 

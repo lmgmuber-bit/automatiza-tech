@@ -65,9 +65,16 @@ API key de n8n (ya configurada, ver abajo).
 | **context7 / metricool** | Docs de librerías / métricas sociales | ❌ | ✅ | ❌ |
 | **Playwright / Chrome DevTools** | QA de frontend, capturas | ✅ plugin | ✅ `browser-use` | ❌ |
 | **Hostinger PROD (SSH/SFTP)** | Desplegar CumpleClick y el juego 3D, correr migraciones, leer logs | ✅ `paramiko` (2026-09-06) | ❌ | ❌ |
+| **ElevenLabs (voces)** | Narrar reels, videos y demos (voz de Josh y otras) | ✅ script `voces.py` (2026-10-30) | ✅ mismo script (Python) | ✅ mismo script (Python) |
 
 **Pendientes de autorizar en Claude:** Notion y Stripe (OAuth), GitHub (header mal formado)
 y `magic` de 21st.dev (API key reseteada). Se arreglan con `/mcp` en sesión interactiva.
+
+**El conector de Google Drive de Claude NO es la cuenta `contacto@automatizatech.cl`** (verificado el 2026-09-28: al
+intentar compartir el Sheet de GT Baseball respondió «The caller does not have permission»). Para compartir, copiar o
+leer archivos de `contacto@` hay que usar las credenciales de Google de n8n (`Google Drive account`,
+`Google Sheets PROD`) con un flujo temporal que se crea, se llama una vez y se borra: `n8n_temp.py` en
+`C:\Users\luis_\respaldos\deploy-scripts\2026-09-27-gt-baseball\`.
 
 ### 3.1 Credenciales dentro de n8n (actualizado 2026-08-26)
 
@@ -83,6 +90,11 @@ la cabecera de un nodo, es un bug: migrarlo a credencial.
 
 Constantes sin consumidor en n8n: `AT_REST_SECRET` (endpoint de propuestas, lo usan los
 agentes vía skill) y `AT_BOARD_TOKEN` (frontend del tablero, se pega en el navegador).
+
+**Variables de entorno del servicio n8n (Easypanel):** `TURNSTILE_SECRET` es la Secret de Cloudflare Turnstile de
+GT Baseball, y la lee el nodo «Verificar Turnstile» con `{{$env.TURNSTILE_SECRET}}`. La puso Luis el 2026-09-28. Ese
+día se verificó que este n8n deja leer `$env` en expresiones y en nodos Code: la prueba midió el largo, sin imprimir
+el valor. La cuenta de Cloudflare y la Site Key (pública) están en la bóveda y en `gt-config.json`, no en el repo.
 `OMNI_ADMIN_SECRET` va por variable de entorno del servidor, no por `wp-config-secrets.php`.
 
 **Al rotar un secreto**, actualizar el valor en los dos lados a la vez: `wp-config-secrets.php`
@@ -124,6 +136,11 @@ enlace `public -> public_html/app`; código = línea `codex/baby-shower-predicci
 Pre-producción = `automatizatech.cl/cumpleclick` (lo descrito abajo). Verificar en cuál se está trabajando antes
 de subir; el 2026-09-06 se subió primero a pre-producción por asumir que era el PROD.
 
+**La cuenta tiene siete dominios (2026-09-28), cada uno con su carpeta en `~/domains/`:** automatizatech.cl,
+cumpleclick.com, gtbaseball.com, hmsp.cl, nalilah.cl, petsgo.cl y tarotestrellas.com. Al desplegar, escribir solo en
+la carpeta del dominio que corresponde. GT Baseball vive en `domains/gtbaseball.com/public_html` y se despliega con
+`deploy_dominio.py`, que tiene la carpeta fija y aborta si la ruta real no es la de gtbaseball.com.
+
 Layout en pre-producción: webroot `domains/automatizatech.cl/public_html/cumpleclick/` (contenido
 de `dist/`; `juego/` es el juego 3D), config privada en `public_html/config/cumpleclick.local.php`,
 privado en `domains/automatizatech.cl/private-cumpleclick/{photos,invitations,event-profiles,
@@ -142,6 +159,30 @@ vive en el scratchpad de esa sesión; rehacerlo es trivial y no debe guardarse e
 **OpenCode no tiene ningún MCP configurado.** Si un handoff le pide a OpenCode tocar n8n,
 Higgsfield o Drive, ese handoff está mal planteado: o se le configura el MCP primero, o la
 tarea va a otro agente.
+
+### 3.4 ElevenLabs: voces para narrar (actualizado 2026-10-30)
+
+Cualquier agente (Claude, Codex u OpenCode) narra con el script común, sin tocar la clave:
+
+```bash
+python "C:/Users/luis_/Documents/Codex/Shared-Tools/elevenlabs-voces/voces.py" linea josh "<texto>" salida.wav
+```
+
+Genera la voz, la nivela a −16 LUFS y al final imprime una transcripción local para verificar que se entiende.
+Guía completa (modelo, ajustes de voz, consejos y costo): `C:\Users\luis_\Documents\Codex\Shared-Tools\elevenlabs-voces\GUIA.md`.
+
+- **Clave:** la línea **«Alice AT Api Key»** del archivo de claves (§2), con formato `etiqueta = valor`. El script
+  la lee sola, la mantiene en memoria y nunca la imprime. Es la clave completa de la cabecera `xi-api-key`, no un ID.
+- ⚠️ **No uses la variable de entorno `ELEVENLABS_API_KEY`:** en esta máquina guarda el **ID** de la clave y
+  ElevenLabs responde `400 api_key_id_used_as_api_key` (le pasó a una sesión el 30-oct).
+- **Modelo y voz:** `eleven_multilingual_v2`; Josh = `TxGEqnHWrfWFTfGW9XjX` (cierre de los reels AT).
+- **Costo:** 0,4 créditos por carácter (medido el 31-oct con `/v1/usage/character-stats`, en `eleven_multilingual_v2` y `eleven_v3`).
+  Pide el visto bueno de Luis antes de textos largos o de muchas pruebas.
+- **Registro de consumo:** pasa tu nombre como último argumento (`voces.py linea josh "<texto>" salida.wav <Nombre>`, o la variable
+  `AT_AGENTE`) y la voz queda anotada en `Shared-Tools/elevenlabs-voces/registro-consumo.csv`. No registres en Finanzas: Balance lo
+  cierra a fin de mes desde ese registro.
+- **Permisos de la clave:** TTS, STT y estadísticas de uso (`/v1/usage/character-stats`) sí; listar voces no (un 401 ahí no
+  significa que la clave esté mala).
 
 ---
 

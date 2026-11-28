@@ -18,6 +18,12 @@ if (!$proposal) {
 
 $iframe_url = $proposal->gamma_iframe_url;
 
+// La página lleva formularios con nonce: nunca se guarda en caché.
+if (!defined('DONOTCACHEPAGE')) {
+    define('DONOTCACHEPAGE', true);
+}
+nocache_headers();
+
 // Si no hay URL de iframe (porque el admin aún no la ha subido), mostrar mensaje
 if (empty($iframe_url)) {
     $iframe_url = ""; // O una URL de placeholder
@@ -48,5 +54,6 @@ if (empty($iframe_url)) {
     </div>
 <?php endif; ?>
 
+<?php if (function_exists('at_cc_render_barra')) { at_cc_render_barra($proposal); } ?>
 </body>
 </html>

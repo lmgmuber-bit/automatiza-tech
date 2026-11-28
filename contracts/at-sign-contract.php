@@ -26,6 +26,12 @@ if (!$c) { status_header(404); echo 'Contrato no encontrado'; exit; }
 
 $flash = '';
 $flash_type = '';
+if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['firmado'])) {
+    // Llega desde el PRG tras firmar (ver action=sign): el token de la URL
+    // ya es el nuevo (rotado por E4), así que el flash se re-muestra por GET.
+    $flash = 'Firmaste el contrato. Ya puedes enviarlo al cliente.';
+    $flash_type = 'ok';
+}
 
 // POST: firmar como AT
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
@@ -49,12 +55,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $r = ContractService::sign_as_at($c->id, $data);
         if (is_wp_error($r)) { $flash = $r->get_error_message(); $flash_type = 'error'; }
         else {
-            $flash = 'Firmaste el contrato. Ya puedes enviarlo al cliente.';
-            $flash_type = 'ok';
-            $c = $r;
-            // E4: at_review_token rotated — refresh local $token so PDF iframe still works
-            $token = $c->at_review_token;
+            // E4 rotates at_review_token al firmar: el token de la URL actual
+            // (todavía el viejo) ya no resuelve con get_by_at_token(). Sin un
+            // redirect (PRG), el siguiente POST ("Enviar al cliente"), que se
+            // publica sin action a la URL actual, llegaría con el token
+            // muerto y esta página respondería 404. Se redirige al token
+            // nuevo antes de renderizar cualquier formulario.
+            wp_safe_redirect(home_url('/contracts/at-sign-contract.php?token=' . $r->at_review_token . '&firmado=1'));
+            exit;
         }
+    } elseif ($_POST['action'] === 'revisar') {
+        $cambios = array();
+        foreach (ContractService::campos_revision() as $k => $_) {
+            if (isset($_POST['rev'][$k]) && is_scalar($_POST['rev'][$k])) {
+                // Tal cual: va al PDF y ContractService lo limpia (nulos, UTF-8, fines de línea).
+                // sanitize_* cortaba «50%de» y dejaba «<24 horas» con entidades. Al mostrarlo aquí se escapa.
+                $cambios[$k] = wp_unslash($_POST['rev'][$k]);
+            }
+        }
+        $r = ContractService::guardar_revision($c->id, $cambios);
+        if (is_wp_error($r)) { $flash = $r->get_error_message(); $flash_type = 'error'; }
+        else { $flash = 'Revisión guardada y PDF actualizado. Revísalo y firma cuando esté listo.'; $flash_type = 'ok'; $c = $r; }
     } elseif ($_POST['action'] === 'send') {
         $email = sanitize_email($_POST['client_email'] ?? '');
         $name  = sanitize_text_field($_POST['client_name'] ?? '');
@@ -88,6 +109,8 @@ iframe{width:100%;height:780px;border:1px solid #e5e9f0;border-radius:8px}
 .flash{padding:12px 16px;border-radius:8px;margin-bottom:16px;font-size:14px}
 .flash.ok{background:#dcf8e6;color:var(--ok)}
 .flash.error{background:#fde0e0;color:var(--err)}
+.flash.aviso{background:#fff4dc;color:#b46400}
+select{width:100%;padding:10px 12px;border:1px solid #d6dde6;border-radius:6px;font-size:14px;background:#fff}
 .badge{display:inline-block;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:600;text-transform:uppercase}
 .b-draft,.b-at_pending{background:#fff4dc;color:#b46400}
 .b-at_signed{background:#dde8f9;color:var(--brand)}
@@ -125,13 +148,51 @@ hr{border:0;border-top:1px solid #e5e9f0;margin:16px 0}
   <div class="grid">
     <div class="card">
       <h3 style="margin:0 0 10px 0">📄 Vista previa del contrato</h3>
-      <iframe src="<?= esc_url($pdf_url) ?>?v=<?= time() ?>"></iframe>
+      <iframe src="<?= esc_url(add_query_arg('v', time(), $pdf_url)) ?>"></iframe>
       <p class="muted" style="margin-top:8px">Si modificas placeholders o vuelves a firmar, el PDF se regenera automáticamente.</p>
     </div>
 
     <div class="card">
 
       <?php if (in_array($c->status, array('draft','at_pending'))): ?>
+        <?php if ($c->type === 'servicios'): ?>
+          <h3 style="margin:0 0 6px 0">✏️ Ajustar el contrato</h3>
+          <p class="muted" style="margin:0 0 12px 0">Viene armado con los datos de la propuesta aceptada. Ajusta lo que corresponda a este cliente y guarda: el PDF de la izquierda se regenera. La firma se habilita después de guardar.</p>
+          <form method="post">
+            <?php wp_nonce_field('at_sign_' . $c->id, '_at_nonce'); ?>
+            <input type="hidden" name="action" value="revisar">
+            <?php foreach (ContractService::campos_revision() as $k => $campo): ?>
+              <label><?= esc_html($campo[0]) ?></label>
+              <?php if ($campo[1] === 'tipo'): ?>
+                <select name="rev[<?= esc_attr($k) ?>]">
+                  <?php foreach (array('' => '— Elegir —') + ContractService::tipos_cliente() as $valor => $texto): ?>
+                    <option value="<?= esc_attr($valor) ?>"<?php selected((string) ($ph[$k] ?? ''), (string) $valor); ?>><?= esc_html($texto) ?></option>
+                  <?php endforeach; ?>
+                </select>
+              <?php elseif ($campo[1] === 'documento'): ?>
+                <?php // Task 15: RUT, DNI o pasaporte; sin tipo guardado (contratos anteriores) queda RUT. ?>
+                <?php $doc_actual = (string) ($ph[$k] ?? ''); if (!array_key_exists($doc_actual, ContractService::tipos_documento())) $doc_actual = 'rut'; ?>
+                <select name="rev[<?= esc_attr($k) ?>]">
+                  <?php foreach (ContractService::tipos_documento() as $valor => $texto): ?>
+                    <option value="<?= esc_attr($valor) ?>"<?php selected($doc_actual, (string) $valor); ?>><?= esc_html($texto) ?></option>
+                  <?php endforeach; ?>
+                </select>
+              <?php elseif ($campo[1] === 'texto'): ?>
+                <textarea name="rev[<?= esc_attr($k) ?>]" rows="4" style="width:100%"><?= esc_textarea($ph[$k] ?? '') ?></textarea>
+              <?php else: ?>
+                <input type="text" name="rev[<?= esc_attr($k) ?>]" value="<?= esc_attr($ph[$k] ?? '') ?>">
+              <?php endif; ?>
+            <?php endforeach; ?>
+            <button type="submit">💾 Guardar revisión y regenerar PDF</button>
+          </form>
+          <hr>
+        <?php endif; ?>
+        <?php $faltantes = ContractService::faltantes($c); ?>
+        <?php if (ContractService::necesita_revision($c)): ?>
+          <p class="muted"><strong>Para firmar, primero guarda la revisión.</strong></p>
+        <?php elseif ($faltantes): ?>
+          <div class="flash aviso"><?= esc_html(ContractService::mensaje_faltantes($faltantes)) ?></div>
+        <?php else: ?>
         <h3 style="margin:0 0 6px 0">🖋️ Firmar como representante AT</h3>
         <p class="muted" style="margin:0 0 12px 0">Tu firma se aplicará al contrato y luego podrás enviarlo al cliente.</p>
 
@@ -172,6 +233,7 @@ hr{border:0;border-top:1px solid #e5e9f0;margin:16px 0}
           <button type="submit">✅ Firmar contrato como AT</button>
         </form>
 
+        <?php endif; ?>
       <?php elseif ($c->status === 'at_signed'): ?>
         <h3 style="margin:0 0 6px 0">📤 Enviar al cliente</h3>
         <p class="muted" style="margin:0 0 12px 0">Tu firma ya quedó registrada. Confirma los datos del cliente y envía el contrato.</p>

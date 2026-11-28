@@ -128,6 +128,8 @@ $summary = is_array($acceptance['plan_summary'] ?? null) ? $acceptance['plan_sum
 $summaryLabels = cb_acceptance_summary_fields();
 $nonce = cb_acceptance_form_nonce((string) $acceptance['public_token_hash'], time());
 $relationships = ['madre' => 'Madre', 'padre' => 'Padre', 'tutor' => 'Tutor/a legal', 'autorizado' => 'Adulto autorizado por los padres'];
+$acceptanceParty = cb_load_party_raw((string) ($acceptance['party_public_slug'] ?? ''));
+$esAdulto = cb_party_event_type($acceptanceParty['event_type'] ?? '') === 'adult_birthday';
 ?><!DOCTYPE html>
 <html lang="es">
 <head>
@@ -294,7 +296,7 @@ canvas#firma { width:100%; height:200px; display:block; border-radius:10px; curs
             <?php if (isset($errors['signer_email'])): ?><div class="err"><?= h($errors['signer_email']) ?></div><?php endif; ?>
           </div>
           <div class="field">
-            <label for="signer_relationship">Relación con el niño o niña homenajeado</label>
+            <label for="signer_relationship"><?= $esAdulto ? 'Relación con la persona homenajeada' : 'Relación con el niño o niña homenajeado' ?></label>
             <select id="signer_relationship" name="signer_relationship" required>
               <option value="">Selecciona…</option>
               <?php foreach ($relationships as $value => $label): ?>

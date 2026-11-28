@@ -152,6 +152,121 @@ $mezcla = $aMano + $resumen;
 ok('lo escrito a mano gana sobre lo que sale de la ficha',
     $mezcla['price_total'] === '$1' && $mezcla['deposit'] === '$2' && isset($mezcla['notes']));
 
+// ---------- «Nueva fiesta» muestra el marco de la temática, no uno genérico ----------
+// AT-CUMPLECLICK-026 (12-oct): el formulario nacía con el marco genérico 0.32/0.30/0.36/0.28 y
+// cambiar la temática solo cambiaba el fondo. Al guardar, esos números quedaban como marco de
+// la fiesta y en Coquetería Pop la foto salía chica en el centro. Se prueba por HTTP.
+$claveMaestra = 'clave-maestra-marco-1234';
+$puerto = 19500 + random_int(0, 200);
+$baseHttp = 'http://127.0.0.1:' . $puerto;
+$env = array_merge(getenv(), [
+    'CC_ADMIN_PASSWORD_HASH' => password_hash($claveMaestra, PASSWORD_DEFAULT),
+    'CC_AJUSTES_PATH' => $tmp . '/ajustes.json', 'CC_INVITATION_DIR' => $tmp . '/invitations',
+    'CC_PUBLIC_BASE_URL' => $baseHttp,
+]);
+$servidor = proc_open([PHP_BINARY, '-S', '127.0.0.1:' . $puerto, '-t', $raiz . '/public'],
+    [0 => ['pipe', 'r'], 1 => ['file', $tmp . '/servidor.log', 'a'], 2 => ['file', $tmp . '/servidor.log', 'a']],
+    $pipesServidor, $raiz . '/public', $env);
+register_shutdown_function(static function () use ($servidor): void { if (is_resource($servidor)) { proc_terminate($servidor); } });
+for ($i = 0; $i < 50; $i++) {
+    $s = @fsockopen('127.0.0.1', $puerto, $errno, $errstr, 0.2);
+    if ($s) { fclose($s); break; }
+    usleep(100000);
+}
+$cookies = [];
+$pedir = static function (string $metodo, string $ruta, ?array $datos = null) use ($baseHttp, &$cookies): array {
+    $cab = [];
+    if ($cookies) { $cab[] = 'Cookie: ' . implode('; ', array_map(static fn($k, $v) => "$k=$v", array_keys($cookies), $cookies)); }
+    $cuerpo = $datos === null ? '' : http_build_query($datos);
+    if ($datos !== null) { $cab[] = 'Content-Type: application/x-www-form-urlencoded'; $cab[] = 'Content-Length: ' . strlen($cuerpo); }
+    $ctx = stream_context_create(['http' => ['method' => $metodo, 'header' => implode("\r\n", $cab), 'content' => $cuerpo,
+        'follow_location' => 0, 'ignore_errors' => true, 'timeout' => 15]]);
+    $html = (string) @file_get_contents($baseHttp . $ruta, false, $ctx);
+    $estado = 0;
+    foreach ($http_response_header ?? [] as $l) {
+        if (preg_match('/^HTTP\/\S+ (\d{3})/', $l, $m)) { $estado = (int) $m[1]; }
+        if (preg_match('/^Set-Cookie:\s*([^=]+)=([^;]*)/i', $l, $m)) { $cookies[$m[1]] = $m[2]; }
+    }
+    return ['estado' => $estado, 'html' => $html];
+};
+$csrfDe = static fn(string $html): string => preg_match('/name="csrf" value="([a-f0-9]+)"/', $html, $m) ? $m[1] : '';
+// Los cuatro números que el formulario muestra en el calibrador.
+$camposMarco = static function (string $html): array {
+    $box = [];
+    foreach (['x', 'y', 'w', 'h'] as $k) {
+        $box[$k] = preg_match('/name="frame_' . $k . '"[^>]*value="([^"]*)"/', $html, $m) ? (float) $m[1] : null;
+    }
+    return $box;
+};
+// El marco que cada <option> de la temática le pasa al script (sin atributo: null).
+$marcoDeOpcion = static function (string $html, string $tema): ?array {
+    if (!preg_match('/<option value="' . preg_quote($tema, '/') . '"([^>]*)>/', $html, $m)) { return null; }
+    if (!preg_match('/data-frame-box="([^"]*)"/', $m[1], $a)) { return null; }
+    $box = json_decode(html_entity_decode($a[1], ENT_QUOTES, 'UTF-8'), true);
+    return is_array($box) ? array_map('floatval', $box) : null;
+};
+$mismoMarco = static fn(?array $a, ?array $b): bool => is_array($a) && is_array($b)
+    && array_reduce(['x', 'y', 'w', 'h'], static fn($c, $k) => $c && isset($a[$k], $b[$k]) && abs((float) $a[$k] - (float) $b[$k]) < 0.00005, true);
+
+$temasAdmin = cb_load_themes()['themes'];
+$generico = ['x' => 0.32, 'y' => 0.30, 'w' => 0.36, 'h' => 0.28];
+$r = $pedir('GET', '/admin/maestro.php');
+$pedir('POST', '/admin/maestro.php', ['csrf' => $csrfDe($r['html']), 'password' => $claveMaestra]);
+$r = $pedir('GET', '/admin/index.php?action=nueva');
+ok('el formulario «Nueva fiesta» abre', $r['estado'] === 200 && str_contains($r['html'], 'id="f-tema"'));
+$csrf = $csrfDe($r['html']);
+
+preg_match('/<select id="f-tema".*?<\/select>/s', $r['html'], $select);
+$opciones = preg_match_all('/<option value="/', $select[0] ?? '');
+$conMarco = preg_match_all('/<option value="[^"]*" data-frame-box="/', $select[0] ?? '');
+ok("cada temática del selector lleva su data-frame-box ($conMarco de $opciones)", $opciones === count($temasAdmin) && $conMarco === $opciones);
+$malos = [];
+foreach ($temasAdmin as $slugTema => $datosTema) {
+    $esperado = cb_normalize_frame_box($datosTema['frameBox'] ?? null) ?? $generico;
+    if (!$mismoMarco($marcoDeOpcion($r['html'], $slugTema), $esperado)) { $malos[] = $slugTema; }
+}
+ok('el data-frame-box de cada temática es su frameBox de themes.json' . ($malos ? ' (difieren: ' . implode(', ', $malos) . ')' : ''), $malos === []);
+$coqueteria = ['x' => 0.1204, 'y' => 0.1719, 'w' => 0.7593, 'h' => 0.4271];
+ok('Coquetería Pop entrega 0.1204/0.1719/0.7593/0.4271 al calibrador', $mismoMarco($marcoDeOpcion($r['html'], 'adulto-coqueteria-pop'), $coqueteria));
+
+// Sin tocar nada, los campos muestran el marco de la temática que viene elegida.
+$temaInicial = (string) array_key_first($temasAdmin);
+$marcoInicial = cb_normalize_frame_box($temasAdmin[$temaInicial]['frameBox'] ?? null) ?? $generico;
+ok("al abrir, el calibrador muestra el marco de «{$temaInicial}» y no el genérico", $mismoMarco($camposMarco($r['html']), $marcoInicial));
+
+// Guardar con lo que muestra el formulario (sin «usar calibración predeterminada»).
+$fichaMarco = static fn(array $extra) => array_merge(['csrf' => $csrf, 'action' => 'guardar', 'modo' => 'nueva',
+    'admin_label' => 'Prueba Marco', 'birthday_person_name' => 'Prueba Marco', 'fecha' => '2026-12-04',
+    'service_plan' => 'booth'], $extra);
+$antes = array_keys(cb_load_parties()['parties']);
+$nuevaFiesta = static function (array $antes): array {
+    $todas = cb_load_parties()['parties'];
+    $nuevas = array_values(array_diff(array_keys($todas), $antes));
+    return $nuevas ? $todas[end($nuevas)] : [];
+};
+$enPantalla = $camposMarco($r['html']);
+$r2 = $pedir('POST', '/admin/index.php', $fichaMarco(['event_type' => 'child_birthday', 'tema' => $temaInicial,
+    'frame_x' => $enPantalla['x'], 'frame_y' => $enPantalla['y'], 'frame_w' => $enPantalla['w'], 'frame_h' => $enPantalla['h']]));
+ok("guardar «{$temaInicial}» con lo que muestra el formulario se crea", $r2['estado'] === 302);
+ok("y su marco es el de «{$temaInicial}», no el genérico", $mismoMarco($nuevaFiesta($antes)['frameBox'] ?? null, $marcoInicial));
+
+// Elegir Coquetería Pop: el script carga los números de la opción (sin atributo, quedan los de pantalla).
+$antes = array_keys(cb_load_parties()['parties']);
+$alElegir = $marcoDeOpcion($r['html'], 'adulto-coqueteria-pop') ?? $camposMarco($r['html']);
+$r2 = $pedir('POST', '/admin/index.php', $fichaMarco(['event_type' => 'adult_birthday', 'tema' => 'adulto-coqueteria-pop',
+    'frame_x' => $alElegir['x'], 'frame_y' => $alElegir['y'], 'frame_w' => $alElegir['w'], 'frame_h' => $alElegir['h']]));
+ok('guardar Coquetería Pop tras elegirla se crea', $r2['estado'] === 302);
+ok('y su marco es el de Coquetería Pop (0.1204/0.1719/0.7593/0.4271)', $mismoMarco($nuevaFiesta($antes)['frameBox'] ?? null, $coqueteria));
+
+// Si la validación rechaza la ficha, el calibrador devuelve lo que se escribió (no lo pisa la temática).
+$r2 = $pedir('POST', '/admin/index.php', $fichaMarco(['event_type' => 'child_birthday', 'tema' => 'adulto-coqueteria-pop',
+    'frame_x' => '0.2', 'frame_y' => '0.2', 'frame_w' => '0.5', 'frame_h' => '0.3']));
+ok('una ficha rechazada conserva el marco escrito a mano',
+    $r2['estado'] === 200 && $mismoMarco($camposMarco($r2['html']), ['x' => 0.2, 'y' => 0.2, 'w' => 0.5, 'h' => 0.3]));
+// Apagar el servidor antes del cierre: en Windows retiene la base y el log, y la carpeta temporal no se borraría.
+proc_terminate($servidor);
+proc_close($servidor);
+
 echo $fallos === 0
     ? "  $total comprobaciones, todas bien\n"
     : "  $total comprobaciones, $fallos con problemas\n";

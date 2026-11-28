@@ -41,6 +41,10 @@ function cb_juegos(): array
         // impulso, y comparte tematica con `aracnida`.
         'circuito' => ['nombre' => 'Circuito Arácnido', 'tema' => 'spidey'],
         'mision' => ['nombre' => 'Misión 3D', 'tema' => 'heroes'],
+        // Chile en Volantín (AT-023, 26-09): vuelo de 80 s de la temática Fiestas Patrias. `max` es el tope que
+        // acepta el servidor: el juego da ~550 como mucho (estrellas, copihues y distancia) y puntajes.php no tiene
+        // autenticación, así que sin tope cualquiera podría anotar 999.999 en la tabla de la fiesta.
+        'volantin' => ['nombre' => 'Chile en Volantín', 'tema' => 'fiestas-patrias', 'max' => 1000],
     ];
 }
 
@@ -89,7 +93,7 @@ function cb_puntaje_anotar(string $slug, string $juego, string $jugador, int $pu
     if ($jugador === '') {
         return ['ok' => false, 'error' => 'Falta el nombre del jugador.'];
     }
-    if ($puntaje < 0 || $puntaje > 999999) {
+    if ($puntaje < 0 || $puntaje > (int) (cb_juegos()[$juego]['max'] ?? 999999)) {
         return ['ok' => false, 'error' => 'El puntaje está fuera de rango.'];
     }
 

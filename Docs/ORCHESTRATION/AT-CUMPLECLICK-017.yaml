@@ -1,0 +1,103 @@
+ticket_id: AT-CUMPLECLICK-017
+title: "Estrategia de marketing de 30 días para @Cumple_Click + módulo Contenido del admin"
+origin: direct_luis
+portfolio: "client:cumpleclick"
+priority: P1
+status: IN_PROGRESS
+status_note: "backend EN PROD 2026-09-25 00:48 (PR #44 mergeado); falta estrategia de 30 días y assets"
+created_at: "2026-09-24"
+created_by: claude
+
+governance:
+  professional_standard: "Docs/ENGINEERING_STANDARDS/PROFESSIONAL_ENGINEERING_STANDARD.md"
+  quality_gate: C2
+
+objective: >
+  Plan de contenido de 30 días para Instagram (@Cumple_Click) pensado por un community manager
+  experto en marcas infantiles chilenas: cada pieza con copy, hashtags, primer comentario y asset
+  (generadores de la casa primero; Higgsfield por API solo con costo aprobado), más un módulo
+  "Contenido" en el admin donde el superusuario ve el calendario, aprueba, marca publicado y anota
+  métricas. Brief completo: CumpleBooth/docs/CODEX-HANDOFF-MARKETING-Y-AGENDA-2026-09-24.md (§1).
+owner: codex
+reviewer: claude
+active_orchestrator: claude
+
+ownership:
+  planner: claude
+  executor: codex
+  reviewer: claude
+  final_approver: "Luis Miguel"
+  current_owner: codex
+  previous_owners: []
+  takeover_allowed: true
+  takeover_count: 0
+  takeover_reason: null
+  urgency: normal
+  resolution_status: pending
+  reassignment_authorized_by: "Luis Miguel"
+  handoff_ref: "CumpleBooth/docs/CODEX-HANDOFF-MARKETING-Y-AGENDA-2026-09-24.md"
+  handoff_quality: COMPLETE
+
+scope:
+  branch: "codex/marketing-contenido"
+  base_commit: "21c0c1a"
+  depends_on: []
+  allowed_files:
+    - "CumpleBooth/docs/MARKETING-CUMPLECLICK-30-DIAS.md"
+    - "CumpleBooth/database/migrations/025_marketing_contenido.php"
+    - "CumpleBooth/database/migrations/025_marketing_contenido.down.php"
+    - "CumpleBooth/database/aplicar-025.php"
+    - "CumpleBooth/public/lib.marketing.php"
+    - "CumpleBooth/public/admin/contenido.php"
+    - "CumpleBooth/public/admin/contenido-media.php"
+    - "CumpleBooth/scripts/seed-marketing-30-dias.php"
+    - "CumpleBooth/design/generadores/arte/**"   # generadores nuevos de piezas; salida/ es gitignored
+    - "CumpleBooth/tests/backend/marketing.php"
+    - "CumpleBooth/tests/backend/marketing-http.php"
+    - "CumpleBooth/public/lib.admin-usuarios.php"   # solo agregar la clave 'marketing' al final de CB_ADMIN_MODULOS
+    - "CumpleBooth/public/admin/_acceso.php"         # solo agregar la pestaña Contenido después de Finanzas
+    - "CumpleBooth/docs/FTP-MANIFEST.md"             # solo anexar una sección al final
+  forbidden_files:
+    - "CLAUDE.md"
+    - "CumpleBooth/CLAUDE.md"
+    - "AGENTS.md"
+    - "CumpleBooth/public/lib.php"                   # cc_parties tiene columnas fijas: no tocar
+    - "CumpleBooth/public/data/marca.json"           # se edita desde Admin → Marca, no a mano
+  locked_files:
+    - "CumpleBooth/database/migrations/024_*"        # es del ticket 018
+
+routing:
+  complexity: C2
+  risk: medium
+  uncertainty: medium
+  reversibility: easy
+  selected_profile: strong_reasoner
+  selected_model: "codex (runtime de Luis)"
+  rationale: "Estrategia + código + assets; gasto de créditos solo con ok explícito; nada en PROD desde Codex."
+  independent_review: true
+  human_gate: true
+
+acceptance:
+  criteria:
+    - "Documento de estrategia con 30 piezas de feed (copy completo, hashtags fijos, primer comentario, asset) y guion de historias por día"
+    - "Assets de la primera semana listos; el resto con generador o prompt aprobado"
+    - "Migración 025 idempotente (MySQL y SQLite) con .down; módulo Contenido solo para super; seed carga las 30 piezas"
+    - "Copiar texto, marcar publicada con URL, métricas semanales y assets servidos con sesión"
+    - "Cero gasto sin el ok de Luis; lo gastado anotado con request_id y costo"
+  tests:
+    - "php -l en todo lo nuevo (PHP de WAMP)"
+    - "tests/backend/marketing.php y marketing-http.php en verde"
+    - "escaneo de secretos sobre el diff"
+  evidence_required:
+    - "Capturas del calendario y de una ficha en local"
+    - "Salida de las pruebas"
+    - "Lista FTP exacta y sección en FTP-MANIFEST con 'No probado'"
+  rollback_plan: "Migración .down + no subir los archivos nuevos; nada en PROD hasta el deploy de Claude"
+
+safety:
+  allow_push: true
+  allow_merge: false
+  allow_deploy: false
+  allow_secrets: false
+  allow_external_messages: false
+  allow_spend: "solo con 'ok' explícito de Luis por plan de costo"

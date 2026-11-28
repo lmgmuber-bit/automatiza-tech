@@ -94,6 +94,13 @@ class Ai1wm_Export_Media {
 			$total_media_files_count = 1;
 		}
 
+		// Set file CRC
+		if ( isset( $params['file_crc'] ) ) {
+			$file_crc = $params['file_crc'];
+		} else {
+			$file_crc = null;
+		}
+
 		// What percent of files have we processed?
 		$progress = (int) min( ( $processed_files_size / $total_media_files_size ) * 100, 100 );
 
@@ -120,11 +127,15 @@ class Ai1wm_Export_Media {
 			$archive->set_file_pointer( $archive_bytes_offset );
 
 			// Loop over files
-			while ( list( $file_abspath, $file_relpath, $file_size, $file_mtime ) = ai1wm_getcsv( $media_list ) ) {
+			while ( ( $row = ai1wm_getcsv( $media_list ) ) !== false ) {
+				list( $file_abspath, $file_relpath, $file_size, $file_mtime ) = $row;
 				$file_bytes_read = 0;
 
 				// Add file to archive
-				if ( ( $completed = $archive->add_file( $file_abspath, 'uploads' . DIRECTORY_SEPARATOR . $file_relpath, $file_bytes_read, $file_bytes_offset, $file_bytes_written ) ) ) {
+				if ( ( $completed = $archive->add_file( $file_abspath, 'uploads' . DIRECTORY_SEPARATOR . $file_relpath, $file_bytes_read, $file_bytes_offset, $file_bytes_written, $file_crc ) ) ) {
+					$file_crc = null;
+
+					// Reset file bytes
 					$file_bytes_offset = $file_bytes_written = 0;
 
 					// Get media bytes offset
@@ -184,6 +195,9 @@ class Ai1wm_Export_Media {
 			// Unset total media files count
 			unset( $params['total_media_files_count'] );
 
+			// Unset file CRC
+			unset( $params['file_crc'] );
+
 			// Unset completed flag
 			unset( $params['completed'] );
 
@@ -209,6 +223,9 @@ class Ai1wm_Export_Media {
 
 			// Set total media files count
 			$params['total_media_files_count'] = $total_media_files_count;
+
+			// Set file CRC
+			$params['file_crc'] = $file_crc;
 
 			// Set completed flag
 			$params['completed'] = $completed;

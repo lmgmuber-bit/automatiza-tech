@@ -1,0 +1,39 @@
+{
+ "_nota": "Óvalos medidos a ojo en la escala original 1520x2688 (26-09-2026): desde sobre las cejas hasta el mentón, con los ojos del personaje enteros adentro (si no, asoman junto a la cara de la persona). Centro entre los ojos.",
+ "huasita-floreada": {
+  "cx": 755,
+  "cy": 396,
+  "rx": 116,
+  "ry": 124
+ },
+ "huasita-chupalla": {
+  "cx": 748,
+  "cy": 410,
+  "rx": 110,
+  "ry": 130
+ },
+ "huasita-manta": {
+  "cx": 740,
+  "cy": 400,
+  "rx": 115,
+  "ry": 120
+ },
+ "huaso-chamanto": {
+  "cx": 743,
+  "cy": 321,
+  "rx": 103,
+  "ry": 121
+ },
+ "huaso-chupalla": {
+  "cx": 750,
+  "cy": 383,
+  "rx": 101,
+  "ry": 117
+ },
+ "huaso-gala": {
+  "cx": 745,
+  "cy": 347,
+  "rx": 101,
+  "ry": 121
+ }
+}

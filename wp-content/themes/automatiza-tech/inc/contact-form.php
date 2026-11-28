@@ -1,4 +1,5 @@
 <?php
+defined('ABSPATH') || exit;
 /**
  * Automatiza Tech - Contact Form Handler
  * Maneja el formulario de contacto y administración de datos
@@ -897,6 +898,18 @@ class AutomatizaTechContactForm {
         if ($result) {
             // Obtener el ID del cliente recién creado
             $client_id = $wpdb->insert_id;
+
+            // Ficha única: el lead contratado queda también como cliente en el CRM, enlazado.
+            // Si el cliente ya tenía una ficha operativa por otro camino (CRM manual o propuesta
+            // aceptada), el puente devuelve ESA ficha (tech_id) y no la que se acaba de crear
+            // aquí ($client_id): se enlaza también la ficha nueva al mismo cliente del CRM, para
+            // que no quede una segunda ficha (con el plan y el valor del contrato) sin enlazar.
+            if (function_exists('at_cc_asegurar_cliente')) {
+                $puente = at_cc_asegurar_cliente(['nombre' => $contact->name, 'email' => $contact->email, 'empresa' => $contact->company, 'telefono' => $contact->phone, 'origen' => 'contactos']);
+                if (is_array($puente) && (int) $puente['tech_id'] !== (int) $client_id) {
+                    $wpdb->update($this->clients_table_name, ['crm_cliente_id' => (int) $puente['crm_id']], ['id' => $client_id]);
+                }
+            }
             
             // Obtener datos completos del cliente
             $client_data = $wpdb->get_row($wpdb->prepare(
@@ -1097,7 +1110,7 @@ class AutomatizaTechContactForm {
             
             $plans_html .= "
                 </div>
-                <p style='margin-top: 10px; padding: 10px; background: #e3f2fd; border-radius: 5px; text-align: center;'>✉️ <strong>Se ha enviado la factura automáticamente al cliente</strong></p>
+                <p style='margin-top: 10px; padding: 10px; background: #e3f2fd; border-radius: 5px; text-align: center;'>✉️ <strong>Se ha enviado el resumen de contratación automáticamente al cliente</strong></p>
             </div>";
         }
         
@@ -1213,7 +1226,7 @@ class AutomatizaTechContactForm {
         $to = $client_data->email;
         
         // ANTI-SPAM: Asunto personalizado sin emojis, con nombre del cliente
-        $subject = 'Bienvenido a AutomatizaTech - Factura ' . $invoice_number . ' - ' . $client_data->name;
+        $subject = 'Bienvenido a AutomatizaTech - Resumen de contratación ' . $invoice_number . ' - ' . $client_data->name;
         
         $site_url = get_site_url();
         
@@ -1374,7 +1387,7 @@ class AutomatizaTechContactForm {
             
             <p class='message-text'>
                 Gracias por confiar en AutomatizaTech para tu proyecto de transformación digital. 
-                <strong>📎 Encontrarás tu factura adjunta en formato PDF</strong> con todos los detalles de tu contratación.
+                <strong>📎 Encontrarás tu resumen de contratación adjunto en formato PDF</strong> con todos los detalles. Resumen interno. No constituye factura ni boleta electrónica del SII. El documento tributario se emite aparte.
             </p>";
             
         // Generar HTML de planes contratados
@@ -1429,12 +1442,12 @@ class AutomatizaTechContactForm {
         }
         
         $message .= "            <p class='message-text'>
-                📄 <strong>Factura PDF adjunta:</strong> Revisa el archivo adjunto para ver el detalle completo 
+                📄 <strong>Resumen de contratación PDF adjunto:</strong> Revisa el archivo adjunto para ver el detalle completo 
                 de tu contratación. Te recomendamos guardar este documento para tus registros contables.
             </p>
             
             <div class='invoice-info'>
-                <h4>Información de la Factura</h4>
+                <h4>Información del resumen de contratación</h4>
                 <div class='invoice-number'>{$invoice_number}</div>
                 <p style='color: #666;'>Fecha: " . date('d/m/Y H:i') . "</p>
             </div>
@@ -1499,8 +1512,8 @@ class AutomatizaTechContactForm {
             // Versión texto plano para mejor deliverability
             $plain_text = "Hola " . $client_data->name . ",\n\n";
             $plain_text .= "Gracias por confiar en AutomatizaTech para tu proyecto de transformación digital.\n\n";
-            $plain_text .= "** FACTURA PDF ADJUNTA **\n\n";
-            $plain_text .= "Encontrarás tu factura en formato PDF adjunta a este correo.\n";
+            $plain_text .= "** RESUMEN DE CONTRATACIÓN PDF ADJUNTO **\n\n";
+            $plain_text .= "Encontrarás tu resumen de contratación en formato PDF adjunto a este correo. Resumen interno. No constituye factura ni boleta electrónica del SII. El documento tributario se emite aparte.\n";
             $plain_text .= "Te recomendamos guardarla para tus registros contables.\n\n";
             
             // Manejar múltiples planes
@@ -1526,7 +1539,7 @@ class AutomatizaTechContactForm {
                 }
             }
             
-            $plain_text .= "FACTURA\n";
+            $plain_text .= "RESUMEN DE CONTRATACIÓN\n";
             $plain_text .= "-------\n";
             $plain_text .= "Número: " . $invoice_number . "\n";
             $plain_text .= "Fecha: " . current_time('d/m/Y H:i') . "\n\n";
@@ -2369,7 +2382,7 @@ class AutomatizaTechContactForm {
      */
     
     /**
-     * Generar factura/boleta en HTML para el cliente
+     * Generar resumen de contratación en HTML para el cliente (no es documento tributario)
      */
     private function generate_invoice_html($client_data, $plans_data) {
         // Cargar librería de QR Code
@@ -2409,7 +2422,7 @@ class AutomatizaTechContactForm {
 <head>
     <meta charset='UTF-8'>
     <meta name='viewport' content='width=device-width, initial-scale=1.0'>
-    <title>Factura {$invoice_number}</title>
+    <title>Resumen de contratación {$invoice_number}</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         
@@ -2675,15 +2688,15 @@ class AutomatizaTechContactForm {
         <!-- Header -->
         <div class='invoice-header'>
             <img src='{$logo_url}' alt='AutomatizaTech Logo' style='max-width: 110px; height: auto; margin-bottom: 8px;'>
-            <h1>🧾 FACTURA</h1>
+            <h1>🧾 RESUMEN DE CONTRATACIÓN</h1>
             <p>AutomatizaTech - Soluciones Digitales Profesionales</p>
         </div>
         
         <!-- Info de Factura y Cliente -->
         <div class='invoice-info'>
             <div class='info-block'>
-                <h3>📋 Datos de la Factura</h3>
-                <p><span class='info-label'>N° Factura:</span> <strong>{$invoice_number}</strong></p>
+                <h3>📋 Datos del resumen</h3>
+                <p><span class='info-label'>N° Resumen:</span> <strong>{$invoice_number}</strong></p>
                 <p><span class='info-label'>Fecha:</span> {$invoice_date}</p>
                 <p><span class='info-label'>Válido hasta:</span> " . date('d/m/Y', strtotime('+30 days')) . "</p>
             </div>
@@ -2800,7 +2813,7 @@ class AutomatizaTechContactForm {
         
         <!-- Código QR de Validación -->
         <div class='qr-validation' style='text-align: center; padding: 12px 30px; background: #f9fafb; border-top: 2px solid {$secondary_color};'>
-            <h3 style='color: {$primary_color}; margin-bottom: 6px;'>🔒 Validación de Factura</h3>
+            <h3 style='color: {$primary_color}; margin-bottom: 6px;'>🔒 Validación del resumen</h3>
             <p style='margin-bottom: 8px; color: #666;'>Escanea el QR para validar la autenticidad</p>";
     
     // Generar URL de validación para el QR (apunta directamente a la página de validación)
@@ -2826,6 +2839,7 @@ class AutomatizaTechContactForm {
                 <p style='margin-top: 8px; font-size: 0.75em; opacity: 0.85;'>
                     Generada: " . date('d/m/Y H:i') . "
                 </p>
+                <p style='margin-top: 6px; font-size: 0.75em; opacity: 0.9;'>Resumen interno. No constituye factura ni boleta electrónica del SII. El documento tributario se emite aparte.</p>
             </div>
             
             <div class='footer-column'>
@@ -6090,6 +6104,9 @@ class AutomatizaTechContactForm {
                                        title="Ver ficha completa del cliente">
                                        📋 Ficha
                                     </a>
+                                    <?php if (!empty($client->crm_cliente_id)): ?>
+                                    <br><a href="<?php echo esc_url(admin_url('admin.php?page=automatiza-crm-ficha&id=' . (int) $client->crm_cliente_id)); ?>" class="button button-small" style="margin-top:4px">Ficha única</a>
+                                    <?php endif; ?>
                                 </td>
                                 
                                 <!-- Editar (solo para administradores) -->

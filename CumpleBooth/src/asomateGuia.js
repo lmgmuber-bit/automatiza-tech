@@ -22,7 +22,9 @@ export const FOTO_POR_HUECO = 5
  * `ajuste` trae {zoom, dx, dy}; dx y dy van en unidades del radio del hueco.
  */
 export function rectFotoEnLienzo(sitio, foto, ajuste = {}) {
-  const alto = sitio.ry * FOTO_POR_HUECO * (ajuste.zoom || 1)
+  // Un zoom que no sea un número positivo (cero, negativo, NaN) vale 1: la foto nunca se invierte.
+  const zoom = Number.isFinite(ajuste.zoom) && ajuste.zoom > 0 ? ajuste.zoom : 1
+  const alto = sitio.ry * FOTO_POR_HUECO * zoom
   const ancho = (alto * foto.naturalWidth) / foto.naturalHeight
   return {
     x: sitio.hx - ancho / 2 + sitio.rx * (ajuste.dx || 0),

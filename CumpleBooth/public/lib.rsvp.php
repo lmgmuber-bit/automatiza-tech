@@ -62,8 +62,10 @@ function cb_rsvp_save(int $partyId, string $familyName, string $guestNames): arr
 function cb_rsvp_list(int $partyId): array
 {
     $stmt = cb_pdo()->prepare(
-        'SELECT family_name, guest_names, created_at, updated_at
-         FROM cc_rsvps WHERE party_id=? ORDER BY created_at DESC, id DESC'
+        'SELECT r.id, r.family_name, r.guest_names, r.team, r.created_at, r.updated_at,
+                g.title AS gift_title, (r.baby_photo_key IS NOT NULL) AS has_photo
+         FROM cc_rsvps r LEFT JOIN cc_gift_items g ON g.id = r.gift_item_id
+         WHERE r.party_id=? ORDER BY r.created_at DESC, r.id DESC'
     );
     $stmt->execute([$partyId]);
     return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
@@ -105,13 +107,19 @@ function cb_rsvp_resolve_parents_token(string $token): ?array
  * asistencia-papas.php: los niños llegan como texto libre ("Emma y Lucas", "Sofía, Tomás")
  * y se cuentan por los separadores más comunes. Es una cifra aproximada a propósito;
  * inventar exactitud sobre texto escrito a mano sería peor.
+ *
+ * En un cumpleaños de adulto ese mismo campo trae acompañantes («con Jorge»), no niños: las
+ * claves no cambian, pero `event_type` viaja en el resumen para que quien lo muestre use las
+ * etiquetas correctas (CX-13, AT-CUMPLECLICK-026).
  */
 function cb_rsvp_resumen(string $publicSlug): array
 {
-    $vacio = ['familias' => 0, 'ninos' => 0, 'ultima' => '', 'lista' => []];
+    $vacio = ['familias' => 0, 'ninos' => 0, 'ultima' => '', 'lista' => [], 'event_type' => 'child_birthday', 'team_mama' => 0, 'team_papa' => 0];
     if (cb_storage_mode() !== 'db' || !cb_valid_public_slug($publicSlug)) {
         return $vacio;
     }
+    $party = cb_load_party_raw($publicSlug);
+    $vacio['event_type'] = cb_party_event_type($party['event_type'] ?? '');
     $partyId = cb_party_db_id($publicSlug);
     if ($partyId === null) {
         return $vacio;
@@ -120,6 +128,8 @@ function cb_rsvp_resumen(string $publicSlug): array
     $ninos = 0;
     $ultima = '';
     $filas = [];
+    $teamMama = 0;
+    $teamPapa = 0;
     foreach ($lista as $fila) {
         $nombres = trim((string) ($fila['guest_names'] ?? ''));
         $cuantos = $nombres === ''
@@ -135,9 +145,16 @@ function cb_rsvp_resumen(string $publicSlug): array
             'ninos' => $nombres,
             'cuantos' => $cuantos,
             'cuando' => substr($creada, 0, 16),
+            'id' => (int) ($fila['id'] ?? 0),
+            'equipo' => (string) ($fila['team'] ?? ''),
+            'regalo' => (string) ($fila['gift_title'] ?? ''),
+            'foto' => !empty($fila['has_photo']),
         ];
+        $teamMama += ($fila['team'] ?? '') === 'mama' ? 1 : 0;
+        $teamPapa += ($fila['team'] ?? '') === 'papa' ? 1 : 0;
     }
-    return ['familias' => count($lista), 'ninos' => $ninos, 'ultima' => $ultima, 'lista' => $filas];
+    return ['familias' => count($lista), 'ninos' => $ninos, 'ultima' => $ultima, 'lista' => $filas,
+        'event_type' => $vacio['event_type'], 'team_mama' => $teamMama, 'team_papa' => $teamPapa];
 }
 
 /**

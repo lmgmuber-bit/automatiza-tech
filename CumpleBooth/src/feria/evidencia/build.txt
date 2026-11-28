@@ -1,0 +1,50 @@
+
+> cumple-booth-plantilla@1.0.0 build
+> vite build
+
+vite v6.4.3 building for production...
+transforming...
+✓ 122 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/carteles.html                                     0.63 kB │ gzip:   0.36 kB
+dist/feria.html                                        0.78 kB │ gzip:   0.41 kB
+dist/assets/segment.worker-CZ45B1n2.js                 0.97 kB
+dist/cartel-qr.html                                    1.16 kB │ gzip:   0.55 kB
+dist/album.html                                        1.17 kB │ gzip:   0.57 kB
+dist/index.html                                        1.35 kB │ gzip:   0.65 kB
+dist/assets/cumpleclick-mark-C2JZLqUO.svg              2.99 kB │ gzip:   1.06 kB
+dist/assets/baloo-2-latin-800-normal-BbF3Etk1.woff2   18.63 kB
+dist/assets/baloo-2-latin-700-normal-CqTg7A15.woff2   19.44 kB
+dist/assets/baloo-2-latin-600-normal-tIfxVoAe.woff2   19.50 kB
+dist/assets/baloo-2-latin-800-normal-B8BXfZF7.woff    22.60 kB
+dist/assets/baloo-2-latin-700-normal-Ld3Zm3l2.woff    23.41 kB
+dist/assets/baloo-2-latin-600-normal-B4tNaogw.woff    23.54 kB
+dist/assets/caveat-latin-500-normal-B9SDL8cy.woff2    50.90 kB
+dist/assets/caveat-latin-500-normal-Do9veZfZ.woff     62.37 kB
+dist/feria/vision-segmenter.js                       137.03 kB
+dist/vendor/mediapipe/selfie_segmenter.tflite        249.54 kB
+dist/assets/Lockup-CQYbo7Xc.css                        0.51 kB │ gzip:   0.29 kB
+dist/assets/cartel-yJHq8X4K.css                        5.36 kB │ gzip:   1.71 kB
+dist/assets/carteles-CRjFN5QB.css                      6.58 kB │ gzip:   1.96 kB
+dist/assets/feria-DpAUL2uk.css                         8.16 kB │ gzip:   2.53 kB
+dist/assets/album-CaWnfSyi.css                        16.47 kB │ gzip:   4.35 kB
+dist/assets/main-BQAKXBRo.css                         72.93 kB │ gzip:  15.25 kB
+dist/assets/Lockup-B8jQuzlB.js                         0.47 kB │ gzip:   0.31 kB
+dist/assets/themeVars-BWg77og2.js                      0.73 kB │ gzip:   0.43 kB
+dist/assets/feria-BF1TD7YO.js                          2.52 kB │ gzip:   1.28 kB
+dist/assets/feria-DiVuzLyh.js                          5.09 kB │ gzip:   2.12 kB
+dist/assets/cartel-SlR9LYHX.js                         5.29 kB │ gzip:   2.35 kB
+dist/assets/carteles-CIwK2MVx.js                      12.03 kB │ gzip:   4.46 kB
+dist/assets/album-zYhkPpjF.js                         23.93 kB │ gzip:   8.10 kB
+dist/assets/browser-BeMEBtOm.js                       25.45 kB │ gzip:   9.98 kB
+dist/assets/vision_bundle-Cd7_-YIR.js                129.28 kB │ gzip:  38.89 kB
+dist/assets/client-eulB1LW-.js                       143.52 kB │ gzip:  46.05 kB
+dist/assets/main-DvPs7Asy.js                         171.07 kB │ gzip:  56.41 kB
+dist/assets/three.module-Y-ql4QRg.js                 734.52 kB │ gzip: 189.60 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 5.28s

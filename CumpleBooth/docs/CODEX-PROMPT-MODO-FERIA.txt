@@ -1,0 +1,24 @@
+Codex: toma el ticket AT-CUMPLECLICK-021 (modo feria del kiosco de CumpleClick). Luis lo aprobó el 26-09-2026 y
+quiere rapidez: Claude ya tiene listo el servidor (ticket 020, rama claude/modo-feria, 97 pruebas en verde) y sigue
+con el admin de ferias.
+
+1. Lee completo, antes de escribir código:
+   C:\wamp64\www\automatiza-tech\.worktrees\modo-feria\CumpleBooth\docs\CODEX-HANDOFF-MODO-FERIA-2026-09-26.md
+   (ojo con las secciones 4.4 bis y 4.4 ter: filtro blanco y negro, personajes sin minijuego en feria, y la foto
+   sobre FONDO COMPLETO con las personas recortadas, que es lo que Luis quiere para los adultos)
+   C:\wamp64\www\automatiza-tech\.worktrees\modo-feria\Docs\ORCHESTRATION\AT-CUMPLECLICK-021.yaml
+2. Crea tu rama codex/modo-feria-kiosco desde origin/main (4cdc795 o posterior) en tu propio worktree.
+3. Toca solo los archivos permitidos del ticket: public/feria.html, src/feria/**, src/App.jsx (solo ramas de feria),
+   vite.config, tests/frontend/feria*.test.mjs, y anexa tu sección al final de docs/FTP-MANIFEST.md.
+   Nada de PHP, admin, base de datos ni scripts: eso es de Claude.
+4. Programa contra el contrato de la sección 4 del brief. Para la prueba de punta a punta, el backend real está en
+   public/api.php, public/feria-api.php, public/lib.ferias.php y public/upload.php del worktree de Claude (ruta de
+   arriba); léelos, no los modifiques. Si el contrato no te calza, anótalo en el PR en vez de cambiarlo por tu cuenta.
+5. Una fiesta sin feria tiene que quedar exactamente igual: agrega la prueba que lo cuide.
+6. No despliegues, no mergees y no gastes créditos. Sin secretos (el repositorio es público) y sin nombres de
+   franquicias en textos nuevos. Todo lo visible en español de Chile.
+7. Entrega: PR contra main desde codex/modo-feria-kiosco, con npm test y npm run build limpios, capturas a 1200 x 2000
+   (vertical, Galaxy Tab A7) del selector y de los recorridos Niños y Adultos (uno con filtro blanco y negro y uno
+   con fondo completo), los fps medidos del recorte, y la lista FTP (ruta local -> destino en PROD,
+   OBLIGATORIO/OPCIONAL, orden). Las tres temáticas adultas reales ya están en public/themes/adulto-* y en
+   public/data/themes.json del worktree de Claude: úsalas para probar.

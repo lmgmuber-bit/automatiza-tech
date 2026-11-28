@@ -53,6 +53,13 @@
       title: 'Agenda tu demo en vivo',
       sub: 'Te mostramos el portal y los asistentes funcionando',
       interes: 'Demo del portal omnicliente'
+    },
+    // Pedido de Luis (17-nov-2026): los clientes agendan su reunión de seguimiento. n8n revisa por teléfono
+    // y correo si es cliente o tiene propuesta; si no, la agenda como diagnóstico (y cuenta como lead).
+    seguimiento: {
+      title: 'Agenda tu reunión de seguimiento',
+      sub: 'Si ya eres cliente, elige el día y la hora; usa el WhatsApp y el correo con que trabajas con nosotros',
+      interes: 'Reunión de seguimiento (ya soy cliente)'
     }
   };
   function applyMode() {
@@ -62,7 +69,7 @@
     var intent = document.getElementById('at-intent'); if (intent) intent.value = state.modalMode;
     var sel = document.getElementById('at-modal-interes');
     if (sel) { for (var i = 0; i < sel.options.length; i++) { if (sel.options[i].text === m.interes) { sel.selectedIndex = i; break; } } }
-    var diag = document.getElementById('at-mode-diag'), demo = document.getElementById('at-mode-demo');
+    var diag = document.getElementById('at-mode-diag'), demo = document.getElementById('at-mode-demo'), seg = document.getElementById('at-mode-seg');
     function paint(btn, on) {
       if (!btn) return;
       btn.setAttribute('aria-selected', on ? 'true' : 'false');
@@ -71,6 +78,26 @@
     }
     paint(diag, state.modalMode === 'diagnostico');
     paint(demo, state.modalMode === 'demo');
+    paint(seg, state.modalMode === 'seguimiento');
+  }
+
+  // Texto del panel «¡Solicitud recibida!» según cómo quedó la cita. El de diagnóstico es el que trae cada plantilla.
+  function mensajeExito(tipo) {
+    var panel = document.querySelector('sc-if[data-when="scheduled"]');
+    if (!panel) return;
+    var h = panel.querySelector('h3'), p = panel.querySelector('p');
+    if (!h || !p) return;
+    if (!panel.hasAttribute('data-h-orig')) { panel.setAttribute('data-h-orig', h.textContent); panel.setAttribute('data-p-orig', p.textContent); }
+    if (tipo === 'seguimiento') {
+      h.textContent = '¡Reunión de seguimiento agendada!';
+      p.textContent = 'Te llegará la invitación con el enlace de la reunión a tu correo. Si necesitas cambiarla, respóndenos por WhatsApp.';
+    } else if (tipo === 'rebajado') {
+      h.textContent = '¡Te agendamos un diagnóstico!';
+      p.textContent = 'No encontramos ese WhatsApp y correo entre nuestros clientes, así que dejamos tu hora como diagnóstico gratis. Si ya trabajas con nosotros, escríbenos por WhatsApp y lo ajustamos.';
+    } else {
+      h.textContent = panel.getAttribute('data-h-orig');
+      p.textContent = panel.getAttribute('data-p-orig');
+    }
   }
 
   // Capture UTM + landing path into the hidden form fields (no PII).
@@ -198,6 +225,11 @@
         setFormMessage(form, 'error', 'Elige fecha y hora disponible para agendar.');
         return;
       }
+      var tsToken = window.atTurnstile ? window.atTurnstile.token(form) : '';
+      if (window.atTurnstile && window.atTurnstile.activo() && !tsToken) {
+        setFormMessage(form, 'error', window.atTurnstile.FALTA);
+        return;
+      }
       // 'YYYY-MM-DD' ordena lexicográficamente igual que por fecha.
       if (scheduledDate < todayISO()) {
         setFormMessage(form, 'error', 'Solo puedes agendar desde hoy en adelante. Elige otra fecha.');
@@ -230,8 +262,32 @@
         privacy_accepted_at: new Date().toISOString(),
         marketing_optin: data.get('marketing_optin') === '1'
       };
+      // Un solo envío a la vez: el botón queda en «Agendando…» con un aviso de espera junto a él,
+      // y un segundo clic o Enter no vuelve a enviar (14-nov-2026). Va por clase y no por estilo en
+      // línea porque el efecto data-hover restaura el style del botón al salir el mouse.
+      if (form.__enviando) return;
+      form.__enviando = true;
+      var exito = false;
+      var espera = form.querySelector('[data-form-espera]');
+      if (!espera) {
+        espera = document.createElement('p');
+        espera.setAttribute('data-form-espera', '');
+        espera.setAttribute('role', 'status');
+        espera.setAttribute('aria-live', 'polite');
+        espera.className = 'at-f-full at-form-espera';
+        if (submit && submit.parentNode) submit.parentNode.insertBefore(espera, submit.nextSibling); else form.appendChild(espera);
+      }
+      espera.textContent = 'Estamos agendando tu cita y preparando el enlace de la reunión. Puede tardar unos segundos; no cierres esta ventana.';
+      espera.hidden = false;
+      if (submit) {
+        submit.__htmlOriginal = submit.innerHTML;
+        submit.disabled = true;
+        submit.setAttribute('aria-busy', 'true');
+        submit.classList.add('at-btn-cargando');
+        submit.innerHTML = '<span class="at-spin" aria-hidden="true"></span><span>Agendando tu cita…</span>';
+      }
+      form.setAttribute('aria-busy', 'true');
       track('diagnostico_form_started', { intent: intent, interest: interest });
-      if (submit) { submit.disabled = true; submit.style.opacity = '.72'; submit.style.cursor = 'wait'; }
       setFormMessage(form, '', '');
       fetch(cfg.availabilityUrl, {
         method: 'POST',
@@ -253,6 +309,9 @@
             body: JSON.stringify({
               action: 'saveLead',
               sessionId: payload.session_id,
+              turnstileToken: tsToken,
+              // El subflujo de agenda ya distingue 'Seguimiento' (lo usa el bot de WhatsApp); sin esto agenda como demo.
+              appointmentType: intent === 'seguimiento' ? 'Seguimiento' : undefined,
               leadData: {
                 name: payload.name,
                 email: payload.email,
@@ -277,11 +336,33 @@
           });
         })
         .then(function (r) {
+          if (r.status === 403 && window.atTurnstile) throw new Error(window.atTurnstile.RECHAZO);
           if (!r.ok) throw new Error('No pudimos registrar la cita. Intenta nuevamente.');
           return r.text();
         })
-        .then(function () {
-          track('lead_submit', { intent: intent, interest: interest, lead_temperature: leadTemperature });
+        .then(function (texto) {
+          var resp = {};
+          try { resp = JSON.parse(texto) || {}; } catch (e) {}
+          if (Array.isArray(resp)) resp = resp[0] || {};
+          // Seguimiento de un cliente: no es un lead (ni para Meta ni para Google). Si n8n no lo reconoció como
+          // cliente, lo agendó como diagnóstico y sí cuenta como lead.
+          // Si n8n no dice el tipo (respuesta vieja u horario rechazado), no se cuenta como lead: mejor perder una
+          // conversión que contar como lead a un cliente.
+          var esSeguimiento = intent === 'seguimiento' && resp.appointmentType !== 'Demo';
+          var rebajado = intent === 'seguimiento' && resp.appointmentType === 'Demo';
+          mensajeExito(esSeguimiento ? (resp.appointmentType === 'Seguimiento' ? 'seguimiento' : 'diagnostico') : (rebajado ? 'rebajado' : 'diagnostico'));
+          if (esSeguimiento) {
+            track('seguimiento_agendado', { intent: intent, confirmado: resp.appointmentType === 'Seguimiento' });
+            exito = true;
+            setState({ scheduled: true });
+            form.reset();
+            fillUtm();
+            applyMode();
+            return;
+          }
+          track('lead_submit', { intent: rebajado ? 'diagnostico' : intent, interest: interest, lead_temperature: leadTemperature });
+          // Cita registrada: avisa a Meta (solo si la persona aceptó cookies; ver mu-plugin at-consentimiento).
+          if (window.atLead) { window.atLead('Agenda diagnóstico (portada)', { email: payload.email, fecha: payload.scheduled_date, hora: payload.scheduled_time }); }
           // Atribución WP-side por session_id (fire-and-forget; no bloquea el éxito).
           if (cfg.attrAjaxUrl && cfg.attrNonce) {
             try {
@@ -294,6 +375,7 @@
               fetch(cfg.attrAjaxUrl, { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: ad.toString() }).catch(function () {});
             } catch (e) {}
           }
+          exito = true;
           setState({ scheduled: true });
           form.reset();
           fillUtm();
@@ -303,7 +385,22 @@
           setFormMessage(form, 'error', err && err.message ? err.message : 'No pudimos enviar la solicitud. Intenta nuevamente.');
         })
         .finally(function () {
-          if (submit) { submit.disabled = false; submit.style.opacity = ''; submit.style.cursor = ''; }
+          form.__enviando = false;
+          // El token sirve una sola vez: casilla nueva para la próxima cita (o el reintento).
+          if (window.atTurnstile) window.atTurnstile.reiniciar(form);
+          form.removeAttribute('aria-busy');
+          if (espera) { espera.textContent = ''; espera.hidden = true; }
+          if (submit) {
+            submit.disabled = false;
+            submit.removeAttribute('aria-busy');
+            submit.classList.remove('at-btn-cargando');
+            if (submit.__htmlOriginal != null) submit.innerHTML = submit.__htmlOriginal;
+          }
+          // Con error, el aviso queda arriba del formulario: lo traemos a la vista (en el celular el botón está abajo).
+          if (!exito) {
+            var msg = form.querySelector('[data-form-message]');
+            if (msg && msg.scrollIntoView) { try { msg.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); } catch (e) { msg.scrollIntoView(); } }
+          }
         });
     },
     stopProp: function (e) { if (e && e.stopPropagation) e.stopPropagation(); }
@@ -329,6 +426,10 @@
     document.querySelectorAll('[data-act-submit]').forEach(function (el) {
       var fn = H[el.getAttribute('data-act-submit')];
       if (fn) el.addEventListener('submit', fn);
+      // Casilla anti-robot (Turnstile) sobre el botón de agendar; n8n rechaza la cita sin token válido.
+      if (window.atTurnstile && el.getAttribute('data-act-submit') === 'submitDemo') {
+        window.atTurnstile.enForm(el, el.querySelector('[type="submit"]'));
+      }
     });
     document.querySelectorAll('[data-hover]').forEach(function (el) {
       var hov = el.getAttribute('data-hover');
@@ -509,6 +610,11 @@
     // Tráfico pagado (utm_*) va directo al contenido: la intro de 4.4s
     // destruye el LCP y quema presupuesto de ads en rebotes.
     try { if (/[?&]utm_/.test(location.search)) return; } catch (e) {}
+    // Decisión de Luis (17-nov-2026, propuesta de Faro): solo en la portada. En landings y guías quien llega
+    // desde Google busca ese contenido, y la capa de 4,4 s se lo tapaba y atrasaba el LCP de escritorio.
+    try { if (location.pathname !== '/') return; } catch (e) {}
+    // Decisión de Luis (12-nov-2026): en celular no se muestra (tapaba la pantalla; lo principal aparecía a los 7,7 s en red lenta).
+    try { if (window.matchMedia && window.matchMedia('(max-width: 767px), (pointer: coarse) and (max-width: 1024px)').matches) return; } catch (e) {}
     // Premium UX: play the brand intro only once per browser session, so
     // internal navigation isn't blocked by the 4.4s sequence every time.
     try { if (sessionStorage.getItem('at_intro_seen')) return; sessionStorage.setItem('at_intro_seen', '1'); } catch (e) {}
@@ -885,51 +991,32 @@
     applyScIf();
     fillUtm();
     applyMode();
-    initCookieBanner();
     track('landing_p0_view', { template: 'AT Home Premium' });
   }
 
-  // Banner de cookies (Ley 21.719): el home premium y las landings no cargan
-  // footer.php, así que el banner se inyecta aquí. GA4/Meta Pixel deben chequear
-  // localStorage.at_cookie_consent === 'accepted' antes de cargar.
-  function initCookieBanner() {
-    var consent = null;
-    try {
-      consent = localStorage.getItem('at_cookie_consent');
-      if (!consent && localStorage.getItem('cookies-accepted') === 'true') {
-        consent = 'accepted';
-        localStorage.setItem('at_cookie_consent', 'accepted');
-      }
-    } catch (e) { return; }
-    if (consent) return;
-
-    var bar = document.createElement('div');
-    bar.id = 'at-cookie-banner';
-    bar.setAttribute('role', 'dialog');
-    bar.setAttribute('aria-label', 'Consentimiento de cookies');
-    bar.style.cssText = 'position:fixed;left:16px;right:16px;bottom:16px;z-index:100001;max-width:680px;margin:0 auto;background:#0d2044;border:1px solid rgba(45,212,191,.35);border-radius:14px;padding:16px 18px;box-shadow:0 20px 60px -20px rgba(0,0,0,.85);display:flex;flex-wrap:wrap;align-items:center;gap:12px;font-family:Manrope,sans-serif';
-    bar.innerHTML =
-      '<p style="flex:1 1 300px;margin:0;font-size:13px;line-height:1.5;color:#b9c6d8">Usamos cookies esenciales y, solo con tu permiso, analítica y píxeles publicitarios. <a href="/cookies/" style="color:#2dd4bf;text-decoration:underline">Más información</a>.</p>' +
-      '<div style="display:flex;gap:9px;flex-wrap:wrap">' +
-      '<button type="button" id="at-ck-accept" style="background:#2dd4bf;color:#061018;border:none;border-radius:9px;padding:10px 20px;font-family:\'Space Grotesk\',sans-serif;font-weight:600;font-size:13.5px;cursor:pointer">Aceptar</button>' +
-      '<button type="button" id="at-ck-reject" style="background:transparent;color:#b9c6d8;border:1px solid rgba(255,255,255,.25);border-radius:9px;padding:10px 20px;font-family:\'Space Grotesk\',sans-serif;font-weight:600;font-size:13.5px;cursor:pointer">Rechazar</button>' +
-      '</div>';
-    document.body.appendChild(bar);
-
-    function setConsent(value) {
-      try {
-        localStorage.setItem('at_cookie_consent', value);
-        localStorage.setItem('cookies-accepted', value === 'accepted' ? 'true' : 'false');
-      } catch (e) {}
-      bar.remove();
-      document.dispatchEvent(new CustomEvent('at:cookie-consent', { detail: { consent: value } }));
-    }
-    var acceptBtn = document.getElementById('at-ck-accept');
-    var rejectBtn = document.getElementById('at-ck-reject');
-    if (acceptBtn) acceptBtn.addEventListener('click', function () { setConsent('accepted'); });
-    if (rejectBtn) rejectBtn.addEventListener('click', function () { setConsent('rejected'); });
-  }
+  // El aviso de cookies lo dibuja el mu-plugin at-consentimiento.php (también en la portada y las landings).
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
   else boot();
+})();
+
+/* Clientes: las tarjetas se asoman al hacer scroll (12-nov-2026). Sin IntersectionObserver o con
+   menos movimiento quedan visibles desde el inicio: el CSS solo las oculta si existe .at-cl-anima. */
+(function () {
+  var grillas = document.querySelectorAll('.at-cl-grid');
+  if (!grillas.length || !('IntersectionObserver' in window)) return;
+  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  var io = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (!e.isIntersecting) return;
+      var item = e.target, hermanos = item.parentNode.children, i = Array.prototype.indexOf.call(hermanos, item);
+      item.style.transitionDelay = (i % 4) * 90 + 'ms';
+      item.classList.add('is-in');
+      io.unobserve(item);
+    });
+  }, { rootMargin: '0px 0px -8% 0px', threshold: 0.12 });
+  grillas.forEach(function (g) {
+    g.classList.add('at-cl-anima');
+    g.querySelectorAll('.at-cl-gitem').forEach(function (it) { io.observe(it); });
+  });
 })();

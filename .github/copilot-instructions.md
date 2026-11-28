@@ -14,17 +14,18 @@ Boveda maestra: `C:\Users\luis_\Documents\Codex\AI-Memory-Vault`
 Este repositorio tiene skills de propuestas en `.github/skills/`. Usarlas cuando el usuario trabaje en ventas o propuestas a clientes.
 
 ### at-gamma-proposal → `.github/skills/at-gamma-proposal/SKILL.md`
-Triggers: "generar propuesta gamma", "nueva propuesta cliente"
-Genera: Gamma prompt (8 slides) + chatbot system prompt + prompt de diseño visual
+Triggers: "generar propuesta", "nueva propuesta cliente", "at propuesta"
+Genera: JSON de la plantilla única del `propuesta-renderer` + chatbot system prompt (+ prompt de diseño si aplica). **Ya no genera prompts de Gamma**: regla en `Docs/METODO_AT/PROPUESTAS-PLANTILLA-UNICA.md`.
 
 ### at-proposal-refiner → `.github/skills/at-proposal-refiner/SKILL.md`
-Triggers: "refinar propuesta", "mejorar prompt gamma"
-Flujo: historial + Gamma → API → evalúa → refina → prompt de diseño
+Triggers: "refinar propuesta", "actualizar prompts propuesta"
+Flujo: historial + presentación del renderer → `GET …/proposal/{ID}/state` → evalúa → v3: comentarios para «Pedir cambios» en el panel (el `POST /prompts` responde 409); antiguas: `POST /prompts` + re-render → prompt de diseño de `at-gamma-proposal`
 
 ### API del pipeline
 ```
-GET/POST https://automatizatech.cl/?rest_route=/automatiza-tech/v1/proposal/{ID}/prompts
-X-AT-Secret: <secret>  (wp-config.php del servidor)
+GET      https://automatizatech.cl/?rest_route=/automatiza-tech/v1/proposal/{ID}/state    (payload, flujo, status)
+GET/POST https://automatizatech.cl/?rest_route=/automatiza-tech/v1/proposal/{ID}/prompts  (POST: solo propuestas antiguas)
+X-AT-Secret: <secret>  (AT_REST_SECRET del wp-config.php del servidor; leer por etiqueta, nunca escribirlo)
 ```
 
 Referencia: `C:\Users\luis_\Documents\Codex\AI-Memory-Vault\30-Agent-Protocols\automatizatech-pipeline.md`
@@ -33,6 +34,28 @@ Referencia: `C:\Users\luis_\Documents\Codex\AI-Memory-Vault\30-Agent-Protocols\a
 ## Responder con base y fundamentos (regla general, Luis 2026-09-23)
 
 No asumir. Antes de dar una cifra, un precio, un plazo, un estado o una capacidad, verificarla con una fuente (código, base de datos, prueba, documentación o búsqueda web) y decir de dónde sale, con enlace cuando exista. "Yo creía", "creo que" o "debería" no son base. Lo que no se pueda verificar se presenta como **supuesto explícito**, con el motivo y cómo se comprobaría; nunca como hecho. Los precios que se propongan a un cliente llevan referencias de mercado con fuentes y el cálculo aplicado al caso.
+
+## GT Baseball Academy (cliente Jeffer García) — estado vivo
+
+- EN PROD en `https://gtbaseball.com/`:
+  - inscripción con QR, pago y Turnstile;
+  - portada con planes y fondos de estadio;
+  - buscador privado `/buscador/` con clave, fotos y listado en PDF.
+- Código en `demos/gt-baseball/`, en `main` desde el 13-oct-2026 (PR #61). Flujos n8n en `N8N/gt-baseball/` (ver su
+  README).
+- 🔴 El repo es público: los datos del cliente viven en `gt-config.json`, fuera del repo. Se despliega solo con
+  `deploy_dominio.py` y con el ok de Luis.
+- **Relevo completo:** bóveda privada `10-Projects/GT-Baseball/README.md`. Diseño e historial en
+  `Docs/superpowers/specs/2026-09-27-gt-baseball-prototipo-design.md`.
+
+## Automatizatech — Plan de trabajo con carta Gantt (Etapas 1 y 2 EN PROD)
+
+Guía única: `Docs/METODO_AT/PLAN-DE-TRABAJO.md`. Módulo `wp-content/themes/automatiza-tech/inc/plan-trabajo/` (cargado por `cargar.php`; `functions.php` no se toca). Al firmar un contrato de servicios se crea el plan; Luis lo edita y aprueba en la ficha del CRM y lo envía al cliente (correo con PDF o su WhatsApp, siempre con su clic). El cliente lo ve en `ver-plan.php?id=<código>` y agenda la llamada de seguimiento por `POST /wp-json/automatiza-tech/v1/plan-seguimiento` (reunión de seguimiento, nunca un lead). Pruebas en `tests/plan/`. Los correos al cliente nunca enlazan a `*.easypanel.host`.
+
+
+## Automatizatech — Entregables con notas y sugerencias con IA (EN PROD)
+
+Guía única: `Docs/METODO_AT/ENTREGABLES-NOTAS.md`. Módulo `wp-content/themes/automatiza-tech/inc/entregables/` (prefijo `at_en_`, cargado desde `inc/admin-proposals.php`; `functions.php` no se toca) y página pública `ver-entregable.php?id=<código>`. Las versiones van dentro del mismo entregable. El cliente ve solo las versiones ya enviadas. Las imágenes se reescriben con GD, sin EXIF, y se guardan en una carpeta privada. La IA (`ia.php`, OpenAI) solo sugiere texto y nunca envía. Pruebas: `bash tests/entregables/correr.sh`.
 
 ## graphify
 
@@ -51,3 +74,13 @@ source files when (a) modifying/debugging specific code, (b) the graph lacks the
 (c) the graph is missing or stale.
 
 Type `/graphify` in Copilot Chat to build or update the graph.
+
+<!-- AT-RETOMAR-001-LOCAL:START -->
+## AT-RETOMAR-001 — referencia local
+
+Rama `claude/retomar-prospectos-final` (PR #94, sin merge), worktree `C:/wamp64/www/automatiza-tech/.worktrees/retomar-eje`. Guía: [Retomar prospectos](../Docs/METODO_AT/RETOMAR-PROSPECTOS.md). Fase 1 EN PROD desde el 2026-10-18. Fase 2 (detección automática, redacción con IA, fotos de Higgsfield y correo semanal con aprobación de Luis) **EN PROD desde el 2026-10-19 con el reloj activo**; estado del primer ciclo y pendientes en la sección «Fase 2» de la guía. Nada sale a un prospecto sin la aprobación de Luis (en dos pasos: correo y página de confirmación).
+<!-- AT-RETOMAR-001-LOCAL:END -->
+
+## Gastos y créditos (Balance)
+
+- Gastos y créditos (Luis, 2026-10-21): cada vez que un agente gaste créditos o dinero de AT (una generación en Higgsfield, una recarga, una suscripción, Google Cloud, etc.), le avisa a **Balance**, el agente de finanzas (`at-balance-claude` / `at-balance-codex`). El aviso lleva qué fue, cuánto, en qué cuenta, para qué proyecto y la referencia (id de la generación, factura o pedido). Si Balance no está disponible, el agente lo registra él mismo con `C:/Users/luis_/Documents/Codex/Shared-Tools/finanzas/registrar.py`. Nunca se escriben montos reales en el repositorio, que es público. Guía: `Docs/METODO_AT/FINANZAS-BALANCE.md`.

@@ -1,0 +1,5 @@
+# Respaldos locales que genera el aplicador: contienen los workflows completos
+# (rutas de webhook, telefonos). Este repo es PUBLICO: van a la boveda privada
+# (AI-Memory-Vault/90-Archive/respaldos-n8n/), nunca a un commit.
+respaldos-antes-del-cambio/
+respaldo_*.json

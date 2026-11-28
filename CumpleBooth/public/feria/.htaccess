@@ -1,0 +1,7 @@
+# Fondo de la feria. El CDN de Hostinger entrega a Android las imágenes achicadas a 800 px y en WebP
+# (ver themes/.htaccess, 2026-09-10); `no-transform` le pide que no las toque.
+<IfModule mod_headers.c>
+  <FilesMatch "\.(png|jpe?g|webp|gif)$">
+    Header merge Cache-Control "no-transform"
+  </FilesMatch>
+</IfModule>

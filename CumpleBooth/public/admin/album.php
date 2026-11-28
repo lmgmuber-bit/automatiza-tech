@@ -8,6 +8,7 @@
  * aprueba ni reordena.
  */
 require __DIR__ . '/../lib.php';
+require_once __DIR__ . '/../lib.fechas.php';
 require __DIR__ . '/config.php';
 
 $adminSecureCookie = !empty($_SERVER['HTTPS']) && strtolower((string) $_SERVER['HTTPS']) !== 'off';
@@ -221,8 +222,8 @@ if ($album !== null && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'
                 $closesAt = null;
                 if ($closesRaw !== '') {
                     // <input type="date"> entrega YYYY-MM-DD; se cierra al final del día.
-                    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $closesRaw)) {
-                        $errors[] = 'La fecha de cierre no tiene un formato válido.';
+                    if (!cb_fecha_valida($closesRaw)) {
+                        $errors[] = 'La fecha de cierre debe existir y tener formato AAAA-MM-DD.';
                     } else {
                         $closesAt = $closesRaw . ' 23:59:59';
                     }
@@ -949,6 +950,19 @@ main > section#fotos-kiosco { display: none !important; }
           Lo que sale de la cabina. Es lo que ven los papás en la galería con PIN, y es
           <strong>distinto del álbum de arriba</strong>: quitar una foto del álbum no la borra
           de acá.
+        </p>
+
+        <?php /* Todas de una vez en un ZIP (2026-10-21): con 30 o 300 fotos, guardarlas de a una no es una
+                 opción. La página del ZIP vuelve a mirar los permisos: lo del álbum solo va si se tiene. */ ?>
+        <p class="fotos-descargar">
+          <a class="btn btn-primary btn-sm" href="<?= h('descargar-fotos.php?party=' . rawurlencode($publicSlug)) ?>">
+            ⬇️ Descargar todas las fotos (ZIP)
+          </a>
+          <span class="muted small">
+            <?= $verAlbum
+              ? 'Trae las de la cabina que siguen en la galería y las que mandaron los invitados (aprobadas y pendientes). Los videos se bajan de a uno.'
+              : 'Trae las fotos de la cabina que siguen en la galería.' ?>
+          </span>
         </p>
 
         <nav class="curation-filters">

@@ -13,9 +13,8 @@
         "triggerOn": "specificFolder",
         "folderToWatch": {
           "__rl": true,
-          "value": "",
-          "mode": "list",
-          "cachedResultName": "Meet Recordings"
+          "value": "14Qy7majCZlelxzkyUcjyJZjZ0mgMoGWW",
+          "mode": "list"
         },
         "event": "fileCreated",
         "options": {}
@@ -23,14 +22,14 @@
       "type": "n8n-nodes-base.googleDriveTrigger",
       "typeVersion": 1,
       "position": [
-        -400,
-        300
+        -3440,
+        624
       ],
-      "id": "google-drive-trigger",
+      "id": "92f8bf8a-a58b-4937-a0ec-51c7926841df",
       "name": "Nueva Transcripción en Drive",
       "credentials": {
         "googleDriveOAuth2Api": {
-          "id": "YOUR_GOOGLE_DRIVE_CREDENTIAL_ID",
+          "id": "fXrMhILaDWpAj8Ue",
           "name": "Google Drive account"
         }
       }
@@ -39,9 +38,9 @@
       "parameters": {
         "conditions": {
           "options": {
-            "caseSensitive": false,
+            "caseSensitive": true,
             "leftValue": "",
-            "typeValidation": "loose",
+            "typeValidation": "strict",
             "version": 2
           },
           "conditions": [
@@ -62,10 +61,10 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        -176,
-        300
+        -3216,
+        624
       ],
-      "id": "check-is-transcript",
+      "id": "d2268f98-ede8-451b-9372-421d48d467c9",
       "name": "¿Es Google Doc?"
     },
     {
@@ -77,15 +76,15 @@
       "type": "n8n-nodes-base.googleDocs",
       "typeVersion": 2,
       "position": [
-        48,
-        300
+        -2928,
+        624
       ],
-      "id": "download-transcript",
+      "id": "cbc692cb-f9b7-4ff9-9155-23c079b0761d",
       "name": "Leer Documento Google Docs",
       "credentials": {
         "googleDocsOAuth2Api": {
-          "id": "YOUR_GOOGLE_DRIVE_CREDENTIAL_ID",
-          "name": "Google Drive account"
+          "id": "6HFs8By62NvRaxn2",
+          "name": "Google Docs account"
         }
       }
     },
@@ -96,10 +95,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        380,
-        300
+        -2656,
+        624
       ],
-      "id": "prepare-data",
+      "id": "d6791c01-9b47-4968-a529-0988237786ce",
       "name": "Preparar Datos"
     },
     {
@@ -129,29 +128,37 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        720,
-        300
+        -2384,
+        640
       ],
-      "id": "check-email",
+      "id": "6c5eed44-8fb4-4b41-8a5b-a468d21f62bd",
       "name": "¿Tiene Email Cliente?"
     },
     {
       "parameters": {
         "method": "POST",
-        "url": "https://n8n-n8n.kchiba.easypanel.host/webhook/generar-propuesta-v2",
+        "url": "=https://n8n-n8n.kchiba.easypanel.host/webhook/propuesta-v3-borrador",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"transcript\": {{ JSON.stringify($json.transcript) }},\n  \"client_email\": {{ JSON.stringify($json.client_email) }}\n}",
-        "options": {}
+        "jsonBody": "={\n  \"transcript\": {{ JSON.stringify($json.transcript) }},\n  \"client_email\": {{ JSON.stringify($json.client_email) }},\n  \"drive_file_id\": {{ JSON.stringify($('Nueva Transcripción en Drive').first().json.id) }}\n}",
+        "options": {},
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth"
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        944,
-        200
+        -2096,
+        512
       ],
-      "id": "send-to-proposal",
-      "name": "Enviar a Workflow Propuestas"
+      "id": "bc7affc0-cdcd-4b16-9613-5ade6418f251",
+      "name": "Enviar a Workflow Propuestas",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "HQ3y7F1f5InsCjkV",
+          "name": "X-AT-Borrador-Key"
+        }
+      }
     },
     {
       "parameters": {
@@ -164,11 +171,12 @@
       "type": "n8n-nodes-base.emailSend",
       "typeVersion": 2.1,
       "position": [
-        944,
-        400
+        -2096,
+        720
       ],
-      "id": "notify-missing-email",
+      "id": "e05a3125-e8b5-4dfb-85ea-e043619f4a09",
       "name": "Notificar Email Faltante",
+      "webhookId": "157c48de-3524-4354-9688-569d760f161c",
       "credentials": {
         "smtp": {
           "id": "dyhVFWmjRNC45ccA",
@@ -199,10 +207,10 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        1168,
-        200
+        -1872,
+        512
       ],
-      "id": "success-response",
+      "id": "ee1fdf76-2c9b-4b58-9962-939761ea149f",
       "name": "Éxito"
     }
   ],
@@ -213,29 +221,6 @@
         [
           {
             "node": "¿Es Google Doc?",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "¿Es Google Doc?": {
-      "main": [
-        [
-          {
-            "node": "Leer Documento Google Docs",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        []
-      ]
-    },
-    "Leer Documento Google Docs": {
-      "main": [
-        [
-          {
-            "node": "Preparar Datos",
             "type": "main",
             "index": 0
           }
@@ -281,16 +266,43 @@
           }
         ]
       ]
+    },
+    "Leer Documento Google Docs": {
+      "main": [
+        [
+          {
+            "node": "Preparar Datos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Es Google Doc?": {
+      "main": [
+        [
+          {
+            "node": "Leer Documento Google Docs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
-  "active": false,
+  "active": true,
   "settings": {
     "executionOrder": "v1",
-    "timezone": "America/Santiago"
+    "timeSavedMode": "fixed",
+    "timezone": "America/Santiago",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false,
+    "errorWorkflow": "p7ISUf0J5GycHscc",
+    "binaryMode": "separate"
   },
-  "versionId": "meet-transcription-v1",
+  "versionId": "9aed035f-ff55-4290-902f-183e138bdfad",
   "meta": {
-    "templateCredsSetupCompleted": false
+    "templateCredsSetupCompleted": true
   },
   "tags": []
 }

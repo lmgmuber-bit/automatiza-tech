@@ -42,18 +42,24 @@ Las credenciales viven **fuera del repo**, en `C:\Users\luis_\OneDrive\Documento
 - Fuente canonica: `Docs/ORCHESTRATION/README.md`.
 - Claude es el orquestador principal por defecto y Codex el suplente; solo uno puede estar activo mediante un lease valido.
 - Antes de ejecutar, cada agente registra clase, riesgo, incertidumbre, reversibilidad y perfil/modelo segun `Docs/ORCHESTRATION/model-routing.yaml`.
+- Router de modelos (Luis, 2026-10-17): antes de ejecutar o delegar, aplicar la skill `at-router-modelos`. Los cargos at-* traen modelo y esfuerzo fijados (Claude: claude-haiku-5-5/claude-sonnet-5-5/claude-opus-5-5; Codex: gpt-6-luna/gpt-6.1-sol, `--profile profundo` para C3); subir de modelo es explícito. Mapa en `model-routing.yaml` v2; informe en `C:/Users/luis_/Documents/Codex/Shared-Tools/Router-Modelos-2026-10-17.md`. Sin proxies de terceros.
 - Codex debe seguir `Docs/ORCHESTRATION/CODEX_ORCHESTRATOR.md` cuando tome el relevo.
 - Claude debe seguir `Docs/ORCHESTRATION/CLAUDE_ORCHESTRATOR.md` como orquestador principal.
 - Estado actual del relevo: `Docs/ORCHESTRATION/current-handoff.yaml`.
 - Continuidad cruzada: `Docs/ORCHESTRATION/TASK_TAKEOVER.md`; cualquier agente puede retomar una tarea bloqueada tras reasignar ownership.
 - Los chats externos no se comunican por si solos: usar tickets/ledger compartido o a Luis como puente.
 - El tablero consume las fuentes canonicas; no crea una segunda verdad permanente.
+- Gastos y créditos (Luis, 2026-10-21): cada vez que un agente gaste créditos o dinero de AT (una generación en Higgsfield, una recarga, una suscripción, Google Cloud, etc.), le avisa a **Balance**, el agente de finanzas (`at-balance-claude` / `at-balance-codex`). El aviso lleva qué fue, cuánto, en qué cuenta, para qué proyecto y la referencia (id de la generación, factura o pedido). Si Balance no está disponible, el agente lo registra él mismo con `C:/Users/luis_/Documents/Codex/Shared-Tools/finanzas/registrar.py`. Nunca se escriben montos reales en el repositorio, que es público. Guía: `Docs/METODO_AT/FINANZAS-BALANCE.md`.
 <!-- AT-ORCHESTRATION:END -->
 
 <!-- AT-METHOD:START -->
 ## Método AT y casos de uso
 
 Para planificar, cotizar, ejecutar, entregar o retomar trabajo con clientes, leer `Docs/METODO_AT/README.md`. Las fuentes canónicas son `Docs/METODO_AT/APLICACION_DEL_METODO_AT.md` y `Docs/METODO_AT/SERVICIOS_Y_CASOS_DE_USO.md`. Para marketing, nichos y contenido de Instagram/Reels, usar `Docs/MARKETING/2026-07-22-AT-ESTUDIO-NICHOS-Y-ESTRATEGIA-REELS-INSTAGRAM.md`. Distinguir siempre capacidades actuales comprobadas de trabajo en curso y roadmap.
+
+Demos de prototipos para prospectos (desde el 2026-09-28, `https://automatizatech.cl/demos/<rubro>/`): método en `Docs/METODO_AT/PROTOTIPOS-Y-DEMOS.md` (404 propio en `.htaccess`, React local con `window.__resources`, arreglo móvil obligatorio, advertencia sanitaria en rubros con alcohol, video de recorrido). Antes de tocar precios o reaprobar una propuesta v3, leer «Precios, reaprobación y enlaces» en `Docs/METODO_AT/PROPUESTAS-FLUJO-V3.md`. Lo propio de cada cliente vive en la bóveda (`10-Projects/<Cliente>/README.md`), nunca en este repo público.
+
+**Propuestas comerciales: una sola plantilla (regla de Luis, 2026-09-23).** Toda propuesta de cliente se arma con la plantilla del `propuesta-renderer` (la misma estructura y controles que la propuesta de referencia; cuál es, en la bóveda privada): no se vuelve a Gamma ni se diseña una presentación nueva. Procedimiento, campos del JSON, fotos alojadas (no el CDN de Higgsfield) y el paso de **Guardar** en el panel para que el chatbot funcione: `Docs/METODO_AT/PROPUESTAS-PLANTILLA-UNICA.md`.
 <!-- AT-METHOD:END -->
 
 <!-- AT-VIDEO-RULES:START -->
@@ -61,16 +67,17 @@ Para planificar, cotizar, ejecutar, entregar o retomar trabajo con clientes, lee
 
 Estas reglas aplican a cualquier video, Reel Diario, Reel programado, comercial, Story, post audiovisual o prompt generado desde Codex/Claude/n8n para AutomatizaTech.
 
-1. Logo AT obligatorio y discreto: usar solo el logo real de referencia de AutomatizaTech. Debe ir en la esquina superior izquierda como watermark profesional, muy pequeno, sutil y translucido: maximo 4% del ancho del frame, opacidad aproximada 35-45%, reconocible pero nunca dominante. Nunca ubicarlo al centro, nunca agrandarlo, nunca inventar un logo generico ni variar el diseno. Si la herramienta generativa no respeta el tamano o fidelidad, agregar/corregir el overlay real en post con ffmpeg.
+1. Logo AT obligatorio: usar solo el logo real de referencia de AutomatizaTech, en la esquina superior izquierda. Tamaño y opacidad (decisión de Luis del 2026-10-20, para todos los videos de AutomatizaTech; reemplaza el antiguo «máximo 4 % del ancho, opacidad 35-45 %»): 96 px de ancho en un cuadro de 1080 px (≈9 % del ancho) y 60 % de opacidad, igual que la v6 del Guion 0 aprobada por Luis. Nunca ubicarlo al centro, nunca hacerlo más grande que eso, nunca inventar un logo generico ni variar el diseno. Si la herramienta generativa no respeta el tamano o fidelidad, agregar/corregir el overlay real en post con ffmpeg.
 2. Texto visible en espanol de Chile: todo texto en pantalla, interfaces, chats, emails, notificaciones, botones, calendarios, dashboards y celulares debe pedirse en espanol (Chile), nunca en ingles. Si Veo/Flow deforma texto menor, no regenerar solo por eso si la pieza es publicable; pero el prompt siempre debe pedir espanol.
 3. Antes de generar o publicar, revisar prompts de video para confirmar que incluyan estas reglas. Si un prompt contradice estas reglas, corregirlo primero.
-4. Cierre estándar AT para Reels: desde 2026-07-14, agregar una sola vez al final del Reel principal el clip completo `N8N/reel-diario-media-worker/assets/outro-at-10s.mp4` (~10s, 720x1280, con audio y CTA `Agenda tu diagnóstico gratis en automatizatech.cl`). Estructura final: `parte_1 + parte_2 + outro-at-10s.mp4`. No insertar el cierre entre partes ni dentro del bonus/Story. No usar el recorte de 3.2s porque puede cortar el logo; el banner turquesa anterior queda prohibido salvo instruccion expresa de Luis.
+4. Cierre de los Reels (decisión de Luis del 2026-10-23, reiterada el 2026-11-13 y el 2026-11-21): **ya no se usa el `outro-at-10s.mp4` en ningún Reel ni video de AutomatizaTech.** Cada pieza termina con una escena corta propia, de unos 3 a 11 s, que lleva una pregunta para que comenten, «Escríbenos», el logo AT y dos vías: Mensaje directo y automatizatech.cl. La pregunta, la escena y el fondo cambian en cada pieza. El «Agenda tu diagnóstico gratis en automatizatech.cl» va en el texto del post, no en el video. Detalle y control de entrega en la skill `at-video-studio` (`references/control-de-entrega.md`). 🔴 El worker del Reel Diario (`N8N/reel-diario-media-worker/server.mjs`) todavía agrega ese outro por defecto: hay que quitarlo antes de reactivar el Reel Diario. El banner turquesa anterior sigue prohibido salvo instrucción expresa de Luis.
 5. Log de publicaciones Reel Diario: n8n Plan B debe actualizar el CSV existente `IG-AT/Reel-Diario/Reel-Diario-Log-Publicaciones.csv` (`file_id=1NpJf8VVTiqcN5LdGFfLdi0T9qQ9iGCRw`) con update real del mismo archivo. No crear CSVs duplicados. Registrar intentos reales de publicación, fallos y rechazos QA; no registrar skips como `already_published`, `fresh_lock` o `folder_not_found`.
+6. Videos de recorrido para un prospecto (no son Reels, regla de Luis del 2026-09-29): logo AT visible arriba a la izquierda y **cierre propio** que dice «Agenda tu llamada de seguimiento para aclarar dudas», nunca el `outro-at-10s.mp4` (trae «diagnóstico» grabado). Método en `Docs/METODO_AT/PROTOTIPOS-Y-DEMOS.md`.
 
 Bloque recomendado para prompts:
 
 ```text
-MANDATORY: The provided reference image is the ONLY logo for AutomatizaTech. You MUST superimpose the EXACT "AT" logo (navy blue circle, white "AT" letters, teal arrow) from the reference image in the top-left corner of the frame. The logo must be clear, sharp, very small, and translucent like a professional TV watermark. Never invent a different logo design or a generic icon.
+MANDATORY: The provided reference image is the ONLY logo for AutomatizaTech. You MUST superimpose the EXACT "AT" logo (navy blue circle, white "AT" letters, teal arrow) from the reference image in the top-left corner of the frame. The logo must be clear and sharp, about 9% of the frame width (96 px on a 1080 px wide frame), at about 60% opacity. Never invent a different logo design or a generic icon.
 
 MANDATORY: All on-screen text, UI elements, app interfaces, phone screens, emails, notifications, and any visible written content in every video or image must be in Spanish (Chile), never in English. This applies to chat bubbles, dashboards, buttons, calendars, and any readable text shown on any screen.
 ```
@@ -83,25 +90,49 @@ Este proyecto tiene dos skills de ventas. Invocarlas cuando el usuario trabaje c
 
 ### Skill 1 — at-gamma-proposal
 **Cuándo:** datos de reunión con prospecto nuevo.
-**Triggers:** "generar propuesta gamma", "nueva propuesta cliente", "propuesta gamma"
-**Genera:** Gamma prompt (8 slides) + chatbot system prompt + prompt de diseño visual
-**Instrucciones:** `.github/skills/at-gamma-proposal/SKILL.md` (Copilot) o `C:\Users\luis_\.codex\skills\at-gamma-proposal\SKILL.md` (Codex)
+**Triggers:** "generar propuesta", "nueva propuesta cliente", "at propuesta" (`at-propuesta` es alias)
+**Genera:** JSON de la plantilla única del `propuesta-renderer` + chatbot system prompt (+ prompt de diseño si aplica). El nombre es histórico: **ya no genera prompts de Gamma**. El camino normal es el flujo automático v3 (`Docs/METODO_AT/PROPUESTAS-FLUJO-V3.md`); la skill sirve para armar o ajustar a mano.
+**Instrucciones:** una sola copia desde el 2026-10-10, `C:\Users\luis_\.agents\skills\at-gamma-proposal\SKILL.md`, enlazada desde Claude, Codex y OpenCode; `.github/skills/at-gamma-proposal/SKILL.md` es idéntica (Copilot). Cambiar las dos a la vez.
 
 ### Skill 2 — at-proposal-refiner
 **Cuándo:** propuesta ya guardada en el sistema (tiene edit_id).
 **Triggers:** "refinar propuesta", "mejorar prompt gamma", "actualizar prompts"
-**Flujo:** historial llamada + Gamma → GET API → evalúa → refina → POST → Output 3 diseño
-**Instrucciones:** `.github/skills/at-proposal-refiner/SKILL.md` (Copilot) o `C:\Users\luis_\.codex\skills\at-proposal-refiner\SKILL.md` (Codex)
+**Flujo:** historial llamada + presentación del renderer (`ver-presentacion.php?id=`) → GET API → evalúa → refina (v3: comentarios para «Pedir cambios» en el panel, porque `POST /prompts` responde 409; antiguas: `/prompts` y re-render con el mismo `unique_id`) → Output 3 diseño
+**Instrucciones:** una sola copia desde el 2026-10-10 (AT-INT-PROP-002), `C:\Users\luis_\.agents\skills\at-proposal-refiner\SKILL.md`, enlazada desde Claude, Codex y OpenCode; `.github/skills/at-proposal-refiner/SKILL.md` es idéntica (Copilot). Cambiar las dos a la vez. El secreto `X-AT-Secret` se lee por su etiqueta en el archivo de claves; la variable de Windows `AT_REST_SECRET_PROD` está vencida desde la rotación del 26-ago.
 
 ### API del pipeline
 ```
-GET/POST https://automatizatech.cl/?rest_route=/automatiza-tech/v1/proposal/{ID}/prompts
-Header: X-AT-Secret: <secret>  (wp-config.php del servidor — no exponer)
+GET      https://automatizatech.cl/?rest_route=/automatiza-tech/v1/proposal/{ID}/state    (payload, flujo, status)
+GET/POST https://automatizatech.cl/?rest_route=/automatiza-tech/v1/proposal/{ID}/prompts  (POST: solo propuestas antiguas; v3 = 409)
+Header: X-AT-Secret: <secret>  (AT_REST_SECRET del wp-config.php del servidor — leer por etiqueta, no exponer)
 ```
+La referencia de la bóveda (`automatizatech-pipeline.md`) y su carpeta `Global-Skills/` todavía describen Gamma (pendiente registrado el 2026-10-10); ante una diferencia, prevalecen las skills de `~/.agents/skills` y las guías `Docs/METODO_AT/PROPUESTAS-*.md`.
 
 ### Referencia completa
 `C:\Users\luis_\Documents\Codex\AI-Memory-Vault\30-Agent-Protocols\automatizatech-pipeline.md`
 <!-- AT-PIPELINE:END -->
+
+## GT Baseball Academy (cliente Jeffer García) — estado vivo
+
+- EN PROD en `https://gtbaseball.com/`:
+  - inscripción con QR, pago y Turnstile;
+  - portada con planes y fondos de estadio;
+  - buscador privado `/buscador/` con clave, fotos y listado en PDF.
+- Código en `demos/gt-baseball/`, en `main` desde el 13-oct-2026 (PR #61). Flujos n8n en `N8N/gt-baseball/` (ver su
+  README).
+- 🔴 El repo es público: los datos del cliente viven en `gt-config.json`, fuera del repo. Se despliega solo con
+  `deploy_dominio.py` y con el ok de Luis.
+- **Relevo completo:** bóveda privada `10-Projects/GT-Baseball/README.md`. Diseño e historial en
+  `Docs/superpowers/specs/2026-09-27-gt-baseball-prototipo-design.md`.
+- **Asistente de mensajes directos de Instagram, EN PROD desde el 28-oct-2026 y en `main` (PR #107, `d336780`; `main` =
+  PROD):** guía `Docs/METODO_AT/ASISTENTE-INSTAGRAM.md`, flujos en `N8N/instagram/` (principal `nDOSJhtVUPEGYrv3` y
+  herramientas `9qMlHNKITu0OWUfU`, activos). Solo la línea de Instagram corre `aplicar.py` y `probar.py` sobre esos flujos;
+  el Cerebro AT lo mantiene Eje. `omnichannel-derivacion.php` se sube antes que el controlador. Revisión B de Vigía-Codex
+  pendiente (encargo en la bóveda, `10-Projects/2026-10-28-Asistente-Instagram-Revision-B-Vigia.md`).
+
+## Instagram de AT — comentarios con palabra clave (estado vivo)
+
+EN PROD desde el 2026-10-24 y en `main` (PR #115). Guía única: `Docs/OMNICLIENTE-IG-COMENTARIOS.md`; aprendizajes y vía rápida en la bóveda, `10-Projects/2026-10-24-Instagram-Comentarios-Palabra-Clave.md`. Palabras por canal en `bot_configs.custom_functions_json.palabras_clave` (editar con `tools/ig-palabras-clave-config.php`). Lo que sigue en la conversación es el asistente de mensajes directos (PR #107).
 
 ## graphify
 
@@ -119,3 +150,14 @@ Rules:
 ## Incidente de seguridad 2026-08-26
 
 - **Incidente de seguridad 2026-08-26 (LEER antes de tocar ARGOS, secretos o el Reel Diario):** `Docs/2026-08-26-INCIDENTE-SEGURIDAD-N8N-Y-REEL-DIARIO.md`. Cerró tres agujeros (bypass de `WP_DEBUG` que dejaba público el listado de errores de ARGOS, `n8n_test_token` que permitía disparar envío masivo de correos, API keys en texto plano en nodos de n8n) y rotó cinco secretos. Contiene además la regla obligatoria de redacción al buscar en el repo, cómo generar el token de Instagram para esta app (`graph.instagram.com`, no el flujo de Page Token), y el workaround del bloqueo de `settings` al escribir workflows por API.
+
+## Punteros de proyecto (estado vivo)
+
+- **Entregables con notas, versiones y sugerencias con IA EN PROD desde el 2026-10-06 y en `main` (PR #76 y #77; enlaces del portal firmados en el PR #75):** guía `Docs/METODO_AT/ENTREGABLES-NOTAS.md`; módulo `wp-content/themes/automatiza-tech/inc/entregables/` + `ver-entregable.php`. Cada versión de un entregable va al cliente por correo y por WhatsApp. El cliente deja notas con texto y 0 a 3 fotos; Luis responde desde la ficha del CRM. Los botones «✨ Sugerir mensaje / respuesta» (OpenAI, menos de un centavo de dólar) solo proponen el texto, nunca envían. Primer cliente real: Julio (Vitolio, CRM 3, entregable 3); por ahí se hace el seguimiento de los entregables del plan de trabajo.
+- **Plan de trabajo con carta Gantt — Etapa 1 EN PROD (2026-09-30, ~00:00, rama `claude/plan-de-trabajo`; renderer `claude/plan-renderer`):** guía única `Docs/METODO_AT/PLAN-DE-TRABAJO.md`. Al firmar un contrato de servicios se crea un plan, la IA arma el borrador y Luis lo edita, pide cambios y aprueba desde la pestaña «🗓️ Plan de trabajo» de la ficha del CRM; nada le llega al cliente (eso es la Etapa 2). 🔴 Nunca ha corrido con un contrato real: revisar las ejecuciones de los tres flujos n8n en la primera prueba. Respaldo y rollback en la guía. Etapa 2 (envío al cliente, `ver-plan.php` y agenda web) EN PROD desde 2026-10-01: ver `Docs/METODO_AT/PLAN-DE-TRABAJO.md`. «Estado del proyecto — Etapa 1» (botón «Ver detalle del avance», cronograma con tercer carril, «Actualizar la vista del plan» y `ver-estado.php`) está EN PROD desde el 2026-10-14 (rama `claude/estado-proyecto`); la Etapa 2 (avance, importar cierre y presentación «Estado del proyecto») está EN PROD desde el 2026-10-14 y mergeada a `main` el 2026-10-15 (rama `claude/estado-proyecto-e2`, PR #89); la Etapa 3 (correo de cierre, WhatsApp e historial) está EN PROD desde el 2026-10-15 (rama `claude/estado-proyecto-e3`, PR #90 sin merge; 10 archivos de WordPress por SSH, respaldo `~/respaldos/estado-e3-antes-20261015.tar.gz`); guía `Docs/METODO_AT/ESTADO-DEL-PROYECTO.md`: sección homónima de esa guía y spec `Docs/superpowers/specs/2026-10-13-estado-del-proyecto-design.md`.
+
+<!-- AT-RETOMAR-001-LOCAL:START -->
+## AT-RETOMAR-001 — referencia local
+
+Rama `claude/retomar-prospectos-final` (PR #94, sin merge), worktree `C:/wamp64/www/automatiza-tech/.worktrees/retomar-eje`. Guía: [Retomar prospectos](Docs/METODO_AT/RETOMAR-PROSPECTOS.md). Fase 1 EN PROD desde el 2026-10-18. Fase 2 (detección automática, redacción con IA, fotos de Higgsfield y correo semanal con aprobación de Luis) **EN PROD desde el 2026-10-19 con el reloj activo**; estado del primer ciclo y pendientes en la sección «Fase 2» de la guía. Nada sale a un prospecto sin la aprobación de Luis (en dos pasos: correo y página de confirmación).
+<!-- AT-RETOMAR-001-LOCAL:END -->

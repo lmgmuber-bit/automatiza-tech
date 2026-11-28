@@ -18,7 +18,31 @@ Antes de trabajar, crea una rama nueva. Usa y manten actualizados `CLAUDE.md`, `
 
 No asumir. Antes de dar una cifra, un precio, un plazo, un estado o una capacidad, verificarla con una fuente (código, base de datos, prueba, documentación o búsqueda web) y decir de dónde sale, con enlace cuando exista. "Yo creía", "creo que" o "debería" no son base. Lo que no se pueda verificar se presenta como **supuesto explícito**, con el motivo y cómo se comprobaría; nunca como hecho. Los precios que se propongan a un cliente llevan referencias de mercado con fuentes y el cálculo aplicado al caso.
 
+## GT Baseball Academy (cliente Jeffer García) — estado vivo
+
+- EN PROD en `https://gtbaseball.com/`:
+  - inscripción con QR, pago y Turnstile;
+  - portada con planes y fondos de estadio;
+  - buscador privado `/buscador/` con clave, fotos y listado en PDF.
+- Código en `demos/gt-baseball/`, en `main` desde el 13-oct-2026 (PR #61). Flujos n8n en `N8N/gt-baseball/` (ver su
+  README).
+- 🔴 El repo es público: los datos del cliente viven en `gt-config.json`, fuera del repo. Se despliega solo con
+  `deploy_dominio.py` y con el ok de Luis.
+- **Relevo completo:** bóveda privada `10-Projects/GT-Baseball/README.md`. Diseño e historial en
+  `Docs/superpowers/specs/2026-09-27-gt-baseball-prototipo-design.md`.
+
+## Propuestas comerciales
+
+Toda propuesta de cliente usa la plantilla única del `propuesta-renderer` (regla de Luis, 2026-09-23), nunca Gamma: `Docs/METODO_AT/PROPUESTAS-PLANTILLA-UNICA.md`.
 
 
 
+<!-- AT-RETOMAR-001-LOCAL:START -->
+## AT-RETOMAR-001 — referencia local
 
+Rama `claude/retomar-prospectos-final` (PR #94, sin merge), worktree `C:/wamp64/www/automatiza-tech/.worktrees/retomar-eje`. Guía: [Retomar prospectos](../Docs/METODO_AT/RETOMAR-PROSPECTOS.md). Fase 1 EN PROD desde el 2026-10-18. Fase 2 (detección automática, redacción con IA, fotos de Higgsfield y correo semanal con aprobación de Luis) **EN PROD desde el 2026-10-19 con el reloj activo**; estado del primer ciclo y pendientes en la sección «Fase 2» de la guía. Nada sale a un prospecto sin la aprobación de Luis (en dos pasos: correo y página de confirmación).
+<!-- AT-RETOMAR-001-LOCAL:END -->
+
+## Gastos y créditos (Balance)
+
+- Gastos y créditos (Luis, 2026-10-21): cada vez que un agente gaste créditos o dinero de AT (una generación en Higgsfield, una recarga, una suscripción, Google Cloud, etc.), le avisa a **Balance**, el agente de finanzas (`at-balance-claude` / `at-balance-codex`). El aviso lleva qué fue, cuánto, en qué cuenta, para qué proyecto y la referencia (id de la generación, factura o pedido). Si Balance no está disponible, el agente lo registra él mismo con `C:/Users/luis_/Documents/Codex/Shared-Tools/finanzas/registrar.py`. Nunca se escriben montos reales en el repositorio, que es público. Guía: `Docs/METODO_AT/FINANZAS-BALANCE.md`.

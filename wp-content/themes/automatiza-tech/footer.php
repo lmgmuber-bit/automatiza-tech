@@ -1,3 +1,4 @@
+<?php defined('ABSPATH') || exit; ?>
     <footer id="colophon" class="site-footer">
         <div class="container">
             <div class="footer-content">
@@ -6,17 +7,11 @@
                     <h3>Automatiza Tech</h3>
                     <p>Automatización y tecnología digital premium para hacer crecer tu negocio: asistentes inteligentes, automatización, sitios premium, apps y sistemas a medida.</p>
                     <div class="social-links">
-                        <a href="https://www.facebook.com/automatizatech.cl" target="_blank" rel="noopener" title="Facebook">
+                        <a href="https://www.facebook.com/profile.php?id=61584793150484" target="_blank" rel="noopener" title="Facebook" aria-label="Facebook">
                             <i class="fab fa-facebook"></i>
                         </a>
-                        <a href="https://www.instagram.com/automatizatech.cl/" target="_blank" rel="noopener" title="Instagram">
+                        <a href="https://www.instagram.com/automatizatech.cl/" target="_blank" rel="noopener" title="Instagram" aria-label="Instagram">
                             <i class="fab fa-instagram"></i>
-                        </a>
-                        <a href="https://www.linkedin.com/company/automatizatech" target="_blank" rel="noopener" title="LinkedIn">
-                            <i class="fab fa-linkedin"></i>
-                        </a>
-                        <a href="https://www.twitter.com/automatizatech.cl" target="_blank" rel="noopener" title="Twitter">
-                            <i class="fab fa-twitter"></i>
                         </a>
                     </div>
                 </div>
@@ -53,6 +48,10 @@
                         <li>
                             <i class="fas fa-envelope"></i>
                             <a href="mailto:contacto@automatizatech.cl">contacto@automatizatech.cl</a>
+                        </li>
+                        <li>
+                            <i class="fas fa-phone" aria-hidden="true"></i>
+                            <a href="tel:+56927002984">+56 9 2700 2984</a>
                         </li>
                         <li>
                             <i class="fab fa-whatsapp"></i>
@@ -104,11 +103,13 @@
                     </div>
                     <div class="col-md-6 text-md-end">
                         <div class="footer-links">
-                            <a href="/privacy-policy">Política de Privacidad</a>
+                            <a href="/privacidad/">Política de Privacidad</a>
                             <span class="separator">|</span>
-                            <a href="/terms-of-service">Términos de Servicio</a>
+                            <a href="/terminos/">Términos de Servicio</a>
                             <span class="separator">|</span>
-                            <a href="/cookies-policy">Política de Cookies</a>
+                            <a href="/cookies/">Política de Cookies</a>
+                            <span class="separator">|</span>
+                            <a href="#" data-at-cookies>Configurar cookies</a>
                         </div>
                     </div>
                 </div>
@@ -123,18 +124,7 @@
     <i class="fas fa-chevron-up"></i>
 </button>
 
-<!-- Cookie Notice -->
-<div id="cookie-notice" class="cookie-notice" style="display: none;">
-    <div class="container">
-        <div class="cookie-content">
-            <p>Utilizamos cookies para mejorar tu experiencia en nuestro sitio web. Al continuar navegando, aceptas nuestro uso de cookies.</p>
-            <div class="cookie-buttons">
-                <button id="accept-cookies" class="btn btn-primary btn-sm">Aceptar</button>
-                <a href="/cookies-policy" class="btn btn-outline btn-sm">Más información</a>
-            </div>
-        </div>
-    </div>
-</div>
+<!-- El aviso de cookies lo dibuja el mu-plugin at-consentimiento.php en todas las páginas (también la portada). -->
 
 <!-- Schema.org Local Business structured data -->
 <?php if (is_front_page()): ?>
@@ -361,6 +351,14 @@
                         </select>
                     </div>
                 </div>
+                <label style="display:flex;align-items:flex-start;gap:8px;margin-bottom:14px;color:rgba(255,255,255,0.75);font-size:12.5px;line-height:1.45;cursor:pointer;">
+                    <input type="checkbox" name="privacy_accept" required value="1" style="margin-top:2px;accent-color:#06d6a0;width:16px;height:16px;flex-shrink:0;">
+                    <span>He leído y acepto la <a href="/privacidad/" target="_blank" rel="noopener" style="color:#06d6a0;text-decoration:underline;">Política de Privacidad</a> *</span>
+                </label>
+                <label style="display:flex;align-items:flex-start;gap:8px;margin-bottom:14px;color:rgba(255,255,255,0.6);font-size:12.5px;line-height:1.45;cursor:pointer;">
+                    <input type="checkbox" name="marketing_optin" value="1" style="margin-top:2px;accent-color:#06d6a0;width:16px;height:16px;flex-shrink:0;">
+                    <span>Quiero recibir novedades y ofertas de AutomatizaTech (opcional)</span>
+                </label>
                 <div id="agenda-msg" style="display:none;text-align:center;padding:8px;border-radius:8px;margin-bottom:12px;font-size:13px;"></div>
                 <button type="submit" id="agenda-submit-btn" style="
                     width:100%;padding:13px;
@@ -616,6 +614,14 @@
             });
         }
 
+        // Casilla anti-robot (Turnstile): n8n rechaza la cita sin un token válido.
+        var tsToken = window.atTurnstile ? window.atTurnstile.token(form) : '';
+        if (window.atTurnstile && window.atTurnstile.activo() && !tsToken) {
+            showMsg(false, '❌ ' + window.atTurnstile.FALTA);
+            unlockAgendaButton();
+            return;
+        }
+
         var canUseChatFlow =
             typeof AutomatizaAIChat !== 'undefined' &&
             !!AutomatizaAIChat &&
@@ -646,12 +652,16 @@
                 var payload = {
                     action: 'saveLead',
                     sessionId: getAgendaSessionId(),
+                    turnstileToken: tsToken,
                     leadData: {
                         name: String(name || '').trim(),
                         email: String(email || '').trim(),
                         phone: String(cc || '+56') + String(phoneDigits || ''),
                         scheduled_date: String(date || '').trim(),
-                        scheduled_time: String(time || '').trim()
+                        scheduled_time: String(time || '').trim(),
+                        privacy_accepted: data.get('privacy_accept') === '1',
+                        privacy_accepted_at: new Date().toISOString(),
+                        marketing_optin: data.get('marketing_optin') === '1'
                     }
                 };
 
@@ -662,6 +672,9 @@
                 });
             })
             .then(function(resp){
+                if (resp.status === 403 && window.atTurnstile) {
+                    throw new Error(window.atTurnstile.RECHAZO);
+                }
                 if (!resp.ok) {
                     throw new Error('Error al conectar con el servidor de agendamiento');
                 }
@@ -694,6 +707,9 @@
                     throw new Error(responseText || 'Error al agendar la cita.');
                 }
 
+                // Cita confirmada: avisa a Meta (solo si la persona aceptó cookies; ver mu-plugin at-consentimiento).
+                if (window.atLead) { window.atLead('Agenda de demo', { email: email, fecha: date, hora: time }); }
+
                 return sendCorporateDemoNotification()
                     .catch(function(notificationError){
                         console.warn('No se pudo enviar notificación corporativa:', notificationError);
@@ -705,11 +721,14 @@
             .then(function(successMessage){
                 showMsg(true, '✅ ' + successMessage);
                 form.reset();
+                if (window.atTurnstile) { window.atTurnstile.reiniciar(form); }
                 resetAgendaTimeSelect('-- Selecciona fecha primero --', true);
                 setTimeout(closeAgendaModal, 3500);
             })
             .catch(function(err){
                 showMsg(false, '❌ ' + (err && err.message ? err.message : 'Error al agendar la cita.'));
+                // El token sirve una sola vez: se pide una casilla nueva para el próximo intento.
+                if (window.atTurnstile) { window.atTurnstile.reiniciar(form); }
                 unlockAgendaButton();
             });
 
@@ -751,6 +770,12 @@
     var am = document.getElementById('agenda-modal');
     if (pm) pm.addEventListener('click', function(e){ if(e.target===this) closePromoModal(); });
     if (am) am.addEventListener('click', function(e){ if(e.target===this) closeAgendaModal(); });
+    // Casilla anti-robot sobre el botón de la ventana de agenda (se dibuja al abrirla).
+    function montarTurnstileAgenda(){
+        var f = document.getElementById('agenda-modal-form');
+        if (window.atTurnstile && f) { window.atTurnstile.enForm(f, document.getElementById('agenda-msg')); }
+    }
+    if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', montarTurnstileAgenda); } else { montarTurnstileAgenda(); }
 
     // Mostrar promo-modal en home hasta un máximo de 25 veces (contador en localStorage)
     if (isHome) {
@@ -816,21 +841,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 top: 0,
                 behavior: 'smooth'
             });
-        });
-    }
-
-    // Cookie notice
-    const cookieNotice = document.getElementById('cookie-notice');
-    const acceptCookies = document.getElementById('accept-cookies');
-    
-    if (cookieNotice && !localStorage.getItem('cookies-accepted')) {
-        cookieNotice.style.display = 'block';
-    }
-    
-    if (acceptCookies) {
-        acceptCookies.addEventListener('click', function() {
-            localStorage.setItem('cookies-accepted', 'true');
-            cookieNotice.style.display = 'none';
         });
     }
 

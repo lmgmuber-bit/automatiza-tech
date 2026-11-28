@@ -8,8 +8,8 @@
  * bien en la prueba y llega cortado al papá.
  */
 
+require __DIR__ . '/_aislamiento-local.php';
 $raiz = dirname(__DIR__, 2);
-putenv('CC_AJUSTES_PATH=' . sys_get_temp_dir() . '/cc-ajustes-prueba-' . getmypid() . '.json');
 require_once $raiz . '/public/lib.php';
 require_once $raiz . '/public/lib.manual.php';
 

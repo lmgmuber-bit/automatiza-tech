@@ -94,7 +94,7 @@ $themesData = cb_load_themes();
 $themeData = $themesData['themes'][$party['tema'] ?? ''] ?? [];
 $colors = is_array($themeData['colors'] ?? null) ? $themeData['colors'] : [];
 $name = (string) ($party['nombre'] ?? 'CumpleClick');
-$eventType = (string) ($party['event_type'] ?? '') === 'baby_shower' ? 'baby_shower' : 'child_birthday';
+$eventType = cb_party_event_type($party['event_type'] ?? '');
 $assetLabel = $isRecuerdito ? 'recuerdito' : ($isDiploma ? 'diploma' : 'foto');
 $accent = (string) ($colors['accent'] ?? '#7C3AED');
 $yellow = (string) ($colors['yellow'] ?? '#FBBF24');

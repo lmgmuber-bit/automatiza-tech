@@ -113,7 +113,14 @@ class Ai1wm_Database_Mysqli extends Ai1wm_Database {
 	 * @return string
 	 */
 	public function server_info() {
-		return mysqli_get_server_info( $this->wpdb->dbh );
+		static $cached_result = null;
+
+		// Cache server info on first call
+		if ( $cached_result === null ) {
+			$cached_result = mysqli_get_server_info( $this->wpdb->dbh );
+		}
+
+		return $cached_result;
 	}
 
 	/**

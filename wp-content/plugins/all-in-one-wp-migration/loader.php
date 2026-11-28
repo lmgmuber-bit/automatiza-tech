@@ -54,10 +54,13 @@ require_once AI1WM_VENDOR_PATH . '/servmask/archiver/class-ai1wm-archiver.php';
 require_once AI1WM_VENDOR_PATH . '/servmask/archiver/class-ai1wm-compressor.php';
 require_once AI1WM_VENDOR_PATH . '/servmask/archiver/class-ai1wm-extractor.php';
 
+require_once AI1WM_VENDOR_PATH . '/servmask/checksum/class-ai1wm-crc.php';
+
 require_once AI1WM_VENDOR_PATH . '/servmask/database/class-ai1wm-database.php';
 require_once AI1WM_VENDOR_PATH . '/servmask/database/class-ai1wm-database-mysql.php';
 require_once AI1WM_VENDOR_PATH . '/servmask/database/class-ai1wm-database-mysqli.php';
 require_once AI1WM_VENDOR_PATH . '/servmask/database/class-ai1wm-database-sqlite.php';
+require_once AI1WM_VENDOR_PATH . '/servmask/database/class-ai1wm-database-mariadb.php';
 require_once AI1WM_VENDOR_PATH . '/servmask/database/class-ai1wm-database-utility.php';
 
 require_once AI1WM_CONTROLLER_PATH . '/class-ai1wm-backups-controller.php';
@@ -65,12 +68,14 @@ require_once AI1WM_CONTROLLER_PATH . '/class-ai1wm-export-controller.php';
 require_once AI1WM_CONTROLLER_PATH . '/class-ai1wm-feedback-controller.php';
 require_once AI1WM_CONTROLLER_PATH . '/class-ai1wm-import-controller.php';
 require_once AI1WM_CONTROLLER_PATH . '/class-ai1wm-main-controller.php';
+require_once AI1WM_CONTROLLER_PATH . '/class-ai1wm-rest-controller.php';
 require_once AI1WM_CONTROLLER_PATH . '/class-ai1wm-reset-controller.php';
 require_once AI1WM_CONTROLLER_PATH . '/class-ai1wm-schedules-controller.php';
 require_once AI1WM_CONTROLLER_PATH . '/class-ai1wm-status-controller.php';
 require_once AI1WM_CONTROLLER_PATH . '/class-ai1wm-updater-controller.php';
 
 require_once AI1WM_MODEL_PATH . '/export/class-ai1wm-export-archive.php';
+require_once AI1WM_MODEL_PATH . '/export/class-ai1wm-export-archive-crc.php';
 require_once AI1WM_MODEL_PATH . '/export/class-ai1wm-export-clean.php';
 require_once AI1WM_MODEL_PATH . '/export/class-ai1wm-export-compatibility.php';
 require_once AI1WM_MODEL_PATH . '/export/class-ai1wm-export-config-file.php';
@@ -106,6 +111,7 @@ require_once AI1WM_MODEL_PATH . '/import/class-ai1wm-import-permalinks.php';
 require_once AI1WM_MODEL_PATH . '/import/class-ai1wm-import-upload.php';
 require_once AI1WM_MODEL_PATH . '/import/class-ai1wm-import-users.php';
 require_once AI1WM_MODEL_PATH . '/import/class-ai1wm-import-validate.php';
+require_once AI1WM_MODEL_PATH . '/import/class-ai1wm-import-validate-crc.php';
 
 require_once AI1WM_MODEL_PATH . '/class-ai1wm-backups.php';
 require_once AI1WM_MODEL_PATH . '/class-ai1wm-compatibility.php';

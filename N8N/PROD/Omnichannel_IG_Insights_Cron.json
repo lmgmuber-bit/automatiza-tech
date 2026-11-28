@@ -1,0 +1,145 @@
+{
+  "name": "OmniCliente · Métricas IG (toma cada hora) - AutomatizaTech (PROD)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 1,
+              "triggerAtMinute": 7
+            }
+          ]
+        }
+      },
+      "id": "a1f0c0de-0001-4c1a-9a01-1f00000000a1",
+      "name": "Cada hora (min 7)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [-460, 60]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://automatizatech.cl/api-omnichannel.php?route=ig-metrics/sync",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{}",
+        "options": {
+          "timeout": 90000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "a1f0c0de-0002-4c1a-9a01-1f00000000a2",
+      "name": "Tomar métricas IG",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [-220, 60],
+      "credentials": {
+        "httpHeaderAuth": {
+          "name": "AT IG Metrics Secret"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Avisa solo cuando el estado cambia (no cada hora): ok, no_permission, token_invalid, no_token, error.\nconst s = $getWorkflowStaticData('global');\nconst r = $input.first().json || {};\nconst prev = s.last || 'ok';\nconst status = r.skipped ? prev : (r.status || 'error');\ns.last = status;\nreturn [{ json: {\n  status,\n  prev,\n  alertar: status !== prev,\n  message: r.message || r.error || '',\n  errors: (r.errors || []).slice(0, 5).join(' | '),\n  posts_seen: r.posts_seen ?? null,\n  snapshots: r.snapshots ?? null,\n  api_calls: r.api_calls ?? null,\n} }];"
+      },
+      "id": "a1f0c0de-0003-4c1a-9a01-1f00000000a3",
+      "name": "¿Cambió el estado?",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [20, 60]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "igm-alertar",
+              "leftValue": "={{ $json.alertar }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a1f0c0de-0004-4c1a-9a01-1f00000000a4",
+      "name": "Avisar?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [260, 60]
+    },
+    {
+      "parameters": {
+        "fromEmail": "Automatiza Tech <contacto@automatizatech.cl>",
+        "toEmail": "automatizacionesbotcore@gmail.com",
+        "subject": "=Métricas IG: {{ $json.prev }} → {{ $json.status }}",
+        "html": "=<div style='font-family:Arial;max-width:600px;margin:0 auto;'><h2 style='color:#be185d;'>Métricas de Instagram: cambió el estado</h2><p><b>Antes:</b> {{ $json.prev }}<br><b>Ahora:</b> {{ $json.status }}</p><p>{{ $json.message }}</p><p style='color:#6b7280;font-size:13px;'>{{ $json.errors }}</p><p>Revisar en el Portal OmniCliente → Marketing IG. Si dice token_invalid, el publicador automático tampoco podrá publicar: renovar el token en Canales → Instagram.</p></div>",
+        "options": {}
+      },
+      "id": "a1f0c0de-0005-4c1a-9a01-1f00000000a5",
+      "name": "Aviso a Luis",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [520, -40],
+      "credentials": {
+        "smtp": {
+          "id": "dyhVFWmjRNC45ccA",
+          "name": "SMTP account PROD"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "id": "a1f0c0de-0006-4c1a-9a01-1f00000000a6",
+      "name": "Sin cambios",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [520, 160]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Cada hora (min 7)": {
+      "main": [[{ "node": "Tomar métricas IG", "type": "main", "index": 0 }]]
+    },
+    "Tomar métricas IG": {
+      "main": [[{ "node": "¿Cambió el estado?", "type": "main", "index": 0 }]]
+    },
+    "¿Cambió el estado?": {
+      "main": [[{ "node": "Avisar?", "type": "main", "index": 0 }]]
+    },
+    "Avisar?": {
+      "main": [
+        [{ "node": "Aviso a Luis", "type": "main", "index": 0 }],
+        [{ "node": "Sin cambios", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Santiago",
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": "p7ISUf0J5GycHscc"
+  },
+  "tags": []
+}

@@ -150,6 +150,47 @@ class AutomatizaTech_Client_Details {
                 'icon' => '📄',
                 'color' => '#667eea'
             ),
+            // Hallazgo T4 ronda 1: no puede ir primero. Sin tipo preseleccionado, el <select> de
+            // showAddDetailModal() elige el primero por defecto; un registro nuevo de Seguimiento
+            // quedaría marcado "Respuesta del cliente" aunque nadie haya elegido ese tipo.
+            'respuesta_cliente' => array(
+                'label' => '✅ Respuesta del cliente',
+                'icon' => '✅',
+                'color' => '#059669'
+            ),
+            // Task 10b (ajuste del controlador 26-sep): mensaje de texto del cliente al bot de
+            // WhatsApp sobre su propuesta; nota interna, nunca cambia el estado. Con «(interno)» en la
+            // etiqueta desde la Task 19, como las demás de at_cc_tipos_internos().
+            'mensaje_whatsapp' => array(
+                'label' => '💬 Mensaje por WhatsApp (interno)',
+                'icon' => '💬',
+                'color' => '#0f766e'
+            ),
+            // Revisión final (26-sep), hallazgo 9: notas internas del cierre de cliente
+            // (at_cc_tipos_internos()). Deben estar en la lista para que, al editarlas con ✏️, el
+            // <select> conserve su tipo en vez de caer en el primero ('propuesta_enviada').
+            'pedido_respuesta' => array(
+                'label' => '📨 Pedido de respuesta (interno)',
+                'icon' => '📨',
+                'color' => '#64748b'
+            ),
+            'cierre_incompleto' => array(
+                'label' => '⚠️ Cierre incompleto (interno)',
+                'icon' => '⚠️',
+                'color' => '#b45309'
+            ),
+            'aviso_operativo' => array(
+                'label' => 'ℹ️ Aviso operativo (interno)',
+                'icon' => 'ℹ️',
+                'color' => '#64748b'
+            ),
+            // Task 19 (27-sep): Meta no entregó el WhatsApp automático de la propuesta. Mismo motivo
+            // que las de arriba: sin esta entrada, editarla con ✏️ la dejaba como 'propuesta_enviada'.
+            'whatsapp_no_entregado' => array(
+                'label' => '📵 WhatsApp no entregado (interno)',
+                'icon' => '📵',
+                'color' => '#b91c1c'
+            ),
             'cotizacion' => array(
                 'label' => '💰 Cotización',
                 'icon' => '💰',
@@ -222,7 +263,7 @@ class AutomatizaTech_Client_Details {
             ),
             // ===== TIPOS CON DOCUMENTOS ADJUNTOS =====
             'presentacion' => array(
-                'label' => '🎨 Presentación (Gamma)',
+                'label' => '🎨 Presentación',
                 'icon' => '🎨',
                 'color' => '#a855f7',
                 'accepts_file' => true
@@ -1716,7 +1757,7 @@ class AutomatizaTech_Client_Details {
                 modalHtml += '<div class="cdw-attachment-section" style="margin-top: 15px; padding: 15px; background: #f0f9ff; border: 1px dashed #0ea5e9; border-radius: 8px;">';
                 modalHtml += '<h4 style="margin: 0 0 10px 0; color: #0369a1; font-size: 14px;">📎 Documento Adjunto (opcional)</h4>';
                 modalHtml += '<div class="cdw-form-group"><label>Subir archivo</label><input type="file" name="attachment" accept=".pdf,.doc,.docx,.txt,.md,.jpg,.jpeg,.png,.gif,.xls,.xlsx"></div>';
-                modalHtml += '<div class="cdw-form-group"><label>O pegar URL (Gamma, Google Docs, etc.)</label><input type="url" name="attachment_url" placeholder="https://..."></div>';
+                modalHtml += '<div class="cdw-form-group"><label>O pegar URL (presentación, Google Docs, etc.)</label><input type="url" name="attachment_url" placeholder="https://..."></div>';
                 modalHtml += '<input type="hidden" name="attachment_name" value="">';
                 modalHtml += '<input type="hidden" name="attachment_type" value="link">';
                 modalHtml += '<p style="font-size: 12px; color: #64748b; margin: 8px 0 0 0;">Formatos: PDF, Word, Excel, TXT, Markdown, Imágenes</p>';

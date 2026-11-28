@@ -28,63 +28,33 @@
 if ( ! defined( 'ABSPATH' ) ) {
 	die( 'Kangaroos cannot jump here' );
 }
-
-ai1wm_enqueue_script(
-	'ai1wm-share-buttons-facebook',
-	'https://connect.facebook.net/en_US/sdk.js#xfbml=1&version=v9.0&appId=597242117012725'
-);
-
-ai1wm_enqueue_script(
-	'ai1wm-share-buttons-youtube',
-	'https://apis.google.com/js/platform.js'
-);
 ?>
 
-<div id="fb-root"></div>
-<script>
-window.twttr = (function(d, s, id) {
-	var js, fjs = d.getElementsByTagName(s)[0],
-		t = window.twttr || {};
-	if (d.getElementById(id)) return t;
-	js = d.createElement(s);
-	js.id = id;
-	js.src = "https://platform.twitter.com/widgets.js";
-	fjs.parentNode.insertBefore(js, fjs);
+<div class="ai1wm-social-share-wrapper">
+	<a href="https://twitter.com/intent/tweet?text=Check+this+epic+WordPress+Migration+plugin&url=https://servmask.com&via=servmask"
+		class="ai1wm-social-icon icon-x"
+		target="_blank"
+		rel="noopener"
+		title="<?php esc_attr_e( 'Share on X', 'all-in-one-wp-migration' ); ?>"
+		aria-label="<?php esc_attr_e( 'Share on X', 'all-in-one-wp-migration' ); ?>">
+		<i class="ai1wm-icon-x" aria-hidden="true"></i>
+	</a>
 
-	t._e = [];
-	t.ready = function(f) {
-		t._e.push(f);
-	};
+	<a href="https://www.facebook.com/sharer/sharer.php?u=https://servmask.com"
+		class="ai1wm-social-icon icon-facebook"
+		target="_blank"
+		rel="noopener"
+		title="<?php esc_attr_e( 'Share on Facebook', 'all-in-one-wp-migration' ); ?>"
+		aria-label="<?php esc_attr_e( 'Share on Facebook', 'all-in-one-wp-migration' ); ?>">
+		<i class="ai1wm-icon-facebook" aria-hidden="true"></i>
+	</a>
 
-	return t;
-}(document, "script", "twitter-wjs"));
-</script>
-
-<div class="ai1wm-share-button-container">
-	<span>
-		<a
-			href="https://twitter.com/share"
-			class="twitter-share-button"
-			data-url="https://servmask.com"
-			data-text="Check this epic WordPress Migration plugin"
-			data-via="servmask"
-			data-related="servmask"
-			data-hashtags="servmask">
-			<?php esc_html_e( 'Tweet', 'all-in-one-wp-migration' ); ?>
-		</a>
-	</span>
-	<span class="ai1wm-top-positive-four">
-		<div
-			class="fb-like"
-			data-href="https://www.facebook.com/servmaskproduct"
-			data-width=""
-			data-layout="button_count"
-			data-action="like"
-			data-size="small"
-			data-share="false">
-		</div>
-	</span>
-	<span class="ai1wm-top-positive-two">
-		<div class="g-ytsubscribe" data-channelid="UCWMNPEnX7KyDLknpcmPaSwg" data-layout="default" data-count="default"></div>
-	</span>
+	<a href="https://www.youtube.com/channel/UCWMNPEnX7KyDLknpcmPaSwg?sub_confirmation=1"
+		class="ai1wm-social-icon icon-youtube"
+		target="_blank"
+		rel="noopener"
+		title="<?php esc_attr_e( 'Subscribe on YouTube', 'all-in-one-wp-migration' ); ?>"
+		aria-label="<?php esc_attr_e( 'Subscribe on YouTube', 'all-in-one-wp-migration' ); ?>">
+		<i class="ai1wm-icon-youtube" aria-hidden="true"></i>
+	</a>
 </div>

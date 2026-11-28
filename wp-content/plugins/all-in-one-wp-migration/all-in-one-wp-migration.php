@@ -5,7 +5,7 @@
  * Description: All-in-One WP Migration makes moving your entire WordPress site simple. Export or import your database, media, plugins, and themes with just a few clicks.
  * Author: ServMask
  * Author URI: https://servmask.com/
- * Version: 7.102
+ * Version: 7.111
  * Text Domain: all-in-one-wp-migration
  * Domain Path: /languages
  * Network: True
@@ -57,14 +57,14 @@ define( 'AI1WM_URL', plugins_url( '', AI1WM_PLUGIN_BASENAME ) );
 // Plugin storage URL
 define( 'AI1WM_STORAGE_URL', plugins_url( 'storage', AI1WM_PLUGIN_BASENAME ) );
 
+// Include functions
+require_once __DIR__ . DIRECTORY_SEPARATOR . 'functions.php';
+
 // Include constants
 require_once __DIR__ . DIRECTORY_SEPARATOR . 'constants.php';
 
 // Include deprecated
 require_once __DIR__ . DIRECTORY_SEPARATOR . 'deprecated.php';
-
-// Include functions
-require_once __DIR__ . DIRECTORY_SEPARATOR . 'functions.php';
 
 // Include exceptions
 require_once __DIR__ . DIRECTORY_SEPARATOR . 'exceptions.php';

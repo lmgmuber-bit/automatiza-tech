@@ -526,6 +526,8 @@ jQuery(document).ready(function($) {
 
         $formContainer.append($avatar).append($form);
         $messages.append($formContainer);
+        // Casilla anti-robot (Turnstile) sobre el botón; n8n rechaza la cita sin token válido.
+        if (window.atTurnstile) { window.atTurnstile.enForm($form[0], $form.find('.submit-demo-btn')[0]); }
         scrollToBottom();
 
         // Handle Submit
@@ -573,6 +575,12 @@ jQuery(document).ready(function($) {
                 return;
             }
 
+            const tsToken = window.atTurnstile ? window.atTurnstile.token($form[0]) : '';
+            if (window.atTurnstile && window.atTurnstile.activo() && !tsToken) {
+                $error.text(window.atTurnstile.FALTA).slideDown();
+                return;
+            }
+
             // Disable button
             $btn.prop('disabled', true).text('Verificando disponibilidad...');
             $error.slideUp();
@@ -595,6 +603,7 @@ jQuery(document).ready(function($) {
                         const payload = {
                             action: 'saveLead',
                             sessionId: sessionId,
+                            turnstileToken: tsToken,
                             leadData: {
                                 name: name,
                                 email: email,
@@ -621,9 +630,11 @@ jQuery(document).ready(function($) {
 
                                 addMessage(responseText, 'bot');
                             },
-                            error: function() {
+                            error: function(jqXHR) {
                                 $btn.prop('disabled', false).text('Agendar Reunión');
-                                $error.text('Error al conectar con el servidor de agendamiento.').slideDown();
+                                // El token sirve una sola vez: casilla nueva para el reintento.
+                                if (window.atTurnstile) { window.atTurnstile.reiniciar($form[0]); }
+                                $error.text(jqXHR && jqXHR.status === 403 && window.atTurnstile ? window.atTurnstile.RECHAZO : 'Error al conectar con el servidor de agendamiento.').slideDown();
                             }
                         });
 
@@ -649,6 +660,9 @@ jQuery(document).ready(function($) {
     // --- MODAL LOGIC (Standalone Form) ---
     const $modal = $('#demo-modal');
     const $modalForm = $('#demo-modal-form');
+    if (window.atTurnstile && $modalForm.length) {
+        window.atTurnstile.enForm($modalForm[0], $modalForm.find('.submit-demo-modal-btn')[0]);
+    }
     const $closeModal = $('.close-demo-modal');
     
     // Open Modal
@@ -809,6 +823,12 @@ jQuery(document).ready(function($) {
             return;
         }
 
+        const tsToken = window.atTurnstile ? window.atTurnstile.token($modalForm[0]) : '';
+        if (window.atTurnstile && window.atTurnstile.activo() && !tsToken) {
+            $error.text(window.atTurnstile.FALTA).slideDown();
+            return;
+        }
+
         // Disable button
         $btn.prop('disabled', true).text('Verificando disponibilidad...');
         $error.slideUp();
@@ -829,6 +849,7 @@ jQuery(document).ready(function($) {
                     const payload = {
                         action: 'saveLead',
                         sessionId: sessionId, // Use existing session ID or generate new one if needed
+                        turnstileToken: tsToken,
                         leadData: {
                             name: name,
                             email: email,
@@ -847,6 +868,7 @@ jQuery(document).ready(function($) {
                         timeout: 90000, // 90 segundos de espera máxima
                         success: function(responseRaw) {
                             $btn.prop('disabled', false).text('Agendar Reunión');
+                            if (window.atTurnstile) { window.atTurnstile.reiniciar($modalForm[0]); }
                             
                             // Verificar si la respuesta indica que el horario está ocupado
                             const responseText = responseRaw.toLowerCase();
@@ -894,7 +916,10 @@ jQuery(document).ready(function($) {
                                 errorMsg = 'Error de conexión. Por favor verifica tu internet.';
                             } else if (jqXHR.status >= 500) {
                                 errorMsg = 'Error interno del servidor. Por favor intenta más tarde.';
+                            } else if (jqXHR.status === 403 && window.atTurnstile) {
+                                errorMsg = window.atTurnstile.RECHAZO;
                             }
+                            if (window.atTurnstile) { window.atTurnstile.reiniciar($modalForm[0]); }
                             
                             $error.text(errorMsg).slideDown();
                         }

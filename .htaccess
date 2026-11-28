@@ -21,7 +21,8 @@ RewriteRule (^|/)debug\.log$ - [F,L]
 
 # 4) Bloquear backups y archivos sensibles dejados en repo
 RewriteRule \.(bak|backup|old|orig|sql|sql\.gz|env)$ - [F,L]
-RewriteRule \.php(2|3|_old)$ - [F,L]
+RewriteRule \.php(2|3|_old[0-9]*)$ - [F,L]
+RewriteRule \.php[._-][^/]*$ - [F,L]
 # 4b) Bloquear carpetas de backup/respaldo a nivel URL
 RewriteRule ^(tema-backup|RespaldoDocs|RespaldoTest|archivos-eliminados-backup|archive)/ - [F,L]
 RewriteRule ^\.claude/ - [F,L]

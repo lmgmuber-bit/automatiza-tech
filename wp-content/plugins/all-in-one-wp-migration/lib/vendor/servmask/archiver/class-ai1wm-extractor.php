@@ -57,6 +57,11 @@ class Ai1wm_Extractor extends Ai1wm_Archiver {
 		parent::__construct( $file_name, $file_password, $file_compression, false );
 	}
 
+	/**
+	 * List all files in the archive
+	 *
+	 * @return array
+	 */
 	public function list_files() {
 		$files = array();
 
@@ -68,10 +73,10 @@ class Ai1wm_Extractor extends Ai1wm_Archiver {
 		$offset = 0;
 
 		// Loop over files
-		while ( ( $block = @fread( $this->file_handle, 4377 ) ) ) {
+		while ( ( $block = @fread( $this->file_handle, static::HEADER_SIZE ) ) ) {
 
 			// End block has been reached
-			if ( $block === $this->file_eof ) {
+			if ( $this->is_eof_block( $block ) ) {
 				continue;
 			}
 
@@ -101,41 +106,7 @@ class Ai1wm_Extractor extends Ai1wm_Archiver {
 	 */
 	public function get_total_files_count() {
 		if ( is_null( $this->total_files_count ) ) {
-
-			// Total files count
-			$this->total_files_count = 0;
-
-			// Total files size
-			$this->total_files_size = 0;
-
-			// Seek to beginning of archive file
-			if ( @fseek( $this->file_handle, 0, SEEK_SET ) === -1 ) {
-				throw new Ai1wm_Not_Seekable_Exception( sprintf( __( 'Could not seek to beginning of file. File: %s', 'all-in-one-wp-migration' ), $this->file_name ) );
-			}
-
-			// Loop over files
-			while ( ( $block = @fread( $this->file_handle, 4377 ) ) ) {
-
-				// End block has been reached
-				if ( $block === $this->file_eof ) {
-					continue;
-				}
-
-				// Get file data from the block
-				if ( ( $data = $this->get_data_from_block( $block ) ) ) {
-
-					// We have a file, increment the count
-					$this->total_files_count += 1;
-
-					// We have a file, increment the size
-					$this->total_files_size += $data['size'];
-
-					// Skip file content so we can move forward to the next file
-					if ( @fseek( $this->file_handle, $data['size'], SEEK_CUR ) === -1 ) {
-						throw new Ai1wm_Not_Seekable_Exception( sprintf( __( 'Could not seek to offset of file. File: %s Offset: %d', 'all-in-one-wp-migration' ), $this->file_name, $data['size'] ) );
-					}
-				}
-			}
+			$this->set_files_totals();
 		}
 
 		return $this->total_files_count;
@@ -148,44 +119,52 @@ class Ai1wm_Extractor extends Ai1wm_Archiver {
 	 */
 	public function get_total_files_size() {
 		if ( is_null( $this->total_files_size ) ) {
-
-			// Total files count
-			$this->total_files_count = 0;
-
-			// Total files size
-			$this->total_files_size = 0;
-
-			// Seek to beginning of archive file
-			if ( @fseek( $this->file_handle, 0, SEEK_SET ) === -1 ) {
-				throw new Ai1wm_Not_Seekable_Exception( sprintf( __( 'Could not seek to beginning of file. File: %s', 'all-in-one-wp-migration' ), $this->file_name ) );
-			}
-
-			// Loop over files
-			while ( ( $block = @fread( $this->file_handle, 4377 ) ) ) {
-
-				// End block has been reached
-				if ( $block === $this->file_eof ) {
-					continue;
-				}
-
-				// Get file data from the block
-				if ( ( $data = $this->get_data_from_block( $block ) ) ) {
-
-					// We have a file, increment the count
-					$this->total_files_count += 1;
-
-					// We have a file, increment the size
-					$this->total_files_size += $data['size'];
-
-					// Skip file content so we can move forward to the next file
-					if ( @fseek( $this->file_handle, $data['size'], SEEK_CUR ) === -1 ) {
-						throw new Ai1wm_Not_Seekable_Exception( sprintf( __( 'Could not seek to offset of file. File: %s Offset: %d', 'all-in-one-wp-migration' ), $this->file_name, $data['size'] ) );
-					}
-				}
-			}
+			$this->set_files_totals();
 		}
 
 		return $this->total_files_size;
+	}
+
+	/**
+	 * Set the total files count and size in the archive
+	 *
+	 * @return void
+	 */
+	protected function set_files_totals() {
+		// Total files count
+		$this->total_files_count = 0;
+
+		// Total files size
+		$this->total_files_size = 0;
+
+		// Seek to beginning of archive file
+		if ( @fseek( $this->file_handle, 0, SEEK_SET ) === -1 ) {
+			throw new Ai1wm_Not_Seekable_Exception( sprintf( __( 'Could not seek to beginning of file. File: %s', 'all-in-one-wp-migration' ), $this->file_name ) );
+		}
+
+		// Loop over files
+		while ( ( $block = @fread( $this->file_handle, static::HEADER_SIZE ) ) ) {
+
+			// End block has been reached
+			if ( $this->is_eof_block( $block ) ) {
+				continue;
+			}
+
+			// Get file data from the block
+			if ( ( $data = $this->get_data_from_block( $block ) ) ) {
+
+				// We have a file, increment the count
+				$this->total_files_count += 1;
+
+				// We have a file, increment the size
+				$this->total_files_size += $data['size'];
+
+				// Skip file content so we can move forward to the next file
+				if ( @fseek( $this->file_handle, $data['size'], SEEK_CUR ) === -1 ) {
+					throw new Ai1wm_Not_Seekable_Exception( sprintf( __( 'Could not seek to offset of file. File: %s Offset: %d', 'all-in-one-wp-migration' ), $this->file_name, $data['size'] ) );
+				}
+			}
+		}
 	}
 
 	/**
@@ -218,16 +197,16 @@ class Ai1wm_Extractor extends Ai1wm_Archiver {
 
 		// Seek to file offset to archive file
 		if ( $file_bytes_offset > 0 ) {
-			if ( @fseek( $this->file_handle, - $file_bytes_offset - 4377, SEEK_CUR ) === -1 ) {
-				throw new Ai1wm_Not_Seekable_Exception( sprintf( __( 'Could not seek to offset of file. File: %s Offset: %d', 'all-in-one-wp-migration' ), $this->file_name, - $file_bytes_offset - 4377 ) );
+			if ( @fseek( $this->file_handle, - $file_bytes_offset - static::HEADER_SIZE, SEEK_CUR ) === -1 ) {
+				throw new Ai1wm_Not_Seekable_Exception( sprintf( __( 'Could not seek to offset of file. File: %s Offset: %d', 'all-in-one-wp-migration' ), $this->file_name, - $file_bytes_offset - static::HEADER_SIZE ) );
 			}
 		}
 
 		// Read file header block
-		if ( ( $block = @fread( $this->file_handle, 4377 ) ) ) {
+		if ( ( $block = @fread( $this->file_handle, static::HEADER_SIZE ) ) ) {
 
 			// We reached end of file, set the pointer to the end of the file so that feof returns true
-			if ( $block === $this->file_eof ) {
+			if ( $this->is_eof_block( $block ) ) {
 
 				// Seek to end of archive file minus 1 byte
 				@fseek( $this->file_handle, 1, SEEK_END );
@@ -252,6 +231,9 @@ class Ai1wm_Extractor extends Ai1wm_Archiver {
 					// Set file path
 					$file_path = $data['path'];
 
+					// Set file crc
+					$file_crc32 = $data['crc32'];
+
 					// Should we skip this file by name?
 					$should_exclude_file = false;
 					for ( $i = 0; $i < count( $exclude_files ); $i++ ) {
@@ -267,6 +249,11 @@ class Ai1wm_Extractor extends Ai1wm_Archiver {
 							$should_exclude_file = true;
 							break;
 						}
+					}
+
+					// Validate file name and file path for directory traversal
+					if ( path_is_absolute( $file_name ) || validate_file( $file_name ) !== 0 ) {
+						$should_exclude_file = true;
 					}
 
 					// Do we have a match?
@@ -305,6 +292,11 @@ class Ai1wm_Extractor extends Ai1wm_Archiver {
 						// We have a match, let's extract the file
 						if ( ( $completed = $this->extract_to( $location_file_name, $file_name, $file_size, $file_mtime, $file_bytes_read, $file_bytes_offset, $file_bytes_written ) ) ) {
 							$file_bytes_offset = $file_bytes_written = 0;
+
+							// Verify CRC32 if present (not empty means version 2 archive with CRC32)
+							if ( ! empty( $file_crc32 ) ) {
+								do_action( 'ai1wm_check_file_integrity', $file_name, $file_crc32 );
+							}
 						}
 					} else {
 
@@ -352,16 +344,16 @@ class Ai1wm_Extractor extends Ai1wm_Archiver {
 
 		// Seek to file offset to archive file
 		if ( $file_bytes_offset > 0 ) {
-			if ( @fseek( $this->file_handle, - $file_bytes_offset - 4377, SEEK_CUR ) === -1 ) {
-				throw new Ai1wm_Not_Seekable_Exception( sprintf( __( 'Could not seek to offset of file. File: %s Offset: %d', 'all-in-one-wp-migration' ), $this->file_name, - $file_bytes_offset - 4377 ) );
+			if ( @fseek( $this->file_handle, - $file_bytes_offset - static::HEADER_SIZE, SEEK_CUR ) === -1 ) {
+				throw new Ai1wm_Not_Seekable_Exception( sprintf( __( 'Could not seek to offset of file. File: %s Offset: %d', 'all-in-one-wp-migration' ), $this->file_name, - $file_bytes_offset - static::HEADER_SIZE ) );
 			}
 		}
 
 		// We read until we reached the end of the file, or the files we were looking for were found
-		while ( ( $block = @fread( $this->file_handle, 4377 ) ) ) {
+		while ( ( $block = @fread( $this->file_handle, static::HEADER_SIZE ) ) ) {
 
 			// We reached end of file, set the pointer to the end of the file so that feof returns true
-			if ( $block === $this->file_eof ) {
+			if ( $this->is_eof_block( $block ) ) {
 
 				// Seek to end of archive file minus 1 byte
 				@fseek( $this->file_handle, 1, SEEK_END );
@@ -385,6 +377,9 @@ class Ai1wm_Extractor extends Ai1wm_Archiver {
 
 					// Set file path
 					$file_path = $data['path'];
+
+					// Set file crc
+					$file_crc32 = $data['crc32'];
 
 					// Should we extract this file by name?
 					$should_include_file = false;
@@ -411,6 +406,11 @@ class Ai1wm_Extractor extends Ai1wm_Archiver {
 						}
 					}
 
+					// Validate file name and file path for directory traversal
+					if ( path_is_absolute( $file_name ) || validate_file( $file_name ) !== 0 ) {
+						$should_include_file = false;
+					}
+
 					// Do we have a match?
 					if ( $should_include_file === true ) {
 
@@ -430,6 +430,11 @@ class Ai1wm_Extractor extends Ai1wm_Archiver {
 						// We have a match, let's extract the file
 						if ( ( $completed = $this->extract_to( $location_file_name, $file_name, $file_size, $file_mtime, $file_bytes_read, $file_bytes_offset, $file_bytes_written ) ) ) {
 							$file_bytes_offset = $file_bytes_written = 0;
+
+							// Verify CRC32 if present (not empty means version 2 archive with CRC32)
+							if ( ! empty( $file_crc32 ) ) {
+								do_action( 'ai1wm_check_file_integrity', $file_name, $file_crc32 );
+							}
 						}
 					} else {
 
@@ -494,18 +499,21 @@ class Ai1wm_Extractor extends Ai1wm_Archiver {
 			if ( @fseek( $file_handle, $file_bytes_written, SEEK_SET ) !== -1 ) {
 				$file_bytes_read = 0;
 
+				// Cache config file check outside the loop
+				$should_process_file = ! in_array( $file_name, ai1wm_config_filters() );
+
 				// Is the filesize more than 0 bytes?
 				while ( $file_size > 0 ) {
 
 					// Read the file in chunks of 512KB
-					$chunk_size = min( $file_size, 512000 );
+					$chunk_size = min( $file_size, static::READ_CHUNK_SIZE );
 
 					// Do not decrypt or decompress config files
-					if ( ! in_array( $file_name, ai1wm_config_filters() ) ) {
+					if ( $should_process_file === true ) {
 
 						// Get decryption chunk size
 						if ( ! empty( $this->file_password ) ) {
-							if ( $file_size > 512000 ) {
+							if ( $file_size > static::READ_CHUNK_SIZE ) {
 								$chunk_size += ai1wm_crypt_iv_length() * 2;
 								$chunk_size  = min( $chunk_size, $file_size );
 							}
@@ -550,7 +558,7 @@ class Ai1wm_Extractor extends Ai1wm_Archiver {
 						$file_size -= $chunk_size;
 
 						// Do not decrypt or decompress config files
-						if ( ! in_array( $file_name, ai1wm_config_filters() ) ) {
+						if ( $should_process_file === true ) {
 
 							// Add chunk data decryption
 							if ( ! empty( $this->file_password ) ) {
@@ -625,12 +633,13 @@ class Ai1wm_Extractor extends Ai1wm_Archiver {
 	private function get_data_from_block( $block ) {
 		$data = false;
 
-		// prepare our array keys to unpack
+		// Prepare our array keys to unpack
 		$format = array(
 			$this->block_format[0] . 'filename/',
 			$this->block_format[1] . 'size/',
 			$this->block_format[2] . 'mtime/',
-			$this->block_format[3] . 'path',
+			$this->block_format[3] . 'path/',
+			$this->block_format[4] . 'crc32',
 		);
 		$format = implode( '', $format );
 
@@ -642,6 +651,7 @@ class Ai1wm_Extractor extends Ai1wm_Archiver {
 			$data['size']     = (int) trim( $data['size'] );
 			$data['mtime']    = (int) trim( $data['mtime'] );
 			$data['path']     = trim( $data['path'] );
+			$data['crc32']    = trim( $data['crc32'] );
 
 			// Set file name
 			$data['filename'] = ( $data['path'] === '.' ? $data['filename'] : $data['path'] . DIRECTORY_SEPARATOR . $data['filename'] );

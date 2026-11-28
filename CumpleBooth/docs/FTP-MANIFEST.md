@@ -21,6 +21,307 @@ grep -o 'assets/[a-zA-Z0-9._-]*' dist/index.html   # lo que index.html pide
 Sube **todos** los de `dist/assets/` junto con `dist/index.html` en la misma
 tanda. Los que sobren del build anterior se pueden borrar después.
 
+## Temática Casa de Muñecas: invitación, firma de Términos y kiosco (rama `claude/cumple-casa-gabby`, 29 al 31-oct-2026)
+
+Todo se sube con scripts privados (`herramientas/prod/cumple-gabby/`, fuera del repo) que cotejan con lo desplegado,
+respaldan en `~/respaldos/`, suben a una carpeta de paso, cotejan sha256, instalan con `mv` y verifican desde afuera.
+Los corre Luis. Nada de esto lleva datos de familias.
+
+**DESPLEGADO** (verificado desde afuera):
+- 30-oct: temática Casa de Muñecas en la invitación (intro propio por fiesta, voz diseñada, despedida con sello,
+  guía sin regalos), vista previa de WhatsApp con versión (`invitacion.php`, `&v=` del sha de la imagen), voz de
+  cada capítulo con `?v=`.
+- 30-oct 12:17: tarjeta «Seguir a @Cumple_Click» en la ventana de «¡Asistencia confirmada!», todas las invitaciones
+  (`invitacion.php`, `assets/invitation.css`). Respaldo `app-antes-instagram-20261030-1217.tar.gz`.
+- 30-oct 12:18 y 12:44: el enlace de firma de Términos se calcula (HMAC de id + vencimiento) y se vuelve a ver en
+  Aceptaciones y en la ficha (`lib.acceptance.php`, `admin/aceptaciones.php`, `lib.envios.php`, `admin/index.php`).
+  Respaldos `app-antes-aceptaciones-enlace-20261030-1218.tar.gz` y `app-antes-envios-firma-20261030-1244.tar.gz`.
+
+**DESPLEGADO 31-oct 09:19** (`desplegar-kiosco.py`, 27 de 27, sha256 cotejado; respaldo `app-themes.json.antes-kiosco-casa-munecas-20261031-0919.tar.gz`): el kiosco de la temática. Solo datos y archivos; no hay build. Verificado desde afuera por `api.php?p=<slug>` (6 personajes, show `neon-arena`, frameBox nuevo) y los 26 archivos con 200. Ojo: `data/themes.json` responde 403 desde afuera; se verifica por `api.php`.
+1. Archivos nuevos en `themes/casa-munecas/` (OBLIGATORIO, primero): `gabby|pandy-paws|cakey|mercat|kitty-fairy|dj-catnip`
+   × (`.jpg`, `-cut.png`, `puzzle-*.jpg`, `saludo-*.mp4`), `fondo-sala.jpg`, `roulette/roulette-background-v1.png`.
+2. `data/themes.json` (OBLIGATORIO, al final): entrada `casa-munecas` con los 6 personajes, `fullGame` (`neon-arena`)
+   y el `frameBox` del fondo de la sala. Respaldo antes de pisar.
+No subir: el material de producción (`material/…/kiosco/`), que está fuera del repo.
+
+**DESPLEGADO 31-oct** (`desplegar-bienvenida.py`): en la bienvenida del kiosco de Casa de Muñecas el título y la guirnalda van en el cielo (`src/styles.css`, regla `.intro--casa-munecas`). Bundle recompilado: cambian solo `assets/main-DDjzb0IP.js` y `assets/main-DNktZ8-y.css` (los otros 5 trozos idénticos a los de PROD, cotejado) y `index.html` al final, con respaldo `~/respaldos/app-index.html.antes-bienvenida-casa-*`. Los trozos viejos `main-CPkbWfbA.js` y `main-BYDY8wH5.css` siguen en el servidor. Validado por Luis en la tablet y desde afuera.
+
+**LOCAL, listo para subir (commit `ae1473b`, script privado `desplegar-asomate.py`, lo corre Luis):** Casa de Muñecas tenía la ruleta con el video genérico del auto (App.jsx cae a `welcome-car.mp4` sin `videos.welcome`) y le faltaban la foto grupal y Asómate. Solo datos y archivos, sin recompilar: nuevos `themes/casa-munecas/welcome-casa-munecas.mp4`, `fondo-grupal.jpg` y `asomate/` (fondo + 6 recortes con hueco); reemplazados los 6 `*-cut.png` (escamas de MerCat que el recorte de verde había dejado semitransparentes); `data/themes.json` al final. Respaldo de lo pisado en `~/respaldos/app-casa-munecas-antes-asomate-*.tar.gz`. Verificar por `api.php?p=<slug>`: `videos.welcome`, `grupal` y `asomate` con 6 personajes. Probado en un kiosco local con fiesta ficticia y cámara simulada; sin probar en la tablet.
+No probado: el kiosco con esta temática en la tablet física ni la cabina con un niño real.
+
+## DESPLEGADO 2026-10-24 (~02:30): baby shower con regalo validado y temática Osito de Bienvenida (rama `claude/baby-shower-regalos`)
+
+Go de Luis el 24-oct («Mándala ahora mismo»). Diseño y plan en `Docs/superpowers/specs/2026-10-24-cumpleclick-baby-shower-invitacion-design.md` y `Docs/superpowers/plans/2026-10-24-cumpleclick-baby-shower-invitacion.md`.
+
+- **Migración 028** (`cc_rsvps`: `team`, `gift_item_id`, `baby_photo_key`) aplicada con `database/aplicar-028.php` ANTES del código: `applied 028_rsvp_regalo`, tres conteos en 0.
+- **Código (14 archivos de `app/`, sha256 cotejado):** `lib.regalos-confirmacion.php` (nuevo), `lib.gifts.php`, `lib.rsvp.php`, `rsvp-api.php`, `gift-api.php`, `regalos-papas.php`, `asistencia-papas.php`, `admin/index.php`, `admin/agenda.php`, `data/themes.json`, `data/event-profile-presets.json`, `assets/invitation.css`, `assets/invitation.js`, `invitacion.php`. Antes de pisar, los 13 reemplazados eran idénticos a `main` (`ca57fcc`).
+- **Temática nueva `themes/baby-osito/`** (7 archivos): fondos Soul 2 sin texto, intro del sobre y despedida con Kling 3.0, música de `baby-nube` provisoria. `vozPropia`: no suena Alice; mientras no haya voz propia, va con música sola.
+- **CLI privados en `database/`:** `modo-regalo-confirmacion.php <slug>` pone `gift_mode='rsvp'` (el admin no lo ofrece todavía).
+- **Respaldo:** `~/respaldos/cumpleclick-db-antes-028-20261024-0225.sql` (40 tablas) y `~/respaldos/app-antes-028-20261024-0225.tar.gz` (13 archivos). El CSS corregido después tiene su propio respaldo `app-invitation.css.antes-*`.
+- **Verificado en PROD:** confirmación por la invitación a 375 px; «cochecito» después de «Coche de paseo» → 422 con el mensaje exacto; «sorpresa» → 422 genérico; foto de 2,9 MB 3024×4032 aceptada y guardada 1200×1600 fuera del webroot; la lista pública sin nombres. Las dos confirmaciones de prueba se borraron con `cb_rsvp_borrar` (fila, regalo y foto).
+- **No probado:** el bloqueo `FOR UPDATE` con dos confirmaciones simultáneas; los enlaces de los papás con datos (exigen la fiesta activa); un iPhone real; la revisión B de Codex (NOT_RUN).
+- **Voz (mismo día, después):** Matilda v3 (voz estándar de temáticas). `themes/baby-osito/narracion-video/` con la despedida en tres versiones y `narracion-final.mp3`; `invitacion.php` ya no apaga la narración de inicio con `vozPropia`. El inicio propio de esta invitación (21,6 s, con nombres) es un output `personalized_narration_intro` aprobado en el almacén privado, fuera del repo. Verificado en PROD: suena al cerrarse el intro y la música baja a 0,04 mientras habla. Respaldo `~/respaldos/app-invitacion.php.antes-*`.
+- **Una sola voz a la vez (mismo día):** `assets/invitation.js` calla la voz que suena cuando arranca otra y al tocar «Toca para seguir» (antes se pisaban). Verificado en PROD: la voz de la portada se detiene y la música vuelve a 0,15. Prueba `tests/frontend/unaSolaVoz.test.mjs` (roja con la versión anterior).
+- **Prueba de repetidos en PROD (28 casos, 28 bien):** coche/cochecito/coche de paseo/COCHES/carrito, cuna/cunita, corral/cuna corral, silla de auto/silla para el auto/butaca, bañera/tina, mochila portabebé/canguro, monitor/monitor de bebé, el cuarto pañales, body dos veces, «mantita para la cuna», pañalera y genéricos. Script fuera del repo (`herramientas/prod/baby-shower/prueba-duplicados.py`); las confirmaciones de prueba se borraron.
+- **Regalos sugeridos y voz de gracias (mismo día):** 16 botones de ideas bajo el campo del regalo (un toque lo escribe, sin abrir el teclado); los únicos tomados y los pañales completos salen apagados según `cb_regalo_validar`. Al confirmar suena `narracion-video/gracias-confirmar.mp3` (Matilda v3). 🔴 Primera subida con una carrera: el audio destrabado terminaba de cargar después del 200 y se callaba, dejando la música baja; corregido con `graciasPedida` y probado en PROD (suena 2,5 s completos y la música vuelve a 0,15). Archivos: `invitacion.php`, `assets/invitation.js`, `assets/invitation.css`, `themes/baby-osito/narracion-video/gracias-confirmar.mp3`; respaldos `~/respaldos/app-*.antes-*`.
+- **Guía hasta confirmar (mismo día):** si el invitado no baja, tras 10 s quieto (una voz o un video sonando cuentan como actividad) la página lo lleva al botón de confirmar; al llegar suena `narracion-video/guia-confirmar.mp3` (9,3 s) y el botón late. 🔴 La voz de «Guarda y comparte» arrancaba a la vez y la callaba: ahora la guía vuelve a sonar cuando hay silencio (hasta dos veces). Medido en PROD sin tocar nada: portada 12 s → recorrido 34 s → «Guarda esta invitación» 49 s → guía 54 s completa, sin voces encimadas. Ya hay confirmaciones reales: no hacer pruebas que confirmen en esta fiesta.
+- **Rollback:** restaurar el tar sobre `app/` y borrar `themes/baby-osito/` y `lib.regalos-confirmacion.php`. La 028 es aditiva y puede quedarse; su `.down.php` está en `database/migrations/`.
+
+## DESPLEGADO 2026-10-21 (noche): la ruleta espera su voz y «Descargar todas las fotos (ZIP)» en el admin (rama `claude/ruleta-voz-descarga-fotos`)
+
+Pedidos de Luis del 21-oct. **Ruleta:** la frase «¡La ruleta está girando… ¿a quién le tocará bailar?» dura 4,2 s y
+el giro 3,7 s, así que la voz del resultado la cortaba (medido grabando el kiosco). Ahora el resultado espera a que
+terminen las dos cosas (`esperarGiro` en `src/animador/voz.js`): si la ruleta ya frenó, sigue pasando nombres despacio;
+sin voz revela al terminar el giro; tope de 6 s. «Otra persona» dice solo «¿No quiere? ¡Tranquilos, giramos otra
+vez!» (sumarle la frase del giro duraba 7,7 s). **ZIP:** botón en Álbum → Fotos del kiosco que baja `cabina/` (lo que
+sigue en la galería) e `invitados/` (aprobadas y pendientes; sin lo oculto ni los videos) en un ZIP escrito mientras
+se descarga (`lib.zip.php`, sin ZipArchive ni temporales en el servidor, con Content-Length exacto). Cada carpeta pide
+su módulo: un operador con solo «Fotos del kiosco» recibe solo `cabina/`; el portero exige que la fiesta sea suya.
+- **Pruebas:** frontend 332 (329 pasan, 3 omitidas), con 5 nuevas de la ruleta; `descargar-fotos-http.php` 22
+  (el ZIP abre con ZipArchive CHECKCONS, cada foto idéntica por sha256, permisos y 404); `album`, `album-moderar-varios-http`,
+  `usuarios-http`, `cumple-adulto-http`, `adulto-textos-http`, `galeria-http` y `lint` en verde. Un ZIP con las 27 fotos
+  reales de la cabina del piloto abrió con Python `zipfile` (CRC sin errores) y con .NET `ZipFile` (el de Windows).
+- **Verificado en local:** grabando la ruleta en Chrome, «está girando» suena entera (4,27 s, termina sola) y recién
+  después «te toca bailar…»; «Otra persona» dice su frase y revela.
+- **Subido con go de Luis** (script `subir-ruleta-descarga.py`, fuera del repo): se cotejó antes que `_acceso.php`, `_style.css.php`
+  y `album.php` de PROD fueran iguales a `main` (sin CR) y que los dos archivos nuevos no existieran; respaldos en
+  `~/respaldos/app-*.antes-*`; cada archivo con sha256 y `php -l`, `mv` atómico, el `index.html` al final.
+- **Verificado en PROD:** los 7 archivos iguales al local; `index.html` desde afuera igual al local; `descargar-fotos.php`
+  sin sesión responde 302 al login; en el servidor, el ZIP de la fiesta del piloto se arma con 25 fotos de cabina (8,3 MB).
+  Nadie ha bajado el ZIP desde el admin con sesión todavía.
+- **Orden en que se subió:** `public/lib.zip.php` → `app/lib.zip.php`; `public/admin/descargar-fotos.php` →
+  `app/admin/descargar-fotos.php`; `public/admin/_acceso.php`, `public/admin/_style.css.php` y `public/admin/album.php`
+  → `app/admin/` (cotejar antes contra `main`); los `dist/assets/` que pida el `index.html` nuevo (`main-*.js` cambia)
+  y `dist/index.html` → `app/index.html` al final. Sin migración.
+- **No probado:** la descarga en PROD con una fiesta grande (cientos de fotos) ni que el borde de Hostinger deje pasar
+  una respuesta larga sin cortarla; la ruleta en la tablet física.
+
+## DESPLEGADO 2026-10-16 (tarde): transiciones habladas y ruleta del baile (rama `claude/animador-voces`)
+
+Go de Luis en cada paso. **Transiciones** (`7ca9898`): «Paso esta» y «Siguiente» dicen una frase («¡Uy, esa no nos
+gustó! Vamos a la siguiente pregunta», tres variantes de cada una) antes de leer la tarjeta nueva. **Ruleta del baile**
+(`368fdcc`, `68c4367`): juego 19 «¿Quién baila? La ruleta»; gira entre los invitados de la fiesta (o frases sin lista),
+dice si baila sin pareja o en pareja y con quién, y nombra una de 37 canciones que pone el DJ (la app no trae audio):
+venezolanas, éxitos bailables del mundo y jocosas con destinatario (`para`: solo hombres o solo mujeres, por el género
+de la lista). «Otra persona» gira de nuevo. 55 frases nuevas (474 + 2.178 créditos), verificadas con `scribe_v1`.
+- **Subido:** carpeta de voces completa (380 claves, respaldo `~/respaldos/voces-fiesta-piloto.antes-*`), `lib.php`
+  (cotejado contra `4a862fc`; suma `ruleta-baile` a `cb_animador_juegos`, respaldo `~/respaldos/app-lib.php.antes-*`),
+  `assets/main-sbHBbQfN.js`, `assets/main-BYDY8wH5.css` e `index.html` (respaldo `~/respaldos/app-index.html.antes-*`).
+- **Verificado en PROD** con los 22 invitados reales: la ruleta eligió a un invitado, con pareja y canción, y sonaron en
+  orden la presentación, «está girando», «en pareja» y la canción; «Paso esta» dijo su frase y leyó la tarjeta nueva.
+- **Pendiente:** el título de la canción de Diveana y otras jocosas que conoce Luis; escuchar «El venao», «San Juan to'
+  lo tiene» y «Chino y Nacho» (el transcriptor oyó «El venado», «te lo tiene» y «Chimi Nacho»).
+
+## DESPLEGADO 2026-10-16 (mañana): revisión B de Codex en las voces y textos adultos de Codex (rama `claude/animador-voces`)
+
+Go de Luis. Codex hizo la revisión B del PR #91 en su app (informe `Revision-B-Codex-Voces-PR91.md`, fuera del repo):
+dictamen RECHAZADO por **CX-30** (al pasar con Siguiente tras «¡Tiempo!», la tarjeta nueva revelaba su respuesta),
+**CX-31** (silenciar durante «se acabó el tiempo» dejaba la respuesta sin revelar) y **CX-32** (un audio fallido saltaba
+la presentación). Claude los confirmó y corrigió (`429523f`; el reloj se monta por tarjeta con `key`, el reproductor
+`crearReproductor` resuelve siempre una vez), con pruebas y verificación en navegador local y en PROD. Codex terminó
+además los textos adultos (`92e8a19`, auditado por Claude): aceptación «persona homenajeada», manual sin «niños»,
+invitaciones Hombre/Mujer, avisos de juegos 3D y privacidad; 45 + 29 pruebas nuevas, en rojo contra el código anterior.
+- **Subido** (`desplegar-revision-b.py`, cotejo previo de cada archivo, respaldo `~/respaldos/revision-b-20261016-*`):
+  `lib.acceptance.php`, `lib.manual.php`, `aceptar-plan.php`, `admin/invitations.php`, `admin/event-profile.php`,
+  `admin/index.php`, `assets/main-BG7Zmx-h.js` e `index.html`. Todos iguales al local por sha256; portada, APIs, feria y
+  login en 200; en PROD la tarjeta siguiente a un «¡Tiempo!» queda en 20 s y sin revelar.
+- 🔴 **Para Luis y el abogado:** la aceptación sigue exigiendo el consentimiento de imagen **de menores** (madre, padre o
+  tutor) también en fiestas adultas. Hace falta un instrumento para adultos; Codex no reescribió texto legal, a propósito.
+- Pendiente menor: `lib.admin-usuarios.php` describe el permiso de invitados como «sumar un niño» (catálogo global).
+
+## DESPLEGADO 2026-10-16 (~00:30): voces del animador adulto y «mujeres y hombres» (rama `claude/animador-voces`)
+
+Go de Luis. Lo hizo Claude por SSH (`desplegar-voces.py`, en la carpeta de Aseo de la sesión): cotejo previo (`lib.php` y
+`admin/index.php` de PROD = `main` `1c3e333`), respaldos `~/respaldos/app-*.antes-voces-20261016-*`, carpeta de voces
+subida a un temporal con sha256 por archivo y renombrada de una vez, después `lib.php`, `admin/index.php`, dos assets
+(`main-BcdOx6xG.js`, `main-BJa6JKvi.css`) y `index.html` al final.
+- **Voces** (`4a862fc`): cada juego abre con una presentación hablada (bienvenida, en qué consiste, un saludo por equipo
+  —voz masculina para «Caballeros sospechosos», femenina para «Cómplices peligrosas»— y «presionemos comenzar») con
+  **Omitir**; cada tarjeta se lee al aparecer (la Mímica nunca), con 🔊 Repetir y silencio en la cabecera; al acabarse el
+  reloj suena «¡Se acabó el tiempo!», se revela la respuesta y la otra voz la lee. Los dos «¿Quién es más venezolano?»
+  pasan a tener reloj de 20 s. Guion único en `src/animador/vocesGuion.js`.
+- **Audios:** 325 frases, dos voces diseñadas en ElevenLabs y guardadas en la cuenta («CumpleClick Animadora/Animador
+  venezolano», `eleven_v3`, 15.628 caracteres, nivel −16 LUFS). Dicen el nombre y la edad: viven **solo en el servidor**
+  en `themes/<tema>/voces-fiesta-<slug>/` (`.gitignore`); `lib.php` publica `party.vocesAnimador` si existe el índice.
+  Otra fiesta adulta necesita su propia carpeta (el guion se arma con `guionCompleto(JUEGOS, {nombre, edad})`).
+- **Textos adultos** (`dcb99be`): lista y gestión de invitados en «Mujeres/Hombres», «Elegir otro invitado» y el selector
+  del admin «Mujer/Hombre». Quedan textos infantiles fuera de la fiesta: página de aceptación, manual PDF y opciones de
+  la invitación en el admin.
+- **Verificado desde afuera:** los tres archivos de PROD iguales al local por sha256, `indice.json` (325 claves) y ocho
+  audios iguales, la API de la fiesta publica el índice, el kiosco en PROD reprodujo intro, equipos, «comenzar» y la
+  tarjeta, y Omitir cortó la presentación; luciano-spidey, feria y portada en 200.
+- **Calidad de voz:** 259 de 325 transcritas con `scribe_v1` (similitud media 0,979); las 66 restantes quedaron sin
+  verificar porque **ElevenLabs se quedó sin créditos**. Posibles a regrabar: «¿Me guardas un baile?» (algo atropellada) y
+  «Me fui», que omitió el paréntesis del intérprete; los «X + Y» de Piropos se leen «X más Y».
+- **Regrabación (16-oct, mañana, go de Luis):** con saldo recargado se regrabaron 20 frases (762 créditos; `f3b138d`):
+  los «A + B» de Piropos se leen «A y B», los paréntesis pasan a coma («Me fui, Reymar Perdomo») y «¿Me guardas un baile?».
+  Las 325 quedaron verificadas con `scribe_v1` (similitud media 0,983); Luis escuchó las cuatro dudosas y aprobó. El
+  índice ahora lleva la huella de cada audio (`archivo.mp3?v=<sha8>`), así el CDN no sirve una frase vieja. Carpeta
+  reemplazada entera (respaldo `~/respaldos/voces-fiesta-piloto.antes-*`); las 20 nuevas verificadas desde afuera.
+- **NOT_RUN:** escuchar en la tablet y en el parlante del salón; la Revisión B cruzada (Codex): lanzada desde Claude, su
+  sandbox de Windows no arrancó (`CryptUnprotectData`), así que se pasó el encargo a Luis para correrlo en la app de Codex.
+
+## DESPLEGADO 2026-10-13 (mañana): despedida propia de la fiesta del piloto
+
+Pedido de Luis: en la despedida del kiosco, la imagen de la cumpleañera con la copa, con movimiento y la voz chilena de
+la demo de la botillería (Matilda `XrExE9yKIg1WjnnlVkGX`, `eleven_v3`; texto aprobado, transcripción `scribe_v1` correcta).
+- **Código** (`df737a7`): `cb_resolve_party` publica `themes/<tema>/despedida-fiesta-<slug>.mp4` como despedida de esa
+  fiesta si el archivo existe. El archivo lleva la cara de la persona festejada: solo en el servidor (`.gitignore`).
+  Prueba en `cumple-adulto-http.php` (56), con control en rojo.
+- **Subido:** `app/lib.php` (cotejado contra el del deploy anterior, respaldo
+  `~/respaldos/app-lib.php.antes-despedida-*`) y el video (720×1280, 9 s, 1,66 MB, −16 LUFS).
+- **Primera versión: SIN IA** (acercamiento lento y balanceo sobre la imagen, más la voz). La animación no salió en el
+  primer intento: la cuenta «API KEY Higgsfield + N8N» no tenía saldo (falló a los 0 s, sin cobro).
+- **Video actual (13-oct, tarde): animado con IA.** Kling 3.0 std image-to-video, 10 s, generado con la otra cuenta
+  de la API (bloque «API N8N», `hf_api.py --cuenta api-n8n`), USD 0,63 de lista aprobados por Luis. Levanta la copa,
+  se mueve con la música y se despide con la mano; texto del fondo y cara revisados cuadro a cuadro. Misma voz, entra
+  a los 0,8 s; −15 LUFS; recomprimido de 20 MB a 2,4 MB (x264 crf 27) para la tablet. Reemplazó el mismo archivo con
+  `mv` atómico (respaldo `~/respaldos/despedida-*.antes-animada-*.mp4`); el `?v=` cambia solo porque
+  `cb_sello_archivo` usa la fecha del archivo. Verificado desde afuera con el User-Agent de la tablet y de escritorio:
+  200 y sha256 igual al local.
+- **NOT_RUN:** verla en el kiosco de PROD (la fiesta sigue inactiva) y en la tablet.
+
+## DESPLEGADO 2026-10-13 (00:28-00:40): cumpleaños de adulto, Coquetería Pop, juegos del animador y la feria integrada (AT-CUMPLECLICK-026)
+
+Go de Luis el 12-oct («vamos a PROD con todo»). Lo hizo Claude por SSH (`deploy-026/desplegar.py`, en la carpeta de Aseo de la
+sesión, fuera del repo) en tres fases que abortan al primer problema: respaldo, subida y verificación.
+
+**PROD no era `main`.** El reconocimiento encontró la feria (`claude/feria-prod`, migración `026_modo_feria`) en PROD: su
+`lib.php` y su `themes.json` eran los de esa rama, y el resto de los once archivos, los de `main` (`188ba45`). Subir la rama
+tal cual habría borrado la feria. Se fusionó `origin/claude/feria-prod` (commit `ad21dd6`): dos conflictos triviales, el
+admin ahora exige una temática con cabina de cumpleaños para un cumpleaños de adulto (las de adultos de la feria se
+rechazan) y `feria-marcos.test.mjs` acepta «Ir a mi foto» con movimiento reducido (fallaba al azar también en la feria
+sola). Con la fusión subió también **la intro de la feria pendiente desde el 29-sep** (`0357996`, sección PENDIENTE
+2026-09-29 más abajo): solo afecta al modo feria. `feria.html` no se tocó (sigue el de PROD).
+
+Cotejo completo `dist/` contra `app/` antes de subir: distintos solo los once de la tabla e `index.html`; nuevos solo tres
+assets (`main-CL2XqIT8.js`, `main-DNIuHEKU.css`, `anton-latin-400-normal-Byf51wtH.woff2`) y la carpeta de la temática. No se
+subieron, a propósito: `data/parties.json` y `data/ajustes.json` (datos vivos), `cartel-qr.html` (PROD tiene otra versión,
+fuera de este cambio) ni `feria.html`.
+
+- **Respaldo:** `~/respaldos/cumpleclick-db-antes-026-20261013-0028.sql` (0600, 40 tablas, «Dump completed») y
+  `~/respaldos/app-antes-026-20261013-0028.tar.gz` + `.sha256` (los 11 archivos reemplazados).
+- **Migración 027** aplicada con `php aplicar-027.php` («applied», 0 fiestas con juegos apagados). `rollback-adultos.php`,
+  `aplicar-027.php` y la migración quedaron en `domains/cumpleclick.com/database/`.
+- **Subido:** 19 archivos de `themes/adulto-coqueteria-pop/` y 14 de código en el orden de la tabla, cada uno cotejado por
+  sha256, con `php -l` y `json_decode`, e instalados con `mv` atómico (`lib.php` primero, `index.html` al final).
+- **Verificado desde afuera:** `samantha-hielo` y `luciano-spidey` responden igual (sin `edad`, sin `cabinaAdulto`, sin
+  `animadorApagados`, 6 personajes); `lib.php` nuevo con la feria presente; raíz, `index.html`, `feria.html`, assets nuevos,
+  fondo y PNG de Asómate (mismos bytes: el CDN no los achica), `admin/login.php` y `admin/maestro.php` en 200 sin errores.
+- **Fiesta del piloto creada en PROD** por CLI con las funciones del admin (adulta, 69, Coquetería Pop, 16-oct, marco de la
+  temática, todos los juegos disponibles), **inactiva** hasta que Luis genere la aceptación o la exima.
+- **NOT_RUN:** el kiosco adulto abierto en PROD (la fiesta está inactiva), la tablet, el rollback real, una invitación
+  publicada y el admin con sesión iniciada.
+
+### Lo que decía la sección PENDIENTE (se conserva para el rollback)
+
+
+Nada de esto está en PROD. Rama `claude/cumple-adulto-coqueteria` sobre `origin/main`. Detalle en
+`docs/CUMPLE-ADULTO-COQUETERIA.md`. La modalidad y la edad no llevan migración (`event_type` es VARCHAR(40) y
+`birthday_age` TINYINT). **Sí la lleva, desde el 12-oct, el apagado de juegos del animador: migración
+`027_animador_apagados`** (columna `cc_parties.animador_apagados`, TEXT NULL; el número 026 ya lo usa
+`026_modo_feria` en otras ramas). Va **antes** de subir `lib.php` y `admin/index.php` (paso 0b). Si por error se
+subiera el código antes, el kiosco igual abre (publica `animadorApagados: []`) y el admin avisa «falta aplicar la
+migración 027» al guardar una fiesta de adulto; nada se pierde en silencio. Requiere el go de Luis.
+
+Orden de subida (destino `app/`, origen `dist/` después de `npx vite build`):
+
+| # | Local | Destino PROD | Clase |
+|---|---|---|---|
+| 0 | `database/rollback-adultos.php` | `domains/cumpleclick.com/database/rollback-adultos.php` (privado, fuera de `public_html`; carga `../public/lib.php`, que allí es el enlace a `public_html/app`) | OBLIGATORIO, antes que todo: sin él no hay rollback sin pérdida. Solo CLI, nunca dentro de `app/` |
+| 0b | `database/migrations/027_animador_apagados.php` y `database/aplicar-027.php` | `domains/cumpleclick.com/database/` (privado, junto a las demás migraciones); después, por SSH: `php aplicar-027.php` (debe decir `applied 027_animador_apagados` o `skip`, y `cc_parties con animador_apagados: 0`) | OBLIGATORIO, antes del paso 2 |
+| 1 | `dist/themes/adulto-coqueteria-pop/fondo-sala.jpg`, `fondo-banner.jpg`, `fondo-grupal.jpg`, `fondo-revista.jpg` y la carpeta `asomate/` completa (15 archivos) | `app/themes/adulto-coqueteria-pop/` (carpeta nueva) | OBLIGATORIO |
+| 2 | `dist/lib.php` | `app/lib.php` | OBLIGATORIO, antes que los PHP de abajo (define `cb_party_event_type`, `cb_party_age_valid`, `cb_theme_is_adult`, `cb_theme_cabina_adulto`) |
+| 3 | `dist/lib.invitations.php`, `dist/lib.predictions.php`, `dist/lib.rsvp.php`, `dist/ver.php`, `dist/invitacion.php`, `dist/asistencia-papas.php` | `app/` | OBLIGATORIO |
+| 4 | `dist/admin/index.php` | `app/admin/index.php` | OBLIGATORIO |
+| 5 | `dist/data/themes.json` | `app/data/themes.json` | OBLIGATORIO |
+| 6 | `dist/assets/invitation.js` | `app/assets/invitation.js` | OBLIGATORIO (independiente; se refresca por `filemtime`) |
+| 7 | `dist/assets/` que referencia el `index.html` nuevo y no estén en PROD (cotejar por nombre; al menos `main-*.js`, `main-*.css` y `anton-latin-400-normal-*.woff2`) | `app/assets/` | OBLIGATORIO |
+| 8 | `dist/index.html` | `app/index.html` | OBLIGATORIO, al final |
+
+No subir: `design/generadores/`, `tests/`, `docs/`, ni el paquete privado del piloto; `database/rollback-adultos.php` va solo a `domains/cumpleclick.com/database/`. Las fotos y el video del piloto
+se suben **por el admin** (Invitaciones → imagen y video aprobados), que los guarda en el almacén privado fuera de
+`public_html`.
+
+**Respaldo previo obligatorio, con sha256** (los 11 archivos que se reemplazan; la revisión B de Codex, CX-04, encontró
+que la lista anterior omitía tres consumidores de `lib.php` y un rollback así dejaba `cb_party_event_type()` sin
+definir): `app/lib.php`, `app/lib.invitations.php`, `app/lib.predictions.php`, `app/lib.rsvp.php`, `app/ver.php`,
+`app/invitacion.php`, `app/asistencia-papas.php`, `app/admin/index.php`, `app/assets/invitation.js`,
+`app/data/themes.json` y `app/index.html`. **Y el volcado completo de la base** con el procedimiento de siempre
+(`mysqldump` desde la consola SSH, `scratchpad/alinear-0915/respaldo-db.py` del checkout principal; ver
+`docs/MAPA-PROD-Y-REPOSITORIOS.md`, re-cotejo del 2026-09-15). El volcado es la red de último recurso: el rollback
+normal no lo usa.
+
+**Por qué el rollback no es solo bajar archivos** (revisión B2 de Codex, CX-04). El código anterior (188ba45) no
+conoce `adult_birthday`: su `cb_load_parties()` lee al adulto como infantil (`lib.php:422`) y su `cb_save_parties()`,
+que reescribe **todas** las fiestas cada vez que el admin guarda cualquiera (basta apagar los juegos de otra fiesta),
+lo deja como `child_birthday` con edad nula, porque el tope era 17 (`lib.php:577-584`), y arrastra a su invitación
+(`lib.php:614`). Además `active=0` no apaga la invitación: las páginas públicas solo miran `status='published'`, y el
+código anterior la mostraría con «Nombre del apoderado o familia» y «Nombre de los niños». Por eso se respalda y se
+suspende antes, y se restaura exacto después. No se borra ninguna fila.
+
+**Los juegos del animador apagados no necesitan nada en el rollback.** Viven en su propia columna
+(`animador_apagados`, migración 027), que el código anterior no lee ni escribe: su `cb_save_parties()` nombra las
+columnas una por una en el `UPDATE` y el `INSERT`. Probado con el `lib.php` de 188ba45 operado de verdad sobre la
+misma base: guarda todas las fiestas y la columna queda igual en todas (`tests/backend/animador-apagados.php`). No
+hay que revertir la migración al bajar el código; `027_animador_apagados.down.php` existe solo si se quisiera quitar
+la columna, y borra la lista de cada fiesta.
+
+**Rollback, en este orden** (por SSH, en `domains/cumpleclick.com/database/`; `F` es el archivo de respaldo, p. ej.
+`~/respaldos/rollback-adultos-AAAAMMDD-HHMM.json`):
+1. Con el código nuevo todavía arriba: `mkdir -p ~/respaldos && php rollback-adultos.php exportar F`. Guarda
+   modalidad, edad, estado y temática de cada fiesta adulta y el estado de publicación de sus invitaciones (archivo
+   0600, nacido con umask 077, con suma sha256 de integridad, que no es una firma, y formato
+   `cumpleclick-rollback-adultos/2` con la huella del entorno: un hash del motor, del nombre de la base y de la URL
+   pública, nunca el DSN ni credenciales) y recién entonces las suspende: fiesta `active=0`, invitación `archived`.
+   Debe terminar con código 0 y `adultas_activas_fuera_del_respaldo: 0`. Se niega, antes de escribir el respaldo o
+   suspender nada, si `F` ya existe o es un enlace, si su carpeta (por ruta real, con los enlaces resueltos) queda
+   dentro de `public_html`, de cualquier webroot de la cuenta (un tramo `public_html`, `www` o `htdocs`, también
+   `domains/automatizatech.cl/public_html/`) o de cualquier repositorio Git (`.git` como carpeta o como archivo de
+   worktree en ella o en un padre: así queda fuera la raíz entera del repositorio público, `Docs/` incluida; en PROD
+   no hay `.git` y `~/respaldos` y `domains/cumpleclick.com/database/` se aceptan), si alguna carpeta padre no se
+   deja revisar, o si el `lib.php` cargado ya es el anterior. Si el PHP de consola tiene `open_basedir`, exportar
+   se niega sin leer ni escribir nada: correr `php -d open_basedir= rollback-adultos.php exportar F`.
+2. Restaurar `index.html` (sin borrar todavía los assets nuevos).
+3. Restaurar todos los consumidores: `admin/index.php`, `lib.invitations.php`, `lib.predictions.php`, `lib.rsvp.php`,
+   `ver.php`, `invitacion.php`, `asistencia-papas.php`, `assets/invitation.js` y `data/themes.json`.
+4. Recién al final, `lib.php`. Al revés quedan llamadas a funciones que la versión anterior no tiene.
+5. Opcional: retirar `themes/adulto-coqueteria-pop/` y los bundles nuevos.
+6. Verificar una fiesta infantil, un baby shower (predicciones), `ver.php`, una invitación infantil y `asistencia-papas`;
+   y que la invitación adulta responde 404 («todavía no está disponible»), no la página con textos infantiles.
+7. Mientras dure: no editar, publicar ni desarchivar fiestas o invitaciones adultas en el admin. Guardar otras fiestas sí
+   se puede; el código anterior reescribirá al adulto como infantil y eso lo deshace la vuelta.
+   `php rollback-adultos.php comprobar F` muestra en cualquier momento qué difiere; con el código anterior arriba sale 1
+   y lista modalidad, edad, estado y publicación, que es lo esperado.
+
+**Vuelta a la versión nueva, en este orden:**
+1. Subir otra vez la versión nueva con el orden de la tabla (`lib.php` antes que sus consumidores, `index.html` al final).
+2. Enseguida: `php rollback-adultos.php restaurar F`. Devuelve exactamente lo guardado (modalidad, edad, estado y
+   temática de la fiesta; estado, fecha y autor de publicación y modalidad de la invitación), todo o nada, y lo
+   comprueba. Lo editado a mano en otros campos durante el rollback (nombre, fecha, invitados, otras fiestas) se
+   conserva. Se niega con el código anterior arriba, con un respaldo alterado, con uno de otro entorno (otra base u
+   otra URL pública), con uno del formato `/1`, si falta alguna fila o si alguna fiesta cambió de slug o alguna
+   invitación pertenece hoy a otra fiesta; en ese caso no escribe nada y se recurre al volcado. `comprobar` también
+   se niega con un respaldo de otro entorno o del formato `/1`. Es idempotente. Debe terminar con código 0 e `igual_al_respaldo: true`.
+   Entre subir el código y restaurar, la fiesta adulta sigue inactiva y no abre: un hueco de minutos, sin datos perdidos.
+3. Verificar `api.php?p=<fiesta adulta>` con `event_type: adult_birthday` y su edad, la invitación adulta con
+   «¿Vienes con alguien?», y que `php rollback-adultos.php comprobar F` sale 0.
+4. `F` se queda en `~/respaldos/`: trae los slugs de fiestas reales y no se copia al repositorio.
+
+**Ensayado en local el 2026-10-11** (Forja-Claude, PHP 8.2.29, SQLite y fiestas ficticias; código de 188ba45 extraído
+fuera del repositorio y operado de verdad, el admin anterior por HTTP): 36 de 36 pasos PASS. Con el código anterior la
+invitación adulta da 404 sin textos infantiles, `rsvp-api.php` y `descargar-invitacion.php` la rechazan, y el admin
+anterior reescribe al adulto como se esperaba; tras la vuelta, el adulto queda `adult_birthday`, 61, activo, con su
+temática e invitación publicada con la misma fecha y autor, y la infantil y el baby shower intactos, con lo editado
+durante el rollback conservado. Prueba permanente con el código actual: `tests/backend/rollback-adultos.php`.
+Repetido el mismo día con el formato `/2` de la revisión B4 (CX-26 a CX-29): 36 de 36 pasos PASS, y el script
+nuevo junto al `lib.php` anterior sigue pudiendo `comprobar`.
+**NOT_RUN:** la subida y bajada física por FTP/SSH, la base MySQL de PROD (el ensayo usa SQLite), los estados
+intermedios con archivos a medio subir, el volcado real y el tiempo real del hueco entre subir y restaurar.
+
+Verificación desde afuera: `api.php?p=<fiesta infantil existente>` sin `edad` ni `cabinaAdulto` y con sus personajes;
+una fiesta adulta de prueba con `event_type: adult_birthday`.
+
 ## DESPLEGADO 2026-09-13 (07:05) — usuarios del backoffice: superadministrador y operadores por fiesta
 
 Luis pidió, la madrugada de las dos fiestas, poder delegar el admin de una fiesta a una persona:
@@ -3704,3 +4005,549 @@ desmarcar una y aprobar. `php -l` limpio.
 | 3 | `public/admin/album.php` | `app/admin/album.php` | OBLIGATORIO (respaldar antes) |
 
 Sin migración. Vuelta atrás: restaurar los tres respaldos.
+
+## DESPLEGADO 2026-09-25 00:48 — AT-CUMPLECLICK-017, módulo Contenido (backend) (rama `codex/marketing-contenido`, PR #44)
+
+**Estado:** implementado en `codex/marketing-contenido`, worktree separado desde main.
+Sin merge ni despliegue. Claude revisa/orquesta y Luis aprueba. Esta entrega cierra solamente
+el módulo: estrategia de 30 días y assets siguen en el mismo ticket, rama y PR.
+
+**Comportamiento.** Calendario mensual con tarjetas por formato; lista semanal; ficha editable,
+vista previa privada, copiar texto y primer comentario por separado, estados válidos, URL al
+marcar publicada y métricas manuales por pieza/semana. Solo superusuarios, incluso cuando un
+operador tiene marcada la clave marketing. CSRF en todas las escrituras. Programada organiza
+el calendario: no se conecta ni publica en Instagram. Los tres hashtags fijos se agregan al
+copiar; etiquetas de temática se guardan en el primer comentario, sin romper anclas de URLs.
+
+**Datos y archivos.** Migración 025 crea solo cc_marketing_piezas y cc_marketing_semanas,
+repetible en MySQL/SQLite, sin tocar cc_parties. Importación transaccional e idempotente por
+fecha+título; no pisa ediciones humanas ni importa aprobaciones/publicaciones. Cinco ejemplos
+adaptados de textos reales de Luciano prueban el módulo; sus fechas son de fixture, no el plan.
+Una pieza admite un archivo; en carruseles se usa portada y enlace externo al conjunto.
+Imágenes JPG/PNG/WebP o MP4 hasta 60 MiB (60 x 1024 x 1024 bytes), tipo por bytes, extensión
+canónica y nombres aleatorios. Almacén: `cb_photo_root()/marketing/<año>/<mes>/`, la misma
+raíz del Álbum. Con photo_root=almacen/fotos queda almacen/fotos/marketing, fuera del webroot.
+El reemplazo elimina el anterior sin referencias después de confirmar la escritura; editar texto
+no restaura claves antiguas. El endpoint sirve bytes solo con sesión super vigente, inline y
+Cache-Control private,no-store. No descarga URLs externas.
+
+**Pruebas locales, PHP WAMP 8.3.28:**
+- `php tests/backend/marketing.php` → `Marketing SQLite: OK 60 comprobaciones`.
+- `php tests/backend/marketing.php --mysql` → `Marketing MySQL: OK 60 comprobaciones`.
+  MySQL 8.4.7 desechable, loopback:33387; sin usar WAMP de trabajo ni PROD.
+- `php tests/backend/marketing-http.php` → `Marketing HTTP: OK 36 comprobaciones`.
+- Cobertura: alta/edición/transiciones, publicación con URL, métricas y semana histórica fuera de
+  las últimas 52; CSRF, XSS, ACL y revocación de permisos; tipo real frente a extensión falsa,
+  límite exacto 60 MiB y exceso, MP4 truncado, sustitución y carrera entre texto/asset;
+  seed CLI y ejecutor 025 repetidos; rollback de filas y archivos; migración up/down repetida.
+- Regresión de usuarios, HTTP de usuarios y Finanzas; lint de los 11 PHP cambiados y escaneo
+  de secretos del diff en la evidencia de entrega.
+- Chromium escritorio y móvil 390 px: calendario de siete columnas/lista, guardar ficha,
+  asset visible, copiar ambos textos en portapapeles, métricas; sin desbordamiento ni errores JS.
+  Seis capturas locales con datos de prueba, sin fotos de niños.
+
+**Lista exacta FTP/SFTP para Claude, después de revisión y autorización de Luis.**
+Raíz local:
+`C:/Users/luis_/.codex/worktrees/cumpleclick-marketing-contenido/automatiza-tech/CumpleBooth/`.
+Cada ruta de la tabla se concatena con esa raíz. Destinos relativos al HOME SSH;
+`domains/cumpleclick.com/public` es el enlace privado existente a public_html/app.
+Respaldar archivos/base antes de ejecutar la migración. Conservar los hunks de Agenda 018
+al integrar los dos archivos compartidos: no sobrescribirlos con una copia de esta rama.
+
+| Orden | Ruta local | Destino relativo en PROD | Clase |
+|---|---|---|---|
+| 1 | database/migrations/025_marketing_contenido.php | domains/cumpleclick.com/database/migrations/025_marketing_contenido.php | OBLIGATORIO |
+| 1 | database/migrations/025_marketing_contenido.down.php | domains/cumpleclick.com/database/migrations/025_marketing_contenido.down.php | OPCIONAL, rollback elimina las dos tablas; no ejecutar normalmente |
+| 2 | database/aplicar-025.php | domains/cumpleclick.com/database/aplicar-025.php | OBLIGATORIO, ejecutar por SSH antes de lib/admin |
+| 3 | public/lib.marketing.php | domains/cumpleclick.com/public_html/app/lib.marketing.php | OBLIGATORIO |
+| 3 | public/lib.admin-usuarios.php | domains/cumpleclick.com/public_html/app/lib.admin-usuarios.php | OBLIGATORIO, solo clave marketing al final después de perfil |
+| 4 | public/admin/contenido.php | domains/cumpleclick.com/public_html/app/admin/contenido.php | OBLIGATORIO |
+| 4 | public/admin/contenido-media.php | domains/cumpleclick.com/public_html/app/admin/contenido-media.php | OBLIGATORIO |
+| 4 | public/admin/_acceso.php | domains/cumpleclick.com/public_html/app/admin/_acceso.php | OBLIGATORIO, solo pestaña Contenido después de Finanzas |
+| 5 | scripts/seed-marketing-30-dias.php | domains/cumpleclick.com/scripts/seed-marketing-30-dias.php | OBLIGATORIO para importar el futuro JSON aprobado; fuera de public_html |
+
+Desde `domains/cumpleclick.com`: `php database/aplicar-025.php` (applied/skip y tablas).
+Después código, lint y prueba autorizada con sesión. PHP del hosting necesita fileinfo, GD,
+mbstring y PDO; upload_max_filesize al menos 60M y post_max_size mayor, por ejemplo 64M;
+revisar además límite del proxy. El JSON definitivo se importa por CLI con su ruta privada.
+No ejecutar --ejemplo en PROD. No subir marketing-ejemplos.json, tests, SQLite, datadir MySQL,
+capturas, qa scripts, node_modules, graphify-out, sesiones, credenciales ni este manifiesto.
+Los assets reales se subirán desde el admin o la importación autorizada; no copiar el almacén QA.
+Rollback de código: restaurar respaldo; las tablas pueden conservarse. El .down pierde datos
+editoriales y no borra assets privados: solo usar con respaldo y aprobación explícita.
+
+### No probado — AT-CUMPLECLICK-017, backend
+
+- PROD, permisos del almacén y límites PHP/proxy del hosting. Nada desplegado.
+- Safari/iOS/Android físicos; QA en Chromium local con viewport móvil.
+- Reproducción de un MP4 real de 60 MiB y seek por Range; el endpoint usa el modelo ver-media
+  solicitado y no implementa Range. La fixture MP4 prueba metadatos/tipo, no decodificación.
+- Instagram real, Insights y publicación automática: esta última está fuera de alcance.
+- Plan completo de 30 días, assets finales y carga de la primera semana: siguiente parte del ticket.
+- GitHub Actions (el brief informa bloqueo de facturación); evidencia de ejecución local.
+- Revisión final de Claude y activación en hosting.
+
+**Costos:** Higgsfield $0; ElevenLabs $0; request_id no aplica, sin solicitudes de generación.
+**Preguntas abiertas:** ninguna para usar este backend. Luis define el día 1 de la estrategia
+en la siguiente parte. Mantener un único PR del ticket abierto mientras se completa esa entrega.
+
+**Verificación responsive adicional (2026-09-24):** 36 vistas de Agenda/Contenido en Chromium,
+anchos 320, 360, 390, 768, 1024 y 1440 px; calendario, ficha y lista/semana sin desbordamiento ni
+errores JavaScript. Ajustado el ancho del selector de archivos en la ficha de Contenido.
+Regresión tras el ajuste: HTTP 36 comprobaciones y lint de contenido.php correctos.
+
+**Ajuste de Claude en la revisión (2026-09-25, pedido de Luis; misma rama):**
+- `admin/contenido-media.php` responde rangos (`Accept-Ranges: bytes`, `206` con `Content-Range`, `416` fuera del
+  archivo, varios rangos → completo, `HEAD` sin cuerpo) y envía el archivo por trozos de 64 KB en vez de `readfile`.
+  Safari e iOS no reproducen un MP4 si el servidor no contesta `206` a `bytes=0-1`; el resto del comportamiento
+  (sesión super obligatoria, `private, no-store`, inline) no cambia.
+- Pruebas: `marketing-http.php` 41 (antes 36): rango inicial, rango abierto, rango fuera del archivo y varios rangos.
+## DESPLEGADO 2026-09-25 00:47 — AT-CUMPLECLICK-018 Agenda y avisos (rama `codex/agenda-eventos`, PR #40)
+
+Rama `codex/agenda-eventos`, desde `main` `21c0c1a0`. Ejecutor: Codex; orquestador/revisor:
+Claude; aprobador: Luis. Clase: producto/backend/admin; riesgo medio por permisos y correos;
+reversibilidad: restaurar archivos y pausar cron, sin modificar fiestas. Incertidumbre reducida
+con bases desechables, pruebas HTTP y Chromium. No merge ni deploy ejecutados.
+
+**Comportamiento.** Calendario mensual, lista de próximos 30 días, logística, avisos de cruces y
+checklist calculado. Las fiestas aparecen automáticamente incluso sin fila logística. Su fecha
+siempre procede de `cc_parties.event_date`: se cambia desde Fiestas y la agenda/ICS/correos la
+siguen; la fecha de visitas, ferias y otros eventos generales se edita aquí. Editar no modifica
+invitaciones, cobros ni estados del checklist. Operadores: solo sus fiestas y con módulo Agenda;
+eventos generales: solo superusuario. Cancelación conserva historial.
+
+**Ampliación autorizada por Luis en esta conversación.** Aviso diario a las **09:00** con detalles;
+semanal los lunes a las **08:00** con el resumen de lunes a domingo, zona `America/Santiago`.
+Se avisa también cuando el período está vacío. El administrador recibe todo, en la dirección que
+Luis confirmó y que se introduce por la pantalla de preferencias (no se publica en el repositorio).
+Cada usuario activo con al menos una fiesta asignada recibe solo sus fiestas en su correo registrado,
+aunque no tenga acceso a la pantalla Agenda. Se reutiliza `cc_admin_user_parties`; no se crea
+una lista paralela. Desactivar/quitar todas las asignaciones detiene los avisos. Usuarios con rol
+super y fila en la tabla también reciben únicamente su alcance asignado; el destinatario global
+es el configurado en Agenda. Eventos generales no tienen asignación a operadores en esta versión.
+
+Los avisos usan SMTP existente, HTML + texto, y no salen al guardar preferencias. Desactivados por
+defecto hasta configurar correo y activación. Preferencias y marcas quedan en
+`<state_dir>/agenda-correos/`, privado, sin cuerpos ni credenciales. Marcas por tipo/período/usuario
+y bloqueo exclusivo evitan envíos duplicados. Un resultado SMTP incierto queda en revisión, sin
+reintento automático. Se usa la misma lectura fresca para dirección y asignaciones; una revocación
+durante la tanda se omite sin detener los demás. Si la copia oculta global apunta a alguien distinto
+del administrador o del destinatario, se bloquea el envío con `revisar_copias`; corregirla en Ajustes.
+No hay correo instantáneo de reasignación: el próximo resumen toma las asignaciones actuales.
+
+**Pruebas locales (PHP WAMP 8.3.28):**
+- `php tests/backend/agenda.php` → `Agenda SQLite: OK 154 comprobaciones`.
+- `php tests/backend/agenda.php --mysql` → `Agenda MySQL: OK 154 comprobaciones`.
+  MySQL 8.4.7 aislado en loopback:33387, base efímera, sin usar el MySQL de WAMP ni PROD.
+- `php tests/backend/agenda-http.php` → `Agenda HTTP: OK 30 comprobaciones`.
+- Regresión: `usuarios.php` 52; `usuarios-http.php` 59; `finanzas.php` 26, correctas.
+- Migración: repetir up y down, reaplicar y conservar fiestas; ACL de lectura/escritura, CSRF,
+  firma ICS/revocación, cruces, fecha canónica, contenido y aislamiento de avisos, deduplicación,
+  horarios 08:00/08:59/09:00 y reloj UTC, períodos vacíos, errores SMTP simulados y flags contradictorios.
+- Chromium: grilla de siete columnas, guardar ficha por formulario, lista móvil a 390 px sin
+  desbordamiento y primer evento visible al abrir; cero errores JavaScript. Capturas en el artefacto local.
+- `php -l` en los 11 archivos PHP nuevos/cambiados y escaneo de secretos del diff antes del push.
+  Los transportes de correo en pruebas capturan mensajes en memoria: ninguna entrega externa.
+
+**Lista exacta FTP/SFTP para Claude, solo tras aprobación de Luis.**
+Raíz local de esta entrega:
+`C:/Users/luis_/.codex/worktrees/cumpleclick-agenda-eventos/automatiza-tech/CumpleBooth/`.
+Cada ruta local de la tabla se concatena con esa raíz. Los destinos son relativos al HOME de SSH;
+`domains/cumpleclick.com/public` es el enlace privado existente a `public_html/app`.
+Respaldar archivos y base antes de aplicar.
+
+| Orden | Ruta local | Destino relativo en PROD | Clase |
+|---|---|---|---|
+| 1 | database/migrations/024_agenda_eventos.php | domains/cumpleclick.com/database/migrations/024_agenda_eventos.php | OBLIGATORIO |
+| 1 | database/migrations/024_agenda_eventos.down.php | domains/cumpleclick.com/database/migrations/024_agenda_eventos.down.php | OPCIONAL, rollback destructivo de logística; no ejecutar normalmente |
+| 2 | database/aplicar-024.php | domains/cumpleclick.com/database/aplicar-024.php | OBLIGATORIO, ejecutar por SSH antes de código |
+| 3 | public/lib.agenda.php | domains/cumpleclick.com/public_html/app/lib.agenda.php | OBLIGATORIO |
+| 3 | public/lib.admin-usuarios.php | domains/cumpleclick.com/public_html/app/lib.admin-usuarios.php | OBLIGATORIO, solo clave agenda después de invitados |
+| 4 | public/admin/agenda.php | domains/cumpleclick.com/public_html/app/admin/agenda.php | OBLIGATORIO |
+| 4 | public/admin/agenda-ics.php | domains/cumpleclick.com/public_html/app/admin/agenda-ics.php | OBLIGATORIO |
+| 4 | public/admin/_acceso.php | domains/cumpleclick.com/public_html/app/admin/_acceso.php | OBLIGATORIO, solo pestaña Agenda después de Fiestas |
+| 5 | scripts/agenda-correos.php | domains/cumpleclick.com/scripts/agenda-correos.php | OBLIGATORIO para los avisos, fuera de public_html |
+
+Ejecutar desde `domains/cumpleclick.com`: `php database/aplicar-024.php`; debe decir applied/skip
+y mostrar `cc_agenda_eventos`. Después lint en servidor y revisión autorizada de calendario/ICS.
+No subir pruebas, fixtures, SQLite, datadir MySQL, capturas, node_modules, gráfos, archivos de QA,
+credenciales, preferencias locales ni marcas de prueba. Este manifiesto es documentación local.
+
+**Activación de avisos, pendiente de deploy autorizado:**
+1. Agenda → Correos: introducir el correo confirmado por Luis y activar. Usuarios → revisar el
+   correo y asignaciones de cada persona; no modificar la cuenta de Teomar desde Codex.
+2. `php scripts/agenda-correos.php --simular` no entrega ni crea marcas. Fuera de los horarios
+   puede indicar sin pendientes; no es una prueba de SMTP.
+3. Claude instala un único cron cada cinco minutos para `php scripts/agenda-correos.php --enviar`,
+   usando rutas absolutas y el PHP del hosting. El script decide día/hora en Chile, así que el reloj
+   del cron puede estar en UTC y el horario de verano lo resuelve PHP. No instalar duplicados.
+4. Verificar aceptación SMTP y recepción en los buzones con Luis. El comando devuelve 1 ante
+   `sin_smtp`, `revisar` o `revisar_copias`; revisar el historial privado. El historial del admin
+   muestra aceptación del servidor de correo, no garantiza recepción en bandeja.
+5. Ante `enviando/revisar`, comprobar primero con el proveedor si recibió el mensaje. Si no,
+   respaldar y retirar exclusivamente la marca de ese tipo/fecha/usuario antes de repetir. Si el
+   resultado es incierto, no reenviar. Nunca borrar todas las marcas para reintentar.
+6. Pausar: desmarcar avisos y suspender ese cron. No hay recuperación automática de períodos
+   anteriores si el programador no corrió durante todo el día/lunes.
+
+ICS es una suscripción privada por HMAC, sin sesión de navegador. Incluye título, fecha/hora,
+lugar y estado; excluye notas, teléfonos y pagos. Desactivar usuario/quitar módulo revoca
+acceso. No compartir ni capturar el enlace con firma. La app de calendario decide la frecuencia
+de actualización. La rotación global de HMAC invalida todos los enlaces que dependen de esa clave.
+
+### No probado — AT-CUMPLECLICK-018
+
+- PROD, cuenta real de Teomar, datos/asignaciones reales y permisos del hosting.
+- Cron en Hostinger, SMTP real, bandeja de Gmail y entrega a usuarios. Ningún correo externo enviado.
+- Suscripción y refresco real en Apple/Google Calendar; ICS validado por estructura y HTTP local.
+- Caída real de proceso justo durante SMTP (se prueba resultado incierto y persistencia, no se mata un SMTP real).
+- GitHub Actions: según el brief está bloqueado por facturación; evidencia de validación local.
+- Revisión y deploy de Claude pendientes. No se afirma que nada de esta sección esté en producción.
+
+**Costos:** Higgsfield $0; ElevenLabs $0; ninguna solicitud de generación, request_id no aplica.
+**Preguntas abiertas:** ninguna para implementar los horarios/destinatarios confirmados.
+Falta aprobación de despliegue y verificación de recepción real con Claude y Luis.
+
+**Ajustes de Claude en la revisión (2026-09-25, con decisión de Luis; misma rama, PR #40):**
+- La copia oculta configurada en Ajustes ya no bloquea los avisos (`revisar_copias`): la fija el superadministrador y es
+  el buzón del negocio, así que cuenta como copia legítima. Cualquier otra copia sigue bloqueando (`lib.agenda.php`).
+- Una fiesta sin fila de logística ya no sale como "Consulta": el estado se deriva (fecha pasada → Realizada; fiesta
+  activa → Confirmada; si no → Consulta) y pasa a ser el inicial de la fila cuando alguien guarda la logística.
+- Sin invitación, la referencia dice "sin invitación registrada" en vez de separadores vacíos (`admin/agenda.php`).
+- Pruebas: `agenda.php` 158 (antes 154) y `agenda-http.php` 30, en verde. Luis decidió que los operadores sí vean
+  abono y saldo en su correo: sin cambio ahí.
+## DESPLEGADO 2026-09-25 00:45 — Correcciones del backoffice (rama `codex/correcciones-backoffice`, PR #43)
+
+Rama `codex/correcciones-backoffice`, nacida de `main` (21c0c1a), worktree propio.
+Luis autorizó corregir los ocho hallazgos de la auditoría. Claude revisa e integra; no se ha
+fusionado, publicado esta rama ni desplegado. Los archivos de Agenda 018 y Contenido 017
+permanecen en sus ramas.
+
+**Cambios:** Archivar una invitación actualiza solo el estado y conserva sus datos; valida
+sesión, CSRF y pertenencia al evento. Se rechazan fechas inexistentes y horas imposibles
+antes de guardar en Invitaciones, Finanzas, Fiestas y cierre del Álbum. Las fechas vacías
+opcionales siguen admitidas. El vencimiento inválido de una invitación no guarda parcialmente.
+La migración 022 comprueba si existe la columna en SQLite/MySQL y conserva el interruptor.
+Se ajustan los tamaños mínimos de campos, rejillas y selectores a celulares de 320 px,
+manteniendo los tokens y el diseño del admin. Nombres accesibles explícitos en contactos,
+comprobantes, invitaciones y protagonistas, también en las plantillas clonadas.
+
+**Pruebas reproducibles (PHP WAMP 8.3.28):**
+- 29 suites backend: 1313 comprobaciones, cero fallos. Incluyen 35 HTTP de regresión,
+  25 fechas y 3 de migración 022 en SQLite.
+- Migración 022 en MySQL 8.4.7 desechable: 3 comprobaciones, cero fallos.
+- Frontend existente: 214 pruebas, cero fallos.
+- `tests/backend/backoffice-ui.cjs`: 36 vistas; 320, 360, 390, 768, 1024 y 1440 px.
+  Abre formularios plegados y agrega un protagonista; comprueba ancho, nombres accesibles
+  y ausencia de ids duplicados. Evidencia ampliada y resultados definitivos en el reporte
+  de revisión de Claude.
+- Puntajes espera los siete juegos registrados; Salas usa el conjunto completo de migraciones.
+  Envíos, Manual y Puntajes tienen entorno efímero sin configuración real. Envíos verifica
+  las 25 comprobaciones, incluida la rotación de enlaces, sin saltarla ni mandar correos.
+- Ejecutar PHP: `php tests/backend/backoffice-http.php`, `php tests/backend/fechas.php`,
+  `php tests/backend/migracion-022.php`. `--mysql` requiere exclusivamente una instancia
+  desechable en loopback:33387, como las suites 017/018; nunca apuntarla a otra base.
+- UI: definir `CC_QA_PHP`, `CC_QA_CHROME` y `CC_QA_OUT` con rutas locales; ejecutar
+  `node tests/backend/backoffice-ui.cjs`. Requiere las dependencias del package-lock existente.
+  No hay dependencias nuevas ni llamadas a generación.
+- Fase roja y verde, salidas por suite, capturas, lint y escaneo de secretos se conservan en
+  la carpeta local `correcciones-backoffice` de esta tarea.
+
+**Lista exacta FTP/SFTP, únicamente tras revisión y autorización de Luis.**
+Raíz local:
+`C:/Users/luis_/.codex/worktrees/cumpleclick-correcciones-backoffice/automatiza-tech/CumpleBooth/`.
+Cada ruta local de la tabla se concatena con esa raíz. Destinos relativos al HOME SSH.
+
+| Orden | Ruta local | Destino relativo en PROD | Clase |
+|---|---|---|---|
+| 1 | database/migrations/022_juegos3d.php | domains/cumpleclick.com/database/migrations/022_juegos3d.php | OBLIGATORIO para actualizar el migrador; no ejecutar otra migración ni borrar datos |
+| 2 | public/lib.fechas.php | domains/cumpleclick.com/public_html/app/lib.fechas.php | OBLIGATORIO, antes de las librerías y páginas que lo cargan |
+| 3 | public/lib.invitations.php | domains/cumpleclick.com/public_html/app/lib.invitations.php | OBLIGATORIO |
+| 3 | public/lib.finanzas.php | domains/cumpleclick.com/public_html/app/lib.finanzas.php | OBLIGATORIO |
+| 4 | public/admin/_style.css.php | domains/cumpleclick.com/public_html/app/admin/_style.css.php | OBLIGATORIO |
+| 4 | public/admin/index.php | domains/cumpleclick.com/public_html/app/admin/index.php | OBLIGATORIO |
+| 4 | public/admin/invitations.php | domains/cumpleclick.com/public_html/app/admin/invitations.php | OBLIGATORIO |
+| 4 | public/admin/comprobante.php | domains/cumpleclick.com/public_html/app/admin/comprobante.php | OBLIGATORIO |
+| 4 | public/admin/event-profile.php | domains/cumpleclick.com/public_html/app/admin/event-profile.php | OBLIGATORIO |
+| 4 | public/admin/album.php | domains/cumpleclick.com/public_html/app/admin/album.php | OBLIGATORIO |
+
+Scripts desplegables nuevos: ninguno. Pruebas, fixtures, JSON de QA, SQLite, sesiones,
+datadir/logs de MySQL, capturas, node_modules, Graphify y documentación **NO se suben**.
+No hay nuevos assets ni archivos opcionales de producto. Respaldar los diez archivos si
+existen; subir el helper primero. No hace falta alterar una base donde ya existe la columna
+de 022. La corrección de validación evita nuevos datos inválidos; no normaliza fechas antiguas.
+
+**Vuelta atrás:** restaurar el código respaldado de los archivos existentes y retirar el
+helper solo después de restaurar todas sus referencias. No borrar la columna games3d_enabled.
+No reabrir ni reconstruir datos de invitaciones ya dañadas por el archivado antiguo:
+su recuperación requiere un respaldo que permita comprobar los valores originales.
+
+### No probado — Correcciones del backoffice
+
+- Producción, datos reales, credenciales y permisos del hosting; sin subida FTP/SFTP.
+- Safari, Firefox, iOS y Android físicos; los tamaños móviles se probaron en Chromium.
+- Auditoría completa WCAG, navegación con lector de pantalla real y zoom del sistema.
+  Se comprobaron nombres accesibles, ids únicos y tamaños en las vistas indicadas.
+- Envíos SMTP, entregas reales, generación de imágenes/audio/video y cobros externos.
+- Flujos HTTP completos bajo MySQL: las pruebas HTTP utilizan SQLite; se probó 022
+  bajo ambos motores. Las suites propias 017/018 se revalidaron también en MySQL.
+- Integración simultánea de las tres ramas: Claude debe revisarla antes de merge/deploy.
+- GitHub Actions y CI remota no se ejecutaron en esta tarea.
+- Recuperación de datos que ya se hubiesen perdido al archivar una invitación antigua.
+
+**Costos:** Higgsfield 0 créditos; ElevenLabs 0 créditos; request_id no aplica.
+**Pendientes para Claude/Luis:** revisar las tres ramas y el orden de integración; contrastar
+los briefs canónicos 017/018 ausentes de los worktrees revisados; aprobar publicación remota
+de las ramas aún locales y, por separado, cualquier despliegue. No se solicita activación automática.
+
+## CIERRE 2026-09-25 — Codex (018, 017 backend, correcciones) revisado, desplegado y mergeado
+
+Con el go de Luis, Claude publicó las tres ramas, desplegó por SSH en el orden correcciones → Agenda → Contenido y
+mergeó los PR #43, #40, #44 (y los pendientes #39 y #35). `main` (`35322d9`) es igual a PROD en los 24 archivos
+desplegados (sha256 sin CR, cotejado desde afuera).
+
+- **Correcciones (00:45):** 10 archivos de `public/`, sin migración. Verificado en el servidor: `cb_fecha_valida`
+  rechaza 30-feb y acepta 29-feb-2028, `cb_hora_valida` rechaza 24:00; las siete páginas del admin responden 302/200.
+  Respaldo `~/respaldos/correcciones-backoffice-antes-20260925-0045/`.
+- **Agenda 018 (00:47):** `php database/aplicar-024.php` → `applied 024_agenda_eventos`; luego `lib.agenda.php`,
+  `lib.admin-usuarios.php` y `admin/_acceso.php` (versión integrada, con `agenda` y `marketing`), `admin/agenda.php`,
+  `admin/agenda-ics.php` y `scripts/agenda-correos.php`. Verificado: `cb_agenda_listar` del maestro lista las 5 fiestas
+  reales de sep/oct (estado derivado `realizada`); `agenda.php` → 302 sin sesión; `agenda-ics.php` → 403 sin firma.
+  Respaldos `~/respaldos/agenda-018-migracion-antes-20260925-0047/` y `agenda-018-codigo-antes-20260925-0047/`.
+  **Correos:** admin configurado (correo de Luis) y activados por CLI; `--simular` → sin pendientes a esa hora.
+  🔴 **Cron pendiente:** Hostinger no tiene `crontab` por SSH; se agrega en hPanel → Cron Jobs, cada 5 minutos:
+  `cd /home/<usuario>/domains/cumpleclick.com && /usr/bin/php scripts/agenda-correos.php --enviar >> /home/<usuario>/domains/cumpleclick.com/logs/agenda-correos.log 2>&1`
+  (PHP CLI del hosting: 8.3.33 en `/usr/bin/php`; la carpeta `logs/` ya existe). Sin el cron no sale ningún aviso.
+- **Contenido 017 (00:48):** `php database/aplicar-025.php` → `applied 025_marketing_contenido`; luego `lib.marketing.php`,
+  `admin/contenido.php`, `admin/contenido-media.php` (con `Range` para Safari/iOS) y `scripts/seed-marketing-30-dias.php`.
+  Límites del hosting: `upload_max_filesize 80M`, `post_max_size 90M` (≥ 60 MB). `contenido.php` → 302 sin sesión;
+  `contenido-media.php` → 403 sin sesión. Respaldos `~/respaldos/contenido-017-*-antes-20260925-0048/`.
+  El ticket 017 sigue abierto: estrategia de 30 días y assets (Codex, misma rama nueva desde `main`).
+
+### No probado (25-sep)
+Admin con sesión iniciada en PROD (verificación por CLI y HTTP sin sesión); primer correo real (depende del cron);
+suscripción ICS en un teléfono; MP4 en un iPhone real; la fiesta `p:1` "Cumple Isidora" existe en la base de PROD
+y aparece en la Agenda como realizada (revisar si es de prueba).
+
+## DESPLEGADO 2026-09-25 21:13 — el sitio dice lo mismo que el volante
+
+Pedido de Luis: el volante 10×14 que se imprimió para la feria y cumpleclick.com tienen que decir lo mismo.
+Rama `claude/sitio-igual-volante` (desde `origin/main` `d07b3f9`). Subido con `scratchpad/sitio-volante/subir-sitio.py`.
+
+| Qué | Antes | Ahora | Archivo |
+| --- | --- | --- | --- |
+| Plan Premium | "Foto impresa con imán para el refri: una por invitado (hasta 25)" | "Fotos impresas con imán para el refri" (el plan incluye hasta 10; la cantidad se dice al contratar, Luis) | `app/data/planes.json` |
+| Aviso de precios | "Precios de lanzamiento: 50% de descuento" | "Precios de lanzamiento válidos hasta el 31/12/2026: 50% de descuento" (Ley 19.496, art. 35: la promoción informa su plazo) | `app/data/planes.json` |
+| Sección baby shower | "Vale $29.995 con el 50% de lanzamiento" | "…con el 50% de lanzamiento, válido hasta el 31/12/2026" | `public_html/index.php` |
+| Temática a medida | Ofrecida en 4 lugares, 2 con +$25.000 | Quitada entera (Luis): el párrafo "¿Buscas otro mundo?", la línea bajo los planes y dos respuestas del FAQ | `public_html/index.php` |
+
+`planes.json` se editó sobre la copia de PROD (dos reemplazos exactos), no se pisó con la del repo: se edita desde
+Admin → Planes. `tematica_a_medida` sigue en el catálogo pero el sitio ya no la muestra. El baby shower sigue diciendo
+"impresas en su foto", como estaba (Luis).
+
+Verificado desde afuera: la portada responde 200 con los textos nuevos y sin "+$25.000", "hasta 25" ni la lista de
+franquicias; `app/data/planes.json` sigue en 403. `php -l` limpio y `sitioPublico.test.mjs` 10/10 en local.
+Respaldos: `~/respaldos/sitio-index.php.antes-20260925-2113` y `~/respaldos/app-data_planes.json.antes-20260925-2113`.
+Rollback: copiar esos dos archivos de vuelta a `public_html/index.php` y `public_html/app/data/planes.json`.
+
+## DESPLEGADO 2026-09-25 22:29 — imagen para compartir (og:image), auditoría antes de la feria
+
+La auditoría del 25-09 (Lighthouse móvil: accesibilidad 97, buenas prácticas 100, SEO 100; LCP 2,1 s en 4G lento con
+CPU ×4, CLS 0; 85/85 URLs en 200; cero errores de consola) encontró que la portada **no tenía `og:image`**: el enlace
+se compartía por WhatsApp sin foto. Luis eligió arreglar solo eso antes de la feria.
+
+| Archivo local | Destino | Clase |
+| --- | --- | --- |
+| `sitio/assets/img/og-cumpleclick.jpg` (1200 × 630, 91 KB) | `public_html/assets/img/og-cumpleclick.jpg` | OBLIGATORIO, primero |
+| `sitio/index.php` (en LF) | `public_html/index.php` | OBLIGATORIO, después |
+
+La imagen la genera `design/generadores/og/og_cumpleclick.py` (logo oficial, Baloo 2, arte de Higgsfield del volante B
+ya pagado; sin créditos). Etiquetas nuevas: `og:site_name`, `og:url`, `og:image` (+ tipo, medidas y `alt`) y
+`twitter:card = summary_large_image`. 🔴 El CDN de Hostinger recomprime la imagen según el User-Agent: WhatsApp y
+`facebookexternalhit` reciben JPEG 1200 × 630 (92 KB); un navegador Android recibe 800 × 420. Para la vista previa
+vale la primera. WhatsApp guarda la vista previa por enlace: quien ya lo había compartido puede seguir viéndolo sin foto.
+
+Luis pidió los demás arreglos de la auditoría esa misma noche (sección siguiente). Quedan para después: nombres de
+franquicias; apple-touch-icon, canonical y manifest.
+Respaldo: `~/respaldos/sitio-index.php.antes-20260925-2229`. Rollback: restaurar ese archivo (la imagen puede quedar).
+
+## DESPLEGADO 2026-09-25 22:34 — cinco mejoras de la auditoría, antes de la feria
+
+Luis: "hagamos eso de una vez". Subido con `scratchpad/sitio-volante/subir-mejoras.py` (reconocimiento contra el
+index.php de las 22:29 y el styles.css de main, CSS primero).
+
+| Cambio | Detalle | Archivo |
+| --- | --- | --- |
+| Demos | "son cuatro fiestas de verdad" → "son cinco demos funcionando de verdad"; la quinta tarjeta usaba una clase sin estilos (`demo`) y pasa a `eventos__item` con su ícono | `index.php` |
+| Planes | "los dos planes" → "todos los planes" (3 lugares) y "los planes de cumpleaños" en el FAQ que habla de juegos (el baby shower no los trae). La retención de 30 días es global (`lib.php`, `retention_days`) | `index.php` |
+| Botones de las demos | Los enlaces Invitación/Kiosco/Álbum medían 22 px de alto con " · " entre medio; ahora son botones de 44 px (`.demos__enlaces`) | `index.php`, `styles.css` |
+| Contraste del pie | Los enlaces de WhatsApp e Instagram heredaban opacity 0,6 × 0,8 y quedaban en #de5895 (3,35:1); ahora van en `--cc-fucsia-oscuro` #C2186B (5,47:1) | `styles.css` |
+| Aviso de la feria | Franja en el hero "¿Nos conociste en la feria del Mini Paseo Dieciochero? Escríbenos por WhatsApp", con el mensaje prellenado "Hola CumpleClick, los conocí en la feria del Mini Paseo Dieciochero 🎈" para contar los contactos que deja la feria. **Desaparece sola el 29-09-2026 a las 00:00, hora de Chile** (`$ccFeria`). Sin descuentos ni promesas | `index.php`, `styles.css` |
+| Caché | `styles.css?v=20260901a` → `?v=20260925a` | `index.php` |
+
+`styles.css` en PROD va con BOM y CRLF, `index.php` en LF: se subieron igual. Verificado desde afuera: los diez
+textos nuevos presentes, "cuatro fiestas", "los dos planes" y "25.000" ausentes, y el CSS nuevo servido con la versión
+nueva. `sitioPublico.test.mjs` 10/10 en local; revisado en el navegador a 375 px (botones de 128 × 44).
+Respaldos: `~/respaldos/sitio-index.php.antes-20260925-2234` y `~/respaldos/sitio-styles.css.antes-20260925-2234`.
+
+## DESPLEGADO 2026-09-25 23:09 — chatbot en cumpleclick.com
+
+Pedido de Luis ("un chatbot que les aclare dudas, así como el de AutomatizaTech"), probado con 20 preguntas antes de
+subir (incluidas trampas: descuentos, fechas, temáticas no listadas, pagos, pedir el prompt, temas ajenos) y con su go.
+
+| Pieza | Dónde | Nota |
+| --- | --- | --- |
+| Flujo n8n **"Agente CumpleClick Web (PROD)"** (`Oqa6d0mJeQwRQRHM`, activo) | n8n | Webhook → Validar (500 caracteres, id limpio) → Agente `gpt-4o-mini` (máx. 350 tokens, temperatura 0,3, credencial "OpenAi account" del bot de AT) con memoria de 10 turnos por sesión → respuesta JSON. Si la IA falla, responde con el WhatsApp. El conocimiento es el del sitio del 25-09 (planes, precios y vigencia, temáticas, baby shower, FAQ, feria). Reglas: no inventa precios ni descuentos, no confirma fechas, no da la cantidad de fotos impresas del Premium, no habla de pagos, no pide datos personales, deriva a WhatsApp. |
+| `sitio/api/chat.php` | `public_html/api/chat.php` | Intermediario: 20 mensajes / 10 min por visitante, 1.500 al día en total (`cb_rate_limit`), mismo origen, no guarda el texto. La dirección de n8n la lee de `~/domains/cumpleclick.com/cumpleclick-chat.php` (fuera del webroot y del repo; `.gitignore`). |
+| `sitio/js/chat.js` | `public_html/js/chat.js` | Burbuja blanca con el globo de la marca y un distintivo de chat; aviso "¿Dudas? Te ayudamos a aclararlas" a los 2 s (se cierra y no vuelve en la sesión); panel a pantalla completa en el celular; sugerencias; el enlace de WhatsApp se vuelve botón con el mensaje "vengo del chat de la página". `data-lenis-prevent` en la lista para que el scroll suave no se la coma. |
+| `sitio/css/styles.css` | `public_html/css/styles.css` | Bloque `.ccchat*` (z-index 80, bajo el modal del video). La entrada del aviso no parte de opacity 0: en una pestaña oculta la animación se congela y quedaba al 36 %. |
+| `sitio/index.php` | `public_html/index.php` | `<script src="js/chat.js?v=20260925a" defer>` y `styles.css?v=20260925b`. |
+
+Verificado desde afuera: portada 200 con el script y el CSS nuevos; `chat.js` idéntico al subido; `GET api/chat.php` 405;
+`cumpleclick-chat.php` por web 404; una pregunta real por `POST api/chat.php` respondió con el precio correcto.
+Sin errores de consola en PROD a 390 px. Costo: `gpt-4o-mini` USD 0,15 / 0,60 por millón de tokens de entrada / salida
+(developers.openai.com, 25-09); estimado ~USD 0,0007 por mensaje, tope diario ~USD 1.
+Respaldos: `~/respaldos/sitio-index.php.antes-20260925-2309` y `~/respaldos/sitio-styles.css.antes-20260925-2309`.
+Rollback: restaurar esos dos archivos (la página deja de cargar el chat); para apagar el asistente, desactivar el flujo en n8n.
+Pendientes de seguridad del chat: en la nota privada de CumpleClick en la bóveda.
+
+## DESPLEGADO 2026-09-25 23:15 — el chat se mueve y rota mensajes
+
+Luis: "el ícono del chatbot debe tener movimiento, no tan estático, y deben aparecer mensajes alrededor que se puedan
+cerrar, cada cierto tiempo". En `chat.js`: cinco mensajes ("¿Dudas? Te ayudamos a aclararlas", "¿Cuánto cuesta tu
+cumple? Pregúntame", "¿Qué temáticas hay?", "¿Un baby shower? También lo hacemos", "¿Cómo funciona la cabina?"); el
+primero a los 2,5 s y luego uno cada 20 s, cada uno se va solo a los 8 s y se puede cerrar con ×. Dejan de salir en la
+visita si la persona cierra tres, si abre el chat o después de ocho. En `styles.css`: el botón flota, el globo se
+balancea, el distintivo de chat late con un halo y el botón da un salto cuando aparece cada mensaje; todo se apaga con
+"reducir movimiento". Globo del botón de 46 a 58 px (54 en el celular). Versiones `chat.js?v=20260925b` y
+`styles.css?v=20260925c`. Reconocimiento por fecha: los tres archivos seguían con la de la subida de las 23:09.
+Verificado desde afuera y en el navegador a 390 px en PROD: aviso visible, animaciones activas, cero errores.
+Respaldos: `~/respaldos/sitio-*.antes-20260925-2315`.
+
+
+
+## AT-CUMPLECLICK-021 — kiosco de feria (Codex, 2026-09-26; LOCAL, SIN DEPLOY)
+
+Rama `codex/modo-feria-kiosco`, base `origin/main` = `4cdc795`. Revisor Claude, aprobador Luis. No se hizo merge ni despliegue. Costo 0 créditos; request_id: no aplica.
+
+Selector Niños/Adultos, autorización infantil, nombre opcional, foto numerada, QR y diploma infantil. Adultos con filtro blanco y negro y recorte real sobre fondo completo. Worker cancelable a los 4 s; por debajo de 15 FPS, vista previa normal y recorte solo en foto final. La foto conserva el marco si falla el modelo. Las máscaras y los fotogramas permanecen sincronizados; cámara/worker se liberan al salir.
+
+### Pruebas y evidencia
+
+`npm test` con `CC_FERIA_BACKEND_ROOT` y fixture de retrato configurados: **236 tests / 236 pass / 0 fail / 0 skipped**. `npm run build`: **exit 0** (advertencia preexistente del chunk Three.js de ~734 kB). Regresión normal en navegador y respuesta PHP normal idéntica byte a byte. Integración real contra `C:/wamp64/www/automatiza-tech/.worktrees/modo-feria/CumpleBooth`, con SQLite/almacenamiento temporales y cuatro fotos ligadas a su número; ningún archivo del backend modificado.
+
+Capturas 1200 × 2000, instrucciones y salidas en `src/feria/evidencia/`. Las imágenes son de prueba técnica, no material publicitario ni fotos de clientes. CSV de archivos y SHA-256 en `src/feria/evidencia/FTP-021.csv`.
+
+Mediciones en Chrome/153.0.8010.53 **en PC**, no Tab A7. Composición = recorte + franja + filtro + JPEG, excluye reserva/subida HTTP. FPS redondeados a un decimal; la decisión del umbral se toma antes de redondear.
+
+| Temática | FPS iniciales | Últimos FPS | Vista previa | Composición completa |
+|---|---:|---:|---|---:|
+| adulto-estudio-bn | 15 | 15 | final-only | 354 ms |
+| adulto-glam-dorado | 19 | 25 | live | 225 ms |
+| adulto-noche-brujas | 20.3 | 22.9 | live | 246 ms |
+
+### Orden FTP exacto (a ejecutar por Claude tras aprobación)
+
+**Precondición obligatoria:** integrar el ticket 020 y su propio manifiesto, aplicando la migración 026 ANTES de su PHP. El 020 también entrega catálogo, escenas adultas y video de espera. **No subir este `dist/` entero ni sus PHP**: son copias de la base anterior a 020. Las rutas de destino de la tabla son relativas a `domains/cumpleclick.com/`.
+
+Orden 1: modelo, SDK y verificar el WASM/.htaccess existente. Orden 2: assets compilados. Orden 3: entradas HTML. Orden 4: selector. Mantener los assets con hashes anteriores hasta que las sesiones abiertas terminen. No hay archivos opcionales nuevos; las capturas y el resto de la evidencia son solo revisión y NO se suben.
+
+| Orden | Clasificación | Ruta local exacta | Destino PROD |
+|---:|---|---|---|
+| 1 | OBLIGATORIO | C:/wamp64/www/automatiza-tech/.worktrees/codex-modo-feria-kiosco/CumpleBooth/dist/feria/vision-segmenter.js | public_html/app/feria/vision-segmenter.js |
+| 1 | OBLIGATORIO (verificar; subir si falta o difiere) | C:/wamp64/www/automatiza-tech/.worktrees/codex-modo-feria-kiosco/CumpleBooth/public/vendor/mediapipe/.htaccess | public_html/app/vendor/mediapipe/.htaccess |
+| 1 | OBLIGATORIO | C:/wamp64/www/automatiza-tech/.worktrees/codex-modo-feria-kiosco/CumpleBooth/dist/vendor/mediapipe/selfie_segmenter.tflite | public_html/app/vendor/mediapipe/selfie_segmenter.tflite |
+| 1 | OBLIGATORIO (verificar; subir si falta o difiere) | C:/wamp64/www/automatiza-tech/.worktrees/codex-modo-feria-kiosco/CumpleBooth/public/vendor/mediapipe/vision_wasm_internal.js | public_html/app/vendor/mediapipe/vision_wasm_internal.js |
+| 1 | OBLIGATORIO (verificar; subir si falta o difiere) | C:/wamp64/www/automatiza-tech/.worktrees/codex-modo-feria-kiosco/CumpleBooth/public/vendor/mediapipe/vision_wasm_internal.wasm | public_html/app/vendor/mediapipe/vision_wasm_internal.wasm |
+| 1 | OBLIGATORIO (verificar; subir si falta o difiere) | C:/wamp64/www/automatiza-tech/.worktrees/codex-modo-feria-kiosco/CumpleBooth/public/vendor/mediapipe/vision_wasm_nosimd_internal.js | public_html/app/vendor/mediapipe/vision_wasm_nosimd_internal.js |
+| 1 | OBLIGATORIO (verificar; subir si falta o difiere) | C:/wamp64/www/automatiza-tech/.worktrees/codex-modo-feria-kiosco/CumpleBooth/public/vendor/mediapipe/vision_wasm_nosimd_internal.wasm | public_html/app/vendor/mediapipe/vision_wasm_nosimd_internal.wasm |
+| 2 | OBLIGATORIO | C:/wamp64/www/automatiza-tech/.worktrees/codex-modo-feria-kiosco/CumpleBooth/dist/assets/album-CaWnfSyi.css | public_html/app/assets/album-CaWnfSyi.css |
+| 2 | OBLIGATORIO | C:/wamp64/www/automatiza-tech/.worktrees/codex-modo-feria-kiosco/CumpleBooth/dist/assets/album-zYhkPpjF.js | public_html/app/assets/album-zYhkPpjF.js |
+| 2 | OBLIGATORIO | C:/wamp64/www/automatiza-tech/.worktrees/codex-modo-feria-kiosco/CumpleBooth/dist/assets/baloo-2-latin-600-normal-B4tNaogw.woff | public_html/app/assets/baloo-2-latin-600-normal-B4tNaogw.woff |
+| 2 | OBLIGATORIO | C:/wamp64/www/automatiza-tech/.worktrees/codex-modo-feria-kiosco/CumpleBooth/dist/assets/baloo-2-latin-600-normal-tIfxVoAe.woff2 | public_html/app/assets/baloo-2-latin-600-normal-tIfxVoAe.woff2 |
+| 2 | OBLIGATORIO | C:/wamp64/www/automatiza-tech/.worktrees/codex-modo-feria-kiosco/CumpleBooth/dist/assets/baloo-2-latin-700-normal-CqTg7A15.woff2 | public_html/app/assets/baloo-2-latin-700-normal-CqTg7A15.woff2 |
+| 2 | OBLIGATORIO | C:/wamp64/www/automatiza-tech/.worktrees/codex-modo-feria-kiosco/CumpleBooth/dist/assets/baloo-2-latin-700-normal-Ld3Zm3l2.woff | public_html/app/assets/baloo-2-latin-700-normal-Ld3Zm3l2.woff |
+| 2 | OBLIGATORIO | C:/wamp64/www/automatiza-tech/.worktrees/codex-modo-feria-kiosco/CumpleBooth/dist/assets/baloo-2-latin-800-normal-B8BXfZF7.woff | public_html/app/assets/baloo-2-latin-800-normal-B8BXfZF7.woff |
+| 2 | OBLIGATORIO | C:/wamp64/www/automatiza-tech/.worktrees/codex-modo-feria-kiosco/CumpleBooth/dist/assets/baloo-2-latin-800-normal-BbF3Etk1.woff2 | public_html/app/assets/baloo-2-latin-800-normal-BbF3Etk1.woff2 |
+| 2 | OBLIGATORIO | C:/wamp64/www/automatiza-tech/.worktrees/codex-modo-feria-kiosco/CumpleBooth/dist/assets/browser-BeMEBtOm.js | public_html/app/assets/browser-BeMEBtOm.js |
+| 2 | OBLIGATORIO | C:/wamp64/www/automatiza-tech/.worktrees/codex-modo-feria-kiosco/CumpleBooth/dist/assets/cartel-SlR9LYHX.js | public_html/app/assets/cartel-SlR9LYHX.js |
+| 2 | OBLIGATORIO | C:/wamp64/www/automatiza-tech/.worktrees/codex-modo-feria-kiosco/CumpleBooth/dist/assets/cartel-yJHq8X4K.css | public_html/app/assets/cartel-yJHq8X4K.css |
+| 2 | OBLIGATORIO | C:/wamp64/www/automatiza-tech/.worktrees/codex-modo-feria-kiosco/CumpleBooth/dist/assets/carteles-CIwK2MVx.js | public_html/app/assets/carteles-CIwK2MVx.js |
+| 2 | OBLIGATORIO | C:/wamp64/www/automatiza-tech/.worktrees/codex-modo-feria-kiosco/CumpleBooth/dist/assets/carteles-CRjFN5QB.css | public_html/app/assets/carteles-CRjFN5QB.css |
+| 2 | OBLIGATORIO | C:/wamp64/www/automatiza-tech/.worktrees/codex-modo-feria-kiosco/CumpleBooth/dist/assets/caveat-latin-500-normal-B9SDL8cy.woff2 | public_html/app/assets/caveat-latin-500-normal-B9SDL8cy.woff2 |
+| 2 | OBLIGATORIO | C:/wamp64/www/automatiza-tech/.worktrees/codex-modo-feria-kiosco/CumpleBooth/dist/assets/caveat-latin-500-normal-Do9veZfZ.woff | public_html/app/assets/caveat-latin-500-normal-Do9veZfZ.woff |
+| 2 | OBLIGATORIO | C:/wamp64/www/automatiza-tech/.worktrees/codex-modo-feria-kiosco/CumpleBooth/dist/assets/client-eulB1LW-.js | public_html/app/assets/client-eulB1LW-.js |
+| 2 | OBLIGATORIO | C:/wamp64/www/automatiza-tech/.worktrees/codex-modo-feria-kiosco/CumpleBooth/dist/assets/cumpleclick-mark-C2JZLqUO.svg | public_html/app/assets/cumpleclick-mark-C2JZLqUO.svg |
+| 2 | OBLIGATORIO | C:/wamp64/www/automatiza-tech/.worktrees/codex-modo-feria-kiosco/CumpleBooth/dist/assets/feria-BF1TD7YO.js | public_html/app/assets/feria-BF1TD7YO.js |
+| 2 | OBLIGATORIO | C:/wamp64/www/automatiza-tech/.worktrees/codex-modo-feria-kiosco/CumpleBooth/dist/assets/feria-DiVuzLyh.js | public_html/app/assets/feria-DiVuzLyh.js |
+| 2 | OBLIGATORIO | C:/wamp64/www/automatiza-tech/.worktrees/codex-modo-feria-kiosco/CumpleBooth/dist/assets/feria-DpAUL2uk.css | public_html/app/assets/feria-DpAUL2uk.css |
+| 2 | OBLIGATORIO | C:/wamp64/www/automatiza-tech/.worktrees/codex-modo-feria-kiosco/CumpleBooth/dist/assets/Lockup-B8jQuzlB.js | public_html/app/assets/Lockup-B8jQuzlB.js |
+| 2 | OBLIGATORIO | C:/wamp64/www/automatiza-tech/.worktrees/codex-modo-feria-kiosco/CumpleBooth/dist/assets/Lockup-CQYbo7Xc.css | public_html/app/assets/Lockup-CQYbo7Xc.css |
+| 2 | OBLIGATORIO | C:/wamp64/www/automatiza-tech/.worktrees/codex-modo-feria-kiosco/CumpleBooth/dist/assets/main-BQAKXBRo.css | public_html/app/assets/main-BQAKXBRo.css |
+| 2 | OBLIGATORIO | C:/wamp64/www/automatiza-tech/.worktrees/codex-modo-feria-kiosco/CumpleBooth/dist/assets/main-DvPs7Asy.js | public_html/app/assets/main-DvPs7Asy.js |
+| 2 | OBLIGATORIO | C:/wamp64/www/automatiza-tech/.worktrees/codex-modo-feria-kiosco/CumpleBooth/dist/assets/segment.worker-CZ45B1n2.js | public_html/app/assets/segment.worker-CZ45B1n2.js |
+| 2 | OBLIGATORIO | C:/wamp64/www/automatiza-tech/.worktrees/codex-modo-feria-kiosco/CumpleBooth/dist/assets/themeVars-BWg77og2.js | public_html/app/assets/themeVars-BWg77og2.js |
+| 2 | OBLIGATORIO | C:/wamp64/www/automatiza-tech/.worktrees/codex-modo-feria-kiosco/CumpleBooth/dist/assets/three.module-Y-ql4QRg.js | public_html/app/assets/three.module-Y-ql4QRg.js |
+| 2 | OBLIGATORIO | C:/wamp64/www/automatiza-tech/.worktrees/codex-modo-feria-kiosco/CumpleBooth/dist/assets/vision_bundle-Cd7_-YIR.js | public_html/app/assets/vision_bundle-Cd7_-YIR.js |
+| 3 | OBLIGATORIO | C:/wamp64/www/automatiza-tech/.worktrees/codex-modo-feria-kiosco/CumpleBooth/dist/album.html | public_html/app/album.html |
+| 3 | OBLIGATORIO | C:/wamp64/www/automatiza-tech/.worktrees/codex-modo-feria-kiosco/CumpleBooth/dist/cartel-qr.html | public_html/app/cartel-qr.html |
+| 3 | OBLIGATORIO | C:/wamp64/www/automatiza-tech/.worktrees/codex-modo-feria-kiosco/CumpleBooth/dist/carteles.html | public_html/app/carteles.html |
+| 3 | OBLIGATORIO | C:/wamp64/www/automatiza-tech/.worktrees/codex-modo-feria-kiosco/CumpleBooth/dist/index.html | public_html/app/index.html |
+| 4 | OBLIGATORIO | C:/wamp64/www/automatiza-tech/.worktrees/codex-modo-feria-kiosco/CumpleBooth/dist/feria.html | public_html/app/feria.html |
+
+No subir `src/`, tests, node_modules, evidencias, ADB, fixtures, SQLite, fotos de prueba, logs ni configuraciones. El HTML fuente `public/feria.html` tampoco se sube directamente: usar `dist/feria.html` procesado por Vite.
+
+### No probado
+
+- Galaxy Tab A7 física: pendiente de conexión USB de Luis; ADB preparado, sin dispositivo detectado al cerrar la verificación en PC. No atribuir estos FPS al equipo real.
+- Cámara física frontal/trasera, iluminación de feria, grupos/personas en movimiento y una jornada continua. Las pruebas usan un retrato público por canvas.
+- Hostinger/HTTPS/CSP real, Selphy 10×15, permisos efectivos de descarga del navegador y task de retención. Corresponden a la validación integrada de Claude; no se accedió a PROD.
+
+### Contrato y preguntas abiertas para Claude
+
+- `upload.php` puede responder éxito aunque no ligue la reserva. Si se pierde una respuesta y se reintenta una reserva ya usada, puede guardar una copia sin vínculo. Se mantuvo el contrato; revisar confirmación/idempotencia en 020 antes de prometer recuperación de todos los casos de red.
+- El diploma se guarda en la tablet; el QR es de la foto. Entrega por QR del diploma requeriría acordar un contrato adicional, que no se inventó aquí.
+- La fuente del modelo quedó en `src/feria/models/` para respetar los archivos autorizados; Vite la emite en `vendor/mediapipe/selfie_segmenter.tflite`. Se reutiliza el mismo WASM instalado. Proveniencia y SHA-256 en `models/NOTICE.md`.
+- Sin nombres de franquicias en el nuevo copy. Las imágenes/nombres de personajes siguen viniendo del catálogo existente de 020.
+
+## DESPLEGADO 2026-10-13 junto con AT-CUMPLECLICK-026: feria: la intro siempre se ve y la temática se despide
+
+Subió en el bundle `main-CL2XqIT8.js` del deploy del cumpleaños de adulto (ver arriba); `feria.html` no se tocó. Lo de abajo
+es el texto de cuando estaba pendiente.
+
+
+Rama `claude/feria-prod`, commit `0357996`, PR lmgmuber-bit/automatiza-tech#58. Luis reportó el 28-sep que en la
+feria del 26-sep la intro se saltaba y el niño caía directo a la ruleta.
+
+**Qué cambia:** el video de bienvenida se baja entero al abrir el kiosco (`videoListo.js`), se ve aunque la tablet
+pida menos animaciones y, si no arranca o falla, queda una tarjeta con el nombre un mínimo de 4 s
+(`src/feria/intro.js`). Al terminar, la despedida de la temática antes de volver al selector. Solo afecta al modo
+feria: una fiesta normal usa `ListaInvitados` y `VideoScreen`, que no se tocaron.
+
+**Estado de PROD cotejado por HTTP el 29-sep:** `app/index.html` referencia `assets/main-BUofv_7z.js` (quinta subida
+del 26-sep, commit `089b1ac`). `app/feria.html` referencia `feria-B6aDrb3_.js` y `feria-CtKgOs8Z.js`.
+
+| Orden | Clase | Local | PROD |
+|---|---|---|---|
+| 1 | OBLIGATORIO | `CumpleBooth/dist/assets/main-B0T6cgEh.js` | `public_html/app/assets/main-B0T6cgEh.js` (nuevo) |
+| 2 | OBLIGATORIO | `CumpleBooth/dist/index.html` | `public_html/app/index.html` (reemplaza) |
+
+Ya están en PROD con los mismos bytes (no subir): `browser-BeMEBtOm.js`, `client-eulB1LW-.js`, `feria-DS66PGN6.css`,
+`feria-DvWbXH6O.js`, `feria-DFqILw4W.js`, `main-BQAKXBRo.css`, `themeVars-BWg77og2.js`, `three.module-Y-ql4QRg.js`,
+`vision_bundle-Cd7_-YIR.js`. **No subir `dist/feria.html`**: el selector no cambió. Sin migración, sin PHP.
+
+**Respaldo y vuelta atrás:** respaldar `app/index.html` antes; volver atrás es restaurarlo. `main-BUofv_7z.js` se
+deja en `assets/` para los navegadores que lo tengan en caché.
+
+**Verificación desde afuera:** `index.html` con los bytes del local y referencia a `main-B0T6cgEh.js`; el asset con
+`Content-Type` de JavaScript y los mismos bytes; `api.php?p=samantha-hielo` y `api.php?p=luciano-spidey` iguales que
+antes; los videos `welcome` y `despedida` de cada temática responden 200.
+
+**Pruebas en local:** `node --test tests/frontend/*.test.mjs` con el backend E2E: 243 pruebas, 242 pasan, 1 omitida
+(ADB), 0 fallas. La E2E cubre la despedida y la tarjeta de respaldo con el video abortado.
+
+### No probado
+
+- Tablet física con un niño.
+- El caso real del 26-sep no se reprodujo: la causa exacta (modo "menos animaciones" de la tablet o video que no
+  arrancó con el wifi del lugar) es la hipótesis más probable, no un hecho medido.

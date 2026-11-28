@@ -20,6 +20,7 @@
 // librería que solo funciona si alguien más la preparó es una trampa para el próximo que
 // la use desde un script.
 require_once __DIR__ . '/lib.php';
+require_once __DIR__ . '/lib.fechas.php';
 require_once __DIR__ . '/lib.cliente.php';
 require_once __DIR__ . '/lib.planes.php';
 
@@ -91,8 +92,8 @@ function cb_finanzas_guardar(array $datos): array
 
     $errores = [];
     $fecha = trim((string) ($datos['fecha'] ?? ''));
-    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $fecha)) {
-        $errores[] = 'La fecha va en formato día/mes/año.';
+    if (!cb_fecha_valida($fecha)) {
+        $errores[] = 'Indica una fecha existente en formato día/mes/año.';
     }
     $tipo = (string) ($datos['tipo'] ?? '');
     if (!isset(cb_finanzas_tipos()[$tipo])) {

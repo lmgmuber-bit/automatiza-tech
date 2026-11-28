@@ -1,0 +1,5 @@
+<?php
+return static function(PDO $pdo):void {
+    $pdo->exec('DROP TABLE IF EXISTS cc_marketing_piezas');
+    $pdo->exec('DROP TABLE IF EXISTS cc_marketing_semanas');
+};

@@ -10,6 +10,7 @@
  * No se manda ningún correo: se prueban el registro, la lectura y la rotación de tokens.
  */
 
+require __DIR__ . '/_aislamiento-local.php';
 $raiz = dirname(__DIR__, 2);
 require_once $raiz . '/public/lib.php';
 require_once $raiz . '/public/lib.envios.php';
@@ -20,6 +21,10 @@ require_once $raiz . '/public/lib.acceptance.php';
 // error parecía del producto cuando era de la preparación de la prueba.
 require_once __DIR__ . '/_migraciones.php';
 cb_test_migrar_todo(cb_pdo());
+if (!cb_save_parties(['parties' => ['qa-envios' => [
+    'nombre' => 'Evento de prueba', 'tema' => 'carreras', 'fecha' => '2026-09-26',
+    'activa' => false, 'service_plan' => 'booth', 'invitados' => [],
+]]])) { throw new RuntimeException('No se creó la fiesta de prueba'); }
 
 $fallos = 0;
 $total = 0;
@@ -84,7 +89,7 @@ $fiestas = cb_load_parties()['parties'] ?? [];
 $slugReal = '';
 foreach ($fiestas as $s => $f) { $slugReal = (string) $s; break; }
 if ($slugReal === '') {
-    echo "  (sin fiestas en la base: no se prueba la rotación de tokens)\n";
+    throw new RuntimeException('Falta la fiesta de prueba para verificar la rotación');
 } else {
     $party = $fiestas[$slugReal] + ['public_slug' => $slugReal];
     $creada = cb_create_plan_acceptance($party, [
@@ -108,12 +113,18 @@ if ($slugReal === '') {
         ok('el enlace ANTERIOR deja de funcionar', cb_load_acceptance_by_token_hash(cb_hash_token($tokenViejo)) === null);
         parse_str((string) parse_url((string) $urlNueva, PHP_URL_QUERY), $q);
         ok('y el nuevo sí funciona', (cb_load_acceptance_by_token_hash(cb_hash_token((string) ($q['t'] ?? '')))['id'] ?? 0) === $id);
+        // Desde el 30-oct-2026 el enlace de firma se puede volver a calcular: la ficha ofrece el mensaje de WhatsApp.
+        $textoFirma = cb_envio_texto_whatsapp($slugReal, 'firma');
+        ok('la firma pendiente trae mensaje de WhatsApp con el enlace vigente', str_contains($textoFirma, (string) $urlNueva));
+        ok('el mismo mensaje que en Aceptaciones', $textoFirma === cb_acceptance_texto_whatsapp(
+            cb_load_acceptance_by_id($id), (string) (($fiestas[$slugReal]['birthday_person_name'] ?? '') ?: ($fiestas[$slugReal]['nombre'] ?? '')), (string) $urlNueva));
 
         // Una fila que no está pendiente no se puede rotar: rotar el enlace de una firma ya
         // hecha reabriría un documento cerrado.
         $pdo->prepare('UPDATE cc_plan_acceptances SET status = ? WHERE id = ?')->execute(['revoked', $id]);
         ok('una aceptación revocada no se puede reenviar', cb_acceptance_rotar_token($id) === null);
         ok('ni aparece como pendiente de la fiesta', (cb_acceptance_pendiente_de_fiesta($slugReal)['id'] ?? 0) !== $id);
+        ok('ni trae mensaje de WhatsApp', cb_envio_texto_whatsapp($slugReal, 'firma') === '');
 
         $pdo->prepare('DELETE FROM cc_plan_acceptances WHERE id = ?')->execute([$id]);
     }

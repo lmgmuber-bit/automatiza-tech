@@ -27,6 +27,11 @@ Antes de trabajar, crea una rama nueva. Usa y manten actualizados `CLAUDE.md`, `
 - **Relevo completo:** bóveda privada `10-Projects/GT-Baseball/README.md`. Diseño e historial en
   `Docs/superpowers/specs/2026-09-27-gt-baseball-prototipo-design.md`.
 
+## Propuestas comerciales
+
+Toda propuesta de cliente usa la plantilla única del `propuesta-renderer` (regla de Luis, 2026-09-23), nunca Gamma: `Docs/METODO_AT/PROPUESTAS-PLANTILLA-UNICA.md`.
+
+
 
 <!-- AT-RETOMAR-001-LOCAL:START -->
 ## AT-RETOMAR-001 — referencia local

@@ -9,6 +9,7 @@ Esta carpeta documenta cómo AutomatizaTech diagnostica, propone, ejecuta, entre
 ## Documentos
 
 - [Aplicación del Método AT](./APLICACION_DEL_METODO_AT.md): recorrido común del cliente, seis pasos, roles, gates y soporte.
+- [Propuestas: una sola plantilla](./PROPUESTAS-PLANTILLA-UNICA.md): regla y procedimiento para armar toda propuesta con el `propuesta-renderer` (láminas, precios en CLP, fotos, chatbot).
 - [Servicios y casos de uso](./SERVICIOS_Y_CASOS_DE_USO.md): catálogo de servicios, selección de solución, ejemplos, entregables, métricas y diagramas.
 - [Propuestas: flujo automático v3](./PROPUESTAS-FLUJO-V3.md): de la transcripción de Meet al envío, con revisión en el panel, fotos por rubro y reintentos.
 - [Plan de trabajo con carta Gantt](./PLAN-DE-TRABAJO.md): al firmar un contrato de servicios, borrador con IA, edición en la ficha del CRM, tabla de tiempos y versión final y, desde la Etapa 2 (EN PROD 01-oct), envío al cliente por correo o WhatsApp, `ver-plan.php` y agenda web de la llamada de seguimiento.

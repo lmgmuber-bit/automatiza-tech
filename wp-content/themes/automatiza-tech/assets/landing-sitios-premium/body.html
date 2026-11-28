@@ -244,8 +244,9 @@
         <sc-if data-when="notScheduled">
         <form data-act-submit="submitDemo" class="at-form" style="padding:22px">
           <div role="tablist" aria-label="Tipo de sesión" class="at-f-full" style="display:flex;gap:6px;padding:4px;background:var(--surface-2);border:1px solid var(--bd2);border-radius:12px">
-            <button type="button" role="tab" data-act="setMode" data-mode="diagnostico" id="at-mode-diag" aria-selected="true" style="flex:1;padding:10px;border:none;border-radius:9px;cursor:pointer;font-family:'Space Grotesk';font-weight:600;font-size:13.5px;background:#2dd4bf;color:#061018;transition:background .2s,color .2s">Diagnóstico</button>
-            <button type="button" role="tab" data-act="setMode" data-mode="demo" id="at-mode-demo" aria-selected="false" style="flex:1;padding:10px;border:none;border-radius:9px;cursor:pointer;font-family:'Space Grotesk';font-weight:600;font-size:13.5px;background:transparent;color:var(--text-2);transition:background .2s,color .2s">Demo en vivo</button>
+            <button type="button" role="tab" class="at-tab-modo" data-act="setMode" data-mode="diagnostico" id="at-mode-diag" aria-selected="true" style="flex:1;padding:10px 6px;display:inline-flex;align-items:center;justify-content:center;gap:6px;border:none;border-radius:9px;cursor:pointer;font-family:'Space Grotesk';font-weight:600;font-size:13px;background:#2dd4bf;color:#061018;transition:background .2s,color .2s"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex:none"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 14l2 2 4-4"/></svg><span>Diagnóstico</span></button>
+            <button type="button" role="tab" class="at-tab-modo" data-act="setMode" data-mode="demo" id="at-mode-demo" aria-selected="false" style="flex:1;padding:10px 6px;display:inline-flex;align-items:center;justify-content:center;gap:6px;border:none;border-radius:9px;cursor:pointer;font-family:'Space Grotesk';font-weight:600;font-size:13px;background:transparent;color:var(--text-2);transition:background .2s,color .2s"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex:none"><rect x="2" y="4" width="20" height="14" rx="2"/><path d="M10 8.5l5 2.5-5 2.5z"/><path d="M8 21h8"/></svg><span>Demo en vivo</span></button>
+            <button type="button" role="tab" class="at-tab-modo" data-act="setMode" data-mode="seguimiento" id="at-mode-seg" aria-selected="false" style="flex:1;padding:10px 6px;display:inline-flex;align-items:center;justify-content:center;gap:6px;border:none;border-radius:9px;cursor:pointer;font-family:'Space Grotesk';font-weight:600;font-size:13px;background:transparent;color:var(--text-2);transition:background .2s,color .2s"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex:none"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/><path d="M9 16l2 2 4-4"/></svg><span>Seguimiento</span></button>
           </div>
           <input type="hidden" name="intent" id="at-intent" value="diagnostico"/>
           <input type="hidden" name="lead_source" value="landing_sitios_premium"/>
@@ -287,6 +288,7 @@
               <option>Asistente inteligente / chatbot</option>
               <option>Sitio web premium</option>
               <option>App o sistema a medida</option>
+              <option>Reunión de seguimiento (ya soy cliente)</option>
             </select>
           </div>
           <div style="display:flex;flex-direction:column;gap:6px">

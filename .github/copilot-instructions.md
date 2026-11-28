@@ -14,21 +14,26 @@ Boveda maestra: `C:\Users\luis_\Documents\Codex\AI-Memory-Vault`
 Este repositorio tiene skills de propuestas en `.github/skills/`. Usarlas cuando el usuario trabaje en ventas o propuestas a clientes.
 
 ### at-gamma-proposal → `.github/skills/at-gamma-proposal/SKILL.md`
-Triggers: "generar propuesta gamma", "nueva propuesta cliente"
-Genera: Gamma prompt (8 slides) + chatbot system prompt + prompt de diseño visual
+Triggers: "generar propuesta", "nueva propuesta cliente", "at propuesta"
+Genera: JSON de la plantilla única del `propuesta-renderer` + chatbot system prompt (+ prompt de diseño si aplica). **Ya no genera prompts de Gamma**: regla en `Docs/METODO_AT/PROPUESTAS-PLANTILLA-UNICA.md`.
 
 ### at-proposal-refiner → `.github/skills/at-proposal-refiner/SKILL.md`
-Triggers: "refinar propuesta", "mejorar prompt gamma"
-Flujo: historial + Gamma → API → evalúa → refina → prompt de diseño
+Triggers: "refinar propuesta", "actualizar prompts propuesta"
+Flujo: historial + presentación del renderer → `GET …/proposal/{ID}/state` → evalúa → v3: comentarios para «Pedir cambios» en el panel (el `POST /prompts` responde 409); antiguas: `POST /prompts` + re-render → prompt de diseño de `at-gamma-proposal`
 
 ### API del pipeline
 ```
-GET/POST https://automatizatech.cl/?rest_route=/automatiza-tech/v1/proposal/{ID}/prompts
-X-AT-Secret: <secret>  (wp-config.php del servidor)
+GET      https://automatizatech.cl/?rest_route=/automatiza-tech/v1/proposal/{ID}/state    (payload, flujo, status)
+GET/POST https://automatizatech.cl/?rest_route=/automatiza-tech/v1/proposal/{ID}/prompts  (POST: solo propuestas antiguas)
+X-AT-Secret: <secret>  (AT_REST_SECRET del wp-config.php del servidor; leer por etiqueta, nunca escribirlo)
 ```
 
 Referencia: `C:\Users\luis_\Documents\Codex\AI-Memory-Vault\30-Agent-Protocols\automatizatech-pipeline.md`
 <!-- AT-PIPELINE:END -->
+
+## Responder con base y fundamentos (regla general, Luis 2026-09-23)
+
+No asumir. Antes de dar una cifra, un precio, un plazo, un estado o una capacidad, verificarla con una fuente (código, base de datos, prueba, documentación o búsqueda web) y decir de dónde sale, con enlace cuando exista. "Yo creía", "creo que" o "debería" no son base. Lo que no se pueda verificar se presenta como **supuesto explícito**, con el motivo y cómo se comprobaría; nunca como hecho. Los precios que se propongan a un cliente llevan referencias de mercado con fuentes y el cálculo aplicado al caso.
 
 ## GT Baseball Academy (cliente Jeffer García) — estado vivo
 

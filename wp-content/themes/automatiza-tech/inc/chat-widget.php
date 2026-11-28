@@ -18,8 +18,8 @@ function automatiza_tech_chat_scripts() {
     wp_enqueue_script(
         'automatiza-ai-chat-script',
         get_template_directory_uri() . '/assets/chat/js/chat.js',
-        array('jquery'),
-        '2.1', // Updated version to force cache refresh - Phone length limits by country
+        array('jquery', 'at-turnstile'),
+        '2.2', // 16-nov-2026: casilla anti-robot (Turnstile) en los formularios de agenda
         true
     );
 

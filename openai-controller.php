@@ -224,9 +224,9 @@ class OpenAIController {
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         
         if (curl_errno($ch)) {
-            $error_msg = curl_error($ch);
+            error_log('OpenAIController: error de red: ' . curl_error($ch));
             curl_close($ch);
-            return ['error' => 'cURL Error: ' . $error_msg];
+            return ['error' => 'upstream_unavailable', 'code' => 502];
         }
         
         curl_close($ch);
@@ -239,7 +239,8 @@ class OpenAIController {
         }
 
         if ($httpCode !== 200) {
-            return ['error' => 'OpenAI API Error', 'details' => $decodedResponse, 'code' => $httpCode];
+            error_log('OpenAIController: respuesta de error HTTP ' . $httpCode . ': ' . substr((string) $response, 0, 1000));
+            return ['error' => 'upstream_error', 'code' => $httpCode];
         }
 
         // 2. Registrar consumo si fue exitoso

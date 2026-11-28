@@ -1,0 +1,11 @@
+<?php
+/** Rastro · Prospección: lista de prospectos, enlace personal al formulario, paso al CRM y baja. Lo incluye functions.php. */
+if (!defined('ABSPATH')) { exit; }
+require_once __DIR__ . '/esquema.php';
+require_once __DIR__ . '/puras.php';
+require_once __DIR__ . '/correo.php';
+require_once __DIR__ . '/datos.php';
+require_once __DIR__ . '/envio.php';
+require_once __DIR__ . '/admin.php';
+require_once __DIR__ . '/publico.php';
+require_once __DIR__ . '/crm-avisos.php';

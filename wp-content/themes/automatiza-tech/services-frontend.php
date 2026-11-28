@@ -1,4 +1,5 @@
 <?php
+defined('ABSPATH') || exit;
 /**
  * Funciones para mostrar servicios en el frontend
  */

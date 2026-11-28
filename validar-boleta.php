@@ -1,6 +1,6 @@
 <?php
 /**
- * Sistema de Validación y Descarga de Boletas
+ * Sistema de Validación y Descarga de Comprobantes de pago
  * URL: /validar-boleta.php
  */
 
@@ -18,20 +18,20 @@ if ( ! at_rate_limit_check( 'validar_boleta', 30, 60 ) ) {
 
 global $wpdb;
 
-// Obtener ID (numero de boleta) desde la URL
+// Obtener ID (número de comprobante) desde la URL
 $receipt_id = isset($_GET['id']) ? sanitize_text_field($_GET['id']) : '';
 
 if (empty($receipt_id)) {
-    wp_die('❌ Error: No se proporcionó un número de boleta válido.', 'Error de Validación', ['response' => 400]);
+    wp_die('❌ Error: No se proporcionó un número de comprobante válido.', 'Error de Validación', ['response' => 400]);
 }
 
-// Buscar la boleta
+// Buscar el comprobante
 $table_name = $wpdb->prefix . 'automatiza_tech_receipts';
 
 // Verificar si existe la tabla
 $table_exists = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table_name ) );
 if ( $table_exists !== $table_name ) {
-    wp_die('❌ Error: Sistema de boletas no inicializado.', 'Error', ['response' => 500]);
+    wp_die('❌ Error: Sistema de comprobantes no inicializado.', 'Error', ['response' => 500]);
 }
 
 $receipt = $wpdb->get_row($wpdb->prepare(
@@ -40,7 +40,7 @@ $receipt = $wpdb->get_row($wpdb->prepare(
 ));
 
 if (!$receipt) {
-    wp_die('❌ Error: Boleta no encontrada o inválida.', 'Boleta No Encontrada', ['response' => 404]);
+    wp_die('❌ Error: Comprobante no encontrado o inválido.', 'Comprobante no encontrado', ['response' => 404]);
 }
 
 // ---- A2.1 IDOR fix: lazy download_token migration ----
@@ -60,7 +60,7 @@ if ( empty( $receipt->download_token ) ) {
 $action = isset($_GET['action']) ? sanitize_text_field($_GET['action']) : 'validate';
 
 if ($action === 'download') {
-    // DESCARGAR BOLETA EN PDF
+    // DESCARGAR COMPROBANTE EN PDF
 
     // A2.1: Verificar download_token para evitar IDOR
     $submitted_token_r = isset($_GET['token']) ? sanitize_text_field($_GET['token']) : '';
@@ -154,7 +154,7 @@ if ($action === 'download') {
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Validación de Boleta - AutomatizaTech</title>
+        <title>Validación de comprobante de pago - AutomatizaTech</title>
         <style>
             body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f0f2f5; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
             .card { background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); max-width: 400px; width: 90%; text-align: center; }
@@ -173,8 +173,9 @@ if ($action === 'download') {
     <body>
         <div class="card">
             <div class="success-icon">✅</div>
-            <h1>Documento Válido</h1>
-            <p class="subtitle">La boleta electrónica es auténtica</p>
+            <h1>Validación de comprobante de pago</h1>
+            <p class="subtitle">El comprobante es auténtico</p>
+            <p style="font-size:12px;color:#666;margin:0 0 10px;">Comprobante interno de AutomatizaTech; no es un documento tributario del SII</p>
             
             <div class="details">
                 <div class="detail-row">
@@ -205,7 +206,7 @@ if ($action === 'download') {
             </div>
             
             <a href="?id=<?php echo urlencode($receipt_id); ?>&token=<?php echo urlencode($receipt->download_token); ?>&action=download" class="btn">
-                📥 Descargar Boleta PDF
+                📥 Descargar comprobante PDF
             </a>
             
             <p style="margin-top: 20px; font-size: 12px; color: #999;">

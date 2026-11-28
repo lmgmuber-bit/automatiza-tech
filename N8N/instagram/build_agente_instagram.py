@@ -74,6 +74,8 @@ if (!/^[0-9A-Za-z_-]{3,64}$/.test(igsid) || !/^[0-9a-f]{64}$/.test(tok)) return 
 if (!prueba && !cb.startsWith('https://automatizatech.cl/')) return [];
 const texto = String(m.content || '').trim().slice(0, 2000);
 const tipo = String(m.type || 'text');
+// Respuesta automática de otro negocio (conversación 29, 15-nov): no se contesta, para no dejar dos bots hablándose.
+if (tipo === 'text' && esRespuestaAutomatica(texto)) return [];
 const ctx = (b.contexto && typeof b.contexto === 'object') ? b.contexto : null;
 return [{ json: {
   conversation_id: conv, channel_id: canal, igsid, nombre: String(contacto.name || '').slice(0, 80),
@@ -82,6 +84,15 @@ return [{ json: {
   contexto: ctx ? { palabra: String(ctx.palabra || '').slice(0, 40), mensaje_privado: String(ctx.mensaje_privado || '').slice(0, 1000) } : null,
 } }];
 """.replace('CANAL', str(CANAL_IG))
+
+
+def respuesta_automatica():
+    """Tramo marcado de respuesta-automatica.js: esRespuestaAutomatica (filtro de bots de otros negocios)."""
+    js = leer(AQUI, 'respuesta-automatica.js')
+    ini, fin = '// <<RESPUESTA AUTOMATICA: inicio>>', '// <<RESPUESTA AUTOMATICA: fin>>'
+    if js.count(ini) != 1 or js.count(fin) != 1 or 'function esRespuestaAutomatica' not in js:
+        raise SystemExit('respuesta-automatica.js no trae las marcas o la función')
+    return js[js.index(ini):js.index(fin) + len(fin)]
 
 JS_UNIR = r"""
 // Junta los mensajes de la ráfaga (los de los últimos 2 minutos). Si la lista llegó vacía, usa el propio mensaje.
@@ -228,7 +239,7 @@ def flujo_principal():
     nodes = [
         nodo('ig-webhook', 'Webhook', 'n8n-nodes-base.webhook', 1, [0, 300],
              {'httpMethod': 'POST', 'path': 'RUTA_WEBHOOK', 'options': {}}, webhookId='RUTA_WEBHOOK'),
-        code('ig-validar', 'Validar', [220, 300], JS_VALIDAR),
+        code('ig-validar', 'Validar', [220, 300], respuesta_automatica() + '\n' + JS_VALIDAR),
         si_booleano('ig-es-texto', '¿Es texto?', [440, 300], '$json.es_texto'),
         # Ráfaga: cada mensaje se anota; espera 6 s y solo sigue la ejecución del último.
         redis('ig-push', 'Anotar en la ráfaga', [660, 200],

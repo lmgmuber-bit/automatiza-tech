@@ -74,5 +74,12 @@ ok(($wa['data'][0]['custom_data']['content_name'] ?? '') === 'Agenda (WhatsApp)'
 $sin = at_capi_payload(['id' => 77, 'email' => 'a@b.cl', 'source' => 'web', 'scheduled_date' => 'null', 'scheduled_time' => ''], '1', '', 1);
 ok(($sin['data'][0]['event_id'] ?? '') === '4fffaccd056bbcf722178f98d6316a9f5783fa07', 'payload sin fecha: event_id de respaldo sha256("lead|77")[:40]');
 
+// Canales que cuentan como Lead (16-nov-2026): mientras el formulario web no tenga Turnstile, solo IG y WhatsApp.
+ok(at_capi_canal_cuenta('instagram', '') && at_capi_canal_cuenta('whatsapp', ''), 'por omisión cuentan instagram y whatsapp');
+ok(!at_capi_canal_cuenta('web', '') && !at_capi_canal_cuenta('', '') && !at_capi_canal_cuenta('otro', ''), 'por omisión no cuentan web, vacío ni otros');
+ok(at_capi_canal_cuenta('web', 'instagram, whatsapp, web'), 'con el ajuste «instagram, whatsapp, web» la web cuenta');
+ok(at_capi_canal_cuenta(' Instagram ', 'INSTAGRAM') && !at_capi_canal_cuenta('whatsapp', 'instagram'), 'sin distinguir mayúsculas ni espacios; solo lo listado');
+ok(at_capi_canal_cuenta('instagram', ' , ,') && !at_capi_canal_cuenta('web', ' , ,'), 'un ajuste vacío o roto vuelve a la lista por omisión');
+
 echo $fallas ? "\n$fallas FALLAS\n" : "\nTODO OK\n";
 exit($fallas ? 1 : 0);

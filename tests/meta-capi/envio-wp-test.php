@@ -16,6 +16,9 @@ add_filter('pre_http_request', function ($pre, $args, $url) {
 	return $GLOBALS['capi_respuesta'];
 }, 10, 3);
 $cfg = ['activo' => true, 'token' => 'token-de-prueba-capi', 'pixel' => '123456', 'test' => ''];
+// Las pruebas de armado usan la web: se la habilita solo dentro de esta prueba (la opción real no se toca).
+$canales_todos = function () { return 'instagram, whatsapp, web'; };
+add_filter('pre_option_at_capi_canales', $canales_todos);
 add_filter('at_capi_config', function () use (&$cfg) { return $cfg; }, 99);
 $limpiar = [];
 register_shutdown_function(function () use (&$limpiar) { foreach ($limpiar as $c) { delete_transient('at_capi_lead_' . hash('sha256', $c)); } });
@@ -99,8 +102,9 @@ ok(get_option('at_capi_activo', null) !== '1' || $real['activo'] === true, 'el i
 
 // 8) /leads dispara la acción después de guardar; /followup-meetings no
 $fuente = (string) file_get_contents($raiz . '/wp-content/themes/automatiza-tech/inc/api-endpoints.php');
-ok(preg_match('/\$lead_id = \(int\) \$wpdb->insert_id;\s*\n\s*do_action\(\'automatiza_tech_lead_guardado\', \$lead_id, \$data\);/', $fuente) === 1,
-	'api-endpoints.php: do_action justo después del insert de /leads');
+// Desde el 16-nov el Lead va dentro de la guarda de la credencial de n8n (ver tests/agenda-rutas-clave/capi-lead-test.php).
+ok(preg_match('/\$lead_id = \(int\) \$wpdb->insert_id;\s*\n(\s*\/\/[^\n]*\n)*\s*if \(function_exists\(\'at_agenda_credencial_valida\'\) && at_agenda_credencial_valida\(\$request\)\) \{\s*\n\s*do_action\(\'automatiza_tech_lead_guardado\', \$lead_id, \$data\);/', $fuente) === 1,
+	'api-endpoints.php: do_action justo después del insert de /leads, dentro de la guarda de la credencial');
 ok(substr_count($fuente, 'automatiza_tech_lead_guardado') === 1, 'la acción se dispara en un solo lugar');
 // Revisión final: todo archivo que api-endpoints.php carga con require_once __DIR__ debe estar en git (si no, main queda roto)
 preg_match_all("/require_once __DIR__ \. '\/([a-z0-9_-]+\.php)'/", $fuente, $req);
@@ -110,6 +114,17 @@ foreach (array_unique($req[1]) as $archivo) {
 }
 $seg = (string) file_get_contents($raiz . '/wp-content/themes/automatiza-tech/inc/admin-followup-meetings.php');
 ok(strpos($seg, 'automatiza_tech_lead_guardado') === false, 'las reuniones de seguimiento no disparan el Lead');
+
+// Canales por omisión (16-nov-2026): sin el ajuste, la web no cuenta y Instagram y WhatsApp sí.
+remove_filter('pre_option_at_capi_canales', $canales_todos);
+add_filter('pre_option_at_capi_canales', function () { return ''; });
+add_filter('at_capi_config', function () { return ['activo' => true, 'token' => 'token-de-prueba-capi', 'pixel' => '123456', 'test' => '']; }, 99);
+$ll = $guardar(921, ['email' => $correo('canal-web'), 'source' => 'web', 'scheduled_date' => '2026-11-06', 'scheduled_time' => '10:00:00']);
+ok(count($ll) === 0, 'por omisión: una agenda web no va a Meta');
+$ll = $guardar(922, ['email' => $correo('canal-ig'), 'source' => 'instagram', 'scheduled_date' => '2026-11-06', 'scheduled_time' => '11:00:00']);
+ok(count($ll) === 1, 'por omisión: una agenda de Instagram sí va');
+$ll = $guardar(923, ['email' => $correo('canal-wa'), 'source' => 'whatsapp', 'scheduled_date' => '2026-11-06', 'scheduled_time' => '12:00:00']);
+ok(count($ll) === 1, 'por omisión: una agenda de WhatsApp sí va');
 
 @unlink($log);
 fin();

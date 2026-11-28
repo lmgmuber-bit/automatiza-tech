@@ -6,7 +6,8 @@ Uso:  python -I -X utf8 sincronizar.py                 (solo dice qué cambiarí
 
 Qué sincroniza (cada tramo va entre marcas en el prompt; lo de fuera de las marcas no se toca):
 - reglas.md               -> «REGLAS AT» en web y WhatsApp (temas permitidos y seguridad).
-- cerebro-at.md           -> «CEREBRO AT» en web y WhatsApp (quién es Tech, qué ofrecemos, Método AT, planes, redes).
+- cerebro-at.md           -> «CEREBRO AT» en web y WhatsApp (quién es Tech, qué ofrecemos, Método AT, regla de precios, redes).
+- planes.md               -> planes del Portal con precio, al final de la personalidad web y de la de WhatsApp (nunca a Instagram).
 - personalidad-web.md     -> «PERSONALIDAD» del web, dentro del tramo que aplicar.py le quita a Instagram.
 - personalidad-whatsapp.md -> «PERSONALIDAD» de WhatsApp.
 - validacion.js           -> nodo «Check Email Booking» de WhatsApp (nombre y correo para agendar).
@@ -98,6 +99,7 @@ def simular_instagram(web):
         q = q.replace(m, '·')
     assert 'SHOW_DEMO_FORM' not in q and 'formulario' not in q, 'instagram: aplicar.py se detendría (formulario)'
     assert REGLAS[0] in q and CEREBRO[0] in q and PERS['web'][0] not in q, 'instagram: tramos equivocados'
+    assert 'USD/mes' not in q, 'instagram: le llegarían los precios de los planes'
     return q
 
 
@@ -174,8 +176,11 @@ def main():
         except urllib.error.HTTPError as e:
             return e.code, {'error': e.read().decode()[:300]}
 
-    f = {'reglas': leer('reglas.md'), 'cerebro': leer('cerebro-at.md'), 'web': leer('personalidad-web.md'),
-         'whatsapp': leer('personalidad-whatsapp.md')}
+    # Los planes con precio van solo en la personalidad web y en la de WhatsApp: Instagram nunca da precios
+    # (Luis, 29-oct-2026) y la personalidad web queda en el tramo que aplicar.py le quita a Instagram.
+    planes = leer('planes.md')
+    f = {'reglas': leer('reglas.md'), 'cerebro': leer('cerebro-at.md'), 'web': leer('personalidad-web.md') + '\n\n' + planes,
+         'whatsapp': leer('personalidad-whatsapp.md') + '\n\n' + planes}
     vjs = io.open(os.path.join(AQUI, 'validacion.js'), encoding='utf-8').read().replace('\r\n', '\n')
     val = vjs[vjs.index(VAL[0]):vjs.index(VAL[1]) + len(VAL[1])]
 

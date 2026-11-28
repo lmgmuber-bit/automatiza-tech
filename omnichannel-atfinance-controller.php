@@ -385,7 +385,8 @@ if (!function_exists('at_omni_log_ai_usage')) {
             $fin->maybe_create_tables();
             return $fin->log_usage($data);
         } catch (\Throwable $e) {
-            return ['error' => $e->getMessage()];
+            error_log('OmniATFinance: excepcion: ' . $e->getMessage());
+            return ['error' => 'internal_error'];
         }
     }
 }

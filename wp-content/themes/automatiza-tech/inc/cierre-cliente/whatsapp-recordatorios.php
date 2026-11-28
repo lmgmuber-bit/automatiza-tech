@@ -18,6 +18,7 @@ if (!defined('ABSPATH')) {
 /** Lo que anotan los flujos: de qué tabla es el id y cómo se nombra el mensaje en el correo. */
 function at_cc_tipos_recordatorio(): array {
 	return [
+		'resena' => ['tabla' => 'resena', 'nombre' => 'la invitación a reseñar el proyecto'],
 		'cita_72h'            => ['tabla' => 'lead', 'nombre' => 'el recordatorio de 72 horas de su cita'],
 		'cita_24h'            => ['tabla' => 'lead', 'nombre' => 'el recordatorio de 24 horas de su cita'],
 		'cita_1h'             => ['tabla' => 'lead', 'nombre' => 'el recordatorio de 1 hora de su cita'],
@@ -57,6 +58,14 @@ function at_cc_rest_envio_recordatorio(WP_REST_Request $r) {
 	if (!at_cc_wamid_valido($wamid) || !isset(at_cc_tipos_recordatorio()[$tipo]) || $id === 0) {
 		return new WP_Error('datos_invalidos', 'wamid, tipo o id inválidos.', ['status' => 400]);
 	}
+    // Reseñas se registran en su tabla por intento, nunca como lead/seguimiento.
+    if ($tipo === 'resena') {
+        if (!function_exists('at_rg_rest_resultado')) { return new WP_Error('no_disponible', 'Reseñas no disponible.', ['status' => 503]); }
+        $peticion = new WP_REST_Request('POST');
+        foreach (['intento_id', 'modo'] as $campo) { $peticion->set_param($campo, $r->get_param($campo)); }
+        $peticion->set_url_params(['proyecto' => $id]); $peticion->set_param('wamid', $wamid); $peticion->set_param('estado', 'aceptado');
+        return at_rg_rest_resultado($peticion);
+    }
 	$envio = ['tipo' => $tipo, 'id' => $id, 'enviado' => time()];
 	set_transient(at_cc_clave_envio_recordatorio($wamid), $envio, 7 * DAY_IN_SECONDS);
 	$avisado = false;
@@ -154,4 +163,9 @@ function at_cc_avisar_recordatorio_no_entregado(array $envio, string $motivo): v
 	if (!wp_mail($destinatario, $t['asunto'], $t['html'], $headers)) {
 		error_log('at_cc: no salió el correo de un recordatorio de WhatsApp no entregado (' . $envio['tipo'] . ' ' . (int) $envio['id'] . ')');
 	}
+}
+
+/** Adaptador del bot de reseñas; mensajes normales conservan su flujo existente. */
+function at_cc_resena_respuesta(string $telefono, string $texto) {
+    return at_rg_whatsapp_baja($telefono, $texto);
 }

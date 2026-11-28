@@ -234,7 +234,8 @@ class AutomatizaTech_Client_Operations {
         );
         
         if ($result === false) {
-            wp_send_json_error('Error al guardar: ' . $wpdb->last_error);
+            error_log('client-operations-module: ' . $wpdb->last_error);
+            wp_send_json_error('Error al guardar.');
         }
         
         wp_send_json_success(array(

@@ -634,6 +634,7 @@ add_action('wp_ajax_at_create_contract_widget', function(){
             'at_review_url'   => home_url('/contracts/at-sign-contract.php?token=' . $contract->at_review_token),
         ));
     } catch (\Throwable $e) {
-        wp_send_json_error(array('message' => $e->getMessage()));
+        error_log('client-contracts-widget: excepcion: ' . $e->getMessage());
+        wp_send_json_error(array('message' => 'No se pudo completar la operación.'));
     }
 });

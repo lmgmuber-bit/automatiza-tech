@@ -7,7 +7,6 @@ const AT_HOME_PREMIUM_ATTR_VERSION = '2026_06_20_reuse_pipeline_v2';
 
 add_action('init', 'automatiza_tech_home_premium_maybe_install_attribution');
 add_action('wp_head', 'automatiza_tech_home_premium_head', 2);
-add_filter('robots_txt', 'automatiza_tech_home_premium_robots_txt', 10, 2);
 // Atribución por session_id (path Opción A: el lead lo crea n8n, no hay lead_id al enviar).
 add_action('wp_ajax_at_home_premium_attr', 'automatiza_tech_home_premium_attr_ajax');
 add_action('wp_ajax_nopriv_at_home_premium_attr', 'automatiza_tech_home_premium_attr_ajax');
@@ -176,8 +175,8 @@ function automatiza_tech_home_premium_head() {
     }
 
     $url = get_permalink();
-    $title = 'AutomatizaTech - Automatizacion y tecnologia digital premium para negocios';
-    $desc = 'Asistentes inteligentes, automatizaciones, sitios web premium, aplicaciones web, apps moviles y sistemas a medida. Agenda un diagnostico gratis.';
+    $title = 'AutomatizaTech — Automatización y tecnología digital premium para negocios';
+    $desc = 'Asistentes inteligentes, automatizaciones, sitios web premium, aplicaciones web, apps móviles y sistemas a medida. Agenda un diagnóstico gratis.';
     $img = get_template_directory_uri() . '/assets/home-premium/img/at-logo.png';
     $schema = array(
         '@context' => 'https://schema.org',
@@ -196,14 +195,28 @@ function automatiza_tech_home_premium_head() {
                 'name' => 'AutomatizaTech',
                 'url' => home_url('/'),
                 'logo' => $img,
+                'sameAs' => array(
+                    'https://www.instagram.com/automatizatech.cl/',
+                    'https://www.facebook.com/profile.php?id=61584793150484',
+                ),
+                'telephone' => '+56927002984',
+                'email' => 'contacto@automatizatech.cl',
+                'contactPoint' => array(
+                    '@type' => 'ContactPoint',
+                    'contactType' => 'customer service',
+                    'telephone' => '+56927002984',
+                    'email' => 'contacto@automatizatech.cl',
+                    'areaServed' => 'CL',
+                    'availableLanguage' => 'es',
+                ),
             ),
             array(
                 '@type' => 'Service',
                 '@id' => $url . '#service',
-                'name' => 'Diagnostico gratis de tecnologia para negocios',
+                'name' => 'Diagnóstico gratis de tecnología para negocios',
                 'provider' => array('@id' => home_url('/#organization')),
                 'areaServed' => array('@type' => 'Country', 'name' => 'Chile'),
-                'serviceType' => array('Asistentes inteligentes', 'Automatizacion de negocios', 'Sitios web premium', 'Aplicaciones web', 'Apps moviles', 'Sistemas a medida'),
+                'serviceType' => array('Asistentes inteligentes', 'Automatización de negocios', 'Sitios web premium', 'Aplicaciones web', 'Apps móviles', 'Sistemas a medida'),
             ),
             array(
                 '@type' => 'FAQPage',
@@ -211,13 +224,13 @@ function automatiza_tech_home_premium_head() {
                 'mainEntity' => array(
                     array(
                         '@type' => 'Question',
-                        'name' => 'Que tecnologia necesita mi negocio primero?',
-                        'acceptedAnswer' => array('@type' => 'Answer', 'text' => 'AutomatizaTech revisa tu operacion y recomienda si conviene partir por asistente inteligente, automatizacion, sitio premium, web app, app movil o sistema a medida.'),
+                        'name' => '¿Qué tecnología necesita mi negocio primero?',
+                        'acceptedAnswer' => array('@type' => 'Answer', 'text' => 'AutomatizaTech revisa tu operación y recomienda si conviene partir por asistente inteligente, automatización, sitio premium, aplicación web, app móvil o sistema a medida.'),
                     ),
                     array(
                         '@type' => 'Question',
-                        'name' => 'El diagnostico es gratis?',
-                        'acceptedAnswer' => array('@type' => 'Answer', 'text' => 'Si. En 15 a 30 minutos se revisa el negocio y se define una primera ruta tecnologica.'),
+                        'name' => '¿El diagnóstico es gratis?',
+                        'acceptedAnswer' => array('@type' => 'Answer', 'text' => 'Sí. En 15 a 30 minutos se revisa el negocio y se define una primera ruta tecnológica.'),
                     ),
                 ),
             ),
@@ -226,7 +239,7 @@ function automatiza_tech_home_premium_head() {
                 '@id' => $url . '#breadcrumb',
                 'itemListElement' => array(
                     array('@type' => 'ListItem', 'position' => 1, 'name' => 'Inicio', 'item' => home_url('/')),
-                    array('@type' => 'ListItem', 'position' => 2, 'name' => 'Diagnostico tecnologico', 'item' => $url),
+                    array('@type' => 'ListItem', 'position' => 2, 'name' => 'Diagnóstico tecnológico', 'item' => $url),
                 ),
             ),
         ),
@@ -243,10 +256,4 @@ function automatiza_tech_home_premium_head() {
     echo '<meta name="twitter:description" content="' . esc_attr($desc) . '">' . "\n";
     echo '<meta name="twitter:image" content="' . esc_url($img) . '">' . "\n";
     echo '<script type="application/ld+json">' . wp_json_encode($schema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . '</script>' . "\n";
-}
-
-function automatiza_tech_home_premium_robots_txt($output, $public) {
-    $extra = "\nSitemap: " . home_url('/wp-sitemap.xml') . "\n";
-    $extra .= "LLMS: " . home_url('/llms.txt') . "\n";
-    return $output . $extra;
 }

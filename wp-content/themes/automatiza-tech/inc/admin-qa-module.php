@@ -563,12 +563,14 @@ add_action('wp_ajax_at_qa_save_project', function() {
     if ($id) {
         $result = $wpdb->update($t['projects'], $data, ['id' => $id]);
         if ($result === false) {
-            wp_send_json_error('Error BD al actualizar: ' . $wpdb->last_error);
+            error_log('admin-qa-module: ' . $wpdb->last_error);
+            wp_send_json_error('Error BD al actualizar.');
         }
     } else {
         $result = $wpdb->insert($t['projects'], $data);
         if ($result === false) {
-            wp_send_json_error('Error BD al insertar: ' . $wpdb->last_error);
+            error_log('admin-qa-module: ' . $wpdb->last_error);
+            wp_send_json_error('Error BD al insertar.');
         }
         $id = $wpdb->insert_id;
     }
@@ -627,7 +629,8 @@ add_action('wp_ajax_at_qa_update_status', function() {
     ], ['id' => $case_db_id]);
 
     if ($updated === false) {
-        wp_send_json_error('Error al actualizar en BD: ' . $wpdb->last_error);
+        error_log('admin-qa-module: ' . $wpdb->last_error);
+        wp_send_json_error('Error al actualizar en BD.');
     }
 
     // ─── Notificaciones por correo al cambiar estado ───
@@ -1795,7 +1798,7 @@ add_action('wp_ajax_at_qa_send_report_email', function() {
             ? $phpmailer->ErrorInfo
             : 'Sin detalle — revisa error_log del servidor';
         error_log('[QA-EMAIL-FAIL] To:' . $to_email . ' | Subject:' . $subject . ' | Error:' . $detail);
-        wp_send_json_error('Error enviando correo: ' . $detail);
+        wp_send_json_error('Error enviando correo.');
     }
 
     // Copia interna para AT — mismo HTML + PDF adjunto que recibe el cliente
@@ -4071,7 +4074,8 @@ add_action('wp_ajax_nopriv_at_qa_agent_update_status', function() {
     ], ['id' => $cid]);
 
     if ($updated === false) {
-        wp_send_json_error('Error al actualizar en BD: ' . $wpdb->last_error);
+        error_log('admin-qa-module: ' . $wpdb->last_error);
+        wp_send_json_error('Error al actualizar en BD.');
     }
 
     // ─── Notificaciones: solo cuando el estado CAMBIA a PASS ───

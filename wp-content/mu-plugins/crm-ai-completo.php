@@ -1996,6 +1996,7 @@ class AutomatizaTech_CRM_AI {
                         <button class="ficha-tab" data-target="tab-operacion">📜 Contratos y operación</button>
                         <?php if (is_array($cliente) && function_exists('at_pt_render_pestana') && current_user_can('manage_options')): ?>
                         <button class="ficha-tab" data-target="tab-plan">🗓️ Plan de trabajo</button>
+                        <?php if (($cliente['tipo'] ?? '') === 'cliente' && function_exists('at_rg_render_panel')): ?><button class="ficha-tab" data-target="tab-resena">⭐ Reseña</button><?php endif; ?>
                         <?php endif; ?>
                         <?php if (is_array($cliente) && function_exists('at_en_render_pestana') && current_user_can('manage_options')): ?>
                         <button class="ficha-tab" data-target="tab-entregables">📦 Entregables</button>
@@ -2260,6 +2261,9 @@ class AutomatizaTech_CRM_AI {
                     </div>
                     </div><!-- /tab-operacion -->
                     <?php if (is_array($cliente) && function_exists('at_pt_render_pestana') && current_user_can('manage_options')): ?>
+                    <?php if (($cliente['tipo'] ?? '') === 'cliente' && function_exists('at_rg_render_panel')): ?><div class="ficha-tab-content" id="tab-resena"><div class="ficha-card"><div class="ficha-card-body">
+                    <?php at_rg_render_panel((int) $cliente['id']); ?>
+                    </div></div></div><?php endif; ?>
                     <!-- Tab: Plan de trabajo (inc/plan-trabajo/panel.php) -->
                     <div class="ficha-tab-content" id="tab-plan">
                     <div class="ficha-card">
@@ -3024,6 +3028,9 @@ class AutomatizaTech_CRM_AI {
                                     <div>
                                         <span style="background:<?php echo $s_color; ?>; color:#fff; padding:2px 10px; border-radius:12px; font-size:11px; font-weight:600;"><?php echo $s_label; ?></span>
                                         <strong style="margin-left:8px; font-size:14px;"><?php echo esc_html($fm['meeting_subject'] ?? 'Reunión de Seguimiento'); ?></strong>
+                                        <?php if (function_exists('at_wa_vinculo_texto') && ($at_wa_vinc = at_wa_vinculo_texto($fm)) !== ''): ?>
+                                            <small style="margin-left:8px; color:#0f766e;">🔗 <?php echo esc_html($at_wa_vinc); ?></small>
+                                        <?php endif; ?>
                                     </div>
                                     <div style="display:flex; gap:6px; align-items:center;">
                                         <?php if (!empty($fm['meet_link'])): ?>
@@ -7230,7 +7237,8 @@ class AutomatizaTech_CRM_AI {
         curl_close($ch);
         
         if ($curl_error) {
-            wp_send_json_success(['respuesta' => "Error técnico (Conexión): " . $curl_error]); 
+            error_log('crm-ai-completo: error de conexion: ' . $curl_error);
+            wp_send_json_success(['respuesta' => 'Error técnico de conexión.']);
         }
         
         $json = json_decode($result, true);
@@ -7511,7 +7519,8 @@ class AutomatizaTech_CRM_AI {
             if ($result !== false) {
                 wp_send_json_success('Elemento actualizado.');
             } else {
-                wp_send_json_error('Error al actualizar en BD: ' . $wpdb->last_error);
+                error_log('crm-ai-completo: ' . $wpdb->last_error);
+                wp_send_json_error('Error al actualizar en BD.');
             }
         } else {
             wp_send_json_error('Fuente de datos desconocida.');
@@ -7578,7 +7587,8 @@ class AutomatizaTech_CRM_AI {
 
         $inserted = $wpdb->insert($table_name, $data);
         if (!$inserted) {
-            wp_send_json_error('Error al guardar en base de datos: ' . $wpdb->last_error);
+            error_log('crm-ai-completo: ' . $wpdb->last_error);
+            wp_send_json_error('Error al guardar en base de datos.');
         }
 
         $meeting_id = $wpdb->insert_id;

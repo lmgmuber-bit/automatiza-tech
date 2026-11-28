@@ -69,6 +69,9 @@ function at_capi_al_guardar_lead($lead_id, $data): void {
 		if (empty($cfg['activo']) || (string) $cfg['token'] === '' || (string) $cfg['pixel'] === '' || $correo === '') {
 			return;
 		}
+		if (!at_capi_canal_cuenta((string) ($data['source'] ?? ''), (string) get_option('at_capi_canales', ''))) {
+			return; // canal que todavía no cuenta (la web, mientras falte Turnstile)
+		}
 		if (at_capi_ya_contado($correo)) {
 			return;
 		}

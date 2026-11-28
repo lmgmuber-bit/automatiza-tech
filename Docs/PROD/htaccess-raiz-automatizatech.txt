@@ -1,3 +1,11 @@
+# BEGIN AT www-a-apex (15-nov-2026)
+<IfModule mod_rewrite.c>
+RewriteEngine On
+RewriteCond %{HTTP_HOST} ^www\.automatizatech\.cl$ [NC]
+RewriteRule ^(.*)$ https://automatizatech.cl/$1 [R=301,L]
+</IfModule>
+# END AT www-a-apex
+
 # BEGIN LSCACHE
 ## LITESPEED WP CACHE PLUGIN - Do not edit the contents of this block! ##
 <IfModule mod_rewrite.c>
@@ -74,7 +82,7 @@ RewriteRule . /index.php [L]
 </FilesMatch>
 # BEGIN AT bloqueo de archivos sensibles (03/04-oct-2026)
 # Nunca servir respaldos, volcados, logs ni copias de codigo. Respaldo previo: ~/respaldos/htaccess-raiz-antes-20261004
-<FilesMatch "\.(log|sql|gz|tgz|wpress|bak|old|orig|swp|php[0-9]|php_old)$|\.backup|_OLD\.php$|_old\.php$">
+<FilesMatch "\.(log|sql|gz|tgz|wpress|bak|old|orig|swp|php[0-9]|php_old[0-9]*)$|\.php[._-][^/]*$|\.backup|_OLD\.php$|_old\.php$">
   Require all denied
 </FilesMatch>
 RedirectMatch 403 ^/wp-content/(backups-dup-lite|ai1wm-backups|ai1wm-backups_old)(/|$)
@@ -86,3 +94,14 @@ RedirectMatch 403 ^/Docs(/|$)
   Require all denied
 </Files>
 # END AT bloqueo xmlrpc
+
+# AT: registro de errores de PHP fuera de la carpeta publica (13-nov-2026)
+# WordPress sigue escribiendo en wp-content/debug.log; esto cubre los PHP que no cargan WordPress.
+<IfModule LiteSpeed>
+php_flag log_errors On
+php_value error_log /home/<usuario>/logs/php-errores.log
+</IfModule>
+<Files "error_log">
+Require all denied
+</Files>
+# AT: fin del registro de errores

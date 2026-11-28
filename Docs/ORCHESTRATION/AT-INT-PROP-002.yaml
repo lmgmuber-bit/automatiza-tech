@@ -1,0 +1,77 @@
+ticket_id: AT-INT-PROP-002
+title: "Conciliar at-proposal-refiner con el flujo v3 y el endpoint real"
+origin: direct_luis
+portfolio: "internal:automatizatech"
+priority: P2
+status: PEER_REVIEW_PENDING
+status_note: "A de Claude PASS el 2026-10-10. Falta la B de Codex. Apilado sobre AT-INT-PROP-001 (PR #80)."
+created_at: "2026-10-10"
+created_by: claude
+
+governance:
+  professional_standard: "Docs/ENGINEERING_STANDARDS/PROFESSIONAL_ENGINEERING_STANDARD.md"
+  quality_gate: C1
+  class: "documentación y configuración de agentes; sin código de producto ni escrituras en PROD"
+  reversibility: "alta: respaldo en C:/Users/luis_/respaldos/skills/2026-10-10-conciliar-refiner/ y rama sin merge"
+
+objective: >
+  Dejar una sola versión de at-proposal-refiner para Claude, Codex, OpenCode y Copilot, sin Gamma, con el
+  camino correcto para cada tipo de propuesta: en las v3, comentarios para «Pedir cambios» en el panel,
+  porque el POST /prompts responde 409; en las antiguas, el endpoint /prompts y un re-render. La lectura
+  pasa por GET /state y el secreto se lee por su etiqueta.
+owner: claude
+reviewer: codex
+active_orchestrator: claude
+
+ownership:
+  planner: claude
+  executor: claude
+  reviewer: codex
+  final_approver: "Luis Miguel"
+  current_owner: claude
+  takeover_allowed: true
+  reassignment_authorized_by: "Luis Miguel"
+
+scope:
+  branch: "claude/conciliar-refiner"
+  base: "claude/conciliar-skill-propuestas (PR #80): se mergea después del #80"
+  repo_files:
+    - ".github/skills/at-proposal-refiner/SKILL.md (igual a la copia de usuario)"
+    - "AGENTS.md (sección del pipeline) y .github/copilot-instructions.md"
+    - "Docs/ORCHESTRATION/AT-INT-PROP-002.yaml y current-handoff.yaml (active_tickets)"
+  user_files_outside_git:
+    canonical: "C:/Users/luis_/.agents/skills/at-proposal-refiner/SKILL.md"
+    junctions: [".claude/skills", ".codex/skills", ".config/opencode/skills (nuevo)"]
+    removed: "references/deploy-prod.md: guía de despliegue obsoleta (el endpoint ya está en PROD) que traía un AT_REST_SECRET en texto plano"
+    backup: "C:/Users/luis_/respaldos/skills/2026-10-10-conciliar-refiner/ (las dos SKILL.md y deploy-prod con el valor redactado; MANIFEST.sha256)"
+  related_fix_in_001: "commit a7a7bf8 del PR #80: at-gamma-proposal y AGENTS.md ya no prometen /prompts para las v3"
+
+security_note:
+  event: "Durante la revisión, un grep de Claude imprimió en la sesión el AT_REST_SECRET que traía deploy-prod.md"
+  verified: "403 en PROD con ese valor (GET /proposal/22/prompts, solo se registró el código HTTP): es anterior a la rotación del 2026-08-26 y no autentica"
+  also_found: "Mismo valor vencido en tres archivos deploy-prod.md: la bóveda (Global-Skills), AI-Memory-Vault-old-backup y una carpeta de trabajo de Codex del 2026-10-08. No está en ninguna rama del repo público"
+  copilot: "Quinta ubicación hallada después: ~/.copilot/skills/at-proposal-refiner/references/deploy-prod.md (copia skillfish). Se resolvió el mismo día: respaldo redactado y junction al runtime (ver AT-INT-PROP-003)"
+  env_var: "La variable de usuario de Windows AT_REST_SECRET_PROD también responde 403 (vencida)"
+  action: "No hace falta rotar. Limpieza de esas copias y de la variable: decisión de Luis (fuera de este ticket)"
+
+acceptance:
+  - {id: A1, criterion: "Rutas de la skill idénticas (sha256 sin contar los fines de línea)", evidence: "da0b345bd6da en la canónica, en .github y por los tres enlaces", result: PASS}
+  - {id: A2, criterion: "Frontmatter válido", evidence: "name=at-proposal-refiner, 6 disparadores", result: PASS}
+  - {id: A3, criterion: "Rutas citadas existen en la rama", evidence: "PROPUESTAS-FLUJO-V3.md, PROPUESTAS-PLANTILLA-UNICA.md, rest-proposals.php", result: PASS}
+  - {id: A4, criterion: "Comportamiento del endpoint descrito igual al código", evidence: "rest-proposals.php: 409 para flujo v3 en POST /prompts, ruta GET /state registrada, envío sent solo desde el panel", result: PASS}
+  - {id: A5, criterion: "Rutas vivas en PROD y con autenticación", evidence: "/state y /prompts sin cabecera = 401", result: PASS}
+  - {id: A6, criterion: "Sin secretos en la skill ni en el diff", evidence: "0 tokens largos; carpeta canónica sin references/", result: PASS}
+  - {id: A7, criterion: "Claude descubre la skill nueva", evidence: "el listado de la sesión mostró la descripción nueva", result: PASS}
+  - {id: A8, criterion: "Recorrido real con un secreto vigente (GET /state de una v3)", evidence: "NOT_RUN: falta la etiqueta exacta del AT_REST_SECRET vigente en el archivo de claves; se pide a Luis", result: NOT_RUN}
+  - {id: A9, criterion: "Codex y OpenCode descubren la skill", evidence: "NOT_RUN: requiere una sesión nueva en cada host", result: NOT_RUN}
+
+peer_review_B:
+  reviewer: codex
+  status: PEER_REVIEW_PENDING
+  brief: "C:/Users/luis_/Documents/Codex/Shared-Tools/Brief-B-Codex-AT-INT-PROP-001.md (sección AT-INT-PROP-002)"
+
+out_of_scope_pending:
+  - "Bóveda: 30-Agent-Protocols/Global-Skills/ (at-gamma-proposal, at-proposal-refiner, at-propuesta) y automatizatech-pipeline.md siguen con Gamma; esa rama tiene cambios sin commit de otra sesión"
+  - "Limpiar los tres deploy-prod.md con el secreto vencido y la variable AT_REST_SECRET_PROD"
+
+safety: {prod_writes: false, credits: false, secrets_written: false, external_messages: false, merge: "no sin el ok de Luis"}
